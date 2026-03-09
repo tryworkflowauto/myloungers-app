@@ -1,5 +1,38 @@
 @import "tailwindcss";
 
+/* Gotham Rounded - Font Face */
+@font-face {
+  font-family: "Gotham Rounded";
+  src: url("/fonts/GothamRnd-Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gotham Rounded";
+  src: url("/fonts/GothamRnd-Book.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gotham Rounded";
+  src: url("/fonts/GothamRnd-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gotham Rounded";
+  src: url("/fonts/GothamRnd-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -19,7 +52,7 @@
   --color-teal-dark: var(--teal-dark);
   --color-coral: var(--coral);
   --color-navy: var(--navy);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Gotham Rounded", ui-sans-serif, system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,5 +65,10 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: "Gotham Rounded", ui-sans-serif, system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6,
+p, span, a, button, input, label, select, textarea {
+  font-family: "Gotham Rounded", ui-sans-serif, system-ui, sans-serif;
 }
