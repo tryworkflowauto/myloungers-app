@@ -52,7 +52,7 @@
   --color-teal-dark: var(--teal-dark);
   --color-coral: var(--coral);
   --color-navy: var(--navy);
-  --font-sans: "Gotham Rounded", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Gotham Rounded", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -65,10 +65,11 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Gotham Rounded", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Gotham Rounded", sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6,
-p, span, a, button, input, label, select, textarea {
-  font-family: "Gotham Rounded", ui-sans-serif, system-ui, sans-serif;
+p, span, a, button, input, label, select, textarea,
+div, li, ul, ol, section, header, footer, nav {
+  font-family: "Gotham Rounded", sans-serif;
 }
