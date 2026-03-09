@@ -2,401 +2,811 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import "./myloungers.css";
 
-const heroSlides = [
-  {
-    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=600&fit=crop",
-    title: "Hayalindeki Plajı Rezerve Et",
-    desc: "Türkiye'nin en güzel plaj ve otel tesislerinde şezlong rezervasyonu yapın",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1920&h=600&fit=crop",
-    title: "Hızlı, Güvenli, Temassız",
-    desc: "QR kod ile anında giriş. Rezervasyonunuz sizi bekliyor.",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1920&h=600&fit=crop",
-    title: "Plaj Keyfinin Tadını Çıkarın",
-    desc: "Kuyruk yok, bekleme yok. Direkt şezlongunuza geçin.",
-  },
+const SLIDER_IMGS = [
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1920&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1920&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1540202404-a2f29016b523?w=1920&h=600&fit=crop",
 ];
 
-const kategoriler = [
-  { slug: "hotel", name: "Hotel", sub: "Otel plajlarında günlük rezervasyon", image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&h=400&fit=crop", badge: "Popüler" as const },
-  { slug: "beach", name: "Beach Club", sub: "Bağımsız plaj ve beach club", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop", badge: "Yeni" as const },
-  { slug: "aqua", name: "Aqua Park", sub: "Aquapark ve havuz tesisleri", image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=600&h=400&fit=crop", badge: "Popüler" as const },
+const CAT_IMGS = [
+  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=600&h=400&fit=crop",
 ];
 
-const tesisler = [
-  { id: "zuzuu", name: "Zuzuu Beach Hotel", location: "Yalıkavak / Bodrum", price: 450, rating: 4.8, image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop", tags: ["Wi-Fi", "Bar", "Havuz"] },
-  { id: "marmaris-aqua", name: "Marmaris Aqua Resort", location: "Marmaris", price: 320, rating: 4.7, image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=400&h=300&fit=crop", tags: ["Wi-Fi", "Havuz", "Aquapark"] },
-  { id: "paradise", name: "Fethiye Paradise Beach", location: "Fethiye", price: 280, rating: 4.8, image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", tags: ["Bar", "Şezlong", "Restoran"] },
-  { id: "blue-bay", name: "Bodrum Blue Bay Hotel", location: "Bodrum", price: 395, rating: 4.7, image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=300&fit=crop", tags: ["Wi-Fi", "Bar", "Havuz"] },
+const TESIS_IMGS = [
+  "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop",
+  "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=400&h=300&fit=crop",
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop",
+  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=300&fit=crop",
 ];
 
-const yorumlar = [
-  { dest: "Bodrum · Zuzuu Beach Hotel", text: "Bodrum tatilimizde şezlong için saatlerce beklemek zorunda kalmadık. Uygulama üzerinden rezervasyon yaptık, QR kod ile direkt giriş. Harika!", author: "Ayşe Y.", loc: "İstanbul · Doğrulanmış" },
-  { dest: "Marmaris · Aqua Resort", text: "QR kod girişi muhteşem! Kasa yok, kuyruk yok. Plaja geldik, telefonu uzattık, şezlongumuz hazırdı. Kesinlikle tavsiye ederim.", author: "Mehmet K.", loc: "Ankara · Doğrulanmış" },
-  { dest: "Fethiye · Paradise Beach", text: "Denize en yakın şezlongu seçebildim. Uygulama çok kullanışlı, rezervasyon 2 dakikada tamamlandı.", author: "Zeynep D.", loc: "İzmir · Doğrulanmış" },
+const ILLER: Record<string, string[]> = {
+  Adana: ["Seyhan", "Çukurova", "Yüreğir"],
+  Ankara: ["Çankaya", "Keçiören", "Mamak", "Etimesgut"],
+  Antalya: ["Muratpaşa", "Konyaaltı", "Alanya", "Manavgat", "Kemer", "Belek"],
+  Muğla: ["Bodrum", "Yalıkavak", "Marmaris", "Fethiye", "Datça", "Milas"],
+  İzmir: ["Konak", "Çeşme", "Karşıyaka", "Bornova"],
+  Aydın: ["Didim", "Kuşadası", "Söke"],
+};
+
+const TESISLER = [
+  { name: "Zuzuu Beach Hotel", il: "Bodrum (Muğla)", ilce: "Yalıkavak", type: "hotel" },
+  { name: "Marmaris Aqua Resort", il: "Marmaris (Muğla)", ilce: "İçmeler", type: "aqua" },
+  { name: "Fethiye Paradise Beach", il: "Fethiye (Muğla)", ilce: "Ölüdeniz", type: "beach" },
+  { name: "Bodrum Blue Bay Hotel", il: "Bodrum (Muğla)", ilce: "Gümbet", type: "hotel" },
 ];
 
-const langs = [
+const LANG_OPTS = [
   { code: "TR", flag: "🇹🇷", name: "Türkçe" },
   { code: "EN", flag: "🇬🇧", name: "English" },
 ];
 
 export default function Home() {
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [slideIdx, setSlideIdx] = useState(0);
   const [langOpen, setLangOpen] = useState(false);
-  const [lang, setLang] = useState(langs[0]);
+  const [lang, setLang] = useState(LANG_OPTS[0]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [basvuruOpen, setBasvuruOpen] = useState(false);
+  const [bmPane, setBmPane] = useState(1);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [srchRegion, setSrchRegion] = useState("");
+  const [srchType, setSrchType] = useState("");
+  const [srchDate, setSrchDate] = useState("");
+  const [srchName, setSrchName] = useState("");
+  const [panelRegion, setPanelRegion] = useState(false);
+  const [panelType, setPanelType] = useState(false);
+  const [panelDate, setPanelDate] = useState(false);
+  const [panelName, setPanelName] = useState(false);
+  const [activeIl, setActiveIl] = useState("");
+  const [activeIlce, setActiveIlce] = useState("");
+  const [ilSearch, setIlSearch] = useState("");
+  const [barWidth, setBarWidth] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setSlideIdx((s) => (s + 1) % SLIDER_IMGS.length), 5500);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const start = Date.now();
+    const dur = 5500;
+    const step = () => {
+      const p = Math.min(((Date.now() - start) / dur) * 100, 100);
+      setBarWidth(p);
+      if (p < 100) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [slideIdx]);
+
+  const openPanel = useCallback((p: "region" | "type" | "date" | "name") => {
+    setPanelRegion(p === "region");
+    setPanelType(p === "type");
+    setPanelDate(p === "date");
+    setPanelName(p === "name");
+  }, []);
+
+  const closePanels = useCallback(() => {
+    setPanelRegion(false);
+    setPanelType(false);
+    setPanelDate(false);
+    setPanelName(false);
+  }, []);
+
+  const ilceler = activeIl && ILLER[activeIl] ? ILLER[activeIl] : [];
+  const filteredIller = Object.keys(ILLER).filter((il) =>
+    !ilSearch || il.toLowerCase().includes(ilSearch.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* 1. NAVBAR */}
-      <nav className="sticky top-0 z-[300] border-b border-gray-200 bg-white/97 backdrop-blur-xl">
-        <div className="mx-auto flex h-[72px] max-w-[1400px] items-center gap-5 px-4 sm:px-7">
-          <Link href="/" className="flex items-center">
-            <Image src="/logo.png" alt="MyLoungers" width={120} height={40} className="h-10 w-auto object-contain" />
+    <div>
+      {/* NAV */}
+      <nav className="nav">
+        <div className="nav-in">
+          <Link href="/" className="logo-img-wrap">
+            <img src="/logo.png" alt="MyLoungers" className="logo-img" />
           </Link>
-          <div className="hidden flex-1 justify-center gap-1 md:flex">
-            <Link href="/kategori/hotel" className="rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-gray-600 transition-all hover:border-teal hover:bg-teal-light hover:text-navy">
+          <div className="nav-cats">
+            <button
+              type="button"
+              className={`nc ${activeCategory === "all" || activeCategory === "hotel" ? "on" : ""}`}
+              onClick={() => setActiveCategory("hotel")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
               Hotel
-            </Link>
-            <Link href="/kategori/beach" className="rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-gray-600 transition-all hover:border-teal hover:bg-teal-light hover:text-navy">
+            </button>
+            <button
+              type="button"
+              className={`nc ${activeCategory === "beach" ? "on" : ""}`}
+              onClick={() => setActiveCategory("beach")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+              </svg>
               Beach Club
-            </Link>
-            <Link href="/kategori/aqua" className="rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-gray-600 transition-all hover:border-teal hover:bg-teal-light hover:text-navy">
+            </button>
+            <button
+              type="button"
+              className={`nc ${activeCategory === "aqua" ? "on" : ""}`}
+              onClick={() => setActiveCategory("aqua")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2v20M2 12h20" />
+              </svg>
               Aqua Park
-            </Link>
-            <Link href="/b2b/basvuru" className="rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-gray-600 transition-all hover:border-teal hover:bg-teal-light hover:text-navy">
+            </button>
+            <button type="button" className="nc" onClick={() => setBasvuruOpen(true)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+              </svg>
               Başvuru Formu
-            </Link>
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="nav-r">
+            <div className={`lang-wrap ${langOpen ? "open" : ""}`}>
               <button
-                onClick={() => setLangOpen(!langOpen)}
-                className="flex items-center gap-2 rounded-full border-2 border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50"
+                type="button"
+                className="lang-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLangOpen(!langOpen);
+                }}
               >
-                <span>{lang.flag}</span>
-                <span className="hidden sm:inline">{lang.code}</span>
-                <svg className={`h-3 w-3 transition-transform ${langOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                <span className="flag">{lang.flag}</span>
+                <span>{lang.code}</span>
+                <svg className="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </button>
-              {langOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 min-w-[160px] overflow-hidden rounded-2xl border-2 border-gray-200 bg-white p-1 shadow-xl">
-                  {langs.map((l) => (
-                    <button key={l.code} onClick={() => { setLang(l); setLangOpen(false); }} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${lang.code === l.code ? "bg-teal-light text-navy font-bold" : "text-gray-600 hover:bg-gray-50"}`}>
-                      <span>{l.flag}</span>
-                      <span className="flex-1">{l.name}</span>
-                      {lang.code === l.code && <span className="text-teal">✓</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="lang-drop">
+                {LANG_OPTS.map((l) => (
+                  <button
+                    key={l.code}
+                    type="button"
+                    className={`lang-opt ${lang.code === l.code ? "active" : ""}`}
+                    onClick={() => {
+                      setLang(l);
+                      setLangOpen(false);
+                    }}
+                  >
+                    <span>{l.flag}</span>
+                    <span className="lname">{l.name}</span>
+                    {lang.code === l.code && <span className="lcheck">✓</span>}
+                  </button>
+                ))}
+              </div>
             </div>
-            <Link href="/giris" className="rounded-full border-2 border-gray-200 px-4 py-2 text-sm font-semibold text-gray-900 transition-colors hover:border-gray-400">
-              Giriş Yap
-            </Link>
-            <Link href="/uye-ol" className="rounded-full bg-navy px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-navy/90">
-              Üye Ol
-            </Link>
+            <Link href="/giris" className="btn-login" id="btnLogin">Giriş Yap</Link>
+            <Link href="/uye-ol" className="btn-signup" id="btnSignup">Üye Ol</Link>
           </div>
+          <button
+            type="button"
+            className={`ham ${menuOpen ? "open" : ""}`}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menü"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
       </nav>
 
-      {/* 2. HERO SLIDER - 3 slide carousel */}
-      <section className="relative overflow-hidden bg-gray-900">
-        <div className="relative h-[400px] w-full sm:h-[500px] md:h-[600px]">
-          {heroSlides.map((slide, i) => (
-            <div key={i} className={`absolute inset-0 transition-opacity duration-500 ${i === slideIndex ? "z-10 opacity-100" : "z-0 opacity-0"}`}>
-              <Image src={slide.image} alt={slide.title} fill className="object-cover" priority={i === 0} sizes="100vw" />
-              <div className="absolute inset-0 bg-black/40" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center text-white">
-                <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">{slide.title}</h1>
-                <p className="mx-auto mt-4 max-w-2xl text-lg text-white/90">{slide.desc}</p>
+      {/* MOB CATS */}
+      <div className="mob-cats">
+        <div className="mob-cats-in">
+          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => setActiveCategory("hotel")}>Hotel</button>
+          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => setActiveCategory("beach")}>Beach Club</button>
+          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => setActiveCategory("aqua")}>Aqua Park</button>
+          <button type="button" className="mcat" onClick={() => setBasvuruOpen(true)}>Başvuru</button>
+        </div>
+      </div>
+
+      {/* MOB MENU */}
+      <div className={`mob-menu ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
+        <div className="mob-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="mob-panel-head">
+            <img src="/logo.png" alt="MyLoungers" className="mob-panel-logo" />
+            <button type="button" className="mob-close" onClick={() => setMenuOpen(false)}>×</button>
+          </div>
+          <div className="mob-btns">
+            <button type="button" className="mob-btn-login">Giriş Yap</button>
+            <button type="button" className="mob-btn-signup">Üye Ol</button>
+          </div>
+          <div className="mob-sec-title">Kategoriler</div>
+          <button type="button" className="mob-link">Hotel</button>
+          <button type="button" className="mob-link">Beach Club</button>
+          <button type="button" className="mob-link">Aqua Park</button>
+          <button type="button" className="mob-link" onClick={() => { setBasvuruOpen(true); setMenuOpen(false); }}>Başvuru Formu</button>
+        </div>
+      </div>
+
+      {/* SLIDER */}
+      <div className="bwrap" id="bwrap">
+        {SLIDER_IMGS.map((src, i) => (
+          <div key={i} className={`slide ${i === slideIdx ? "on" : ""}`}>
+            <img src={src} alt="" className="slide-img" />
+          </div>
+        ))}
+        <button type="button" className="sarr prev" id="sprev" onClick={() => setSlideIdx((s) => (s - 1 + SLIDER_IMGS.length) % SLIDER_IMGS.length)}>‹</button>
+        <button type="button" className="sarr next" id="snext" onClick={() => setSlideIdx((s) => (s + 1) % SLIDER_IMGS.length)}>›</button>
+        <div className="sdots">
+          {SLIDER_IMGS.map((_, i) => (
+            <button key={i} type="button" className={`dot ${i === slideIdx ? "on" : ""}`} onClick={() => setSlideIdx(i)} aria-label={`Slide ${i + 1}`} />
+          ))}
+        </div>
+        <div className="bprog">
+          <div className="bbar" style={{ width: `${barWidth}%` }} />
+        </div>
+      </div>
+
+      {/* BACKDROP */}
+      <div className={`srch-backdrop ${panelRegion || panelType || panelDate || panelName ? "on" : ""}`} onClick={closePanels} />
+
+      {/* SEARCH */}
+      <div className="srch-wrap">
+        <div className="srch-in" style={{ position: "relative" }}>
+          <div className="srch-card">
+            <div
+              className={`sf ${panelRegion ? "active" : ""}`}
+              data-panel="panelRegion"
+              onClick={() => openPanel("region")}
+              role="button"
+              tabIndex={0}
+            >
+              <span className="sfl" id="sfl-region">Bölge</span>
+              <span className={`sfv ${srchRegion ? "selected" : ""}`} id="sfv-region">{srchRegion || "Bodrum, Antalya, Marmaris..."}</span>
+            </div>
+            <div
+              className={`sf ${panelType ? "active" : ""}`}
+              data-panel="panelType"
+              onClick={() => openPanel("type")}
+              role="button"
+              tabIndex={0}
+            >
+              <span className="sfl">Tesis Tipi</span>
+              <span className={`sfv ${srchType ? "selected" : ""}`}>{srchType || "Hotel, Beach Club..."}</span>
+            </div>
+            <div
+              className={`sf ${panelDate ? "active" : ""}`}
+              data-panel="panelDate"
+              onClick={() => openPanel("date")}
+              role="button"
+              tabIndex={0}
+            >
+              <span className="sfl">Tarih</span>
+              <span className={`sfv ${srchDate ? "selected" : ""}`}>{srchDate || "Tarih seçin"}</span>
+            </div>
+            <div
+              className={`sf ${panelName ? "active" : ""}`}
+              data-panel="panelName"
+              onClick={() => openPanel("name")}
+              role="button"
+              tabIndex={0}
+            >
+              <span className="sfl">Tesis Adı</span>
+              <span className={`sfv ${srchName ? "selected" : ""}`}>{srchName || "Ara..."}</span>
+            </div>
+            <button
+              type="button"
+              className={`filter-btn ${filterOpen ? "active" : ""}`}
+              onClick={() => setFilterOpen(true)}
+            >
+              <span className="filter-badge" style={{ display: "none" }}>0</span>
+              <span>Filtre</span>
+            </button>
+            <button type="button" className="srch-btn">
+              Tesis Ara
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Region panel */}
+          <div className={`sf-panel ${panelRegion ? "open" : ""}`} id="panelRegion" style={{ position: "relative", top: 0, left: 0 }}>
+            <div className="sf-panel-inn region-panel">
+              <div className="region-cols">
+                <div className="region-iller">
+                  <div className="r-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                    <input type="text" placeholder="İl ara..." value={ilSearch} onChange={(e) => setIlSearch(e.target.value)} />
+                  </div>
+                  <div id="illerList">
+                    {filteredIller.map((il) => (
+                      <div
+                        key={il}
+                        className={`r-item ${activeIl === il ? "active" : ""}`}
+                        onClick={() => { setActiveIl(il); setActiveIlce(""); }}
+                      >
+                        {il}<span className="r-arr">›</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="region-ilceler">
+                  {activeIl ? (
+                    <>
+                      <div className="r-ilce-ttl">{activeIl}</div>
+                      <div className={`r-ilce-item ${!activeIlce ? "sel" : ""}`} onClick={() => setActiveIlce("")}>Tümü</div>
+                      {ilceler.map((ilce) => (
+                        <div key={ilce} className={`r-ilce-item ${activeIlce === ilce ? "sel" : ""}`} onClick={() => setActiveIlce(ilce)}>{ilce}</div>
+                      ))}
+                    </>
+                  ) : (
+                    <div style={{ padding: "12px 14px", fontSize: ".75rem", color: "var(--ink3)" }}>İl seçin</div>
+                  )}
+                </div>
+              </div>
+              <div className="r-footer">
+                <span className="r-footer-val" id="regionVal">{activeIlce ? `${activeIl} / ${activeIlce}` : activeIl || ""}</span>
+                <button type="button" className="r-btn-clear" onClick={() => { setActiveIl(""); setActiveIlce(""); setSrchRegion(""); }}>Temizle</button>
+                <button type="button" className="r-btn-ok" onClick={() => { setSrchRegion(activeIlce ? `${activeIl} / ${activeIlce}` : activeIl); closePanels(); }}>Tamam</button>
               </div>
             </div>
-          ))}
-        </div>
-        <button onClick={() => setSlideIndex((s) => (s === 0 ? 2 : s - 1))} className="absolute left-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/40 text-2xl text-white transition-colors hover:bg-black/60">‹</button>
-        <button onClick={() => setSlideIndex((s) => (s === 2 ? 0 : s + 1))} className="absolute right-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/40 text-2xl text-white transition-colors hover:bg-black/60">›</button>
-        <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-          {[0, 1, 2].map((i) => (
-            <button key={i} onClick={() => setSlideIndex(i)} className={`h-2 rounded-full transition-all ${i === slideIndex ? "w-6 bg-white" : "w-2 bg-white/40"}`} />
-          ))}
-        </div>
-      </section>
+          </div>
 
-      {/* 3. ARAMA BARI - Sticky */}
-      <div className="sticky top-[72px] z-[200] border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-7">
-          <div className="flex flex-col gap-3 rounded-2xl border-2 border-gray-200 p-3 shadow-lg sm:flex-row sm:items-stretch">
-            <div className="flex flex-1 flex-col justify-center border-r border-gray-200 p-3 transition-colors hover:bg-teal-light/50">
-              <label className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-navy">Bölge</label>
-              <input type="text" placeholder="Bodrum, Antalya, Marmaris..." className="text-sm font-medium text-gray-500 placeholder-gray-400 focus:outline-none" />
+          {/* Type panel */}
+          <div className={`sf-panel ${panelType ? "open" : ""}`} id="panelType">
+            <div className="sf-panel-inn type-panel">
+              <div className="type-grid-p">
+                {["Hotel", "Beach Club", "Aqua Park", "Tatil Köyü", "Pansiyon", "Havuzlu Tesis"].map((t, i) => (
+                  <button key={i} type="button" className="tp-btn">{t}</button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-1 flex-col justify-center border-r border-gray-200 p-3 transition-colors hover:bg-teal-light/50">
-              <label className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-navy">Tesis Tipi</label>
-              <select className="text-sm font-medium text-gray-500 focus:outline-none">
-                <option>Hotel, Beach Club, Aqua Park</option>
-              </select>
+          </div>
+
+          {/* Date panel */}
+          <div className={`sf-panel ${panelDate ? "open" : ""}`} id="panelDate">
+            <div className="sf-panel-inn date-panel">
+              <div className="cal-header">
+                <span className="cal-month">Tarih Seçin</span>
+              </div>
+              <input type="date" onChange={(e) => { setSrchDate(e.target.value); closePanels(); }} />
             </div>
-            <div className="flex flex-1 flex-col justify-center border-r border-gray-200 p-3 transition-colors hover:bg-teal-light/50">
-              <label className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-navy">Tarih</label>
-              <input type="date" className="text-sm font-medium text-gray-500 focus:outline-none" />
-            </div>
-            <div className="flex flex-1 flex-col justify-center border-r border-gray-200 p-3 transition-colors hover:bg-teal-light/50">
-              <label className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-navy">Tesis Adı</label>
-              <input type="text" placeholder="Örn: Zuzuu Beach" className="text-sm font-medium text-gray-500 placeholder-gray-400 focus:outline-none" />
-            </div>
-            <div className="flex gap-2 sm:flex-col sm:gap-0">
-              <button className="flex flex-1 items-center justify-center gap-2 bg-teal px-6 py-4 font-bold text-white transition-colors hover:bg-teal-dark">Tesis Ara</button>
-              <button className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-gray-200 px-4 py-3 font-bold text-gray-700 transition-colors hover:border-gray-400">Filtrele</button>
+          </div>
+
+          {/* Name panel */}
+          <div className={`sf-panel ${panelName ? "open" : ""}`} id="panelName">
+            <div className="sf-panel-inn name-panel">
+              <div className="name-inp-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                <input type="text" className="name-inp" placeholder="Tesis adı yazın..." onChange={(e) => setSrchName(e.target.value)} />
+              </div>
+              <div className="name-suggestions">
+                {TESISLER.slice(0, 4).map((t) => (
+                  <div key={t.name} className="name-sug" onClick={() => { setSrchName(t.name); closePanels(); }}>
+                    <span>{t.type === "hotel" ? "🏨" : t.type === "beach" ? "🏖️" : "💦"}</span>
+                    <span>{t.name}</span>
+                    <span className="name-sug-lbl">{t.il}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 4. İSTATİSTİKLER */}
-      <div className="bg-navy">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-center gap-6 overflow-x-auto px-4 py-4 sm:px-7">
-          <div className="flex flex-col"><span className="text-xl font-black text-white">100+</span><span className="text-xs text-white/50">Aktif Tesis</span></div>
-          <div className="h-6 w-px bg-white/20" />
-          <div className="flex flex-col"><span className="text-xl font-black text-white">50K+</span><span className="text-xs text-white/50">Rezervasyon</span></div>
-          <div className="h-6 w-px bg-white/20" />
-          <div className="flex flex-col"><span className="text-xl font-black text-white">15</span><span className="text-xs text-white/50">Destinasyon</span></div>
-          <div className="h-6 w-px bg-white/20" />
-          <div className="flex flex-col"><span className="text-xl font-black text-white">4.9★</span><span className="text-xs text-white/50">Ortalama Puan</span></div>
-          <div className="h-6 w-px bg-white/20" />
-          <div className="flex flex-col"><span className="text-xl font-black text-white">QR</span><span className="text-xs text-white/50">Temassız Giriş</span></div>
+      {/* FILTER OVERLAY */}
+      <div className={`filter-overlay ${filterOpen ? "open" : ""}`} onClick={() => setFilterOpen(false)} />
+      <div className={`filter-panel ${filterOpen ? "open" : ""}`}>
+        <div className="fp-head">
+          <div className="fp-title">Filtreler</div>
+          <button type="button" className="fp-close" onClick={() => setFilterOpen(false)}>×</button>
+        </div>
+        <div className="fp-body">
+          <div className="fp-section">
+            <div className="fp-sec-title">Sıralama</div>
+            <div className="fp-sort-grid">
+              <button type="button" className="fp-sort-btn sel">Popüler</button>
+              <button type="button" className="fp-sort-btn">Fiyat</button>
+            </div>
+          </div>
+          <div className="fp-section">
+            <div className="fp-sec-title">Fiyat Aralığı</div>
+            <div className="fp-price-row">
+              <div className="fp-price-box"><span className="fp-price-lbl">Min</span><span className="fp-price-val">₺0</span></div>
+              <span className="fp-price-sep">-</span>
+              <div className="fp-price-box"><span className="fp-price-lbl">Max</span><span className="fp-price-val">₺5000+</span></div>
+            </div>
+          </div>
+          <div className="fp-section">
+            <div className="fp-sec-title">Yıldız</div>
+            <div className="fp-stars-row">
+              {[4, 5].map((s) => (
+                <button key={s} type="button" className="fp-star-btn">{s} ★</button>
+              ))}
+            </div>
+          </div>
+          <div className="fp-foot">
+            <button type="button" className="fp-clear-btn">Temizle</button>
+            <button type="button" className="fp-apply-btn" onClick={() => setFilterOpen(false)}>Uygula</button>
+          </div>
         </div>
       </div>
 
-      {/* 5. KATEGORİLER - Resimli kartlar, Popüler/Yeni badge */}
-      <section className="mx-auto max-w-[1400px] px-4 py-12 sm:px-7">
-        <h2 className="mb-8 text-xl font-extrabold tracking-tight text-gray-900">Kategoriler</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {kategoriler.map((kat) => (
-            <Link key={kat.slug} href={`/kategori/${kat.slug}`} className="group relative aspect-[3/2] overflow-hidden rounded-2xl transition-all hover:-translate-y-1 hover:shadow-2xl">
-              <Image src={kat.image} alt={kat.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="33vw" />
-              <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-transparent to-transparent" />
-              <span className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-extrabold text-white ${kat.badge === "Popüler" ? "bg-teal" : "bg-coral"}`}>{kat.badge}</span>
-              <div className="absolute bottom-4 left-4 text-white">
-                <h3 className="text-lg font-extrabold">{kat.name}</h3>
-                <p className="text-sm text-white/70">{kat.sub}</p>
+      {/* STATS */}
+      <div className="stats">
+        <div className="stats-in">
+          <div><span className="stn">100+</span><span className="stl" id="stl1">Aktif tesis</span></div>
+          <div className="std" />
+          <div><span className="stn">50K+</span><span className="stl" id="stl2">Rezervasyon</span></div>
+          <div className="std" />
+          <div><span className="stn">15</span><span className="stl" id="stl3">Destinasyon</span></div>
+          <div className="std" />
+          <div><span className="stn">4.9★</span><span className="stl" id="stl4">Ortalama puan</span></div>
+          <div className="std" />
+          <div><span className="stn">QR</span><span className="stl" id="stl5">Temassız giriş</span></div>
+        </div>
+      </div>
+
+      {/* CATEGORIES */}
+      <section className="sec">
+        <div className="sec-row">
+          <h2 className="sec-h" id="cat-title">Tesis Kategorileri</h2>
+          <a href="/kategoriler" className="sec-a" id="cat-all">Tümünü gör →</a>
+        </div>
+        <div className="cat-grid">
+          <div className="cat-card" data-cat="hotel" onClick={() => setActiveCategory("hotel")}>
+            <img src={CAT_IMGS[0]} alt="Hotel" />
+            <div className="cat-ov">
+              <span className="cat-badge ct" id="cat1-badge">Popüler</span>
+              <span className="cat-name" id="cat1-name">Hotel</span>
+              <span className="cat-sub" id="cat1-sub">Konfor ve hizmet</span>
+            </div>
+          </div>
+          <div className="cat-card" data-cat="beach" onClick={() => setActiveCategory("beach")}>
+            <img src={CAT_IMGS[1]} alt="Beach Club" />
+            <div className="cat-ov">
+              <span className="cat-name" id="cat2-name">Beach Club</span>
+              <span className="cat-sub" id="cat2-sub">Şezlong &amp; deniz keyfi</span>
+            </div>
+          </div>
+          <div className="cat-card" data-cat="aqua" onClick={() => setActiveCategory("aqua")}>
+            <img src={CAT_IMGS[2]} alt="Aqua Park" />
+            <div className="cat-ov">
+              <span className="cat-badge co" id="cat3-badge">Yeni</span>
+              <span className="cat-name" id="cat3-name">Aqua Park</span>
+              <span className="cat-sub" id="cat3-sub">Eğlence &amp; kaydırak</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAV / PRODUCTS */}
+      <section className="sec">
+        <div className="sec-row">
+          <h2 className="sec-h" id="fav-title">En Çok Tercih Edilenler</h2>
+          <a href="/arama" className="sec-a" id="fav-all">Tümünü gör →</a>
+        </div>
+        <div className="pgrid" id="tesisGrid">
+          {TESISLER.map((t, i) => (
+            <div
+              key={t.name}
+              className="pc"
+              data-type={t.type}
+              style={{ display: activeCategory !== "all" && activeCategory !== t.type ? "none" : undefined }}
+            >
+              <div className="pw0">
+                <img src={TESIS_IMGS[i]} alt={t.name} />
+                <span className="prat">★ 4.8</span>
+                <span className="ptag">Günlük</span>
               </div>
-            </Link>
+              <div className="pn">{t.name}</div>
+              <div className="pl">{t.ilce} / {t.il}</div>
+              <div className="pf">
+                <span className="pfc">Wi-Fi</span>
+                <span className="pfc">Bar</span>
+              </div>
+              <div className="pp"><b>₺{i === 0 ? 450 : i === 1 ? 320 : i === 2 ? 280 : 395}</b><span> / gün</span></div>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* 6. EN ÇOK TERCİH EDİLENLER */}
-      <section className="mx-auto max-w-[1400px] px-4 py-12 sm:px-7">
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-xl font-extrabold tracking-tight text-gray-900">En Çok Tercih Edilenler</h2>
-          <Link href="/arama" className="text-sm font-bold text-teal hover:underline">Tümünü gör →</Link>
+      {/* PLAN */}
+      <section className="plan-sec">
+        <div>
+          <div className="plan-k" id="plan-tag">Şezlong Planı</div>
+          <h2 id="plan-title">Tam istediğin şezlongu harita üzerinden seç</h2>
+          <p className="pdesc" id="plan-desc">Tesis planında müsait şezlongları anlık görürsün.</p>
+          <ul className="cl">
+            <li id="plan-f1">Anlık müsaitlik durumu</li>
+            <li id="plan-f2">Silver, Gold, VIP kategori fiyatları</li>
+            <li id="plan-f3">İleri tarihli rezervasyon imkânı</li>
+            <li id="plan-f4">Garson çağırma ve sipariş</li>
+          </ul>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button type="button" className="btn-solid" id="plan-btn1">Tesis planını gör →</button>
+            <button type="button" className="btn-ghost" id="plan-btn2">Daha fazla bilgi</button>
+          </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {tesisler.map((t) => (
-            <Link key={t.id} href={`/tesis/${t.id}`} className="group">
-              <div className="relative aspect-[3/2] overflow-hidden rounded-2xl">
-                <Image src={t.image} alt={t.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="25vw" />
-                <span className="absolute left-3 top-3 rounded-full bg-black/50 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">★ {t.rating}</span>
-                <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">Günlük</span>
-              </div>
-              <h3 className="mt-2 font-bold text-gray-900">{t.name}</h3>
-              <p className="text-sm text-gray-500">{t.location}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {t.tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-600">{tag}</span>
-                ))}
-              </div>
-              <p className="mt-2"><strong className="text-base font-extrabold text-navy">{t.price}₺</strong><span className="text-sm text-gray-500"> / gün</span></p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 7. ŞEZLONG PLANI TANITIM */}
-      <section className="bg-gray-50 py-16">
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-4 md:flex-row md:items-center md:gap-12 sm:px-7">
-          <div className="flex-1">
-            <span className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-teal before:h-0.5 before:w-4 before:bg-teal">Özellik</span>
-            <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 md:text-3xl">Tam istediğin şezlongu harita üzerinden seç</h2>
-            <p className="mt-4 text-gray-600">
-              Rezervasyon öncesi tesis şezlong planını incele. Silver, Gold ve Platinum kategoriler arasından denize yakınlığına göre şezlongunu seç. Renk kodlu harita ile konumunu önceden belirle.
-            </p>
-            <ul className="mt-6 space-y-3">
-              {["Renk kodlu kategoriler (Silver, Gold, Platinum)", "Denize mesafe bilgisi", "Gerçek zamanlı doluluk"].map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-teal-light text-[10px] font-bold text-teal-dark">✓</span>
-                  {item}
-                </li>
+        <div className="pww">
+          <div className="pwt">
+            <span className="pwn">Zuzuu Beach Hotel</span>
+            <span className="pwd">Şezlong Planı</span>
+          </div>
+          <div className="pwb">
+            <div className="pwc" id="leg1">Müsait</div>
+            <div className="lrow">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className={`l ${i % 4 === 0 ? "lok" : i % 4 === 1 ? "lno" : "lpnd"}`}>{i % 4 === 0 ? "S" : i % 4 === 1 ? "R" : "T"}</div>
               ))}
+            </div>
+            <div className="pwc" id="leg2">Rezerve</div>
+            <div className="pwc" id="leg3">Tadilat</div>
+            <div className="pwc" id="leg4">Seçimim</div>
+          </div>
+          <div className="pwleg">
+            <div className="pwl"><div className="pwld lok" /><span>Müsait</span></div>
+            <div className="pwl"><div className="pwld lno" /><span>Rezerve</span></div>
+            <div className="pwl"><div className="pwld lpnd" /><span>Tadilat</span></div>
+            <div className="pwl"><div className="pwld lsel" /><span>Seçimim</span></div>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW */}
+      <section className="how">
+        <div className="how-in">
+          <h2 className="how-ttl" id="how-title">Nasıl <span>Çalışır?</span></h2>
+          <p className="how-sub" id="how-sub">3 adımda şezlong rezervasyonu</p>
+          <div className="hgrid">
+            <div className="hs">
+              <div className="hn"><span className="hn-num">1</span></div>
+              <span className="hi">📍</span>
+              <h3 id="how1-title">Tesis Seç</h3>
+              <p id="how1-desc">Konum, tesis tipi veya tarihe göre filtrele.</p>
+            </div>
+            <div className="hs">
+              <div className="hn"><span className="hn-num">2</span></div>
+              <span className="hi">🪑</span>
+              <h3 id="how2-title">Şezlong Seç</h3>
+              <p id="how2-desc">Tesis planı üzerinden istediğin şezlongu seç.</p>
+            </div>
+            <div className="hs">
+              <div className="hn"><span className="hn-num">3</span></div>
+              <span className="hi">💳</span>
+              <h3 id="how3-title">Öde &amp; Uzan</h3>
+              <p id="how3-desc">Güvenli ödeme yap, QR kodunu göster.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* B2B */}
+      <section className="b2b">
+        <div className="b2b-in">
+          <div>
+            <div className="bm-tag" id="b2b-tag">Tesis Sahipleri İçin</div>
+            <h2 id="b2b-title">Tesisinizi MyLoungers&apos;a ekleyin</h2>
+            <p className="desc" id="b2b-desc">Otel, beach club veya plaj işletmenizi platforma ekleyin.</p>
+            <div className="b2b-acts">
+              <button type="button" className="btn-solid" id="b2b-btn1" onClick={() => setBasvuruOpen(true)}>Başvuru Formu →</button>
+              <button type="button" className="btn-ghost" id="b2b-btn2">Demo İzle</button>
+            </div>
+          </div>
+          <div className="b2bcards">
+            <div className="b2bc">
+              <div className="b2bi">📈</div>
+              <div>
+                <h4 id="b2b1-title">Doluluk Oranını Artır</h4>
+                <p id="b2b1-desc">Sezon boyunca %90+ doluluk oranı hedefleyin, her şezlong gelir getirsin.</p>
+              </div>
+            </div>
+            <div className="b2bc">
+              <div className="b2bi">💳</div>
+              <div>
+                <h4 id="b2b2-title">Online Ödeme &amp; Raporlama</h4>
+                <p id="b2b2-desc">iyzico altyapısıyla tahsilatlar otomatik, raporlar anlık — kasaya dokunmadan.</p>
+              </div>
+            </div>
+            <div className="b2bc">
+              <div className="b2bi">🌟</div>
+              <div>
+                <h4 id="b2b3-title">Ücretsiz Tesis Sayfası</h4>
+                <p id="b2b3-desc">Fotoğraf, harita, şezlong planı — tesisiniz 10 dakikada yayında.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* REVIEWS */}
+      <section className="rev">
+        <div className="sec-row">
+          <h2 className="sec-h" id="rev-title">Kullanıcılar Ne Diyor?</h2>
+          <a href="/yorumlar" className="sec-a" id="rev-all">Tüm yorumlar →</a>
+        </div>
+        <div className="rgrid">
+          <div className="rc">
+            <div className="rc-dest" id="rev1-dest">🏖️ Bodrum · Zuzuu Beach Hotel</div>
+            <div className="rc-stars">★★★★★</div>
+            <p className="rc-text" id="rev1-text">Bodrum tatilinde şezlong için saatlerce beklemek zorunda kalmadık!</p>
+            <div className="rc-auth">
+              <div className="rc-av">AY</div>
+              <div>
+                <div className="rc-name">Ayşe Y.</div>
+                <div className="rc-loc" id="rev1-loc">İstanbul · Doğrulanmış</div>
+              </div>
+            </div>
+          </div>
+          <div className="rc">
+            <div className="rc-dest" id="rev2-dest">🏊 Marmaris · Aqua Resort</div>
+            <div className="rc-stars">★★★★★</div>
+            <p className="rc-text" id="rev2-text">QR kod ile giriş süper. Kasaya uğramak yok, kuyruk yok!</p>
+            <div className="rc-auth">
+              <div className="rc-av">MK</div>
+              <div>
+                <div className="rc-name">Mehmet K.</div>
+                <div className="rc-loc" id="rev2-loc">Ankara · Doğrulanmış</div>
+              </div>
+            </div>
+          </div>
+          <div className="rc">
+            <div className="rc-dest" id="rev3-dest">🌊 Fethiye · Paradise Beach</div>
+            <div className="rc-stars">★★★★★</div>
+            <p className="rc-text" id="rev3-text">Denize en yakın şezlongu seçebildim. Uygulama çok kolay!</p>
+            <div className="rc-auth">
+              <div className="rc-av">ZD</div>
+              <div>
+                <div className="rc-name">Zeynep D.</div>
+                <div className="rc-loc" id="rev3-loc">İzmir · Doğrulanmış</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer>
+        <div className="ft">
+          <div>
+            <img src="/logo.png" alt="MyLoungers" className="fl-logo" />
+            <p className="fd" id="footer-desc">Türkiye&apos;nin şezlong rezervasyon platformu.</p>
+            <div className="fa">
+              <a href="#" className="fapp">🍎 App Store</a>
+              <a href="#" className="fapp">🤖 Google Play</a>
+            </div>
+          </div>
+          <div className="fcol">
+            <h5 id="ft-p">Platform</h5>
+            <ul>
+              <li><a href="/arama" id="ft-p1">Tesisleri Keşfet</a></li>
+              <li><a href="/harita" id="ft-p2">Harita ile Ara</a></li>
+              <li><a href="/nasil-calisir" id="ft-p3">Nasıl Çalışır?</a></li>
+              <li><a href="/rezervasyonlarim" id="ft-p4">Rezervasyon Takibi</a></li>
             </ul>
           </div>
-          <div className="flex-1 overflow-hidden rounded-2xl border-2 border-gray-200 shadow-xl">
-            <div className="border-b border-gray-200 bg-white p-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-gray-900">Zuzuu Beach Hotel</span>
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">Şezlong Planı</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-6 gap-1 bg-gray-100 p-3">
-              {Array.from({ length: 24 }).map((_, i) => (
-                <div key={i} className={`flex aspect-square items-center justify-center rounded text-[10px] font-bold ${i % 3 === 0 ? "bg-teal/20 text-teal-dark border border-teal/40" : "bg-amber-50 text-amber-800 border border-amber-200"}`}>
-                  {i % 3 === 0 ? "S" : "G"}
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-4 border-t border-gray-200 bg-white p-3">
-              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded bg-teal/30 border border-teal"></div><span className="text-xs text-gray-600">Silver</span></div>
-              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded bg-amber-100 border border-amber-300"></div><span className="text-xs text-gray-600">Gold</span></div>
-            </div>
+          <div className="fcol">
+            <h5 id="ft-c">Kurumsal</h5>
+            <ul>
+              <li><a href="/b2b/basvuru" id="ft-c1">Tesis Başvurusu</a></li>
+              <li><a href="/hakkimizda" id="ft-c2">Hakkımızda</a></li>
+              <li><a href="/iletisim" id="ft-c3">İletişim</a></li>
+            </ul>
+          </div>
+          <div className="fcol">
+            <h5 id="ft-s">Destek</h5>
+            <ul>
+              <li><a href="/kvkk" id="ft-s1">KVKK Metni</a></li>
+              <li><a href="/gizlilik" id="ft-s2">Gizlilik</a></li>
+              <li><a href="/iptal-iade" id="ft-s3">İptal &amp; İade</a></li>
+            </ul>
           </div>
         </div>
-      </section>
-
-      {/* 8. NASIL ÇALIŞIR - Koyu arka plan */}
-      <section className="relative overflow-hidden py-20" style={{ background: "linear-gradient(160deg, #070F1E 0%, #0B1929 55%, #0B1F3A 100%)" }}>
-        <div className="absolute -right-24 -top-36 h-[500px] w-[500px] rounded-full bg-teal/10 opacity-30" />
-        <div className="absolute -bottom-24 -left-24 h-[400px] w-[400px] rounded-full bg-coral/5 opacity-20" />
-        <div className="relative mx-auto max-w-[1400px] px-4 sm:px-7">
-          <h2 className="text-center text-2xl font-extrabold text-white sm:text-3xl">Nasıl <span className="text-teal">Çalışır?</span></h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-white/50">3 adımda şezlong rezervasyonu — hızlı, güvenli, temassız</p>
-          <div className="mt-12 grid gap-6 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 transition-all hover:border-teal/40 hover:shadow-xl">
-              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-teal/20 text-2xl font-black text-teal">1</span>
-              <h3 className="text-lg font-bold text-white">Tesis Seç</h3>
-              <p className="mt-2 text-sm text-white/50">Bölge ve tarihe göre arama yapın</p>
-              <ul className="mt-4 space-y-2">
-                {["100+ plaj ve otel", "Haritadan konum seç", "Fiyat karşılaştır"].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-white/70"><span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal"></span>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-coral/20 bg-coral/5 p-8 transition-all hover:border-coral/40 hover:shadow-xl">
-              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-coral/20 text-2xl font-black text-coral">2</span>
-              <h3 className="text-lg font-bold text-white">Şezlong Seç</h3>
-              <p className="mt-2 text-sm text-white/50">Harita üzerinden tam konumunu seçin</p>
-              <ul className="mt-4 space-y-2">
-                {["Silver, Gold, Platinum", "Denize yakınlık gör", "QR rezervasyon"].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-white/70"><span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-coral"></span>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 transition-all hover:border-teal/40 hover:shadow-xl">
-              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-teal/20 text-2xl font-black text-teal">3</span>
-              <h3 className="text-lg font-bold text-white">Öde & Uzan</h3>
-              <p className="mt-2 text-sm text-white/50">Güvenli ödeme, QR ile giriş</p>
-              <ul className="mt-4 space-y-2">
-                {["iyzico ile ödeme", "Anında onay", "QR temassız giriş"].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-white/70"><span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal"></span>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 9. TESİS SAHİPLERİ / B2B */}
-      <section className="border-t border-gray-200 bg-gray-50 py-16">
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-12 px-4 md:flex-row md:items-start md:gap-16 sm:px-7">
-          <div className="flex-1">
-            <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">Tesisinizi MyLoungers&apos;a ekleyin</h2>
-            <p className="mt-3 text-gray-600">Plaj veya otel tesisinizi platforma ekleyin. Rezervasyonlarınızı tek yerden yönetin, doluluk oranınızı artırın.</p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/b2b/basvuru" className="inline-flex items-center gap-2 rounded-lg bg-navy px-5 py-3 font-bold text-white transition-colors hover:bg-navy/90">Başvuru Formu →</Link>
-              <Link href="/b2b/demo" className="inline-flex items-center gap-2 rounded-lg border-2 border-gray-200 bg-white px-5 py-3 font-bold text-gray-700 transition-colors hover:border-gray-400">Demo İzle</Link>
-            </div>
-          </div>
-          <div className="flex flex-1 flex-col gap-3">
-            {[
-              { icon: "📈", title: "Doluluk Oranını Artır", desc: "Sezon boyunca %90+ doluluk hedefleyin, her şezlong gelir getirsin." },
-              { icon: "💳", title: "Online Ödeme & Raporlama", desc: "iyzico altyapısıyla tahsilatlar otomatik, raporlar anlık." },
-              { icon: "🌟", title: "Ücretsiz Tesis Sayfası", desc: "Fotoğraf, harita, şezlong planı — tesisiniz 10 dakikada yayında." },
-            ].map((f, i) => (
-              <div key={i} className="flex gap-4 rounded-xl border-2 border-gray-200 bg-white p-4 transition-colors hover:border-teal">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-teal-light text-lg">{f.icon}</div>
-                <div>
-                  <h4 className="font-bold text-gray-900">{f.title}</h4>
-                  <p className="mt-1 text-sm text-gray-500">{f.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 10. KULLANICI YORUMLARI */}
-      <section className="mx-auto max-w-[1400px] px-4 py-16 sm:px-7">
-        <div className="mb-10 flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">Kullanıcılarımız Ne Diyor?</h2>
-          <Link href="/yorumlar" className="text-sm font-bold text-teal hover:underline">Tüm yorumlar →</Link>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {yorumlar.map((y, i) => (
-            <div key={i} className="rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-sm">
-              <p className="mb-2 text-xs font-bold text-teal">{y.dest}</p>
-              <div className="mb-3 text-amber-500">★★★★★</div>
-              <p className="mb-4 text-sm leading-relaxed text-gray-600">{y.text}</p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-light text-xs font-bold text-teal-dark">
-                  {y.author.split(" ").map((n) => n[0]).join("").replace(".", "").slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900">{y.author}</p>
-                  <p className="text-xs text-gray-500">{y.loc}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 11. FOOTER */}
-      <footer className="bg-navy px-4 py-12 sm:px-7">
-        <div className="mx-auto max-w-[1400px]">
-          <div className="grid gap-8 border-b border-white/10 pb-8 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-white">
-                <span>🪑☀️</span> MyLoungers
-              </Link>
-              <p className="mt-3 max-w-[240px] text-sm text-white/40">Türkiye&apos;nin plaj ve otel şezlong rezervasyon platformu. Hayalindeki plajı rezerve et.</p>
-              <div className="mt-4 flex gap-2">
-                <a href="#" className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-2 text-xs font-bold text-white/70 transition-colors hover:border-white/40 hover:text-white">🍎 App Store</a>
-                <a href="#" className="flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-2 text-xs font-bold text-white/70 transition-colors hover:border-white/40 hover:text-white">🤖 Google Play</a>
-              </div>
-            </div>
-            <div>
-              <h5 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-white/40">Platform</h5>
-              <ul className="space-y-2">
-                <li><Link href="/arama" className="text-sm text-white/50 hover:text-white">Tesis Ara</Link></li>
-                <li><Link href="/kategoriler" className="text-sm text-white/50 hover:text-white">Kategoriler</Link></li>
-                <li><Link href="/nasil-calisir" className="text-sm text-white/50 hover:text-white">Nasıl Çalışır</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-white/40">Kurumsal</h5>
-              <ul className="space-y-2">
-                <li><Link href="/hakkimizda" className="text-sm text-white/50 hover:text-white">Hakkımızda</Link></li>
-                <li><Link href="/iletisim" className="text-sm text-white/50 hover:text-white">İletişim</Link></li>
-                <li><Link href="/b2b" className="text-sm text-white/50 hover:text-white">Tesis Sahipleri</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-white/40">Destek / KVKK</h5>
-              <ul className="space-y-2">
-                <li><Link href="/gizlilik" className="text-sm text-white/50 hover:text-white">Gizlilik Politikası</Link></li>
-                <li><Link href="/kvkk" className="text-sm text-white/50 hover:text-white">KVKK</Link></li>
-                <li><Link href="/yardim" className="text-sm text-white/50 hover:text-white">Yardım</Link></li>
-              </ul>
-            </div>
-          </div>
-          <p className="mt-6 text-center text-xs text-white/30">© {new Date().getFullYear()} MyLoungers. Tüm hakları saklıdır.</p>
+        <div className="fb">
+          <span id="ft-copy">© 2025 MyLoungers · BGS İnteraktif</span>
+          <span id="ft-made">🇹🇷 Türkiye&apos;de yapıldı</span>
         </div>
       </footer>
+
+      {/* BASVURU MODAL */}
+      <div className={`basvuru-overlay ${basvuruOpen ? "open" : ""}`} onClick={() => setBasvuruOpen(false)}>
+        <div className="basvuru-modal" onClick={(e) => e.stopPropagation()}>
+          <button type="button" className="bm-close-btn" onClick={() => setBasvuruOpen(false)}>×</button>
+          <div className="bm-left">
+            <div className="bm-tag">Tesis Sahipleri</div>
+            <h2 className="bm-ttl">Tesisinizi <span>MyLoungers</span>&apos;a ekleyin</h2>
+            <p className="bm-desc">Platformumuzla rezervasyonlarınızı kolayca yönetin.</p>
+            <div className="bm-feats">
+              <div className="bm-feat">
+                <div className="bm-feat-ico">✓</div>
+                <div><div className="bm-feat-ttl">Ücretsiz Kurulum</div><div className="bm-feat-desc">Sözleşme yok</div></div>
+              </div>
+              <div className="bm-feat">
+                <div className="bm-feat-ico">✓</div>
+                <div><div className="bm-feat-ttl">7/24 Destek</div><div className="bm-feat-desc">Her zaman yanınızdayız</div></div>
+              </div>
+            </div>
+            <div className="bm-ref">
+              <div className="bm-ref-stars">★★★★★</div>
+              <p className="bm-ref-text">&quot;MyLoungers ile doluluk oranımız %40 arttı.&quot;</p>
+              <div className="bm-ref-auth">
+                <div className="bm-ref-av">ZK</div>
+                <div><div className="bm-ref-name">Zeynep K.</div><div className="bm-ref-role">Tesis Sahibi</div></div>
+              </div>
+            </div>
+            <div className="bm-trust">
+              <div className="bm-trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Ücretsiz Kurulum</div>
+              <div className="bm-trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>7/24 Destek</div>
+              <div className="bm-trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Sözleşme YOK</div>
+            </div>
+          </div>
+          <div className="bm-right">
+            <div className="bm-steps">
+              <div className={`bm-step ${bmPane >= 1 ? "active" : ""} ${bmPane > 1 ? "done" : ""}`}><div className="bm-sn">{bmPane > 1 ? "✓" : "1"}</div><div className="bm-sl">İşletme</div></div>
+              <div className={`bm-step ${bmPane >= 2 ? "active" : ""} ${bmPane > 2 ? "done" : ""}`}><div className="bm-sn">{bmPane > 2 ? "✓" : "2"}</div><div className="bm-sl">Tesis</div></div>
+              <div className={`bm-step ${bmPane >= 3 ? "active" : ""}`}><div className="bm-sn">3</div><div className="bm-sl">İletişim</div></div>
+            </div>
+            <div className="bm-prog"><div className="bm-pb" style={{ width: bmPane === 1 ? "33%" : bmPane === 2 ? "66%" : "99%" }} /></div>
+            {bmPane === 1 && (
+              <div className="bm-pane on">
+                <div className="bm-pttl">İşletme Bilgileri</div>
+                <div className="bm-psub">Tesisiniz hakkında temel bilgileri girin.</div>
+                <div className="bfg">
+                  <label className="bfl">İşletme Adı *</label>
+                  <div className="biw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1" /><path d="M16 22V12H8v10" /><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" /></svg><input className="bfi" type="text" placeholder="Örn: Zuzuu Beach Club" /></div>
+                </div>
+                <div className="bfg">
+                  <label className="bfl">Tesis Türü *</label>
+                  <div className="tgrid">
+                    {["Hotel", "Beach Club", "Aqua Park", "Pansiyon", "Tatil Köyü", "Havuzlu Tesis"].map((t, i) => (
+                      <button key={i} type="button" className={`tbtn ${i === 0 ? "sel" : ""}`}><span className="ti">{["🏨", "🏖️", "💦", "🏠", "🌴", "🏊"][i]}</span>{t}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="bfg2">
+                  <div><label className="bfl">Şehir *</label><select className="bfs"><option value="">Seçiniz</option><option>Bodrum</option><option>Antalya</option><option>Marmaris</option></select></div>
+                  <div><label className="bfl">İlçe / Bölge</label><input className="bfi" type="text" placeholder="Örn: Yalıkavak" /></div>
+                </div>
+                <div className="bm-nav">
+                  <div />
+                  <button type="button" className="bm-next" onClick={() => setBmPane(2)}>Devam Et <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg></button>
+                </div>
+              </div>
+            )}
+            {bmPane === 2 && (
+              <div className="bm-pane on">
+                <div className="bm-pttl">Tesis Detayları</div>
+                <div className="bm-psub">Kapasite ve özellikler hakkında bilgi verin.</div>
+                <div className="bfg"><label className="bfl">Şezlong Kapasitesi: <span>50</span> adet</label><div className="cap-w"><input type="range" className="cap-s" min={5} max={500} defaultValue={50} step={5} /><div className="cap-v">50</div></div></div>
+                <div className="bm-nav">
+                  <button type="button" className="bm-prev" onClick={() => setBmPane(1)}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg> Geri</button>
+                  <button type="button" className="bm-next" onClick={() => setBmPane(3)}>Devam Et <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg></button>
+                </div>
+              </div>
+            )}
+            {bmPane === 3 && (
+              <div className="bm-pane on">
+                <div className="bm-pttl">İletişim Bilgileri</div>
+                <div className="bm-psub">Sizi en kısa sürede arayalım.</div>
+                <div className="bfg2">
+                  <div><label className="bfl">Ad *</label><input className="bfi" type="text" placeholder="Adınız" /></div>
+                  <div><label className="bfl">Soyad *</label><input className="bfi" type="text" placeholder="Soyadınız" /></div>
+                </div>
+                <div className="bfg"><label className="bfl">Telefon *</label><div className="biw"><input className="bfi" type="tel" placeholder="+90 5XX XXX XX XX" /></div></div>
+                <div className="bfg"><label className="bfl">E-posta</label><div className="biw"><input className="bfi" type="email" placeholder="ornek@isletme.com" /></div></div>
+                <div className="bm-nav" style={{ flexDirection: "column", gap: 7, alignItems: "stretch" }}>
+                  <button type="button" className="bm-sub">🚀 Başvurumu Tamamla</button>
+                  <button type="button" className="bm-prev" style={{ justifyContent: "center" }} onClick={() => setBmPane(2)}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg> Geri</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
