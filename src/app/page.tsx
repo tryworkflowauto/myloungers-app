@@ -56,9 +56,8 @@ export default function Home() {
       {/* 1. NAVBAR */}
       <nav className="sticky top-0 z-[300] border-b border-gray-200 bg-white/97 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-[1400px] items-center gap-5 px-4 sm:px-7">
-          <Link href="/" className="flex items-center gap-2 text-xl font-bold text-teal md:text-2xl">
-            <Image src="/logo.png" alt="MyLoungers" width={80} height={80} className="h-10 w-auto md:h-12" />
-            MyLoungers
+          <Link href="/" className="flex items-center">
+            <Image src="/logo.png" alt="MyLoungers" width={120} height={40} className="h-10 w-auto object-contain" />
           </Link>
           <div className="hidden flex-1 justify-center gap-1 md:flex">
             <Link href="/kategori/hotel" className="rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-gray-600 transition-all hover:border-teal hover:bg-teal-light hover:text-navy">
