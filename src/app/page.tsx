@@ -298,7 +298,7 @@ export default function Home() {
               )}
             </div>
             <Link href="/giris" className="btn-login" id="btnLogin">{t.btn_login}</Link>
-            <Link href="/uye-ol" className="btn-signup" id="btnSignup">{t.btn_signup}</Link>
+            <Link href="/giris?tab=register" className="btn-signup" id="btnSignup">{t.btn_signup}</Link>
           </div>
           <button
             type="button"
@@ -340,8 +340,8 @@ export default function Home() {
             ))}
           </div>
           <div className="mob-btns">
-            <button type="button" className="mob-btn-login">{t.btn_login}</button>
-            <button type="button" className="mob-btn-signup">{t.btn_signup}</button>
+            <Link href="/giris" className="mob-btn-login" onClick={() => setMenuOpen(false)}>{t.btn_login}</Link>
+            <Link href="/giris?tab=register" className="mob-btn-signup" onClick={() => setMenuOpen(false)}>{t.btn_signup}</Link>
           </div>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>

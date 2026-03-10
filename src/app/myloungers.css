@@ -45,7 +45,7 @@ button.mcat{border:1.5px solid var(--border);appearance:none;-webkit-appearance:
 .mob-panel-logo{height:44px}
 .mob-close{background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--ink3);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .mob-btns{display:flex;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
-.mob-btns button{flex:1;padding:11px;border-radius:var(--r);font-size:.85rem;font-weight:700;cursor:pointer}
+.mob-btns button,.mob-btns a{flex:1;padding:11px;border-radius:var(--r);font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center}
 .mob-btn-login{background:var(--soft);color:var(--ink);border:1.5px solid var(--border)}
 .mob-btn-signup{background:var(--navy);color:#fff;border:none}
 .mob-sec-title{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding:14px 18px 6px}
