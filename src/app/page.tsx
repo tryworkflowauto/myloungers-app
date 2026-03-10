@@ -133,13 +133,50 @@ const TESIS_IMGS = [
 ];
 
 const ILLER: Record<string, string[]> = {
-  Adana: ["Seyhan", "Çukurova", "Yüreğir"],
+  Muğla: ["Bodrum", "Yalıkavak", "Turgutreis", "Gümbet", "Gündoğan", "Ortakent", "Bitez", "Güvercinlik", "Marmaris", "Fethiye", "Datça", "Milas"],
+  Antalya: ["Kemer", "Alanya", "Side", "Manavgat", "Belek", "Kaş", "Kalkan"],
+  İzmir: ["Çeşme", "Alaçatı", "Foça", "Urla", "Seferihisar"],
+  İstanbul: ["Beşiktaş", "Sarıyer", "Bakırköy", "Kadıköy"],
   Ankara: ["Çankaya", "Keçiören", "Mamak", "Etimesgut"],
-  Antalya: ["Muratpaşa", "Konyaaltı", "Alanya", "Manavgat", "Kemer", "Belek"],
-  Muğla: ["Bodrum", "Yalıkavak", "Marmaris", "Fethiye", "Datça", "Milas"],
-  İzmir: ["Konak", "Çeşme", "Karşıyaka", "Bornova"],
+  Adana: [],
   Aydın: ["Didim", "Kuşadası", "Söke"],
 };
+
+const FACILITY_TYPES = [
+  { icon: "🏨", label: "Hotel" },
+  { icon: "🏖️", label: "Beach Club" },
+  { icon: "💦", label: "Aqua Park" },
+  { icon: "🌴", label: "Tatil Köyü" },
+  { icon: "🏠", label: "Pansiyon" },
+  { icon: "🏊", label: "Havuzlu Tesis" },
+];
+
+const POPULAR_TESISLER = [
+  { name: "Zuzuu Beach Hotel", loc: "Bodrum (Muğla)", icon: "🏖️" },
+  { name: "Marmaris Aqua Resort", loc: "Marmaris (Muğla)", icon: "🌊" },
+  { name: "Fethiye Paradise Beach", loc: "Fethiye (Muğla)", icon: "🏖️" },
+  { name: "Bodrum Blue Bay Hotel", loc: "Bodrum (Muğla)", icon: "🏨" },
+];
+
+const SORT_OPTS = [
+  { icon: "⭐", label: "Popüler" },
+  { icon: "💰", label: "Ucuzdan Pahalıya" },
+  { icon: "💎", label: "Pahalıdan Ucuza" },
+  { icon: "🏆", label: "En Yüksek Puan" },
+];
+
+const RATING_OPTS = ["Tümü", "3★+", "4★+", "4.5★+"];
+
+const FEATURE_OPTS = [
+  { icon: "🏊", label: "Havuz" },
+  { icon: "📶", label: "Wi-Fi" },
+  { icon: "🌊", label: "Denize Sıfır" },
+  { icon: "🍽️", label: "Restoran" },
+  { icon: "🍹", label: "Bar" },
+  { icon: "⛱️", label: "Şemsiye" },
+  { icon: "🅿️", label: "Otopark" },
+  { icon: "✈️", label: "Havalimanı Transfer" },
+];
 
 const TESISLER = [
   { name: "Zuzuu Beach Hotel", il: "Bodrum (Muğla)", ilce: "Yalıkavak", type: "hotel" },
@@ -169,6 +206,12 @@ export default function Home() {
   const [activeIlce, setActiveIlce] = useState("");
   const [ilSearch, setIlSearch] = useState("");
   const [barWidth, setBarWidth] = useState(0);
+  const [calDate, setCalDate] = useState(() => new Date());
+  const [filterSort, setFilterSort] = useState(0);
+  const [filterPriceMin, setFilterPriceMin] = useState(0);
+  const [filterPriceMax, setFilterPriceMax] = useState(5000);
+  const [filterRating, setFilterRating] = useState(0);
+  const [filterFeatures, setFilterFeatures] = useState<number[]>([]);
 
   useEffect(() => {
     const t = setInterval(() => setSlideIdx((s) => (s + 1) % SLIDER_IMGS.length), 5500);
@@ -193,12 +236,26 @@ export default function Home() {
     return () => document.removeEventListener("click", onClose);
   }, [isLangOpen]);
 
+  useEffect(() => {
+    const onClose = () => { closePanels(); setFilterOpen(false); };
+    if (panelRegion || panelType || panelDate || panelName || filterOpen) {
+      document.addEventListener("click", onClose);
+      return () => document.removeEventListener("click", onClose);
+    }
+  }, [panelRegion, panelType, panelDate, panelName, filterOpen, closePanels]);
+
   const openPanel = useCallback((p: "region" | "type" | "date" | "name") => {
+    setFilterOpen(false);
+    const isOpen = (p === "region" && panelRegion) || (p === "type" && panelType) || (p === "date" && panelDate) || (p === "name" && panelName);
+    if (isOpen) {
+      closePanels();
+      return;
+    }
     setPanelRegion(p === "region");
     setPanelType(p === "type");
     setPanelDate(p === "date");
     setPanelName(p === "name");
-  }, []);
+  }, [panelRegion, panelType, panelDate, panelName, closePanels]);
 
   const closePanels = useCallback(() => {
     setPanelRegion(false);
@@ -206,6 +263,26 @@ export default function Home() {
     setPanelDate(false);
     setPanelName(false);
   }, []);
+
+  const openFilterPanel = useCallback(() => {
+    closePanels();
+    setFilterOpen((prev) => !prev);
+  }, [closePanels]);
+
+  const handleTesisAra = useCallback(() => {
+    const filters = {
+      region: activeIlce ? `${activeIl} / ${activeIlce}` : activeIl || null,
+      type: srchType || null,
+      date: srchDate || null,
+      name: srchName || null,
+      sort: SORT_OPTS[filterSort]?.label || null,
+      priceMin: filterPriceMin,
+      priceMax: filterPriceMax,
+      rating: RATING_OPTS[filterRating] || null,
+      features: filterFeatures.map((i) => FEATURE_OPTS[i]?.label),
+    };
+    console.log("Arama filtreleri:", filters);
+  }, [activeIl, activeIlce, srchType, srchDate, srchName, filterSort, filterPriceMin, filterPriceMax, filterRating, filterFeatures]);
 
   const ilceler = activeIl && ILLER[activeIl] ? ILLER[activeIl] : [];
   const filteredIller = Object.keys(ILLER).filter((il) =>
@@ -369,189 +446,231 @@ export default function Home() {
         </div>
       </div>
 
-      {/* BACKDROP */}
-      <div className={`srch-backdrop ${panelRegion || panelType || panelDate || panelName ? "on" : ""}`} onClick={closePanels} />
-
-      {/* SEARCH */}
+      {/* SEARCH BAR — sticky, 5 sections */}
       <div className="srch-wrap">
-        <div className="srch-in" style={{ position: "relative" }}>
+        <div className="srch-in">
           <div className="srch-card">
-            <div
-              className={`sf ${panelRegion ? "active" : ""}`}
-              data-panel="panelRegion"
-              onClick={() => openPanel("region")}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="sfl" id="sfl-region">{t.sfl_region}</span>
-              <span className={`sfv ${srchRegion ? "selected" : ""}`} id="sfv-region">{srchRegion || t.sfv_region}</span>
-            </div>
-            <div
-              className={`sf ${panelType ? "active" : ""}`}
-              data-panel="panelType"
-              onClick={() => openPanel("type")}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="sfl">{t.sfl_type}</span>
-              <span className={`sfv ${srchType ? "selected" : ""}`}>{srchType || t.sfv_type}</span>
-            </div>
-            <div
-              className={`sf ${panelDate ? "active" : ""}`}
-              data-panel="panelDate"
-              onClick={() => openPanel("date")}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="sfl">{t.sfl_date}</span>
-              <span className={`sfv ${srchDate ? "selected" : ""}`}>{srchDate || t.sfv_date}</span>
-            </div>
-            <div
-              className={`sf ${panelName ? "active" : ""}`}
-              data-panel="panelName"
-              onClick={() => openPanel("name")}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="sfl">{t.sfl_name}</span>
-              <span className={`sfv ${srchName ? "selected" : ""}`}>{srchName || t.sfv_name}</span>
-            </div>
-            <button type="button" className="srch-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-              {t.srch_btn}
-            </button>
-            <button
-              type="button"
-              className={`filter-btn ${filterOpen ? "active" : ""}`}
-              onClick={() => setFilterOpen(true)}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-              <span>{t.filter_btn}</span>
-            </button>
-          </div>
-
-          {/* Region panel */}
-          <div className={`sf-panel ${panelRegion ? "open" : ""}`} id="panelRegion" style={{ position: "relative", top: 0, left: 0 }}>
-            <div className="sf-panel-inn region-panel">
-              <div className="region-cols">
-                <div className="region-iller">
-                  <div className="r-search">
+            {/* BÖLGE */}
+            <div className="srch-field-wrap">
+              <div
+                className={`sf ${panelRegion ? "active" : ""} ${srchRegion ? "filled" : ""}`}
+                onClick={(e) => { e.stopPropagation(); openPanel("region"); }}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="sfl">{t.sfl_region}</span>
+                <span className="sfv">{srchRegion || t.sfv_region}</span>
+              </div>
+              {panelRegion && (
+                <div className="srch-dropdown region-dropdown" onClick={(e) => e.stopPropagation()}>
+                  <div className="region-search">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
                     <input type="text" placeholder={t.r_search_placeholder} value={ilSearch} onChange={(e) => setIlSearch(e.target.value)} />
                   </div>
-                  <div id="illerList">
-                    {filteredIller.map((il) => (
-                      <div
-                        key={il}
-                        className={`r-item ${activeIl === il ? "active" : ""}`}
-                        onClick={() => { setActiveIl(il); setActiveIlce(""); }}
-                      >
-                        {il}<span className="r-arr">›</span>
+                  <div className="region-cols">
+                    <div className="region-iller" style={{ width: 280 }}>
+                      {filteredIller.map((il) => (
+                        <div key={il} className={`r-item ${activeIl === il ? "active" : ""}`} onClick={() => { setActiveIl(il); setActiveIlce(""); }}>
+                          {il}<span className="r-arr">›</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="region-ilceler" style={{ width: 340 }}>
+                      {activeIl ? (
+                        <>
+                          <div className="r-ilce-ttl">{activeIl}</div>
+                          <div className={`r-ilce-item ${!activeIlce ? "sel" : ""}`} onClick={() => setActiveIlce("")}>{t.r_all}</div>
+                          {ilceler.map((ilce) => (
+                            <div key={ilce} className={`r-ilce-item ${activeIlce === ilce ? "sel" : ""}`} onClick={() => setActiveIlce(ilce)}>{ilce}</div>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="r-empty">{t.r_select_il}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="srch-drop-footer">
+                    <span className="srch-drop-val">{activeIlce ? `${activeIl} / ${activeIlce}` : activeIl || ""}</span>
+                    <button type="button" className="srch-drop-btn" onClick={() => { setActiveIl(""); setActiveIlce(""); setSrchRegion(""); }}>{t.r_clear}</button>
+                    <button type="button" className="srch-drop-btn primary" onClick={() => { setSrchRegion(activeIlce ? `${activeIl} / ${activeIlce}` : activeIl); closePanels(); }}>{t.r_ok}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* TESİS TİPİ */}
+            <div className="srch-field-wrap">
+              <div
+                className={`sf ${panelType ? "active" : ""} ${srchType ? "filled" : ""}`}
+                onClick={(e) => { e.stopPropagation(); openPanel("type"); }}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="sfl">{t.sfl_type}</span>
+                <span className="sfv">{srchType || t.sfv_type}</span>
+              </div>
+              {panelType && (
+                <div className="srch-dropdown type-dropdown" onClick={(e) => e.stopPropagation()}>
+                  <div className="type-title">TESİS TÜRÜ SEÇİN</div>
+                  <div className="type-grid">
+                    {FACILITY_TYPES.map((ft, i) => (
+                      <button key={i} type="button" className={`type-btn ${srchType === ft.label ? "sel" : ""}`} onClick={() => setSrchType(srchType === ft.label ? "" : ft.label)}>
+                        <span>{ft.icon}</span><span>{ft.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="srch-drop-footer">
+                    <button type="button" className="srch-drop-btn" onClick={() => setSrchType("")}>{t.r_clear}</button>
+                    <button type="button" className="srch-drop-btn primary" onClick={() => closePanels()}>Uygula</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* TARİH */}
+            <div className="srch-field-wrap">
+              <div
+                className={`sf ${panelDate ? "active" : ""} ${srchDate ? "filled" : ""}`}
+                onClick={(e) => { e.stopPropagation(); openPanel("date"); }}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="sfl">{t.sfl_date}</span>
+                <span className="sfv">{srchDate || t.sfv_date}</span>
+              </div>
+              {panelDate && (
+                <div className="srch-dropdown date-dropdown" onClick={(e) => e.stopPropagation()}>
+                  <div className="cal-header">
+                    <button type="button" className="cal-nav" onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() - 1))}>‹</button>
+                    <span className="cal-month">{calDate.toLocaleDateString("tr-TR", { month: "long", year: "numeric" })}</span>
+                    <button type="button" className="cal-nav" onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() + 1))}>›</button>
+                  </div>
+                  <div className="cal-weekdays">PT SA ÇA PE CU CT PZ</div>
+                  <div className="cal-grid">
+                    {(() => {
+                      const y = calDate.getFullYear(), m = calDate.getMonth();
+                      const first = new Date(y, m, 1);
+                      const last = new Date(y, m + 1, 0);
+                      const startPad = (first.getDay() + 6) % 7;
+                      const days: (Date | null)[] = [...Array(startPad)].fill(null) as null[];
+                      for (let d = 1; d <= last.getDate(); d++) days.push(new Date(y, m, d));
+                      const now = new Date();
+                      now.setHours(0, 0, 0, 0);
+                      return days.map((d, i) => {
+                        if (!d) return <div key={i} className="cal-cell empty" />;
+                        const isToday = d.getTime() === now.getTime();
+                        const isPast = d < now;
+                        const sel = srchDate && new Date(srchDate).toDateString() === d.toDateString();
+                        return (
+                          <button key={i} type="button" className={`cal-cell ${isToday ? "today" : ""} ${isPast ? "past" : ""} ${sel ? "sel" : ""}`} disabled={isPast} onClick={() => { setSrchDate(d.toISOString().slice(0, 10)); closePanels(); }}>{d.getDate()}</button>
+                        );
+                      });
+                    })()}
+                  </div>
+                  <div className="srch-drop-footer"><button type="button" className="srch-drop-btn" onClick={() => { setSrchDate(""); }}>{t.r_clear}</button></div>
+                </div>
+              )}
+            </div>
+
+            {/* TESİS ADI */}
+            <div className="srch-field-wrap">
+              <div
+                className={`sf ${panelName ? "active" : ""} ${srchName ? "filled" : ""}`}
+                onClick={(e) => { e.stopPropagation(); openPanel("name"); }}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="sfl">{t.sfl_name}</span>
+                <span className="sfv">{srchName || t.sfv_name}</span>
+              </div>
+              {panelName && (
+                <div className="srch-dropdown name-dropdown" onClick={(e) => e.stopPropagation()}>
+                  <div className="name-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                    <input type="text" placeholder="Tesis adı yazın..." value={srchName} onChange={(e) => setSrchName(e.target.value)} />
+                  </div>
+                  <div className="name-title">POPÜLER TESİSLER</div>
+                  <div className="name-list">
+                    {POPULAR_TESISLER.filter((ts) => !srchName || ts.name.toLowerCase().includes(srchName.toLowerCase())).map((ts) => (
+                      <div key={ts.name} className="name-item" onClick={() => { setSrchName(ts.name); closePanels(); }}>
+                        <span>{ts.icon}</span>
+                        <span className="name-item-name">{ts.name}</span>
+                        <span className="name-item-loc">— {ts.loc}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="region-ilceler">
-                  {activeIl ? (
-                    <>
-                      <div className="r-ilce-ttl">{activeIl}</div>
-                      <div className={`r-ilce-item ${!activeIlce ? "sel" : ""}`} onClick={() => setActiveIlce("")}>{t.r_all}</div>
-                      {ilceler.map((ilce) => (
-                        <div key={ilce} className={`r-ilce-item ${activeIlce === ilce ? "sel" : ""}`} onClick={() => setActiveIlce(ilce)}>{ilce}</div>
-                      ))}
-                    </>
-                  ) : (
-                    <div style={{ padding: "12px 14px", fontSize: ".75rem", color: "var(--ink3)" }}>{t.r_select_il}</div>
-                  )}
-                </div>
-              </div>
-              <div className="r-footer">
-                <span className="r-footer-val" id="regionVal">{activeIlce ? `${activeIl} / ${activeIlce}` : activeIl || ""}</span>
-                <button type="button" className="r-btn-clear" onClick={() => { setActiveIl(""); setActiveIlce(""); setSrchRegion(""); }}>{t.r_clear}</button>
-                <button type="button" className="r-btn-ok" onClick={() => { setSrchRegion(activeIlce ? `${activeIl} / ${activeIlce}` : activeIl); closePanels(); }}>{t.r_ok}</button>
-              </div>
+              )}
             </div>
-          </div>
 
-          {/* Type panel */}
-          <div className={`sf-panel ${panelType ? "open" : ""}`} id="panelType">
-            <div className="sf-panel-inn type-panel">
-              <div className="type-grid-p">
-                {["Hotel", "Beach Club", "Aqua Park", "Tatil Köyü", "Pansiyon", "Havuzlu Tesis"].map((t, i) => (
-                  <button key={i} type="button" className="tp-btn">{t}</button>
-                ))}
+            {/* FİLTRELE */}
+            <div className="srch-field-wrap">
+              <div
+                className={`sf filter-trigger ${filterOpen ? "active" : ""}`}
+                onClick={(e) => { e.stopPropagation(); openFilterPanel(); }}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="sfl">{t.filter_btn}</span>
               </div>
             </div>
-          </div>
 
-          {/* Date panel */}
-          <div className={`sf-panel ${panelDate ? "open" : ""}`} id="panelDate">
-            <div className="sf-panel-inn date-panel">
-              <div className="cal-header">
-                <span className="cal-month">Tarih Seçin</span>
-              </div>
-              <input type="date" onChange={(e) => { setSrchDate(e.target.value); closePanels(); }} />
-            </div>
-          </div>
-
-          {/* Name panel */}
-          <div className={`sf-panel ${panelName ? "open" : ""}`} id="panelName">
-            <div className="sf-panel-inn name-panel">
-              <div className="name-inp-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                <input type="text" className="name-inp" placeholder="Tesis adı yazın..." onChange={(e) => setSrchName(e.target.value)} />
-              </div>
-              <div className="name-suggestions">
-                {TESISLER.slice(0, 4).map((t) => (
-                  <div key={t.name} className="name-sug" onClick={() => { setSrchName(t.name); closePanels(); }}>
-                    <span>{t.type === "hotel" ? "🏨" : t.type === "beach" ? "🏖️" : "💦"}</span>
-                    <span>{t.name}</span>
-                    <span className="name-sug-lbl">{t.il}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* TESİS ARA */}
+            <button type="button" className="srch-btn" onClick={(e) => { e.stopPropagation(); handleTesisAra(); }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+              {t.srch_btn}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* FILTER OVERLAY */}
+      {/* FİLTRELE PANELİ — sağdan açılır */}
       <div className={`filter-overlay ${filterOpen ? "open" : ""}`} onClick={() => setFilterOpen(false)} />
-      <div className={`filter-panel ${filterOpen ? "open" : ""}`}>
+      <div className={`filter-panel ${filterOpen ? "open" : ""}`} onClick={(e) => e.stopPropagation()}>
         <div className="fp-head">
-          <div className="fp-title">Filtreler</div>
+          <div className="fp-title">Filtrele</div>
           <button type="button" className="fp-close" onClick={() => setFilterOpen(false)}>×</button>
         </div>
         <div className="fp-body">
           <div className="fp-section">
-            <div className="fp-sec-title">Sıralama</div>
+            <button type="button" className="fp-location-btn">📍 🗺️ Konumumu Kullan</button>
+          </div>
+          <div className="fp-section">
+            <div className="fp-sec-title">SIRALAMA</div>
             <div className="fp-sort-grid">
-              <button type="button" className="fp-sort-btn sel">Popüler</button>
-              <button type="button" className="fp-sort-btn">Fiyat</button>
+              {SORT_OPTS.map((s, i) => (
+                <button key={i} type="button" className={`fp-sort-btn ${filterSort === i ? "sel" : ""}`} onClick={() => setFilterSort(i)}>{s.icon} {s.label}</button>
+              ))}
             </div>
           </div>
           <div className="fp-section">
-            <div className="fp-sec-title">Fiyat Aralığı</div>
+            <div className="fp-sec-title">GÜNLÜK FİYAT ARALIĞI</div>
             <div className="fp-price-row">
-              <div className="fp-price-box"><span className="fp-price-lbl">Min</span><span className="fp-price-val">₺0</span></div>
-              <span className="fp-price-sep">-</span>
-              <div className="fp-price-box"><span className="fp-price-lbl">Max</span><span className="fp-price-val">₺5000+</span></div>
+              <div className="fp-price-box"><span className="fp-price-lbl">MIN</span><span className="fp-price-val">₺{filterPriceMin}</span></div>
+              <span className="fp-price-sep">—</span>
+              <div className="fp-price-box"><span className="fp-price-lbl">MAX</span><span className="fp-price-val">₺{filterPriceMax}+</span></div>
+            </div>
+            <input type="range" className="fp-range" min={0} max={5000} value={filterPriceMax} onChange={(e) => setFilterPriceMax(Number(e.target.value))} />
+          </div>
+          <div className="fp-section">
+            <div className="fp-sec-title">MİNİMUM PUAN</div>
+            <div className="fp-rating-row">
+              {RATING_OPTS.map((r, i) => (
+                <button key={i} type="button" className={`fp-rating-btn ${filterRating === i ? "sel" : ""}`} onClick={() => setFilterRating(i)}>{r}</button>
+              ))}
             </div>
           </div>
           <div className="fp-section">
-            <div className="fp-sec-title">Yıldız</div>
-            <div className="fp-stars-row">
-              {[4, 5].map((s) => (
-                <button key={s} type="button" className="fp-star-btn">{s} ★</button>
+            <div className="fp-sec-title">ÖZELLİKLER</div>
+            <div className="fp-features">
+              {FEATURE_OPTS.map((f, i) => (
+                <button key={i} type="button" className={`fp-feat-btn ${filterFeatures.includes(i) ? "sel" : ""}`} onClick={() => setFilterFeatures((prev) => prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i])}>{f.icon} {f.label}</button>
               ))}
             </div>
           </div>
           <div className="fp-foot">
-            <button type="button" className="fp-clear-btn">Temizle</button>
-            <button type="button" className="fp-apply-btn" onClick={() => setFilterOpen(false)}>Uygula</button>
+            <button type="button" className="fp-clear-btn" onClick={() => { setFilterSort(0); setFilterPriceMin(0); setFilterPriceMax(5000); setFilterRating(0); setFilterFeatures([]); }}>Temizle</button>
+            <button type="button" className="fp-apply-btn" onClick={() => setFilterOpen(false)}>Sonuçları Gör</button>
           </div>
         </div>
       </div>
