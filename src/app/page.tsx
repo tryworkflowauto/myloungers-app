@@ -146,9 +146,6 @@ const FACILITY_TYPES = [
   { icon: "🏨", label: "Hotel" },
   { icon: "🏖️", label: "Beach Club" },
   { icon: "💦", label: "Aqua Park" },
-  { icon: "🌴", label: "Tatil Köyü" },
-  { icon: "🏠", label: "Pansiyon" },
-  { icon: "🏊", label: "Havuzlu Tesis" },
 ];
 
 const POPULAR_TESISLER = [
@@ -212,6 +209,7 @@ export default function Home() {
   const [filterPriceMax, setFilterPriceMax] = useState(5000);
   const [filterRating, setFilterRating] = useState(0);
   const [filterFeatures, setFilterFeatures] = useState<number[]>([]);
+  const [locationStatus, setLocationStatus] = useState<null | "alındı" | "hata">(null);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -276,19 +274,13 @@ export default function Home() {
   }, []);
 
   const handleTesisAra = useCallback(() => {
-    const filters = {
-      region: activeIlce ? `${activeIl} / ${activeIlce}` : activeIl || null,
-      type: srchType || null,
-      date: srchDate || null,
-      name: srchName || null,
-      sort: SORT_OPTS[filterSort]?.label || null,
-      priceMin: filterPriceMin,
-      priceMax: filterPriceMax,
-      rating: RATING_OPTS[filterRating] || null,
-      features: filterFeatures.map((i) => FEATURE_OPTS[i]?.label),
-    };
-    console.log("Arama filtreleri:", filters);
-  }, [activeIl, activeIlce, srchType, srchDate, srchName, filterSort, filterPriceMin, filterPriceMax, filterRating, filterFeatures]);
+    const selectedRegion = activeIl || null;
+    const selectedDistrict = activeIlce || null;
+    const selectedTypes = srchType ? [srchType] : [];
+    const selectedDate = srchDate || null;
+    const searchName = srchName || null;
+    console.log("Arama filtreleri:", { selectedRegion, selectedDistrict, selectedTypes, selectedDate, searchName });
+  }, [activeIl, activeIlce, srchType, srchDate, srchName]);
 
   const ilceler = activeIl && ILLER[activeIl] ? ILLER[activeIl] : [];
   const filteredIller = Object.keys(ILLER).filter((il) =>
@@ -551,7 +543,11 @@ export default function Home() {
                     <span className="cal-month">{calDate.toLocaleDateString("tr-TR", { month: "long", year: "numeric" })}</span>
                     <button type="button" className="cal-nav" onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() + 1))}>›</button>
                   </div>
-                  <div className="cal-weekdays">PT SA ÇA PE CU CT PZ</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", textAlign: "center" }}>
+                    {["PT", "SA", "ÇA", "PE", "CU", "CT", "PZ"].map((g) => (
+                      <div key={g}>{g}</div>
+                    ))}
+                  </div>
                   <div className="cal-grid">
                     {(() => {
                       const y = calDate.getFullYear(), m = calDate.getMonth();
@@ -611,14 +607,14 @@ export default function Home() {
 
             {/* FİLTRELE */}
             <div className="srch-field-wrap">
-              <div
+              <button
+                type="button"
                 className={`sf filter-trigger ${filterOpen ? "active" : ""}`}
                 onClick={(e) => { e.stopPropagation(); openFilterPanel(); }}
-                role="button"
-                tabIndex={0}
               >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" /></svg>
                 <span className="sfl">{t.filter_btn}</span>
-              </div>
+              </button>
             </div>
 
             {/* TESİS ARA */}
@@ -639,7 +635,26 @@ export default function Home() {
         </div>
         <div className="fp-body">
           <div className="fp-section">
-            <button type="button" className="fp-location-btn">📍 🗺️ Konumumu Kullan</button>
+            <button
+              type="button"
+              className={`fp-location-btn ${locationStatus === "alındı" ? "fp-location-ok" : ""} ${locationStatus === "hata" ? "fp-location-err" : ""}`}
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      console.log("Konum:", pos.coords.latitude, pos.coords.longitude);
+                      setLocationStatus("alındı");
+                    },
+                    (err) => {
+                      console.error("Konum hatası:", err);
+                      setLocationStatus("hata");
+                    }
+                  );
+                }
+              }}
+            >
+              {locationStatus === "alındı" ? "✅ Konumunuz Alındı" : locationStatus === "hata" ? "❌ Konum İzni Reddedildi" : "📍 🗺️ Konumumu Kullan"}
+            </button>
           </div>
           <div className="fp-section">
             <div className="fp-sec-title">SIRALAMA</div>
