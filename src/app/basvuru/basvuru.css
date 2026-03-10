@@ -387,16 +387,30 @@
   box-shadow: 0 1px 4px rgba(10,186,181,.4);
 }
 
-.bav-check-list { display: flex; flex-direction: column; gap: 8px; }
+.bav-check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
 .bav-check-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   cursor: pointer;
   font-size: .82rem;
-  color: var(--ink2);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #444;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background .15s;
 }
+.bav-check-item.sel { background: #E0F7F6; }
 .bav-check-item input { width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; flex-shrink: 0; }
+@media (max-width: 480px) {
+  .bav-check-grid { grid-template-columns: 1fr; }
+}
 
 .bav-form-nav {
   display: flex;

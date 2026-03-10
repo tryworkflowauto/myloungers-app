@@ -5,9 +5,21 @@ import { useState } from "react";
 import "./basvuru.css";
 
 const ILLER = ["Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin", "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars", "Kastamonu", "Kayseri", "Kilis", "Kırıkkale", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Şırnak", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"];
-const PRICE_RANGES = ["₺100-200", "₺200-400", "₺400-700", "₺700+"];
 const SEZON_OPTS = ["Yaz (Haz-Eyl)", "Tüm Yıl", "Diğer"];
-const FEATURES = ["Restoran/Kafe", "Ücretsiz Otopark", "Su Sporları", "VIP Alan", "Çocuk Havuzu", "Konaklama"];
+const FEATURES = [
+  { key: "bar", emoji: "🍹", label: "Bar / İçecek" },
+  { key: "deniz", emoji: "🌊", label: "Deniz erişimi" },
+  { key: "wifi", emoji: "📶", label: "Wi-Fi" },
+  { key: "otobus", emoji: "🚌", label: "Otobüs ulaşımı" },
+  { key: "tekne", emoji: "🤿", label: "Tekne / Su sporları" },
+  { key: "engelli", emoji: "♿", label: "Engelli erişimi" },
+  { key: "restoran", emoji: "🍽️", label: "Restoran" },
+  { key: "havuz", emoji: "🏊", label: "Yüzme havuzu" },
+  { key: "otopark", emoji: "🅿️", label: "Otopark" },
+  { key: "taksi", emoji: "🚕", label: "Taksi / Transfer" },
+  { key: "muzik", emoji: "🎵", label: "Canlı müzik / DJ" },
+  { key: "market", emoji: "🏪", label: "Market / Kiosk" },
+];
 const GOREV_OPTS = ["İşletme Sahibi", "Müdür", "Pazarlama", "Diğer"];
 const SAAT_OPTS = ["Sabah 09-12", "Öğleden sonra 12-17", "Akşam 17-20", "Fark etmez"];
 
@@ -24,7 +36,6 @@ export default function BasvuruPage() {
   const [tamAdres, setTamAdres] = useState("");
 
   // Step 2
-  const [fiyatAraligi, setFiyatAraligi] = useState("");
   const [sezon, setSezon] = useState("");
   const [ozellikler, setOzellikler] = useState<Record<string, boolean>>({});
   const [ekNotlar, setEkNotlar] = useState("");
@@ -222,15 +233,6 @@ export default function BasvuruPage() {
                   <div className="bav-pane">
                     <h3 className="bav-form-ttl">Tesis Detayları</h3>
                     <div className="bav-fgrp">
-                      <label>Fiyat Aralığı</label>
-                      <select className="bav-fsel" value={fiyatAraligi} onChange={(e) => setFiyatAraligi(e.target.value)}>
-                        <option value="">Seçiniz</option>
-                        {PRICE_RANGES.map((p) => (
-                          <option key={p} value={p}>{p}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="bav-fgrp">
                       <label>Sezon</label>
                       <select className="bav-fsel" value={sezon} onChange={(e) => setSezon(e.target.value)}>
                         <option value="">Seçiniz</option>
@@ -240,12 +242,12 @@ export default function BasvuruPage() {
                       </select>
                     </div>
                     <div className="bav-fgrp">
-                      <label>Özellikler</label>
-                      <div className="bav-check-list">
+                      <label>Mevcut Özellikler</label>
+                      <div className="bav-check-grid">
                         {FEATURES.map((f) => (
-                          <label key={f} className="bav-check-item">
-                            <input type="checkbox" checked={ozellikler[f] || false} onChange={() => toggleOzellik(f)} />
-                            {f}
+                          <label key={f.key} className={`bav-check-item ${ozellikler[f.key] ? "sel" : ""}`}>
+                            <input type="checkbox" checked={ozellikler[f.key] || false} onChange={() => toggleOzellik(f.key)} />
+                            <span>{f.emoji} {f.label}</span>
                           </label>
                         ))}
                       </div>
