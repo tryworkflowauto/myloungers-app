@@ -122,14 +122,6 @@ export default function Home() {
           <div className="nav-cats">
             <button
               type="button"
-              className={`nc ${activeCategory === "all" ? "on" : ""}`}
-              onClick={() => setActiveCategory("all")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-              Tümünü Gör
-            </button>
-            <button
-              type="button"
               className={`nc ${activeCategory === "hotel" ? "on" : ""}`}
               onClick={() => setActiveCategory("hotel")}
             >
@@ -210,7 +202,6 @@ export default function Home() {
       {/* MOB CATS */}
       <div className="mob-cats">
         <div className="mob-cats-in">
-          <button type="button" className={`mcat ${activeCategory === "all" ? "on" : ""}`} onClick={() => setActiveCategory("all")}>Tümünü Gör</button>
           <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => setActiveCategory("hotel")}>Hotel</button>
           <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => setActiveCategory("beach")}>Beach Club</button>
           <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => setActiveCategory("aqua")}>Aqua Park</button>
@@ -230,7 +221,6 @@ export default function Home() {
             <button type="button" className="mob-btn-signup">Üye Ol</button>
           </div>
           <div className="mob-sec-title">Kategoriler</div>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("all"); }}>Tümünü Gör</button>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); }}>Hotel</button>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); }}>Beach Club</button>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); }}>Aqua Park</button>
