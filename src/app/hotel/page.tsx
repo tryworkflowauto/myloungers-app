@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "../myloungers.css";
 import "./hotel.css";
 
@@ -35,6 +35,10 @@ export default function HotelPage() {
   const [langOpen, setLangOpen] = useState(false);
   const [lang, setLang] = useState(LANG_OPTS[0]);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
     <div className="hotel-page">
