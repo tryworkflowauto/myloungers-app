@@ -53,11 +53,23 @@ button.mcat{border:1.5px solid var(--border);appearance:none;-webkit-appearance:
 button.mob-link{width:calc(100% - 12px);appearance:none;-webkit-appearance:none}
 .mob-link:hover{background:var(--soft)}
 .mob-link svg{width:19px;height:19px;color:var(--ink3);flex-shrink:0}
-/* LANG PILLS */
-.lang-pills{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.lang-pill{font-size:.75rem;font-weight:700;padding:5px 10px;border-radius:6px;border:none;background:transparent;color:#444;cursor:pointer;transition:background .15s,color .15s;font-family:inherit;white-space:nowrap}
-.lang-pill:hover{background:#f0f0f0}
-.lang-pill.active{background:#0ABAB5;color:#fff}
+/* LANG DROPDOWN */
+.lang-dropdown-wrap{position:relative;flex-shrink:0}
+.lang-trigger{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1.5px solid #E5EBF0;background:#fff;font-size:.82rem;font-weight:700;color:var(--ink2);cursor:pointer;transition:border-color .15s;font-family:inherit}
+.lang-trigger:hover{border-color:#0ABAB5}
+.lang-trigger-flag{font-size:1rem;line-height:1}
+.lang-chevron{width:12px;height:12px;opacity:.6;transition:transform .2s}
+.lang-dropdown-wrap.open .lang-chevron{transform:rotate(180deg)}
+.lang-dropdown{position:absolute;top:100%;right:0;margin-top:6px;background:#fff;border:1px solid #E5EBF0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:160px;padding:6px;z-index:100}
+.lang-drop-item{width:100%;padding:10px 14px;display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:500;color:var(--ink2);text-align:left;border-radius:8px;transition:background .12s}
+.lang-drop-item:hover{background:#F4F8FB}
+.lang-drop-item.active{color:#0ABAB5;font-weight:700}
+.lang-drop-name{flex:1}
+.lang-check{color:#0ABAB5;font-size:.8rem}
+.mob-lang-dropdown{display:flex;flex-direction:column;gap:4px;padding:12px 18px;border-bottom:1px solid var(--border)}
+.mob-lang-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:.85rem;text-align:left;border-radius:8px;transition:background .12s;color:var(--ink2)}
+.mob-lang-item:hover{background:#F4F8FB}
+.mob-lang-item.active{color:#0ABAB5;font-weight:700}
 /* SLIDER */
 .bwrap{position:relative;overflow:hidden;width:100%;background:#111;line-height:0}
 

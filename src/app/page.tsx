@@ -101,38 +101,13 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     rev_title: "Что говорят пользователи?", rev_all: "Все отзывы",
     footer_desc: "Платформа бронирования шезлонгов в Турции.",
   },
-  ar: {
-    nav_hotel: "فندق", nav_beach: "نادي الشاطئ", nav_aqua: "حديقة مائية", nav_apply: "تقدم الآن",
-    hero_title: "أفضل تجربة في بودروم", hero_title2: "شاطئ وفندق", hero_subtitle: "إدارة حجوزات الكراسي الشمسية والنوادي الشاطئية والفنادق في منصة واحدة",
-    hero_search_placeholder: "ابحث عن منشأة أو منطقة أو نشاط...", hero_btn: "بحث",
-    filter_all: "عرض الكل", filter_hotel: "فندق", filter_beach: "نادي الشاطئ", filter_aqua: "حديقة مائية",
-    cat_title: "فئات المنشآت", cat_subtitle: "اختر نوع المنشأة",
-    popular_title: "الأكثر شعبية", popular_subtitle: "المنشآت المفضلة لدى ضيوفنا",
-    card_btn: "احجز الآن", card_per_day: "/يوم", view_all: "عرض الكل",
-    btn_login: "تسجيل الدخول", btn_signup: "إنشاء حساب",
-    sfl_region: "المنطقة", sfl_type: "نوع المنشأة", sfl_date: "التاريخ", sfl_name: "اسم المنشأة",
-    sfv_region: "بودروم، أنطاليا، مرماريس...", sfv_type: "فندق، نادي شاطئ...", sfv_date: "اختر التاريخ", sfv_name: "بحث...",
-    srch_btn: "بحث", filter_btn: "تصفية",
-    r_search_placeholder: "ابحث عن مدينة...", r_all: "الكل", r_clear: "مسح", r_ok: "موافق", r_select_il: "اختر المدينة",
-    st_active: "منشآت نشطة", st_res: "الحجوزات", st_dest: "الوجهات", st_rating: "متوسط التقييم", st_qr: "دخول بدون تلامس",
-    cat_hotel: "فندق", cat_beach: "نادي الشاطئ", cat_aqua: "حديقة مائية",
-    cat_hotel_sub: "الراحة والخدمة", cat_beach_sub: "كرسي شمسي وبحر", cat_aqua_sub: "مرح ومنزلقات",
-    badge_popular: "شائع", badge_new: "جديد", tag_daily: "يومي",
-    how_title: "كيف", how_title2: "يعمل", how_sub: "حجز الكرسي الشمسي في 3 خطوات",
-    how1: "اختر المنشأة", how2: "اختر الكرسي", how3: "ادفع واسترخِ",
-    plan_tag: "خطة الكراسي", plan_title: "اختر كرسيك على الخريطة",
-    b2b_tag: "لمالكي المنشآت", b2b_title: "أضف منشأتك إلى MyLoungers",
-    rev_title: "ماذا يقول المستخدمون؟", rev_all: "جميع التقييمات",
-    footer_desc: "منصة حجز الكراسي الشمسية في تركيا.",
-  },
 };
 
-const LANG_BTNS = [
-  { code: "tr", flag: "🇹🇷", label: "TR" },
-  { code: "en", flag: "🇬🇧", label: "EN" },
-  { code: "de", flag: "🇩🇪", label: "DE" },
-  { code: "ru", flag: "🇷🇺", label: "RU" },
-  { code: "ar", flag: "🇸🇦", label: "AR" },
+const LANG_OPTS = [
+  { code: "tr", flag: "🇹🇷", label: "TR", name: "Türkçe" },
+  { code: "en", flag: "🇬🇧", label: "EN", name: "English" },
+  { code: "de", flag: "🇩🇪", label: "DE", name: "Deutsch" },
+  { code: "ru", flag: "🇷🇺", label: "RU", name: "Русский" },
 ];
 
 const SLIDER_IMGS = [
@@ -174,7 +149,8 @@ const TESISLER = [
 ];
 
 export default function Home() {
-  const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru" | "ar">("tr");
+  const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru">("tr");
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const [slideIdx, setSlideIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -210,6 +186,13 @@ export default function Home() {
     requestAnimationFrame(step);
   }, [slideIdx]);
 
+  useEffect(() => {
+    if (!isLangOpen) return;
+    const onClose = () => setIsLangOpen(false);
+    document.addEventListener("click", onClose);
+    return () => document.removeEventListener("click", onClose);
+  }, [isLangOpen]);
+
   const openPanel = useCallback((p: "region" | "type" | "date" | "name") => {
     setPanelRegion(p === "region");
     setPanelType(p === "type");
@@ -234,7 +217,7 @@ export default function Home() {
     : TESISLER.filter((x) => x.type === activeCategory);
 
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
-  const isRtl = currentLang === "ar";
+  const activeLangOpt = LANG_OPTS.find((o) => o.code === currentLang) ?? LANG_OPTS[0];
 
   const scrollToTesisler = () => {
     const el = document.getElementById("tesisler-bolum");
@@ -245,7 +228,7 @@ export default function Home() {
   };
 
   return (
-    <div className="home-page" dir={isRtl ? "rtl" : "ltr"}>
+    <div className="home-page">
       {/* NAV */}
       <nav className="nav">
         <div className="nav-in">
@@ -283,17 +266,36 @@ export default function Home() {
             </Link>
           </div>
           <div className="nav-r">
-            <div className="lang-pills">
-              {LANG_BTNS.map((lb) => (
-                <button
-                  key={lb.code}
-                  type="button"
-                  className={`lang-pill ${currentLang === lb.code ? "active" : ""}`}
-                  onClick={() => setCurrentLang(lb.code as "tr" | "en" | "de" | "ru" | "ar")}
-                >
-                  {lb.flag} {lb.label}
-                </button>
-              ))}
+            <div className={`lang-dropdown-wrap ${isLangOpen ? "open" : ""}`}>
+              <button
+                type="button"
+                className="lang-trigger"
+                onClick={(e) => { e.stopPropagation(); setIsLangOpen(!isLangOpen); }}
+                aria-expanded={isLangOpen}
+                aria-haspopup="listbox"
+              >
+                <span className="lang-trigger-flag">{activeLangOpt.flag}</span>
+                <span>{activeLangOpt.label}</span>
+                <svg className="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+              </button>
+              {isLangOpen && (
+                <div className="lang-dropdown" role="listbox">
+                  {LANG_OPTS.map((opt) => (
+                    <button
+                      key={opt.code}
+                      type="button"
+                      role="option"
+                      aria-selected={currentLang === opt.code}
+                      className={`lang-drop-item ${currentLang === opt.code ? "active" : ""}`}
+                      onClick={(e) => { e.stopPropagation(); setCurrentLang(opt.code as "tr" | "en" | "de" | "ru"); setIsLangOpen(false); }}
+                    >
+                      <span>{opt.flag}</span>
+                      <span className="lang-drop-name">{opt.name}</span>
+                      {currentLang === opt.code && <span className="lang-check">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <Link href="/giris" className="btn-login" id="btnLogin">{t.btn_login}</Link>
             <Link href="/uye-ol" className="btn-signup" id="btnSignup">{t.btn_signup}</Link>
@@ -328,9 +330,13 @@ export default function Home() {
             <img src="/logo.png" alt="MyLoungers" className="mob-panel-logo" />
             <button type="button" className="mob-close" onClick={() => setMenuOpen(false)}>×</button>
           </div>
-          <div className="mob-lang-pills">
-            {LANG_BTNS.map((lb) => (
-              <button key={lb.code} type="button" className={`lang-pill ${currentLang === lb.code ? "active" : ""}`} onClick={() => setCurrentLang(lb.code as "tr" | "en" | "de" | "ru" | "ar")}>{lb.flag} {lb.label}</button>
+          <div className="mob-lang-dropdown">
+            {LANG_OPTS.map((opt) => (
+              <button key={opt.code} type="button" className={`mob-lang-item ${currentLang === opt.code ? "active" : ""}`} onClick={() => setCurrentLang(opt.code as "tr" | "en" | "de" | "ru")}>
+                <span>{opt.flag}</span>
+                <span>{opt.name}</span>
+                {currentLang === opt.code && <span className="lang-check">✓</span>}
+              </button>
             ))}
           </div>
           <div className="mob-btns">
