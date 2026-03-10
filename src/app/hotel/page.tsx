@@ -37,7 +37,18 @@ export default function HotelPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    const prevScrollRestoration = history.scrollRestoration;
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
+    const t = setTimeout(() => window.scrollTo(0, 0), 50);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+      if ("scrollRestoration" in history) history.scrollRestoration = prevScrollRestoration;
+    };
   }, []);
 
   return (
