@@ -213,6 +213,13 @@ export default function Home() {
   const [filterRating, setFilterRating] = useState(0);
   const [filterFeatures, setFilterFeatures] = useState<number[]>([]);
 
+  const closePanels = () => {
+    setPanelRegion(false);
+    setPanelType(false);
+    setPanelDate(false);
+    setPanelName(false);
+  };
+
   useEffect(() => {
     const t = setInterval(() => setSlideIdx((s) => (s + 1) % SLIDER_IMGS.length), 5500);
     return () => clearInterval(t);
@@ -237,12 +244,18 @@ export default function Home() {
   }, [isLangOpen]);
 
   useEffect(() => {
-    const onClose = () => { closePanels(); setFilterOpen(false); };
+    const onClose = () => {
+      setPanelRegion(false);
+      setPanelType(false);
+      setPanelDate(false);
+      setPanelName(false);
+      setFilterOpen(false);
+    };
     if (panelRegion || panelType || panelDate || panelName || filterOpen) {
       document.addEventListener("click", onClose);
       return () => document.removeEventListener("click", onClose);
     }
-  }, [panelRegion, panelType, panelDate, panelName, filterOpen, closePanels]);
+  }, [panelRegion, panelType, panelDate, panelName, filterOpen]);
 
   const openPanel = useCallback((p: "region" | "type" | "date" | "name") => {
     setFilterOpen(false);
@@ -255,19 +268,12 @@ export default function Home() {
     setPanelType(p === "type");
     setPanelDate(p === "date");
     setPanelName(p === "name");
-  }, [panelRegion, panelType, panelDate, panelName, closePanels]);
-
-  const closePanels = useCallback(() => {
-    setPanelRegion(false);
-    setPanelType(false);
-    setPanelDate(false);
-    setPanelName(false);
-  }, []);
+  }, [panelRegion, panelType, panelDate, panelName]);
 
   const openFilterPanel = useCallback(() => {
     closePanels();
     setFilterOpen((prev) => !prev);
-  }, [closePanels]);
+  }, []);
 
   const handleTesisAra = useCallback(() => {
     const filters = {
