@@ -107,8 +107,12 @@ export default function Home() {
     !ilSearch || il.toLowerCase().includes(ilSearch.toLowerCase())
   );
 
+  const filteredTesis = activeCategory === "all"
+    ? TESISLER
+    : TESISLER.filter((t) => t.type === activeCategory);
+
   return (
-    <div>
+    <div className="home-page">
       {/* NAV */}
       <nav className="nav">
         <div className="nav-in">
@@ -116,30 +120,38 @@ export default function Home() {
             <img src="/logo.png" alt="MyLoungers" className="logo-img" />
           </Link>
           <div className="nav-cats">
-            <a
-              href="#oteller"
+            <button
+              type="button"
+              className={`nc ${activeCategory === "all" ? "on" : ""}`}
+              onClick={() => setActiveCategory("all")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Tümünü Gör
+            </button>
+            <button
+              type="button"
               className={`nc ${activeCategory === "hotel" ? "on" : ""}`}
               onClick={() => setActiveCategory("hotel")}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 22V12H8v10"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
               Hotel
-            </a>
-            <a
-              href="#beach-club"
+            </button>
+            <button
+              type="button"
               className={`nc ${activeCategory === "beach" ? "on" : ""}`}
               onClick={() => setActiveCategory("beach")}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 4C14 4 11 6 10 9L3 21"/><path d="M22 4C19 4 16 6 15 9L8 21"/><path d="M7 21h14"/><circle cx="19" cy="4" r="1" fill="currentColor"/></svg>
               Beach Club
-            </a>
-            <a
-              href="#aqua-park"
+            </button>
+            <button
+              type="button"
               className={`nc ${activeCategory === "aqua" ? "on" : ""}`}
               onClick={() => setActiveCategory("aqua")}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
               Aqua Park
-            </a>
+            </button>
             <Link href="/basvuru" className="nc">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Başvuru Formu
@@ -198,9 +210,10 @@ export default function Home() {
       {/* MOB CATS */}
       <div className="mob-cats">
         <div className="mob-cats-in">
-          <a href="#oteller" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => setActiveCategory("hotel")}>Hotel</a>
-          <a href="#beach-club" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => setActiveCategory("beach")}>Beach Club</a>
-          <a href="#aqua-park" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => setActiveCategory("aqua")}>Aqua Park</a>
+          <button type="button" className={`mcat ${activeCategory === "all" ? "on" : ""}`} onClick={() => setActiveCategory("all")}>Tümünü Gör</button>
+          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => setActiveCategory("hotel")}>Hotel</button>
+          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => setActiveCategory("beach")}>Beach Club</button>
+          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => setActiveCategory("aqua")}>Aqua Park</button>
           <Link href="/basvuru" className="mcat">Başvuru</Link>
         </div>
       </div>
@@ -217,9 +230,10 @@ export default function Home() {
             <button type="button" className="mob-btn-signup">Üye Ol</button>
           </div>
           <div className="mob-sec-title">Kategoriler</div>
-          <a href="#oteller" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); }}>Hotel</a>
-          <a href="#beach-club" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); }}>Beach Club</a>
-          <a href="#aqua-park" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); }}>Aqua Park</a>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("all"); }}>Tümünü Gör</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); }}>Hotel</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); }}>Beach Club</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); }}>Aqua Park</button>
           <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>Başvuru Formu</Link>
         </div>
       </div>
@@ -485,28 +499,31 @@ export default function Home() {
           <a href="/arama" className="sec-a" id="fav-all">Tümünü gör →</a>
         </div>
         <div className="pgrid" id="tesisGrid">
-          {TESISLER.map((t, i) => (
-            <div
-              key={t.name}
-              className="pc"
-              data-type={t.type}
-
-            >
-              <div className="pw0">
-                <img src={TESIS_IMGS[i]} alt={t.name} />
-                <button type="button" className="pfav">♡</button>
-                <span className="prat">★ 4.8</span>
-                <span className={`ptag ${t.type === "aqua" ? "co" : "ct"}`}>{t.type === "hotel" ? "Günlük" : t.type === "aqua" ? "Günlük" : "Günlük"}</span>
+          {filteredTesis.map((t) => {
+            const origIdx = TESISLER.indexOf(t);
+            const prices = [450, 320, 280, 395];
+            return (
+              <div
+                key={t.name}
+                className="pc"
+                data-type={t.type}
+              >
+                <div className="pw0">
+                  <img src={TESIS_IMGS[origIdx]} alt={t.name} />
+                  <button type="button" className="pfav">♡</button>
+                  <span className="prat">★ 4.8</span>
+                  <span className={`ptag ${t.type === "aqua" ? "co" : "ct"}`}>Günlük</span>
+                </div>
+                <div className="pn">{t.name}</div>
+                <div className="pl">{t.ilce} / {t.il}</div>
+                <div className="pf">
+                  <span className="pfc">Wi-Fi</span>
+                  <span className="pfc">Bar</span>
+                </div>
+                <div className="pp"><b>₺{prices[origIdx] ?? 395}</b><span> / gün</span></div>
               </div>
-              <div className="pn">{t.name}</div>
-              <div className="pl">{t.ilce} / {t.il}</div>
-              <div className="pf">
-                <span className="pfc">Wi-Fi</span>
-                <span className="pfc">Bar</span>
-              </div>
-              <div className="pp"><b>₺{i === 0 ? 450 : i === 1 ? 320 : i === 2 ? 280 : 395}</b><span> / gün</span></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
