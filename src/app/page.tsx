@@ -138,8 +138,18 @@ const ILLER: Record<string, string[]> = {
   İzmir: ["Çeşme", "Alaçatı", "Foça", "Urla", "Seferihisar"],
   İstanbul: ["Beşiktaş", "Sarıyer", "Bakırköy", "Kadıköy"],
   Ankara: ["Çankaya", "Keçiören", "Mamak", "Etimesgut"],
-  Adana: [],
+  Adana: ["Seyhan", "Çukurova", "Yüreğir", "Sarıçam", "Aladağ"],
   Aydın: ["Didim", "Kuşadası", "Söke"],
+  Balıkesir: ["Ayvalık", "Edremit", "Bandırma", "Burhaniye", "Erdek", "Gönen"],
+  Bursa: ["Osmangazi", "Nilüfer", "Yıldırım", "Mudanya", "Gemlik", "İnegöl"],
+  Mersin: ["Mezitli", "Yenişehir", "Toroslar", "Silifke", "Anamur", "Erdemli"],
+  Hatay: ["Antakya", "İskenderun", "Samandağ", "Harbiye", "Defne", "Dörtyol"],
+  Trabzon: ["Ortahisar", "Akçaabat", "Yomra", "Sürmene", "Of", "Araklı"],
+  Samsun: ["İlkadım", "Atakum", "Canik", "Bafra", "Çarşamba", "Terme"],
+  Konya: ["Selçuklu", "Meram", "Karatay", "Beyşehir", "Akşehir", "Seydişehir"],
+  Gaziantep: ["Şahinbey", "Şehitkamil", "Nizip", "İslahiye", "Araban", "Oğuzeli"],
+  Kayseri: ["Melikgazi", "Kocasinan", "Talas", "Develi", "Bünyan", "İncesu"],
+  Eskişehir: ["Tepebaşı", "Odunpazarı", "Sivrihisar", "Mahmudiye", "Seyitgazi"],
 };
 
 const FACILITY_TYPES = [
@@ -199,7 +209,7 @@ export default function Home() {
   const [panelType, setPanelType] = useState(false);
   const [panelDate, setPanelDate] = useState(false);
   const [panelName, setPanelName] = useState(false);
-  const [activeIl, setActiveIl] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("");
   const [activeIlce, setActiveIlce] = useState("");
   const [ilSearch, setIlSearch] = useState("");
   const [barWidth, setBarWidth] = useState(0);
@@ -274,15 +284,15 @@ export default function Home() {
   }, []);
 
   const handleTesisAra = useCallback(() => {
-    const selectedRegion = activeIl || null;
+    const selectedRegion = selectedProvince || null;
     const selectedDistrict = activeIlce || null;
     const selectedTypes = srchType ? [srchType] : [];
     const selectedDate = srchDate || null;
     const searchName = srchName || null;
     console.log("Arama filtreleri:", { selectedRegion, selectedDistrict, selectedTypes, selectedDate, searchName });
-  }, [activeIl, activeIlce, srchType, srchDate, srchName]);
+  }, [selectedProvince, activeIlce, srchType, srchDate, srchName]);
 
-  const ilceler = activeIl && ILLER[activeIl] ? ILLER[activeIl] : [];
+  const ilceler = selectedProvince && ILLER[selectedProvince] ? ILLER[selectedProvince] : [];
   const filteredIller = Object.keys(ILLER).filter((il) =>
     !ilSearch || il.toLowerCase().includes(ilSearch.toLowerCase())
   );
@@ -468,15 +478,15 @@ export default function Home() {
                   <div className="region-cols">
                     <div className="region-iller" style={{ width: 280 }}>
                       {filteredIller.map((il) => (
-                        <div key={il} className={`r-item ${activeIl === il ? "active" : ""}`} onClick={() => { setActiveIl(il); setActiveIlce(""); }}>
+                        <div key={il} className={`r-item ${selectedProvince === il ? "active" : ""}`} onClick={() => { setSelectedProvince(il); setActiveIlce(""); }}>
                           {il}<span className="r-arr">›</span>
                         </div>
                       ))}
                     </div>
                     <div className="region-ilceler" style={{ width: 340 }}>
-                      {activeIl ? (
+                      {selectedProvince ? (
                         <>
-                          <div className="r-ilce-ttl">{activeIl}</div>
+                          <div className="r-ilce-ttl">{selectedProvince}</div>
                           <div className={`r-ilce-item ${!activeIlce ? "sel" : ""}`} onClick={() => setActiveIlce("")}>{t.r_all}</div>
                           {ilceler.map((ilce) => (
                             <div key={ilce} className={`r-ilce-item ${activeIlce === ilce ? "sel" : ""}`} onClick={() => setActiveIlce(ilce)}>{ilce}</div>
@@ -488,9 +498,9 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="srch-drop-footer">
-                    <span className="srch-drop-val">{activeIlce ? `${activeIl} / ${activeIlce}` : activeIl || ""}</span>
-                    <button type="button" className="srch-drop-btn" onClick={() => { setActiveIl(""); setActiveIlce(""); setSrchRegion(""); }}>{t.r_clear}</button>
-                    <button type="button" className="srch-drop-btn primary" onClick={() => { setSrchRegion(activeIlce ? `${activeIl} / ${activeIlce}` : activeIl); closePanels(); }}>{t.r_ok}</button>
+                    <span className="srch-drop-val">{activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince || ""}</span>
+                    <button type="button" className="srch-drop-btn" onClick={() => { setSelectedProvince(""); setActiveIlce(""); setSrchRegion(""); }}>{t.r_clear}</button>
+                    <button type="button" className="srch-drop-btn primary" onClick={() => { setSrchRegion(activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince); closePanels(); }}>{t.r_ok}</button>
                   </div>
                 </div>
               )}
@@ -646,7 +656,6 @@ export default function Home() {
                       setLocationStatus("alındı");
                     },
                     (err) => {
-                      console.error("Konum hatası:", err);
                       setLocationStatus("hata");
                     }
                   );
