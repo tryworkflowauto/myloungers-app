@@ -1,9 +1,139 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import "./myloungers.css";
+
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  tr: {
+    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_apply: "Başvuru Formu",
+    hero_title: "Bodrum'un En İyi", hero_title2: "Plaj & Otel Deneyimi", hero_subtitle: "Şezlong, plaj kulübü ve otel rezervasyonlarını tek platformda yönetin",
+    hero_search_placeholder: "Tesis, bölge veya aktivite ara...", hero_btn: "Ara",
+    filter_all: "Tümünü Gör", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
+    cat_title: "Tesis Kategorileri", cat_subtitle: "İhtiyacınıza göre tesis türü seçin",
+    popular_title: "En Çok Tercih Edilenler", popular_subtitle: "Misafirlerimizin en beğendiği tesisler",
+    card_btn: "Rezervasyon Yap", card_per_day: "/gün", view_all: "Tümünü gör",
+    btn_login: "Giriş Yap", btn_signup: "Üye Ol",
+    sfl_region: "Bölge", sfl_type: "Tesis Tipi", sfl_date: "Tarih", sfl_name: "Tesis Adı",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
+    srch_btn: "Tesis Ara", filter_btn: "Filtrele",
+    r_search_placeholder: "İl ara...", r_all: "Tümü", r_clear: "Temizle", r_ok: "Tamam", r_select_il: "İl seçin",
+    st_active: "Aktif tesis", st_res: "Rezervasyon", st_dest: "Destinasyon", st_rating: "Ortalama puan", st_qr: "Temassız giriş",
+    cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
+    cat_hotel_sub: "Konfor ve hizmet", cat_beach_sub: "Şezlong & deniz keyfi", cat_aqua_sub: "Eğlence & kaydırak",
+    badge_popular: "Popüler", badge_new: "Yeni", tag_daily: "Günlük",
+    how_title: "Nasıl", how_title2: "Çalışır?", how_sub: "3 adımda şezlong rezervasyonu",
+    how1: "Tesis Seç", how2: "Şezlong Seç", how3: "Öde & Uzan",
+    plan_tag: "Şezlong Planı", plan_title: "Tam istediğin şezlongu harita üzerinden seç",
+    b2b_tag: "Tesis Sahipleri İçin", b2b_title: "Tesisinizi MyLoungers'a ekleyin",
+    rev_title: "Kullanıcılar Ne Diyor?", rev_all: "Tüm yorumlar",
+    footer_desc: "Türkiye'nin şezlong rezervasyon platformu.",
+  },
+  en: {
+    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_apply: "Apply Now",
+    hero_title: "Bodrum's Best", hero_title2: "Beach & Hotel Experience", hero_subtitle: "Manage sunbed, beach club and hotel reservations on one platform",
+    hero_search_placeholder: "Search facility, region or activity...", hero_btn: "Search",
+    filter_all: "View All", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
+    cat_title: "Facility Categories", cat_subtitle: "Choose the facility type that suits your needs",
+    popular_title: "Most Popular", popular_subtitle: "Our guests' most loved facilities",
+    card_btn: "Book Now", card_per_day: "/day", view_all: "View All",
+    btn_login: "Log In", btn_signup: "Sign Up",
+    sfl_region: "Region", sfl_type: "Facility Type", sfl_date: "Date", sfl_name: "Facility Name",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club...", sfv_date: "Select date", sfv_name: "Search...",
+    srch_btn: "Search", filter_btn: "Filter",
+    r_search_placeholder: "Search city...", r_all: "All", r_clear: "Clear", r_ok: "OK", r_select_il: "Select city",
+    st_active: "Active facilities", st_res: "Reservations", st_dest: "Destinations", st_rating: "Average rating", st_qr: "Contactless entry",
+    cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
+    cat_hotel_sub: "Comfort and service", cat_beach_sub: "Sunbed & sea", cat_aqua_sub: "Fun & slides",
+    badge_popular: "Popular", badge_new: "New", tag_daily: "Daily",
+    how_title: "How", how_title2: "It Works", how_sub: "Sunbed reservation in 3 steps",
+    how1: "Choose Facility", how2: "Choose Sunbed", how3: "Pay & Relax",
+    plan_tag: "Sunbed Plan", plan_title: "Choose your sunbed on the map",
+    b2b_tag: "For Facility Owners", b2b_title: "Add your facility to MyLoungers",
+    rev_title: "What Users Say?", rev_all: "All reviews",
+    footer_desc: "Turkey's sunbed reservation platform.",
+  },
+  de: {
+    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_apply: "Jetzt Bewerben",
+    hero_title: "Bodrums Bestes", hero_title2: "Strand & Hotel Erlebnis", hero_subtitle: "Verwalten Sie Liegestuhl-, Strandclub- und Hotelreservierungen auf einer Plattform",
+    hero_search_placeholder: "Einrichtung, Region oder Aktivität suchen...", hero_btn: "Suchen",
+    filter_all: "Alle anzeigen", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
+    cat_title: "Einrichtungskategorien", cat_subtitle: "Wählen Sie den Einrichtungstyp",
+    popular_title: "Am beliebtesten", popular_subtitle: "Die beliebtesten Einrichtungen unserer Gäste",
+    card_btn: "Jetzt buchen", card_per_day: "/Tag", view_all: "Alle anzeigen",
+    btn_login: "Anmelden", btn_signup: "Registrieren",
+    sfl_region: "Region", sfl_type: "Einrichtungstyp", sfl_date: "Datum", sfl_name: "Einrichtungsname",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club...", sfv_date: "Datum wählen", sfv_name: "Suchen...",
+    srch_btn: "Suchen", filter_btn: "Filtern",
+    r_search_placeholder: "Stadt suchen...", r_all: "Alle", r_clear: "Löschen", r_ok: "OK", r_select_il: "Stadt wählen",
+    st_active: "Aktive Einrichtungen", st_res: "Reservierungen", st_dest: "Reiseziele", st_rating: "Durchschnittsbewertung", st_qr: "Berührungsloser Eintritt",
+    cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
+    cat_hotel_sub: "Komfort und Service", cat_beach_sub: "Liegestuhl & Meer", cat_aqua_sub: "Spaß & Rutschen",
+    badge_popular: "Beliebt", badge_new: "Neu", tag_daily: "Täglich",
+    how_title: "Wie", how_title2: "es funktioniert", how_sub: "Liegestuhlreservierung in 3 Schritten",
+    how1: "Einrichtung wählen", how2: "Liegestuhl wählen", how3: "Bezahlen & Entspannen",
+    plan_tag: "Liegestuhl-Plan", plan_title: "Wählen Sie Ihren Liegestuhl auf der Karte",
+    b2b_tag: "Für Einrichtungsinhaber", b2b_title: "Fügen Sie Ihre Einrichtung zu MyLoungers hinzu",
+    rev_title: "Was Nutzer sagen?", rev_all: "Alle Bewertungen",
+    footer_desc: "Die Liegestuhl-Reservierungsplattform der Türkei.",
+  },
+  ru: {
+    nav_hotel: "Отель", nav_beach: "Пляжный клуб", nav_aqua: "Аквапарк", nav_apply: "Подать заявку",
+    hero_title: "Лучшее в Бодруме", hero_title2: "Пляж и Отель", hero_subtitle: "Управляйте бронированием шезлонгов, пляжных клубов и отелей на одной платформе",
+    hero_search_placeholder: "Поиск объекта, региона или активности...", hero_btn: "Поиск",
+    filter_all: "Все", filter_hotel: "Отель", filter_beach: "Пляжный клуб", filter_aqua: "Аквапарк",
+    cat_title: "Категории объектов", cat_subtitle: "Выберите тип объекта",
+    popular_title: "Самые популярные", popular_subtitle: "Самые любимые объекты наших гостей",
+    card_btn: "Забронировать", card_per_day: "/день", view_all: "Все",
+    btn_login: "Войти", btn_signup: "Регистрация",
+    sfl_region: "Регион", sfl_type: "Тип объекта", sfl_date: "Дата", sfl_name: "Название",
+    sfv_region: "Бодрум, Анталья, Мармарис...", sfv_type: "Отель, Пляжный клуб...", sfv_date: "Выберите дату", sfv_name: "Поиск...",
+    srch_btn: "Поиск", filter_btn: "Фильтр",
+    r_search_placeholder: "Поиск города...", r_all: "Все", r_clear: "Очистить", r_ok: "OK", r_select_il: "Выберите город",
+    st_active: "Активные объекты", st_res: "Бронирования", st_dest: "Направления", st_rating: "Средний рейтинг", st_qr: "Бесконтактный вход",
+    cat_hotel: "Отель", cat_beach: "Пляжный клуб", cat_aqua: "Аквапарк",
+    cat_hotel_sub: "Комфорт и сервис", cat_beach_sub: "Шезлонг и море", cat_aqua_sub: "Развлечения и горки",
+    badge_popular: "Популярный", badge_new: "Новый", tag_daily: "Ежедневно",
+    how_title: "Как", how_title2: "это работает", how_sub: "Бронирование шезлонга за 3 шага",
+    how1: "Выберите объект", how2: "Выберите шезлонг", how3: "Оплатите и расслабьтесь",
+    plan_tag: "План шезлонгов", plan_title: "Выберите шезлонг на карте",
+    b2b_tag: "Для владельцев", b2b_title: "Добавьте свой объект в MyLoungers",
+    rev_title: "Что говорят пользователи?", rev_all: "Все отзывы",
+    footer_desc: "Платформа бронирования шезлонгов в Турции.",
+  },
+  ar: {
+    nav_hotel: "فندق", nav_beach: "نادي الشاطئ", nav_aqua: "حديقة مائية", nav_apply: "تقدم الآن",
+    hero_title: "أفضل تجربة في بودروم", hero_title2: "شاطئ وفندق", hero_subtitle: "إدارة حجوزات الكراسي الشمسية والنوادي الشاطئية والفنادق في منصة واحدة",
+    hero_search_placeholder: "ابحث عن منشأة أو منطقة أو نشاط...", hero_btn: "بحث",
+    filter_all: "عرض الكل", filter_hotel: "فندق", filter_beach: "نادي الشاطئ", filter_aqua: "حديقة مائية",
+    cat_title: "فئات المنشآت", cat_subtitle: "اختر نوع المنشأة",
+    popular_title: "الأكثر شعبية", popular_subtitle: "المنشآت المفضلة لدى ضيوفنا",
+    card_btn: "احجز الآن", card_per_day: "/يوم", view_all: "عرض الكل",
+    btn_login: "تسجيل الدخول", btn_signup: "إنشاء حساب",
+    sfl_region: "المنطقة", sfl_type: "نوع المنشأة", sfl_date: "التاريخ", sfl_name: "اسم المنشأة",
+    sfv_region: "بودروم، أنطاليا، مرماريس...", sfv_type: "فندق، نادي شاطئ...", sfv_date: "اختر التاريخ", sfv_name: "بحث...",
+    srch_btn: "بحث", filter_btn: "تصفية",
+    r_search_placeholder: "ابحث عن مدينة...", r_all: "الكل", r_clear: "مسح", r_ok: "موافق", r_select_il: "اختر المدينة",
+    st_active: "منشآت نشطة", st_res: "الحجوزات", st_dest: "الوجهات", st_rating: "متوسط التقييم", st_qr: "دخول بدون تلامس",
+    cat_hotel: "فندق", cat_beach: "نادي الشاطئ", cat_aqua: "حديقة مائية",
+    cat_hotel_sub: "الراحة والخدمة", cat_beach_sub: "كرسي شمسي وبحر", cat_aqua_sub: "مرح ومنزلقات",
+    badge_popular: "شائع", badge_new: "جديد", tag_daily: "يومي",
+    how_title: "كيف", how_title2: "يعمل", how_sub: "حجز الكرسي الشمسي في 3 خطوات",
+    how1: "اختر المنشأة", how2: "اختر الكرسي", how3: "ادفع واسترخِ",
+    plan_tag: "خطة الكراسي", plan_title: "اختر كرسيك على الخريطة",
+    b2b_tag: "لمالكي المنشآت", b2b_title: "أضف منشأتك إلى MyLoungers",
+    rev_title: "ماذا يقول المستخدمون؟", rev_all: "جميع التقييمات",
+    footer_desc: "منصة حجز الكراسي الشمسية في تركيا.",
+  },
+};
+
+const LANG_BTNS = [
+  { code: "tr", flag: "🇹🇷", label: "TR" },
+  { code: "en", flag: "🇬🇧", label: "EN" },
+  { code: "de", flag: "🇩🇪", label: "DE" },
+  { code: "ru", flag: "🇷🇺", label: "RU" },
+  { code: "ar", flag: "🇸🇦", label: "AR" },
+];
 
 const SLIDER_IMGS = [
   "/images/1.png",
@@ -43,17 +173,9 @@ const TESISLER = [
   { name: "Bodrum Blue Bay Hotel", il: "Bodrum (Muğla)", ilce: "Gümbet", type: "hotel" },
 ];
 
-const LANG_OPTS = [
-  { code: "TR", flag: "🇹🇷", name: "Türkçe" },
-  { code: "EN", flag: "🇬🇧", name: "English" },
-  { code: "RU", flag: "🇷🇺", name: "Русский" },
-  { code: "DE", flag: "🇩🇪", name: "Deutsch" },
-];
-
 export default function Home() {
+  const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru" | "ar">("tr");
   const [slideIdx, setSlideIdx] = useState(0);
-  const [langOpen, setLangOpen] = useState(false);
-  const [lang, setLang] = useState(LANG_OPTS[0]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [basvuruOpen, setBasvuruOpen] = useState(false);
@@ -109,7 +231,10 @@ export default function Home() {
 
   const filteredTesis = activeCategory === "all"
     ? TESISLER
-    : TESISLER.filter((t) => t.type === activeCategory);
+    : TESISLER.filter((x) => x.type === activeCategory);
+
+  const t = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+  const isRtl = currentLang === "ar";
 
   const scrollToTesisler = () => {
     const el = document.getElementById("tesisler-bolum");
@@ -120,7 +245,7 @@ export default function Home() {
   };
 
   return (
-    <div className="home-page">
+    <div className="home-page" dir={isRtl ? "rtl" : "ltr"}>
       {/* NAV */}
       <nav className="nav">
         <div className="nav-in">
@@ -134,7 +259,7 @@ export default function Home() {
               onClick={() => { setActiveCategory("hotel"); scrollToTesisler(); }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 22V12H8v10"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
-              Hotel
+              {t.nav_hotel}
             </button>
             <button
               type="button"
@@ -142,57 +267,36 @@ export default function Home() {
               onClick={() => { setActiveCategory("beach"); scrollToTesisler(); }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 4C14 4 11 6 10 9L3 21"/><path d="M22 4C19 4 16 6 15 9L8 21"/><path d="M7 21h14"/><circle cx="19" cy="4" r="1" fill="currentColor"/></svg>
-              Beach Club
+              {t.nav_beach}
             </button>
             <button
               type="button"
               className={`nc ${activeCategory === "aqua" ? "on" : ""}`}
               onClick={() => { setActiveCategory("aqua"); scrollToTesisler(); }}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
-              Aqua Park
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
+              {t.nav_aqua}
             </button>
             <Link href="/basvuru" className="nc">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Başvuru Formu
+              {t.nav_apply}
             </Link>
           </div>
           <div className="nav-r">
-            <div className={`lang-wrap ${langOpen ? "open" : ""}`}>
-              <button
-                type="button"
-                className="lang-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLangOpen(!langOpen);
-                }}
-              >
-                <span className="flag">{lang.flag}</span>
-                <span>{lang.code}</span>
-                <svg className="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
-              <div className="lang-drop">
-                {LANG_OPTS.map((l) => (
-                  <button
-                    key={l.code}
-                    type="button"
-                    className={`lang-opt ${lang.code === l.code ? "active" : ""}`}
-                    onClick={() => {
-                      setLang(l);
-                      setLangOpen(false);
-                    }}
-                  >
-                    <span>{l.flag}</span>
-                    <span className="lname">{l.name}</span>
-                    {lang.code === l.code && <span className="lcheck">✓</span>}
-                  </button>
-                ))}
-              </div>
+            <div className="lang-pills">
+              {LANG_BTNS.map((lb) => (
+                <button
+                  key={lb.code}
+                  type="button"
+                  className={`lang-pill ${currentLang === lb.code ? "active" : ""}`}
+                  onClick={() => setCurrentLang(lb.code as "tr" | "en" | "de" | "ru" | "ar")}
+                >
+                  {lb.flag} {lb.label}
+                </button>
+              ))}
             </div>
-            <Link href="/giris" className="btn-login" id="btnLogin">Giriş Yap</Link>
-            <Link href="/uye-ol" className="btn-signup" id="btnSignup">Üye Ol</Link>
+            <Link href="/giris" className="btn-login" id="btnLogin">{t.btn_login}</Link>
+            <Link href="/uye-ol" className="btn-signup" id="btnSignup">{t.btn_signup}</Link>
           </div>
           <button
             type="button"
@@ -210,10 +314,10 @@ export default function Home() {
       {/* MOB CATS */}
       <div className="mob-cats">
         <div className="mob-cats-in">
-          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => { setActiveCategory("hotel"); scrollToTesisler(); }}>Hotel</button>
-          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => { setActiveCategory("beach"); scrollToTesisler(); }}>Beach Club</button>
-          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => { setActiveCategory("aqua"); scrollToTesisler(); }}>Aqua Park</button>
-          <Link href="/basvuru" className="mcat">Başvuru</Link>
+          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => { setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
+          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => { setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>
+          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => { setActiveCategory("aqua"); scrollToTesisler(); }}>{t.nav_aqua}</button>
+          <Link href="/basvuru" className="mcat">{t.nav_apply}</Link>
         </div>
       </div>
 
@@ -224,15 +328,19 @@ export default function Home() {
             <img src="/logo.png" alt="MyLoungers" className="mob-panel-logo" />
             <button type="button" className="mob-close" onClick={() => setMenuOpen(false)}>×</button>
           </div>
-          <div className="mob-btns">
-            <button type="button" className="mob-btn-login">Giriş Yap</button>
-            <button type="button" className="mob-btn-signup">Üye Ol</button>
+          <div className="mob-lang-pills">
+            {LANG_BTNS.map((lb) => (
+              <button key={lb.code} type="button" className={`lang-pill ${currentLang === lb.code ? "active" : ""}`} onClick={() => setCurrentLang(lb.code as "tr" | "en" | "de" | "ru" | "ar")}>{lb.flag} {lb.label}</button>
+            ))}
           </div>
-          <div className="mob-sec-title">Kategoriler</div>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); scrollToTesisler(); }}>Hotel</button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); scrollToTesisler(); }}>Beach Club</button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); scrollToTesisler(); }}>Aqua Park</button>
-          <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>Başvuru Formu</Link>
+          <div className="mob-btns">
+            <button type="button" className="mob-btn-login">{t.btn_login}</button>
+            <button type="button" className="mob-btn-signup">{t.btn_signup}</button>
+          </div>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); scrollToTesisler(); }}>{t.nav_aqua}</button>
+          <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>{t.nav_apply}</Link>
         </div>
       </div>
 
@@ -269,8 +377,8 @@ export default function Home() {
               role="button"
               tabIndex={0}
             >
-              <span className="sfl" id="sfl-region">Bölge</span>
-              <span className={`sfv ${srchRegion ? "selected" : ""}`} id="sfv-region">{srchRegion || "Bodrum, Antalya, Marmaris..."}</span>
+              <span className="sfl" id="sfl-region">{t.sfl_region}</span>
+              <span className={`sfv ${srchRegion ? "selected" : ""}`} id="sfv-region">{srchRegion || t.sfv_region}</span>
             </div>
             <div
               className={`sf ${panelType ? "active" : ""}`}
@@ -279,8 +387,8 @@ export default function Home() {
               role="button"
               tabIndex={0}
             >
-              <span className="sfl">Tesis Tipi</span>
-              <span className={`sfv ${srchType ? "selected" : ""}`}>{srchType || "Hotel, Beach Club..."}</span>
+              <span className="sfl">{t.sfl_type}</span>
+              <span className={`sfv ${srchType ? "selected" : ""}`}>{srchType || t.sfv_type}</span>
             </div>
             <div
               className={`sf ${panelDate ? "active" : ""}`}
@@ -289,8 +397,8 @@ export default function Home() {
               role="button"
               tabIndex={0}
             >
-              <span className="sfl">Tarih</span>
-              <span className={`sfv ${srchDate ? "selected" : ""}`}>{srchDate || "Tarih seçin"}</span>
+              <span className="sfl">{t.sfl_date}</span>
+              <span className={`sfv ${srchDate ? "selected" : ""}`}>{srchDate || t.sfv_date}</span>
             </div>
             <div
               className={`sf ${panelName ? "active" : ""}`}
@@ -299,15 +407,15 @@ export default function Home() {
               role="button"
               tabIndex={0}
             >
-              <span className="sfl">Tesis Adı</span>
-              <span className={`sfv ${srchName ? "selected" : ""}`}>{srchName || "Ara..."}</span>
+              <span className="sfl">{t.sfl_name}</span>
+              <span className={`sfv ${srchName ? "selected" : ""}`}>{srchName || t.sfv_name}</span>
             </div>
             <button type="button" className="srch-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" />
               </svg>
-              Tesis Ara
+              {t.srch_btn}
             </button>
             <button
               type="button"
@@ -315,7 +423,7 @@ export default function Home() {
               onClick={() => setFilterOpen(true)}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-              <span>Filtrele</span>
+              <span>{t.filter_btn}</span>
             </button>
           </div>
 
@@ -326,7 +434,7 @@ export default function Home() {
                 <div className="region-iller">
                   <div className="r-search">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                    <input type="text" placeholder="İl ara..." value={ilSearch} onChange={(e) => setIlSearch(e.target.value)} />
+                    <input type="text" placeholder={t.r_search_placeholder} value={ilSearch} onChange={(e) => setIlSearch(e.target.value)} />
                   </div>
                   <div id="illerList">
                     {filteredIller.map((il) => (
@@ -344,20 +452,20 @@ export default function Home() {
                   {activeIl ? (
                     <>
                       <div className="r-ilce-ttl">{activeIl}</div>
-                      <div className={`r-ilce-item ${!activeIlce ? "sel" : ""}`} onClick={() => setActiveIlce("")}>Tümü</div>
+                      <div className={`r-ilce-item ${!activeIlce ? "sel" : ""}`} onClick={() => setActiveIlce("")}>{t.r_all}</div>
                       {ilceler.map((ilce) => (
                         <div key={ilce} className={`r-ilce-item ${activeIlce === ilce ? "sel" : ""}`} onClick={() => setActiveIlce(ilce)}>{ilce}</div>
                       ))}
                     </>
                   ) : (
-                    <div style={{ padding: "12px 14px", fontSize: ".75rem", color: "var(--ink3)" }}>İl seçin</div>
+                    <div style={{ padding: "12px 14px", fontSize: ".75rem", color: "var(--ink3)" }}>{t.r_select_il}</div>
                   )}
                 </div>
               </div>
               <div className="r-footer">
                 <span className="r-footer-val" id="regionVal">{activeIlce ? `${activeIl} / ${activeIlce}` : activeIl || ""}</span>
-                <button type="button" className="r-btn-clear" onClick={() => { setActiveIl(""); setActiveIlce(""); setSrchRegion(""); }}>Temizle</button>
-                <button type="button" className="r-btn-ok" onClick={() => { setSrchRegion(activeIlce ? `${activeIl} / ${activeIlce}` : activeIl); closePanels(); }}>Tamam</button>
+                <button type="button" className="r-btn-clear" onClick={() => { setActiveIl(""); setActiveIlce(""); setSrchRegion(""); }}>{t.r_clear}</button>
+                <button type="button" className="r-btn-ok" onClick={() => { setSrchRegion(activeIlce ? `${activeIl} / ${activeIlce}` : activeIl); closePanels(); }}>{t.r_ok}</button>
               </div>
             </div>
           </div>
@@ -445,47 +553,47 @@ export default function Home() {
       {/* STATS */}
       <div className="stats">
         <div className="stats-in">
-          <div><span className="stn">100+</span><span className="stl" id="stl1">Aktif tesis</span></div>
+          <div><span className="stn">100+</span><span className="stl" id="stl1">{t.st_active}</span></div>
           <div className="std" />
-          <div><span className="stn">50K+</span><span className="stl" id="stl2">Rezervasyon</span></div>
+          <div><span className="stn">50K+</span><span className="stl" id="stl2">{t.st_res}</span></div>
           <div className="std" />
-          <div><span className="stn">15</span><span className="stl" id="stl3">Destinasyon</span></div>
+          <div><span className="stn">15</span><span className="stl" id="stl3">{t.st_dest}</span></div>
           <div className="std" />
-          <div><span className="stn">4.9★</span><span className="stl" id="stl4">Ortalama puan</span></div>
+          <div><span className="stn">4.9★</span><span className="stl" id="stl4">{t.st_rating}</span></div>
           <div className="std" />
-          <div><span className="stn">QR</span><span className="stl" id="stl5">Temassız giriş</span></div>
+          <div><span className="stn">QR</span><span className="stl" id="stl5">{t.st_qr}</span></div>
         </div>
       </div>
 
       {/* CATEGORIES */}
       <section className="sec">
         <div className="sec-row">
-          <h2 className="sec-h" id="cat-title">Tesis Kategorileri</h2>
-          <button type="button" className="sec-a" id="cat-all" onClick={() => setActiveCategory("all")}>Tümünü gör →</button>
+<h2 className="sec-h" id="cat-title">{t.cat_title}</h2>
+        <button type="button" className="sec-a" id="cat-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="cat-grid">
           <div id="oteller" className="cat-card" data-cat="hotel" onClick={() => setActiveCategory("hotel")}>
             <img src={CAT_IMGS[0]} alt="Hotel" />
             <div className="cat-ov">
-              <div className="cat-name" id="cat1-name">Hotel</div>
-              <div className="cat-sub" id="cat1-sub">Konfor ve hizmet</div>
+<div className="cat-name" id="cat1-name">{t.cat_hotel}</div>
+            <div className="cat-sub" id="cat1-sub">{t.cat_hotel_sub}</div>
             </div>
-            <div className="cat-badge ct" id="cat1-badge">Popüler</div>
+            <div className="cat-badge ct" id="cat1-badge">{t.badge_popular}</div>
           </div>
           <div id="beach-club" className="cat-card" data-cat="beach" onClick={() => setActiveCategory("beach")}>
             <img src={CAT_IMGS[1]} alt="Beach Club" />
             <div className="cat-ov">
-              <div className="cat-name" id="cat2-name">Beach Club</div>
-              <div className="cat-sub" id="cat2-sub">Şezlong &amp; deniz keyfi</div>
+              <div className="cat-name" id="cat2-name">{t.cat_beach}</div>
+              <div className="cat-sub" id="cat2-sub">{t.cat_beach_sub}</div>
             </div>
           </div>
           <div id="aqua-park" className="cat-card" data-cat="aqua" onClick={() => setActiveCategory("aqua")}>
             <img src={CAT_IMGS[2]} alt="Aqua Park" />
             <div className="cat-ov">
-              <div className="cat-name" id="cat3-name">Aqua Park</div>
-              <div className="cat-sub" id="cat3-sub">Eğlence &amp; kaydırak</div>
+              <div className="cat-name" id="cat3-name">{t.cat_aqua}</div>
+              <div className="cat-sub" id="cat3-sub">{t.cat_aqua_sub}</div>
             </div>
-            <div className="cat-badge co" id="cat3-badge">Yeni</div>
+            <div className="cat-badge co" id="cat3-badge">{t.badge_new}</div>
           </div>
         </div>
       </section>
@@ -493,32 +601,32 @@ export default function Home() {
       {/* FAV / PRODUCTS */}
       <section className="sec" id="tesisler-bolum">
         <div className="sec-row">
-          <h2 className="sec-h" id="fav-title">En Çok Tercih Edilenler</h2>
-          <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>Tümünü gör →</button>
+          <h2 className="sec-h" id="fav-title">{t.popular_title}</h2>
+          <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="pgrid" id="tesisGrid">
-          {filteredTesis.map((t) => {
-            const origIdx = TESISLER.indexOf(t);
+          {filteredTesis.map((tesis) => {
+            const origIdx = TESISLER.indexOf(tesis);
             const prices = [450, 320, 280, 395];
             return (
               <div
-                key={t.name}
+                key={tesis.name}
                 className="pc"
-                data-type={t.type}
+                data-type={tesis.type}
               >
                 <div className="pw0">
-                  <img src={TESIS_IMGS[origIdx]} alt={t.name} />
+                  <img src={TESIS_IMGS[origIdx]} alt={tesis.name} />
                   <button type="button" className="pfav">♡</button>
                   <span className="prat">★ 4.8</span>
-                  <span className={`ptag ${t.type === "aqua" ? "co" : "ct"}`}>Günlük</span>
+                  <span className={`ptag ${tesis.type === "aqua" ? "co" : "ct"}`}>{t.tag_daily}</span>
                 </div>
-                <div className="pn">{t.name}</div>
-                <div className="pl">{t.ilce} / {t.il}</div>
+                <div className="pn">{tesis.name}</div>
+                <div className="pl">{tesis.ilce} / {tesis.il}</div>
                 <div className="pf">
                   <span className="pfc">Wi-Fi</span>
                   <span className="pfc">Bar</span>
                 </div>
-                <div className="pp"><b>₺{prices[origIdx] ?? 395}</b><span> / gün</span></div>
+                <div className="pp"><b>₺{prices[origIdx] ?? 395}</b><span> {t.card_per_day}</span></div>
               </div>
             );
           })}
@@ -528,8 +636,8 @@ export default function Home() {
       {/* HOW */}
       <section className="how">
         <div className="how-in">
-          <h2 className="how-ttl" id="how-title">Nasıl <span>Çalışır?</span></h2>
-          <p className="how-sub" id="how-sub">3 adımda şezlong rezervasyonu</p>
+          <h2 className="how-ttl" id="how-title">{t.how_title} <span>{t.how_title2}</span></h2>
+          <p className="how-sub" id="how-sub">{t.how_sub}</p>
           <div className="hgrid">
             <div className="hs">
               <div className="hs-top">
@@ -537,7 +645,7 @@ export default function Home() {
                 <span className="hadim">ADIM 01</span>
               </div>
               <span className="hi">🔍</span>
-              <h3 id="how1-title">Tesis Seç</h3>
+              <h3 id="how1-title">{t.how1}</h3>
               <p className="hs-desc" id="how1-desc">Konum, tesis tipi veya tarihe göre filtrele.</p>
               <ul className="hs-list">
                 <li>Konuma, tarihe veya tesis tipine göre filtrele</li>
@@ -552,7 +660,7 @@ export default function Home() {
                 <span className="hadim">ADIM 02</span>
               </div>
               <span className="hi">🏖️</span>
-              <h3 id="how2-title">Şezlong Seç</h3>
+              <h3 id="how2-title">{t.how2}</h3>
               <p className="hs-desc" id="how2-desc">Tesis planı üzerinden istediğin şezlongu seç.</p>
               <ul className="hs-list">
                 <li>Denize yakınlık, gölge ve VIP bölge tercini yap</li>
@@ -567,7 +675,7 @@ export default function Home() {
                 <span className="hadim">ADIM 03</span>
               </div>
               <span className="hi">✅</span>
-              <h3 id="how3-title">Öde &amp; Uzan</h3>
+              <h3 id="how3-title">{t.how3}</h3>
               <p className="hs-desc" id="how3-desc">Güvenli ödeme yap, QR kodunu göster.</p>
               <ul className="hs-list">
                 <li>iyzico ile 256-bit SSL şifreli güvenli ödeme</li>
@@ -639,8 +747,8 @@ export default function Home() {
       <section className="b2b">
         <div className="b2b-in">
           <div>
-            <div className="bm-tag" id="b2b-tag">Tesis Sahipleri İçin</div>
-            <h2 id="b2b-title">Tesisinizi MyLoungers&apos;a ekleyin</h2>
+            <div className="bm-tag" id="b2b-tag">{t.b2b_tag}</div>
+            <h2 id="b2b-title">{t.b2b_title}</h2>
             <p className="desc" id="b2b-desc">Otel, beach club veya plaj işletmenizi platforma ekleyin.</p>
             <div className="b2b-acts">
               <button type="button" className="btn-solid" id="b2b-btn1" onClick={() => setBasvuruOpen(true)}>Başvuru Formu →</button>
@@ -676,8 +784,8 @@ export default function Home() {
       {/* REVIEWS */}
       <section className="rev">
         <div className="sec-row">
-          <h2 className="sec-h" id="rev-title">Kullanıcılar Ne Diyor?</h2>
-          <a href="/yorumlar" className="sec-a" id="rev-all">Tüm yorumlar →</a>
+          <h2 className="sec-h" id="rev-title">{t.rev_title}</h2>
+          <a href="/yorumlar" className="sec-a" id="rev-all">{t.rev_all} →</a>
         </div>
         <div className="rgrid">
           <div className="rc">
@@ -724,7 +832,7 @@ export default function Home() {
         <div className="ft">
           <div>
             <img src="/logo.png" alt="MyLoungers" className="fl-logo" />
-            <p className="fd" id="footer-desc">Türkiye&apos;nin şezlong rezervasyon platformu.</p>
+            <p className="fd" id="footer-desc">{t.footer_desc}</p>
             <div className="fa">
               <a href="#" className="fapp">🍎 App Store</a>
               <a href="#" className="fapp">🤖 Google Play</a>
