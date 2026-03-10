@@ -463,7 +463,8 @@ footer{background:var(--navy);padding:48px 24px 22px}
 .fp-location-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:11px;border:1.5px solid var(--teal);border-radius:var(--r);background:rgba(10,186,181,.05);color:var(--teal);font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
 .fp-location-btn:hover{background:rgba(10,186,181,.12)}
 .fp-location-btn.fp-location-ok{background:var(--teal);color:#fff;border-color:var(--teal);cursor:default}
-.fp-location-btn.fp-location-err{border-color:#e53935;color:#e53935;background:rgba(229,57,53,.06);cursor:default}
+.fp-location-btn.fp-location-err{border-color:#e53935;color:#e53935;background:rgba(229,57,53,.06);cursor:pointer}
+.fp-location-btn.fp-location-loading{cursor:wait;opacity:.85}
 @media(max-width:480px){.filter-panel{width:100%}.filter-btn span:not(.filter-badge){display:none}.filter-btn{padding:0 14px}}
 .srch-wrap{background:#fff;border-bottom:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.06)}
 .srch-in{max-width:1400px;margin:0 auto;padding:20px 40px}
@@ -628,7 +629,8 @@ footer{background:var(--navy);padding:48px 24px 22px}
 .fp-location-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:11px;border:1.5px solid var(--teal);border-radius:var(--r);background:rgba(10,186,181,.05);color:var(--teal);font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
 .fp-location-btn:hover{background:rgba(10,186,181,.12)}
 .fp-location-btn.fp-location-ok{background:var(--teal);color:#fff;border-color:var(--teal);cursor:default}
-.fp-location-btn.fp-location-err{border-color:#e53935;color:#e53935;background:rgba(229,57,53,.06);cursor:default}
+.fp-location-btn.fp-location-err{border-color:#e53935;color:#e53935;background:rgba(229,57,53,.06);cursor:pointer}
+.fp-location-btn.fp-location-loading{cursor:wait;opacity:.85}
 @media(max-width:480px){.filter-panel{width:100%}.filter-btn span:not(.filter-badge){display:none}.filter-btn{padding:0 14px}}
 .srch-wrap{background:#fff;border-bottom:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.06)}
 .srch-in{max-width:1400px;margin:0 auto;padding:20px 40px}

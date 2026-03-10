@@ -219,7 +219,7 @@ export default function Home() {
   const [filterPriceMax, setFilterPriceMax] = useState(5000);
   const [filterRating, setFilterRating] = useState(0);
   const [filterFeatures, setFilterFeatures] = useState<number[]>([]);
-  const [locationStatus, setLocationStatus] = useState<null | "alındı" | "hata">(null);
+  const [locationStatus, setLocationStatus] = useState<null | "loading" | "alındı" | "hata">(null);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -252,7 +252,9 @@ export default function Home() {
   }, [isLangOpen]);
 
   useEffect(() => {
-    const onClose = () => {
+    const onClose = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest(".sf") || target.closest(".region-dropdown") || target.closest(".type-dropdown") || target.closest(".date-dropdown") || target.closest(".name-dropdown") || target.closest(".filter-panel")) return;
       setPanelRegion(false);
       setPanelType(false);
       setPanelDate(false);
@@ -499,7 +501,7 @@ export default function Home() {
                   </div>
                   <div className="srch-drop-footer">
                     <span className="srch-drop-val">{activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince || ""}</span>
-                    <button type="button" className="srch-drop-btn" onClick={() => { setSelectedProvince(""); setActiveIlce(""); setSrchRegion(""); }}>{t.r_clear}</button>
+                    <button type="button" className="srch-drop-btn" onClick={() => { setSelectedProvince(""); setActiveIlce(""); setSrchRegion(""); closePanels(); }}>{t.r_clear}</button>
                     <button type="button" className="srch-drop-btn primary" onClick={() => { setSrchRegion(activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince); closePanels(); }}>{t.r_ok}</button>
                   </div>
                 </div>
@@ -646,22 +648,23 @@ export default function Home() {
           <div className="fp-section">
             <button
               type="button"
-              className={`fp-location-btn ${locationStatus === "alındı" ? "fp-location-ok" : ""} ${locationStatus === "hata" ? "fp-location-err" : ""}`}
+              className={`fp-location-btn ${locationStatus === "alındı" ? "fp-location-ok" : ""} ${locationStatus === "hata" ? "fp-location-err" : ""} ${locationStatus === "loading" ? "fp-location-loading" : ""}`}
               onClick={() => {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      console.log("Konum:", pos.coords.latitude, pos.coords.longitude);
-                      setLocationStatus("alındı");
-                    },
-                    (err) => {
-                      setLocationStatus("hata");
-                    }
-                  );
-                }
+                if (!navigator.geolocation) return;
+                setLocationStatus(null);
+                setLocationStatus("loading");
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    console.log("Konum:", pos.coords.latitude, pos.coords.longitude);
+                    setLocationStatus("alındı");
+                  },
+                  () => {
+                    setLocationStatus("hata");
+                  }
+                );
               }}
             >
-              {locationStatus === "alındı" ? "✅ Konumunuz Alındı" : locationStatus === "hata" ? "❌ Konum İzni Reddedildi" : "📍 🗺️ Konumumu Kullan"}
+              {locationStatus === "loading" ? "⏳ Konum alınıyor..." : locationStatus === "alındı" ? "✅ Konumunuz Alındı" : locationStatus === "hata" ? "❌ Konum İzni Reddedildi" : "📍 🗺️ Konumumu Kullan"}
             </button>
           </div>
           <div className="fp-section">
