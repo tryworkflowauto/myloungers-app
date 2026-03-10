@@ -150,11 +150,13 @@ button.mob-link{width:calc(100% - 12px);appearance:none;-webkit-appearance:none}
 .name-item:hover{background:#F4F8FB}
 .name-item-name{font-weight:600;color:var(--ink)}
 .name-item-loc{font-size:.75rem;color:var(--ink3)}
-.filter-trigger{border-right:1px solid var(--border);flex-direction:row;align-items:center;gap:8px}
-.sf.filter-trigger .sfl{margin-bottom:0}
-.sf.filter-trigger svg{flex-shrink:0}
-.srch-btn{background:#0ABAB5;color:#fff;border:none;padding:0 28px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:8px;align-self:stretch;border-radius:0 14px 14px 0}
+.srch-actions{display:flex;gap:8px;align-items:stretch;flex-shrink:0}
+.srch-btn{background:#0ABAB5;color:#fff;border:none;padding:12px 24px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;align-self:stretch;border-radius:12px;white-space:nowrap}
 .srch-btn:hover{background:#089490}
+.filter-trigger{background:#fff;color:#111;border:1.5px solid #E5EBF0;padding:12px 20px;border-radius:12px;font-weight:600;font-family:inherit;font-size:.88rem;cursor:pointer;display:flex;align-items:center;gap:6px;align-self:stretch;white-space:nowrap;transition:border-color .15s,background .15s}
+.filter-trigger:hover{border-color:#0ABAB5;background:#F4F8FB}
+.filter-trigger.active{border-color:#0ABAB5;background:#E0F7F6;color:#0ABAB5}
+.filter-trigger svg{flex-shrink:0}
 /* STATS */
 .stats{background:var(--navy)}
 .stats-in{max-width:1400px;margin:0 auto;padding:18px 40px;display:flex;align-items:center;gap:40px;overflow-x:auto;scrollbar-width:none}

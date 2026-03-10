@@ -615,21 +615,20 @@ export default function Home() {
               )}
             </div>
 
-            {/* TESİS ARA */}
-            <button type="button" className="srch-btn" onClick={(e) => { e.stopPropagation(); handleTesisAra(); }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-              {t.srch_btn}
-            </button>
-
-            {/* FİLTRELE */}
-            <div className="srch-field-wrap">
+            <div className="srch-actions">
+              {/* TESİS ARA */}
+              <button type="button" className="srch-btn" onClick={(e) => { e.stopPropagation(); handleTesisAra(); }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                {t.srch_btn}
+              </button>
+              {/* FİLTRELE */}
               <button
                 type="button"
-                className={`sf filter-trigger ${filterOpen ? "active" : ""}`}
+                className={`filter-trigger ${filterOpen ? "active" : ""}`}
                 onClick={(e) => { e.stopPropagation(); openFilterPanel(); }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" /></svg>
-                <span className="sfl">{t.filter_btn}</span>
+                <span>{t.filter_btn}</span>
               </button>
             </div>
           </div>
