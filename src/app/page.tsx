@@ -222,6 +222,7 @@ export default function Home() {
   const [filterRating, setFilterRating] = useState(0);
   const [filterFeatures, setFilterFeatures] = useState<number[]>([]);
   const [locationStatus, setLocationStatus] = useState<null | "loading" | "alındı" | "izin-yok" | "hata">(null);
+  const [radius, setRadius] = useState(5);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -670,13 +671,25 @@ export default function Home() {
         </div>
         <div className="fp-body">
           <div className="fp-section">
+            <div className="fp-radius-header">
+              <span className="fp-sec-title">ARAMA YARIÇAPI</span>
+              <span className="fp-radius-val">{radius} km</span>
+            </div>
+            <div className="fp-range-wrap">
+              <input type="range" className="fp-range" min={1} max={50} step={1} value={radius} onChange={(e) => setRadius(Number(e.target.value))} />
+            </div>
+            <div className="fp-radius-pills">
+              {[1, 5, 10, 50].map((km) => (
+                <button key={km} type="button" className={`fp-radius-pill ${radius === km ? "sel" : ""}`} onClick={() => setRadius(km)}>{km} km</button>
+              ))}
+            </div>
             <button
               type="button"
               className={`fp-location-btn ${locationStatus === "alındı" ? "fp-location-ok" : ""} ${locationStatus === "hata" ? "fp-location-err" : ""} ${locationStatus === "loading" ? "fp-location-loading" : ""} ${locationStatus === "izin-yok" ? "fp-location-izin" : ""}`}
               onClick={handleLocation}
               disabled={locationStatus === "loading" || locationStatus === "alındı"}
             >
-              {locationStatus === "loading" ? "⏳ Konum alınıyor..." : locationStatus === "alındı" ? "✅ Konumunuz Alındı" : locationStatus === "izin-yok" ? "🔒 Tarayıcı ayarlarından konum iznini aç" : locationStatus === "hata" ? "❌ Tekrar Dene" : "📍 Konumumu Kullan"}
+              {locationStatus === "loading" ? "⏳ Konum alınıyor..." : locationStatus === "alındı" ? `✅ ${radius} km çevresinde aranıyor` : locationStatus === "izin-yok" ? "🔒 Tarayıcı ayarlarından konum iznini aç" : locationStatus === "hata" ? `📍 Konumumu Kullan — ${radius} km çevresinde ara` : `📍 Konumumu Kullan — ${radius} km çevresinde ara`}
             </button>
           </div>
           <div className="fp-section">
