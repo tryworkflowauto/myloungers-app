@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import "./basvuru.css";
 
-const CITIES = ["Bodrum", "Marmaris", "Fethiye", "Antalya", "İzmir", "Diğer"];
+const ILLER = ["Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin", "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars", "Kastamonu", "Kayseri", "Kilis", "Kırıkkale", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Şırnak", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"];
 const PRICE_RANGES = ["₺100-200", "₺200-400", "₺400-700", "₺700+"];
 const SEZON_OPTS = ["Yaz (Haz-Eyl)", "Tüm Yıl", "Diğer"];
 const FEATURES = ["Restoran/Kafe", "Ücretsiz Otopark", "Su Sporları", "VIP Alan", "Çocuk Havuzu", "Konaklama"];
@@ -18,8 +18,10 @@ export default function BasvuruPage() {
   // Step 1
   const [isletmeAdi, setIsletmeAdi] = useState("");
   const [sehir, setSehir] = useState("");
+  const [ilce, setIlce] = useState("");
   const [tesisTipi, setTesisTipi] = useState("beach");
   const [kapasite, setKapasite] = useState(50);
+  const [tamAdres, setTamAdres] = useState("");
 
   // Step 2
   const [fiyatAraligi, setFiyatAraligi] = useState("");
@@ -176,14 +178,20 @@ export default function BasvuruPage() {
                       <label>İşletme Adı *</label>
                       <input type="text" className="bav-finp" placeholder="örn. Zuzuu Beach Hotel" value={isletmeAdi} onChange={(e) => setIsletmeAdi(e.target.value)} />
                     </div>
-                    <div className="bav-fgrp">
-                      <label>Şehir *</label>
-                      <select className="bav-fsel" value={sehir} onChange={(e) => setSehir(e.target.value)}>
-                        <option value="">Seçiniz</option>
-                        {CITIES.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
+                    <div className="bav-fgrp-row">
+                      <div className="bav-fgrp">
+                        <label>Şehir *</label>
+                        <select className="bav-fsel" value={sehir} onChange={(e) => setSehir(e.target.value)}>
+                          <option value="" disabled>Seçiniz</option>
+                          {ILLER.map((il) => (
+                            <option key={il} value={il}>{il}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="bav-fgrp">
+                        <label>İlçe / Bölge</label>
+                        <input type="text" id="f-district" className="bav-finp" placeholder="Örn: Yalıkavak" value={ilce} onChange={(e) => setIlce(e.target.value)} />
+                      </div>
                     </div>
                     <div className="bav-fgrp">
                       <label>Tesis Tipi</label>
@@ -198,6 +206,10 @@ export default function BasvuruPage() {
                       <div className="bav-cap-wrap">
                         <input type="range" min={10} max={200} value={kapasite} step={5} onChange={(e) => setKapasite(Number(e.target.value))} className="bav-cap-slider" />
                       </div>
+                    </div>
+                    <div className="bav-fgrp">
+                      <label>Tam Adres</label>
+                      <textarea id="f-address" className="bav-ftxt bav-ftxt-address" placeholder="Tesisin tam adresi..." value={tamAdres} onChange={(e) => setTamAdres(e.target.value)} rows={3} />
                     </div>
                     <div className="bav-form-nav">
                       <div />

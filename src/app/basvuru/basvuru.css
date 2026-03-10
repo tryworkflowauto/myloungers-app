@@ -298,6 +298,16 @@
 .bav-form-sub { font-size: .75rem; color: var(--ink3); margin-bottom: 22px; line-height: 1.5; }
 
 .bav-fgrp { margin-bottom: 16px; }
+.bav-fgrp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.bav-fgrp-row .bav-fgrp { margin-bottom: 0; }
+@media (max-width: 500px) {
+  .bav-fgrp-row { grid-template-columns: 1fr; }
+}
 .bav-fgrp label {
   display: block;
   font-size: .68rem;
@@ -325,6 +335,7 @@
 }
 .bav-finp::placeholder, .bav-ftxt::placeholder { color: var(--ink3); }
 .bav-ftxt { resize: vertical; min-height: 80px; line-height: 1.5; }
+.bav-ftxt-address { min-height: 70px; }
 .bav-fsel {
   cursor: pointer;
   appearance: none;
