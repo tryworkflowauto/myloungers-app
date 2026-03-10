@@ -158,6 +158,8 @@ const FACILITY_TYPES = [
   { icon: "💦", label: "Aqua Park" },
 ];
 
+const TYPE_MAP: Record<string, string> = { "Hotel": "hotel", "Beach Club": "beach", "Aqua Park": "aqua" };
+
 const POPULAR_TESISLER = [
   { name: "Zuzuu Beach Hotel", loc: "Bodrum (Muğla)", icon: "🏖️" },
   { name: "Marmaris Aqua Resort", loc: "Marmaris (Muğla)", icon: "🌊" },
@@ -219,7 +221,7 @@ export default function Home() {
   const [filterPriceMax, setFilterPriceMax] = useState(5000);
   const [filterRating, setFilterRating] = useState(0);
   const [filterFeatures, setFilterFeatures] = useState<number[]>([]);
-  const [locationStatus, setLocationStatus] = useState<null | "loading" | "alındı" | "hata">(null);
+  const [locationStatus, setLocationStatus] = useState<null | "loading" | "alındı" | "izin-yok" | "hata">(null);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -285,33 +287,55 @@ export default function Home() {
     setFilterOpen((prev) => !prev);
   }, []);
 
+  const handleLocation = useCallback(() => {
+    setLocationStatus("loading");
+
+    if (!navigator.geolocation) {
+      setLocationStatus("hata");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationStatus("alındı");
+        console.log("Konum:", pos.coords.latitude, pos.coords.longitude);
+      },
+      (err) => {
+        if (err.code === 1) {
+          setLocationStatus("izin-yok");
+        } else {
+          setLocationStatus("hata");
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  }, []);
+
   const handleTesisAra = useCallback(() => {
-    const selectedRegion = selectedProvince || null;
-    const selectedDistrict = activeIlce || null;
-    const selectedTypes = srchType ? [srchType] : [];
-    const selectedDate = srchDate || null;
-    const searchName = srchName || null;
-    console.log("Arama filtreleri:", { selectedRegion, selectedDistrict, selectedTypes, selectedDate, searchName });
-  }, [selectedProvince, activeIlce, srchType, srchDate, srchName]);
+    const el = document.getElementById("tesisler-section");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   const ilceler = selectedProvince && ILLER[selectedProvince] ? ILLER[selectedProvince] : [];
   const filteredIller = Object.keys(ILLER).filter((il) =>
     !ilSearch || il.toLowerCase().includes(ilSearch.toLowerCase())
   );
 
-  const filteredTesis = activeCategory === "all"
-    ? TESISLER
-    : TESISLER.filter((x) => x.type === activeCategory);
+  const searchTypeKey = srchType ? TYPE_MAP[srchType] : null;
+  let filteredTesis = TESISLER;
+  if (activeCategory !== "all") {
+    filteredTesis = filteredTesis.filter((x) => x.type === activeCategory);
+  }
+  if (searchTypeKey) {
+    filteredTesis = filteredTesis.filter((x) => x.type === searchTypeKey);
+  }
 
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
   const activeLangOpt = LANG_OPTS.find((o) => o.code === currentLang) ?? LANG_OPTS[0];
 
   const scrollToTesisler = () => {
-    const el = document.getElementById("tesisler-bolum");
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 120;
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
+    const el = document.getElementById("tesisler-section");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -648,23 +672,11 @@ export default function Home() {
           <div className="fp-section">
             <button
               type="button"
-              className={`fp-location-btn ${locationStatus === "alındı" ? "fp-location-ok" : ""} ${locationStatus === "hata" ? "fp-location-err" : ""} ${locationStatus === "loading" ? "fp-location-loading" : ""}`}
-              onClick={() => {
-                if (!navigator.geolocation) return;
-                setLocationStatus(null);
-                setLocationStatus("loading");
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => {
-                    console.log("Konum:", pos.coords.latitude, pos.coords.longitude);
-                    setLocationStatus("alındı");
-                  },
-                  () => {
-                    setLocationStatus("hata");
-                  }
-                );
-              }}
+              className={`fp-location-btn ${locationStatus === "alındı" ? "fp-location-ok" : ""} ${locationStatus === "hata" ? "fp-location-err" : ""} ${locationStatus === "loading" ? "fp-location-loading" : ""} ${locationStatus === "izin-yok" ? "fp-location-izin" : ""}`}
+              onClick={handleLocation}
+              disabled={locationStatus === "loading" || locationStatus === "alındı"}
             >
-              {locationStatus === "loading" ? "⏳ Konum alınıyor..." : locationStatus === "alındı" ? "✅ Konumunuz Alındı" : locationStatus === "hata" ? "❌ Konum İzni Reddedildi" : "📍 🗺️ Konumumu Kullan"}
+              {locationStatus === "loading" ? "⏳ Konum alınıyor..." : locationStatus === "alındı" ? "✅ Konumunuz Alındı" : locationStatus === "izin-yok" ? "🔒 Tarayıcı ayarlarından konum iznini aç" : locationStatus === "hata" ? "❌ Tekrar Dene" : "📍 Konumumu Kullan"}
             </button>
           </div>
           <div className="fp-section">
@@ -755,8 +767,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAV / PRODUCTS */}
-      <section className="sec" id="tesisler-bolum">
+      {/* FAV / PRODUCTS — En Çok Tercih Edilenler */}
+      <section className="sec" id="tesisler-section">
         <div className="sec-row">
           <h2 className="sec-h" id="fav-title">{t.popular_title}</h2>
           <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
