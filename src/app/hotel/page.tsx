@@ -177,7 +177,7 @@ export default function HotelPage() {
         <h2 className="sec-h">Bodrum Otelleri</h2>
         <div className="hotel-grid">
           {HOTEL_CARDS.map((hotel) => (
-            <div key={hotel.name} className="hotel-card">
+            <Link key={hotel.name} href="#" className="hotel-card">
               <div className="hotel-card-img-wrap">
                 <img src={hotel.image} alt={hotel.name} />
                 <span className="hotel-card-stars">★ {hotel.stars}</span>
@@ -192,11 +192,11 @@ export default function HotelPage() {
                 </div>
                 <div className="hotel-card-price">
                   <b>₺{hotel.loungerPrice}</b>
-                  <span> / şezlong gün</span>
+                  <span> / gün</span>
                 </div>
-                <Link href="#" className="hotel-card-btn">Rezervasyon Yap</Link>
+                <span className="hotel-card-btn">Rezervasyon Yap</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
