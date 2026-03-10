@@ -6,17 +6,18 @@ import { useState, useEffect, useCallback } from "react";
 import "./myloungers.css";
 
 const SLIDER_IMGS = [
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1920&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1920&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1540202404-a2f29016b523?w=1920&h=600&fit=crop",
+  "/images/1.png",
+  "/images/2.png",
+  "/images/5.png",
+  "/images/6.png",
+  "/images/9.png",
+  "/images/10.png",
 ];
 
 const CAT_IMGS = [
-  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=600&h=400&fit=crop",
+  "/images/tesis_kategorisi-otel.png",
+  "/images/tesis_kategorisi-beach.png",
+  "/images/tesis_kategorsi-aquapark.png",
 ];
 
 const TESIS_IMGS = [
@@ -45,6 +46,8 @@ const TESISLER = [
 const LANG_OPTS = [
   { code: "TR", flag: "🇹🇷", name: "Türkçe" },
   { code: "EN", flag: "🇬🇧", name: "English" },
+  { code: "RU", flag: "🇷🇺", name: "Русский" },
+  { code: "DE", flag: "🇩🇪", name: "Deutsch" },
 ];
 
 export default function Home() {
@@ -113,43 +116,34 @@ export default function Home() {
             <img src="/logo.png" alt="MyLoungers" className="logo-img" />
           </Link>
           <div className="nav-cats">
-            <button
-              type="button"
-              className={`nc ${activeCategory === "all" || activeCategory === "hotel" ? "on" : ""}`}
+            <a
+              href="#oteller"
+              className={`nc ${activeCategory === "hotel" ? "on" : ""}`}
               onClick={() => setActiveCategory("hotel")}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 22V12H8v10"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
               Hotel
-            </button>
-            <button
-              type="button"
+            </a>
+            <a
+              href="#beach-club"
               className={`nc ${activeCategory === "beach" ? "on" : ""}`}
               onClick={() => setActiveCategory("beach")}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 4C14 4 11 6 10 9L3 21"/><path d="M22 4C19 4 16 6 15 9L8 21"/><path d="M7 21h14"/><circle cx="19" cy="4" r="1" fill="currentColor"/></svg>
               Beach Club
-            </button>
-            <button
-              type="button"
+            </a>
+            <a
+              href="#aqua-park"
               className={`nc ${activeCategory === "aqua" ? "on" : ""}`}
               onClick={() => setActiveCategory("aqua")}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2v20M2 12h20" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
               Aqua Park
-            </button>
-            <button type="button" className="nc" onClick={() => setBasvuruOpen(true)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-              </svg>
+            </a>
+            <Link href="/basvuru" className="nc">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Başvuru Formu
-            </button>
+            </Link>
           </div>
           <div className="nav-r">
             <div className={`lang-wrap ${langOpen ? "open" : ""}`}>
@@ -204,10 +198,10 @@ export default function Home() {
       {/* MOB CATS */}
       <div className="mob-cats">
         <div className="mob-cats-in">
-          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => setActiveCategory("hotel")}>Hotel</button>
-          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => setActiveCategory("beach")}>Beach Club</button>
-          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => setActiveCategory("aqua")}>Aqua Park</button>
-          <button type="button" className="mcat" onClick={() => setBasvuruOpen(true)}>Başvuru</button>
+          <a href="#oteller" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => setActiveCategory("hotel")}>Hotel</a>
+          <a href="#beach-club" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => setActiveCategory("beach")}>Beach Club</a>
+          <a href="#aqua-park" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => setActiveCategory("aqua")}>Aqua Park</a>
+          <Link href="/basvuru" className="mcat">Başvuru</Link>
         </div>
       </div>
 
@@ -223,10 +217,10 @@ export default function Home() {
             <button type="button" className="mob-btn-signup">Üye Ol</button>
           </div>
           <div className="mob-sec-title">Kategoriler</div>
-          <button type="button" className="mob-link">Hotel</button>
-          <button type="button" className="mob-link">Beach Club</button>
-          <button type="button" className="mob-link">Aqua Park</button>
-          <button type="button" className="mob-link" onClick={() => { setBasvuruOpen(true); setMenuOpen(false); }}>Başvuru Formu</button>
+          <a href="#oteller" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); }}>Hotel</a>
+          <a href="#beach-club" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); }}>Beach Club</a>
+          <a href="#aqua-park" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); }}>Aqua Park</a>
+          <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>Başvuru Formu</Link>
         </div>
       </div>
 
@@ -234,7 +228,7 @@ export default function Home() {
       <div className="bwrap" id="bwrap">
         {SLIDER_IMGS.map((src, i) => (
           <div key={i} className={`slide ${i === slideIdx ? "on" : ""}`}>
-            <img src={src} alt="" className="slide-img" />
+  <img src={src} alt="" className="slide-img" />
           </div>
         ))}
         <button type="button" className="sarr prev" id="sprev" onClick={() => setSlideIdx((s) => (s - 1 + SLIDER_IMGS.length) % SLIDER_IMGS.length)}>‹</button>
@@ -296,20 +290,20 @@ export default function Home() {
               <span className="sfl">Tesis Adı</span>
               <span className={`sfv ${srchName ? "selected" : ""}`}>{srchName || "Ara..."}</span>
             </div>
+            <button type="button" className="srch-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              Tesis Ara
+            </button>
             <button
               type="button"
               className={`filter-btn ${filterOpen ? "active" : ""}`}
               onClick={() => setFilterOpen(true)}
             >
-              <span className="filter-badge" style={{ display: "none" }}>0</span>
-              <span>Filtre</span>
-            </button>
-            <button type="button" className="srch-btn">
-              Tesis Ara
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+              <span>Filtrele</span>
             </button>
           </div>
 
@@ -458,28 +452,28 @@ export default function Home() {
           <a href="/kategoriler" className="sec-a" id="cat-all">Tümünü gör →</a>
         </div>
         <div className="cat-grid">
-          <div className="cat-card" data-cat="hotel" onClick={() => setActiveCategory("hotel")}>
+          <div id="oteller" className="cat-card" data-cat="hotel" onClick={() => setActiveCategory("hotel")}>
             <img src={CAT_IMGS[0]} alt="Hotel" />
             <div className="cat-ov">
-              <span className="cat-badge ct" id="cat1-badge">Popüler</span>
-              <span className="cat-name" id="cat1-name">Hotel</span>
-              <span className="cat-sub" id="cat1-sub">Konfor ve hizmet</span>
+              <div className="cat-name" id="cat1-name">Hotel</div>
+              <div className="cat-sub" id="cat1-sub">Konfor ve hizmet</div>
             </div>
+            <div className="cat-badge ct" id="cat1-badge">Popüler</div>
           </div>
-          <div className="cat-card" data-cat="beach" onClick={() => setActiveCategory("beach")}>
+          <div id="beach-club" className="cat-card" data-cat="beach" onClick={() => setActiveCategory("beach")}>
             <img src={CAT_IMGS[1]} alt="Beach Club" />
             <div className="cat-ov">
-              <span className="cat-name" id="cat2-name">Beach Club</span>
-              <span className="cat-sub" id="cat2-sub">Şezlong &amp; deniz keyfi</span>
+              <div className="cat-name" id="cat2-name">Beach Club</div>
+              <div className="cat-sub" id="cat2-sub">Şezlong &amp; deniz keyfi</div>
             </div>
           </div>
-          <div className="cat-card" data-cat="aqua" onClick={() => setActiveCategory("aqua")}>
+          <div id="aqua-park" className="cat-card" data-cat="aqua" onClick={() => setActiveCategory("aqua")}>
             <img src={CAT_IMGS[2]} alt="Aqua Park" />
             <div className="cat-ov">
-              <span className="cat-badge co" id="cat3-badge">Yeni</span>
-              <span className="cat-name" id="cat3-name">Aqua Park</span>
-              <span className="cat-sub" id="cat3-sub">Eğlence &amp; kaydırak</span>
+              <div className="cat-name" id="cat3-name">Aqua Park</div>
+              <div className="cat-sub" id="cat3-sub">Eğlence &amp; kaydırak</div>
             </div>
+            <div className="cat-badge co" id="cat3-badge">Yeni</div>
           </div>
         </div>
       </section>
@@ -496,12 +490,13 @@ export default function Home() {
               key={t.name}
               className="pc"
               data-type={t.type}
-              style={{ display: activeCategory !== "all" && activeCategory !== t.type ? "none" : undefined }}
+
             >
               <div className="pw0">
                 <img src={TESIS_IMGS[i]} alt={t.name} />
+                <button type="button" className="pfav">♡</button>
                 <span className="prat">★ 4.8</span>
-                <span className="ptag">Günlük</span>
+                <span className={`ptag ${t.type === "aqua" ? "co" : "ct"}`}>{t.type === "hotel" ? "Günlük" : t.type === "aqua" ? "Günlük" : "Günlük"}</span>
               </div>
               <div className="pn">{t.name}</div>
               <div className="pl">{t.ilce} / {t.il}</div>
@@ -512,6 +507,65 @@ export default function Home() {
               <div className="pp"><b>₺{i === 0 ? 450 : i === 1 ? 320 : i === 2 ? 280 : 395}</b><span> / gün</span></div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* HOW */}
+      <section className="how">
+        <div className="how-in">
+          <h2 className="how-ttl" id="how-title">Nasıl <span>Çalışır?</span></h2>
+          <p className="how-sub" id="how-sub">3 adımda şezlong rezervasyonu</p>
+          <div className="hgrid">
+            <div className="hs">
+              <div className="hs-top">
+                <div className="hn"><span className="hn-num">1</span></div>
+                <span className="hadim">ADIM 01</span>
+              </div>
+              <span className="hi">🔍</span>
+              <h3 id="how1-title">Tesis Seç</h3>
+              <p className="hs-desc" id="how1-desc">Konum, tesis tipi veya tarihe göre filtrele.</p>
+              <ul className="hs-list">
+                <li>Konuma, tarihe veya tesis tipine göre filtrele</li>
+                <li>Gerçek kullanıcı yorumları ve puanlarını gör</li>
+                <li>Anlık müsaitlik durumunu kontrol et</li>
+              </ul>
+              <div className="hs-badge">🗺️ 15+ Destinasyon</div>
+            </div>
+            <div className="hs">
+              <div className="hs-top">
+                <div className="hn"><span className="hn-num">2</span></div>
+                <span className="hadim">ADIM 02</span>
+              </div>
+              <span className="hi">🏖️</span>
+              <h3 id="how2-title">Şezlong Seç</h3>
+              <p className="hs-desc" id="how2-desc">Tesis planı üzerinden istediğin şezlongu seç.</p>
+              <ul className="hs-list">
+                <li>Denize yakınlık, gölge ve VIP bölge tercini yap</li>
+                <li>Silver, Gold ve VIP kategoriler arasından seç</li>
+                <li>Birden fazla şezlongu aynı anda rezerve et</li>
+              </ul>
+              <div className="hs-badge">🏖️ 100+ Şezlong / Tesis</div>
+            </div>
+            <div className="hs">
+              <div className="hs-top">
+                <div className="hn"><span className="hn-num">3</span></div>
+                <span className="hadim">ADIM 03</span>
+              </div>
+              <span className="hi">✅</span>
+              <h3 id="how3-title">Öde &amp; Uzan</h3>
+              <p className="hs-desc" id="how3-desc">Güvenli ödeme yap, QR kodunu göster.</p>
+              <ul className="hs-list">
+                <li>iyzico ile 256-bit SSL şifreli güvenli ödeme</li>
+                <li>QR kod ile temassız, kasasız tesis girişi</li>
+                <li>24 saate kadar ücretsiz iptal imkânı</li>
+              </ul>
+              <div className="hs-badge">🔒 Güvenli &amp; Anında Onay</div>
+            </div>
+          </div>
+          <div className="how-cta">
+            <button type="button" className="how-cta-btn" id="how-cta-btn">🔍 Tesis Aramaya Başla</button>
+            <p className="how-cta-sub">Ücretsiz üyelik · Kredi kartı gerekmez</p>
+          </div>
         </div>
       </section>
 
@@ -535,52 +589,33 @@ export default function Home() {
         <div className="pww">
           <div className="pwt">
             <span className="pwn">Zuzuu Beach Hotel</span>
-            <span className="pwd">Şezlong Planı</span>
+            <span className="pwd">6 Mar 2026</span>
           </div>
           <div className="pwb">
-            <div className="pwc" id="leg1">Müsait</div>
+            <div className="pw-cat-row">
+              <span className="pw-cat-lbl">SILVER</span>
+              <span className="pw-cat-price">₺1.000 / GÜN</span>
+            </div>
             <div className="lrow">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className={`l ${i % 4 === 0 ? "lok" : i % 4 === 1 ? "lno" : "lpnd"}`}>{i % 4 === 0 ? "S" : i % 4 === 1 ? "R" : "T"}</div>
+              {[4,5,6,7,8,9,28,30].map((n, i) => (
+                <div key={n} className={`l ${i === 7 ? "lsel" : i === 6 ? "lno" : "lok"}`}>{n}</div>
               ))}
             </div>
-            <div className="pwc" id="leg2">Rezerve</div>
-            <div className="pwc" id="leg3">Tadilat</div>
-            <div className="pwc" id="leg4">Seçimim</div>
+            <div className="pw-cat-row" style={{marginTop:"14px"}}>
+              <span className="pw-cat-lbl">GOLD</span>
+              <span className="pw-cat-price">₺600 / GÜN</span>
+            </div>
+            <div className="lrow">
+              {[1,2,3,4,5,6,7,8].map((n, i) => (
+                <div key={n} className={`l lgold ${i === 2 ? "lno" : i === 5 ? "lpnd" : "lok"}`}>{n}</div>
+              ))}
+            </div>
           </div>
           <div className="pwleg">
             <div className="pwl"><div className="pwld lok" /><span>Müsait</span></div>
             <div className="pwl"><div className="pwld lno" /><span>Rezerve</span></div>
             <div className="pwl"><div className="pwld lpnd" /><span>Tadilat</span></div>
             <div className="pwl"><div className="pwld lsel" /><span>Seçimim</span></div>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW */}
-      <section className="how">
-        <div className="how-in">
-          <h2 className="how-ttl" id="how-title">Nasıl <span>Çalışır?</span></h2>
-          <p className="how-sub" id="how-sub">3 adımda şezlong rezervasyonu</p>
-          <div className="hgrid">
-            <div className="hs">
-              <div className="hn"><span className="hn-num">1</span></div>
-              <span className="hi">📍</span>
-              <h3 id="how1-title">Tesis Seç</h3>
-              <p id="how1-desc">Konum, tesis tipi veya tarihe göre filtrele.</p>
-            </div>
-            <div className="hs">
-              <div className="hn"><span className="hn-num">2</span></div>
-              <span className="hi">🪑</span>
-              <h3 id="how2-title">Şezlong Seç</h3>
-              <p id="how2-desc">Tesis planı üzerinden istediğin şezlongu seç.</p>
-            </div>
-            <div className="hs">
-              <div className="hn"><span className="hn-num">3</span></div>
-              <span className="hi">💳</span>
-              <h3 id="how3-title">Öde &amp; Uzan</h3>
-              <p id="how3-desc">Güvenli ödeme yap, QR kodunu göster.</p>
-            </div>
           </div>
         </div>
       </section>
