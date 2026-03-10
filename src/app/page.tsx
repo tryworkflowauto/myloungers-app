@@ -463,7 +463,7 @@ export default function Home() {
       <section className="sec">
         <div className="sec-row">
           <h2 className="sec-h" id="cat-title">Tesis Kategorileri</h2>
-          <a href="/kategoriler" className="sec-a" id="cat-all">Tümünü gör →</a>
+          <button type="button" className="sec-a" id="cat-all" onClick={() => setActiveCategory("all")}>Tümünü gör →</button>
         </div>
         <div className="cat-grid">
           <div id="oteller" className="cat-card" data-cat="hotel" onClick={() => setActiveCategory("hotel")}>
@@ -496,7 +496,7 @@ export default function Home() {
       <section className="sec">
         <div className="sec-row">
           <h2 className="sec-h" id="fav-title">En Çok Tercih Edilenler</h2>
-          <a href="/arama" className="sec-a" id="fav-all">Tümünü gör →</a>
+          <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>Tümünü gör →</button>
         </div>
         <div className="pgrid" id="tesisGrid">
           {filteredTesis.map((t) => {

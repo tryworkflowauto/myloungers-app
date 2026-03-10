@@ -101,7 +101,9 @@ button.mob-link{width:calc(100% - 12px);appearance:none;-webkit-appearance:none}
 .sec{max-width:1400px;margin:0 auto;padding:48px 24px}
 .sec-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .sec-h{font-size:1.6rem;font-weight:800;letter-spacing:-.025em}
-.sec-a{font-size:.8rem;font-weight:700;color:var(--teal-dk);text-decoration:none}
+.sec-a{font-size:.8rem;font-weight:700;color:var(--teal-dk);text-decoration:none;cursor:pointer}
+button.sec-a{background:none;border:none;padding:0;font-family:inherit;appearance:none;-webkit-appearance:none}
+button.sec-a:hover{color:var(--teal)}
 .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .cat-card{border-radius:var(--rl);overflow:hidden;position:relative;cursor:pointer;aspect-ratio:3/2;transition:transform .22s,box-shadow .22s}
 .cat-card:hover{transform:translateY(-4px);box-shadow:var(--shl)}
