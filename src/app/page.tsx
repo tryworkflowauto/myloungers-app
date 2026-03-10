@@ -615,6 +615,12 @@ export default function Home() {
               )}
             </div>
 
+            {/* TESİS ARA */}
+            <button type="button" className="srch-btn" onClick={(e) => { e.stopPropagation(); handleTesisAra(); }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+              {t.srch_btn}
+            </button>
+
             {/* FİLTRELE */}
             <div className="srch-field-wrap">
               <button
@@ -626,12 +632,6 @@ export default function Home() {
                 <span className="sfl">{t.filter_btn}</span>
               </button>
             </div>
-
-            {/* TESİS ARA */}
-            <button type="button" className="srch-btn" onClick={(e) => { e.stopPropagation(); handleTesisAra(); }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-              {t.srch_btn}
-            </button>
           </div>
         </div>
       </div>
