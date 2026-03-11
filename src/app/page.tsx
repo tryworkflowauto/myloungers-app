@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import "./myloungers.css";
 
@@ -195,6 +196,7 @@ const TESISLER = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru">("tr");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [slideIdx, setSlideIdx] = useState(0);
@@ -313,9 +315,14 @@ export default function Home() {
   }, []);
 
   const handleTesisAra = useCallback(() => {
-    const el = document.getElementById("tesisler-section");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  }, []);
+    const params = new URLSearchParams();
+    const konum = activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince;
+    if (konum) params.set("konum", konum);
+    if (srchType) params.set("tip", TYPE_MAP[srchType] ?? srchType.toLowerCase());
+    if (srchDate) params.set("tarih", srchDate);
+    const qs = params.toString();
+    router.push(qs ? `/arama?${qs}` : "/arama");
+  }, [selectedProvince, activeIlce, srchType, srchDate, router]);
 
   const ilceler = selectedProvince && ILLER[selectedProvince] ? ILLER[selectedProvince] : [];
   const filteredIller = Object.keys(ILLER).filter((il) =>
