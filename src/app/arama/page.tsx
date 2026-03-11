@@ -3,7 +3,10 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import "./arama.css";
+
+const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 
 const CARDS = [
   { id:1, name:"Zuzuu Beach Hotel", score:9.6, cat:"Beach Club", stars:4, rev:128, loc:"Bodrum, Muğla", dist:"2.4", feats:["Özel İskele","Havuz","Beach Bar","Vale Park"], price:1000, avail:"ok", availTxt:"23 şezlong müsait", badge:"top", badgeTxt:"TOP 10", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
@@ -107,49 +110,20 @@ function AramaContent() {
         <div className="hero-wrap">
           <div className="hero-title">🔍 Tesis Ara</div>
           <div className="hero-sub">Beach club, hotel ve aqua park — Türkiye geneli</div>
-          <div className="sbox">
-            <div className="sf" style={{ flex: 2, minWidth: 180 }}>
-              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Konum</label>
-              <div className="sf-loc">
-                <input type="text" value={locInput} onChange={e => setLocInput(e.target.value)} placeholder="Bodrum, Antalya, Marmaris..." disabled={gpsOn} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%" }} />
-                <button className={`gps-btn${gpsOn ? " on" : ""}`} onClick={toggleGPS}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-                  {gpsOn ? "✓ GPS" : "GPS"}
-                </button>
-              </div>
-            </div>
-            <div className="sf" style={{ minWidth: 130 }}>
-              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Tesis Tipi</label>
-              <select value={typeVal} onChange={e => setTypeVal(e.target.value)} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%", cursor: "pointer" }}>
-                <option value="">Tümü</option>
-                <option value="beach">Beach Club</option>
-                <option value="hotel">Hotel</option>
-                <option value="aqua">Aqua Park</option>
-                <option value="tatil">Tatil Köyü</option>
-              </select>
-            </div>
-            <div className="sf" style={{ minWidth: 130 }}>
-              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Tarih</label>
-              <input type="date" value={dateVal} onChange={e => setDateVal(e.target.value)} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%" }} />
-            </div>
-            <div className="sf" style={{ minWidth: 100, maxWidth: 120 }}>
-              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Kişi</label>
-              <select value={kisiVal} onChange={e => setKisiVal(e.target.value)} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%", cursor: "pointer" }}>
-                {["1 Kişi","2 Kişi","3 Kişi","4 Kişi","5+ Kişi"].map(k => <option key={k}>{k}</option>)}
-              </select>
-            </div>
-            <button className="sbtn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              Ara
-            </button>
-          </div>
-          {gpsOn && (
-            <div className="km-row">
-              <span className="km-lbl">📍 Çevremdeki tesisler — yarıçap:</span>
-              <input type="range" className="km-slider" min={1} max={50} value={km} onChange={e => setKm(+e.target.value)} />
-              <span className="km-val">{km} km</span>
-            </div>
-          )}
+          <SearchBar
+            locInput={locInput}
+            onLocInputChange={setLocInput}
+            gpsOn={gpsOn}
+            onToggleGPS={toggleGPS}
+            typeVal={typeVal}
+            onTypeValChange={setTypeVal}
+            dateVal={dateVal}
+            onDateValChange={setDateVal}
+            kisiVal={kisiVal}
+            onKisiValChange={setKisiVal}
+            km={km}
+            onKmChange={setKm}
+          />
         </div>
       </div>
 
