@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const CARDS = [
@@ -17,46 +17,48 @@ const CARDS = [
 
 type Card = typeof CARDS[0];
 
-const TAB_MAP: Record<string, string> = { beach: "Beach Club", hotel: "Hotel", aqua: "Aqua Park", tatil: "Tatil Köyü" };
-
 function AramaContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
 
-  const konum = searchParams.get("konum");
-  const tip = searchParams.get("tip");
-  const tarih = searchParams.get("tarih");
-  const gps = searchParams.get("gps");
-  const kmParam = searchParams.get("km");
-
-  const [locInput, setLocInput] = useState(konum ?? "");
-  const [gpsOn, setGpsOn] = useState(gps === "1");
-  const [km, setKm] = useState(kmParam ? parseInt(kmParam, 10) : 10);
-  const [typeVal, setTypeVal] = useState(tip ?? "");
-  const [dateVal, setDateVal] = useState(tarih ?? "");
+  const [locInput, setLocInput] = useState("");
+  const [gpsOn, setGpsOn] = useState(false);
+  const [km, setKm] = useState(10);
+  const [typeVal, setTypeVal] = useState("");
+  const [dateVal, setDateVal] = useState("");
   const [kisiVal, setKisiVal] = useState("2 Kişi");
   const [sortVal, setSortVal] = useState("Önerilen");
   const [viewMode, setViewMode] = useState<"list"|"grid">("list");
   const [fpOpen, setFpOpen] = useState(false);
   const [favs, setFavs] = useState<Set<number>>(new Set());
-  const [activeTab, setActiveTab] = useState(tip && TAB_MAP[tip] ? TAB_MAP[tip] : "Tümü");
+  const [activeTab, setActiveTab] = useState("Tümü");
   const [filterBadge, setFilterBadge] = useState(0);
   const [priceMax, setPriceMax] = useState(5000);
-  const [activeTags, setActiveTags] = useState<string[]>(() => {
-    if (gps === "1") return ["📍 GPS Konumu"];
-    if (konum) return [`📍 ${konum}`];
-    return [];
-  });
-  const [heroTitle, setHeroTitle] = useState(() => {
-    if (gps === "1") return "📍 Konumunuza Yakın Tesisler";
-    if (konum) return `🔍 ${konum} Tesisleri`;
-    return "🔍 Tesis Ara";
-  });
-  const [heroSub, setHeroSub] = useState(() => {
-    if (gps === "1") return `${kmParam || 10} km yarıçap içindeki tüm tesisler`;
-    if (konum) return `${konum} bölgesindeki tüm beach club, hotel ve tesisler`;
-    return "Beach club, hotel ve aqua park — Türkiye geneli";
-  });
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [heroTitle, setHeroTitle] = useState("🔍 Tesis Ara");
+  const [heroSub, setHeroSub] = useState("Beach club, hotel ve aqua park — Türkiye geneli");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const konum = params.get("konum");
+    const tip = params.get("tip");
+    const tarih = params.get("tarih");
+    const gps = params.get("gps");
+    const kmParam = params.get("km");
+
+    if (gps === "1") {
+      setGpsOn(true);
+      setHeroTitle("📍 Konumunuza Yakın Tesisler");
+      setHeroSub(`${kmParam || 10} km yarıçap içindeki tüm tesisler`);
+      setActiveTags(["📍 GPS Konumu"]);
+    } else if (konum) {
+      setLocInput(konum);
+      setHeroTitle(`🔍 ${konum} Tesisleri`);
+      setHeroSub(`${konum} bölgesindeki tüm beach club, hotel ve tesisler`);
+      setActiveTags([`📍 ${konum}`]);
+    }
+    if (tarih) setDateVal(tarih);
+    if (tip) setTypeVal(tip);
+  }, []);
 
   function toggleGPS() {
     setGpsOn(!gpsOn);
@@ -241,9 +243,9 @@ function AramaContent() {
           <div className="hero-sub">{heroSub}</div>
           <div className="sbox">
             <div className="sf" style={{ flex: 2, minWidth: 180 }}>
-              <label>Konum</label>
+              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Konum</label>
               <div className="sf-loc">
-                <input type="text" value={locInput} onChange={e => setLocInput(e.target.value)} placeholder="Bodrum, Antalya, Marmaris..." disabled={gpsOn} />
+                <input type="text" value={locInput} onChange={e => setLocInput(e.target.value)} placeholder="Bodrum, Antalya, Marmaris..." disabled={gpsOn} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%" }} />
                 <button className={`gps-btn${gpsOn ? " on" : ""}`} onClick={toggleGPS}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
                   {gpsOn ? "✓ GPS" : "GPS"}
@@ -251,8 +253,8 @@ function AramaContent() {
               </div>
             </div>
             <div className="sf" style={{ minWidth: 130 }}>
-              <label>Tesis Tipi</label>
-              <select value={typeVal} onChange={e => setTypeVal(e.target.value)}>
+              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Tesis Tipi</label>
+              <select value={typeVal} onChange={e => setTypeVal(e.target.value)} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%", cursor: "pointer" }}>
                 <option value="">Tümü</option>
                 <option value="beach">Beach Club</option>
                 <option value="hotel">Hotel</option>
@@ -261,12 +263,12 @@ function AramaContent() {
               </select>
             </div>
             <div className="sf" style={{ minWidth: 130 }}>
-              <label>Tarih</label>
-              <input type="date" value={dateVal} onChange={e => setDateVal(e.target.value)} />
+              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Tarih</label>
+              <input type="date" value={dateVal} onChange={e => setDateVal(e.target.value)} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%" }} />
             </div>
             <div className="sf" style={{ minWidth: 100, maxWidth: 120 }}>
-              <label>Kişi</label>
-              <select value={kisiVal} onChange={e => setKisiVal(e.target.value)}>
+              <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Kişi</label>
+              <select value={kisiVal} onChange={e => setKisiVal(e.target.value)} style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", color: "#fff", outline: "none", width: "100%", cursor: "pointer" }}>
                 {["1 Kişi","2 Kişi","3 Kişi","4 Kişi","5+ Kişi"].map(k => <option key={k}>{k}</option>)}
               </select>
             </div>
