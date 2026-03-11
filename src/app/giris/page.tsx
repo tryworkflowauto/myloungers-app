@@ -3,7 +3,7 @@
 import Link from "next/link";
 import "./giris.css";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 
 const COUNTRY_CODES = [
   { code: "TR", flag: "🇹🇷", dial: "+90" },
@@ -174,5 +174,21 @@ export default function GirisPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function GirisLoading() {
+  return (
+    <div className="giris-page" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F6F9" }}>
+      <div style={{ fontSize: "1rem", fontWeight: 700, color: "#374151" }}>Yükleniyor...</div>
+    </div>
+  );
+}
+
+export default function GirisPage() {
+  return (
+    <Suspense fallback={<GirisLoading />}>
+      <GirisContent />
+    </Suspense>
   );
 }
