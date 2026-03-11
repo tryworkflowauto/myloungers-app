@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tesis Ara | MyLoungers</title>
+<style>
+@font-face{font-family:'GR';src:url('data:font/otf;base64,PLACEHOLDER_FONT_1') format('opentype');font-weight:300;font-display:swap}
+@font-face{font-family:'GR';src:url('data:font/otf;base64,PLACEHOLDER_FONT_2') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:'GR';src:url('data:font/otf;base64,PLACEHOLDER_FONT_3') format('opentype');font-weight:500;font-display:swap}
+@font-face{font-family:'GR';src:url('data:font/otf;base64,PLACEHOLDER_FONT_4') format('opentype');font-weight:800;font-display:swap}
+@font-face{font-family:'GR';src:url('data:font/otf;base64,PLACEHOLDER_FONT_5') format('opentype');font-weight:900;font-display:swap}
+
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0A1628;--teal:#0ABAB5;--tdk:#0D8C89;--tlt:#E6F7F7;--or:#F5821F;--wh:#fff;
+  --bg:#F4F6F9;--bd:#E5E7EB;--i2:#374151;--i3:#6B7280;
+  --r2:12px;--r3:16px;--r4:20px;
+  --sh:0 1px 4px rgba(0,0,0,.07);--sh2:0 4px 20px rgba(0,0,0,.12);
+}
+html{scroll-behavior:smooth}
+body{font-family:'GR',sans-serif;background:var(--bg);color:var(--navy);font-size:15px;line-height:1.55}
+
+/* NAV */
+.nav{background:var(--wh);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:300;height:64px;display:flex;align-items:center;padding:0 24px;gap:12px;box-shadow:var(--sh)}
+.nav-logo{height:40px;cursor:pointer}
+.nav-back{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--i3);text-decoration:none;border:1.5px solid var(--bd);padding:6px 12px;border-radius:9px;transition:all .12s;white-space:nowrap}
+.nav-back:hover{border-color:var(--navy);color:var(--navy)}
+.nav-sp{flex:1}
+.nav-count{font-size:.78rem;font-weight:700;color:var(--i3);white-space:nowrap}
+.nav-count b{color:var(--tdk)}
+
+/* ARAMA HERO */
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#112240 55%,#0D3B6E 100%);padding:24px 24px 0;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230ABAB5' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
+.hero-wrap{max-width:1240px;margin:0 auto}
+.hero-title{font-size:1.4rem;font-weight:900;color:#fff;margin-bottom:3px;letter-spacing:-.02em}
+.hero-sub{font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:16px}
+
+/* ARAMA KUTUSU */
+.sbox{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:16px;padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap;backdrop-filter:blur(8px);align-items:flex-end}
+.sf{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px}
+.sf label{font-size:.6rem;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em}
+.sf-loc{display:flex;gap:6px}
+.sf input,.sf select{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;padding:9px 12px;font-size:.82rem;font-family:'GR',sans-serif;color:#fff;outline:none;transition:border .12s;width:100%}
+.sf input::placeholder{color:rgba(255,255,255,.35)}
+.sf select{color:rgba(255,255,255,.75);cursor:pointer}
+.sf select option{background:var(--navy);color:#fff}
+.sf input:focus,.sf select:focus{border-color:var(--teal)}
+.gps-btn{background:rgba(10,186,181,.2);border:1.5px solid var(--teal);border-radius:10px;padding:9px 12px;cursor:pointer;color:var(--teal);font-size:.85rem;flex-shrink:0;transition:all .12s;display:flex;align-items:center;gap:5px;font-family:'GR',sans-serif;font-size:.75rem;font-weight:700;white-space:nowrap}
+.gps-btn:hover{background:rgba(10,186,181,.3)}
+.gps-btn.on{background:var(--teal);color:#fff}
+.sbtn{background:var(--or);color:#fff;border:none;border-radius:12px;padding:11px 22px;font-size:.85rem;font-weight:900;cursor:pointer;font-family:'GR',sans-serif;align-self:flex-end;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sbtn:hover{background:#DC6C10;transform:translateY(-1px)}
+
+/* KM SLİDER (GPS seçilince) */
+.km-row{display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(10,186,181,.08);border-top:1px solid rgba(255,255,255,.08)}
+.km-row.on{display:flex}
+.km-lbl{font-size:.72rem;font-weight:700;color:rgba(255,255,255,.6);white-space:nowrap}
+.km-slider{flex:1;accent-color:var(--teal)}
+.km-val{font-size:.78rem;font-weight:900;color:var(--teal);min-width:50px;text-align:right}
+
+/* TAB BAR */
+.tabs{background:var(--navy);border-bottom:1px solid rgba(255,255,255,.08);padding:0 24px}
+.tabs-inner{max-width:1240px;margin:0 auto;display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
+.tabs-inner::-webkit-scrollbar{display:none}
+.tab{padding:12px 16px;font-size:.75rem;font-weight:700;color:rgba(255,255,255,.4);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:rgba(255,255,255,.7)}
+.tab.on{color:#fff;border-bottom-color:var(--teal)}
+
+/* BODY */
+.page{max-width:1240px;margin:0 auto;padding:20px 20px 80px}
+
+/* SONUÇ BAR */
+.rbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.rbar-info{font-size:.8rem;color:var(--i3);flex:1}
+.rbar-info b{color:var(--navy);font-weight:900}
+.sort-sel{border:1.5px solid var(--bd);border-radius:9px;padding:7px 11px;font-size:.75rem;font-family:'GR',sans-serif;color:var(--navy);background:var(--wh);cursor:pointer;outline:none}
+.view-btns{display:flex;gap:4px}
+.vbtn{width:33px;height:33px;border:1.5px solid var(--bd);border-radius:8px;background:var(--wh);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--i3);transition:all .12s}
+.vbtn.on,.vbtn:hover{border-color:var(--navy);color:var(--navy)}
+.filter-open-btn{display:flex;align-items:center;gap:6px;background:var(--wh);border:1.5px solid var(--bd);border-radius:10px;padding:7px 14px;font-size:.78rem;font-weight:700;color:var(--navy);cursor:pointer;font-family:'GR',sans-serif;transition:all .12s;position:relative}
+.filter-open-btn:hover{border-color:var(--navy)}
+.filter-badge{position:absolute;top:-6px;right:-6px;background:var(--or);color:#fff;font-size:.55rem;font-weight:900;width:18px;height:18px;border-radius:50%;display:none;align-items:center;justify-content:center}
+.filter-badge.on{display:flex}
+
+/* AKTİF FİLTRE ETİKETLERİ */
+.af-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;min-height:0}
+.af-tag{display:inline-flex;align-items:center;gap:5px;background:var(--tlt);color:var(--tdk);border:1px solid #B2EBEA;font-size:.68rem;font-weight:700;padding:4px 10px;border-radius:50px;cursor:pointer}
+.af-tag:hover{background:#C0EFED}
+.af-x{width:10px;height:10px;opacity:.7}
+
+/* KARTLAR */
+.cards{display:flex;flex-direction:column;gap:14px;transition:opacity .2s}
+.cards.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:var(--r4);overflow:hidden;box-shadow:var(--sh);transition:all .18s;cursor:pointer;display:flex}
+.card:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:#C8D0DA}
+.cards.grid .card{flex-direction:column}
+.card-img{width:220px;flex-shrink:0;position:relative;overflow:hidden;background:#E5E7EB}
+.cards.grid .card-img{width:100%;height:190px}
+.card-img img{width:100%;height:100%;object-fit:cover;transition:transform .3s;display:block}
+.card:hover .card-img img{transform:scale(1.04)}
+.card-badge{position:absolute;top:10px;left:10px;font-size:.58rem;font-weight:900;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.05em;color:#fff}
+.badge-top{background:#7C3AED}
+.badge-pop{background:var(--or)}
+.badge-new{background:var(--teal)}
+.card-fav{position:absolute;top:10px;right:10px;width:30px;height:30px;background:rgba(255,255,255,.88);border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-size:.85rem;backdrop-filter:blur(4px);transition:all .12s}
+.card-fav:hover,.card-fav.on{background:#fff}
+.card-body{flex:1;padding:15px 18px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.card-name{font-size:.98rem;font-weight:900;color:var(--navy);line-height:1.2;letter-spacing:-.01em}
+.card-score{background:var(--teal);color:#fff;font-size:.75rem;font-weight:900;padding:4px 9px;border-radius:8px;white-space:nowrap;flex-shrink:0}
+.card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.card-cat{background:var(--tlt);color:var(--tdk);font-size:.63rem;font-weight:700;padding:2px 8px;border-radius:50px;border:1px solid #B2EBEA}
+.card-stars{color:#F59E0B;font-size:.72rem;letter-spacing:1px}
+.card-rev{font-size:.63rem;color:var(--i3)}
+.card-loc{font-size:.7rem;color:var(--i3);display:flex;align-items:center;gap:3px;margin-top:1px}
+.card-dist{font-size:.65rem;color:var(--tdk);font-weight:700;background:var(--tlt);padding:1px 6px;border-radius:5px;margin-left:4px}
+.card-feats{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+.card-feat{font-size:.63rem;color:var(--i2);background:var(--bg);padding:2px 7px;border-radius:5px;border:1px solid var(--bd)}
+.card-footer{margin-top:auto;padding-top:10px;border-top:1px solid var(--bg);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-price-from{font-size:.58rem;color:var(--i3)}
+.card-price-val{font-size:1rem;font-weight:900;color:var(--navy);line-height:1.1}
+.card-price-unit{font-size:.58rem;color:var(--i3)}
+.avail{display:flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700}
+.avail.ok{color:#16A34A}.avail.few{color:var(--or)}.avail.full{color:#DC2626}
+.avail-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:#22C55E}.dot-few{background:var(--or)}.dot-full{background:#EF4444}
+.card-btn{background:var(--navy);color:#fff;border:none;border-radius:9px;padding:8px 15px;font-size:.72rem;font-weight:800;cursor:pointer;font-family:'GR',sans-serif;transition:all .12s;white-space:nowrap}
+.card-btn:hover{background:var(--tdk)}
+.card-btn:disabled{background:#E5E7EB;color:#9CA3AF;cursor:not-allowed}
+
+/* ══ SAĞDA AÇILIR FİLTRE PANELİ ══ */
+.fp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:400;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(2px)}
+.fp-overlay.on{opacity:1;pointer-events:all}
+.fp{position:fixed;top:0;right:-380px;width:360px;height:100vh;background:var(--wh);z-index:500;overflow-y:auto;transition:right .25s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,.15);display:flex;flex-direction:column}
+.fp.on{right:0}
+.fp-head{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--wh);z-index:1}
+.fp-title{font-size:.92rem;font-weight:900;color:var(--navy);display:flex;align-items:center;gap:8px}
+.fp-close{background:none;border:none;cursor:pointer;color:var(--i3);padding:4px;border-radius:6px;transition:all .12s;font-size:1.1rem}
+.fp-close:hover{background:var(--bg);color:var(--navy)}
+.fp-body{flex:1;overflow-y:auto;padding-bottom:80px}
+.fg{padding:16px 20px;border-bottom:1px solid var(--bd)}
+.fg-title{font-size:.68rem;font-weight:900;color:var(--i3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.fc{display:flex;align-items:center;gap:8px;margin-bottom:9px;cursor:pointer}
+.fc input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
+.fc input[type=radio]{width:16px;height:16px;accent-color:var(--or);cursor:pointer;flex-shrink:0}
+.fc-lbl{font-size:.8rem;color:var(--i2);flex:1}
+.fc-cnt{font-size:.63rem;font-weight:700;color:var(--i3);background:var(--bg);padding:1px 7px;border-radius:50px}
+.frange{width:100%;accent-color:var(--teal);cursor:pointer;margin-top:4px}
+.frange-vals{display:flex;justify-content:space-between;font-size:.68rem;color:var(--i3);margin-top:5px}
+.ftags{display:flex;gap:6px;flex-wrap:wrap}
+.ftag{border:1.5px solid var(--bd);background:none;border-radius:8px;padding:5px 11px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'GR',sans-serif;color:var(--i2);transition:all .12s;display:flex;align-items:center;gap:5px}
+.ftag:hover,.ftag.on{border-color:var(--teal);background:var(--tlt);color:var(--tdk)}
+.fp-footer{position:sticky;bottom:0;background:var(--wh);border-top:1px solid var(--bd);padding:14px 20px;display:flex;gap:10px}
+.fp-apply{flex:1;background:var(--or);color:#fff;border:none;border-radius:11px;padding:12px;font-size:.85rem;font-weight:900;cursor:pointer;font-family:'GR',sans-serif;transition:all .12s}
+.fp-apply:hover{background:#DC6C10}
+.fp-clear{background:none;border:1.5px solid var(--bd);border-radius:11px;padding:12px 18px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'GR',sans-serif;color:var(--i3);transition:all .12s}
+.fp-clear:hover{border-color:var(--navy);color:var(--navy)}
+
+/* SAYFALAMA */
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding-top:20px}
+.pg-btn{width:36px;height:36px;border:1.5px solid var(--bd);border-radius:9px;background:var(--wh);cursor:pointer;font-size:.82rem;font-weight:700;color:var(--i3);transition:all .12s;display:flex;align-items:center;justify-content:center;font-family:'GR',sans-serif}
+.pg-btn:hover{border-color:var(--navy);color:var(--navy)}
+.pg-btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* HARİTA BUTONU */
+.map-fab{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;border:none;border-radius:50px;padding:12px 20px;font-size:.78rem;font-weight:800;cursor:pointer;font-family:'GR',sans-serif;display:flex;align-items:center;gap:7px;box-shadow:0 4px 20px rgba(10,22,40,.3);transition:all .15s;z-index:200}
+.map-fab:hover{background:var(--tdk);transform:translateY(-2px)}
+
+@media(max-width:768px){
+  .sbox{flex-direction:column}
+  .fp{width:100%;right:-100%}
+  .cards.grid{grid-template-columns:1fr}
+  .card{flex-direction:column}
+  .card-img{width:100%;height:170px}
+  .page{padding:16px 12px 80px}
+}
+
+
+/* ══ ARAMA SAYFASI MOBİL ══ */
+
+/* Filtre paneli — tam ekran mobilde */
+@media(max-width:768px){
+  .fp{width:100%;right:-100%}
+  .sbox{flex-direction:column;gap:8px}
+  .sf{min-width:100%!important}
+  .gps-btn{align-self:flex-start}
+  .km-row{flex-wrap:wrap}
+  .hero{padding:16px 14px 0}
+  .hero-title{font-size:1.1rem}
+  .tabs{padding:0 10px}
+  .tab{padding:11px 12px;font-size:.7rem}
+  .page{padding:14px 12px 80px}
+  .rbar{gap:8px}
+  .sort-sel{font-size:.72rem;padding:6px 8px}
+  .cards{gap:10px}
+  .card{flex-direction:column}
+  .card-img{width:100%!important;height:170px}
+  .card-body{padding:12px 14px}
+  .card-name{font-size:.9rem}
+  .cards.grid{grid-template-columns:1fr}
+  .map-fab{bottom:16px;right:16px;padding:10px 16px;font-size:.75rem}
+  .filter-open-btn{padding:7px 11px;font-size:.72rem}
+  .nav{padding:0 14px}
+  .nav-back span{display:none}
+}
+
+/* Tablet */
+@media(min-width:769px) and (max-width:1024px){
+  .sbox{flex-wrap:wrap}
+  .sf{min-width:calc(50% - 10px)!important}
+  .cards.grid{grid-template-columns:1fr}
+  .card-img{width:180px}
+  .page{padding:18px 16px 80px}
+}
+
+/* iOS safe area */
+@supports(padding:max(0px)){
+  .nav{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+  .map-fab{bottom:max(16px,env(safe-area-inset-bottom))}
+}
+
+/* Touch hedefler */
+@media(max-width:768px){
+  .card-btn{min-height:40px;padding:8px 14px}
+  .card-fav{width:36px;height:36px}
+  .pg-btn{width:40px;height:40px}
+  .vbtn{width:38px;height:38px}
+  .ftag{min-height:36px}
+  .fc input{width:18px;height:18px}
+}
+
+@media(max-width:480px){.nav-back-txt{display:none}}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+/* ── FİLTRE PANELİ ── */
+window.openFilter = function() {
+  document.getElementById('fp').classList.add('on');
+  document.getElementById('fpOverlay').classList.add('on');
+  document.body.style.overflow = 'hidden';
+};
+window.closeFilter = function() {
+  document.getElementById('fp').classList.remove('on');
+  document.getElementById('fpOverlay').classList.remove('on');
+  document.body.style.overflow = '';
+};
+document.getElementById('fpOverlay').addEventListener('click', closeFilter);
+
+/* ── GPS BUTONU ── */
+window.toggleGPS = function() {
+  var btn = document.getElementById('gpsBtn');
+  var km  = document.getElementById('kmRow');
+  var inp = document.getElementById('locInput');
+  var on  = btn.classList.toggle('on');
+  km.classList.toggle('on', on);
+  if (on) {
+    inp.placeholder = '📍 Konumunuz kullanılıyor...';
+    inp.value = '';
+    inp.disabled = true;
+  } else {
+    inp.placeholder = 'Bodrum, Antalya, Marmaris...';
+    inp.disabled = false;
+  }
+};
+
+/* ── KM SLİDER ── */
+var kmSlider = document.getElementById('kmSlider');
+if (kmSlider) {
+  kmSlider.addEventListener('input', function() {
+    document.getElementById('kmVal').textContent = this.value + ' km';
+  });
+}
+
+/* ── FİYAT SLİDER (filtre panel) ── */
+var prSlider = document.getElementById('priceSlider');
+if (prSlider) {
+  prSlider.addEventListener('input', function() {
+    document.getElementById('priceVal').textContent = '₺' + parseInt(this.value).toLocaleString('tr-TR');
+  });
+}
+
+/* ── ÖZELLİK ETİKETLERİ ── */
+document.querySelectorAll('.ftag').forEach(function(t) {
+  t.addEventListener('click', function() {
+    this.classList.toggle('on');
+    updateBadge();
+  });
+});
+document.querySelectorAll('.fg input').forEach(function(i) {
+  i.addEventListener('change', updateBadge);
+});
+
+function updateBadge() {
+  var count = document.querySelectorAll('.fg input:checked, .ftag.on').length;
+  var badge = document.getElementById('filterBadge');
+  if (count > 0) {
+    badge.textContent = count;
+    badge.classList.add('on');
+  } else {
+    badge.classList.remove('on');
+  }
+  renderActiveTags();
+}
+
+function renderActiveTags() {
+  var tags = [];
+  document.querySelectorAll('.fg input[type=checkbox]:checked, .fg input[type=radio]:checked').forEach(function(i) {
+    tags.push(i.dataset.label);
+  });
+  document.querySelectorAll('.ftag.on').forEach(function(t) {
+    tags.push(t.dataset.label);
+  });
+  var pv = parseInt(document.getElementById('priceSlider').value);
+  if (pv < 5000) tags.push('Max ₺' + pv.toLocaleString('tr-TR'));
+  var wrap = document.getElementById('afWrap');
+  wrap.innerHTML = '';
+  tags.forEach(function(t) {
+    var el = document.createElement('div');
+    el.className = 'af-tag';
+    el.innerHTML = t + ' <svg class="af-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    el.onclick = function() {
+      // İlgili filtreyi kapat
+      document.querySelectorAll('.fg input').forEach(function(i) {
+        if (i.dataset.label === t) i.checked = false;
+      });
+      document.querySelectorAll('.ftag').forEach(function(ft) {
+        if (ft.dataset.label === t) ft.classList.remove('on');
+      });
+      updateBadge();
+    };
+    wrap.appendChild(el);
+  });
+}
+
+/* ── FİLTRE TEMİZLE ── */
+window.clearFilters = function() {
+  document.querySelectorAll('.fg input').forEach(function(i) { i.checked = false; });
+  document.querySelectorAll('.ftag').forEach(function(t) { t.classList.remove('on'); });
+  document.getElementById('priceSlider').value = 5000;
+  document.getElementById('priceVal').textContent = '₺5.000';
+  updateBadge();
+};
+
+/* ── FİLTRE UYGULA ── */
+window.applyFilters = function() {
+  closeFilter();
+  var list = document.getElementById('cardList');
+  list.style.opacity = '.3';
+  setTimeout(function() { list.style.opacity = '1'; }, 300);
+  renderActiveTags();
+};
+
+/* ── GÖRÜNÜM ── */
+window.setView = function(v) {
+  document.getElementById('cardList').className = v === 'grid' ? 'cards grid' : 'cards';
+  document.getElementById('btnList').classList.toggle('on', v === 'list');
+  document.getElementById('btnGrid').classList.toggle('on', v === 'grid');
+};
+
+/* ── SIRALAMA ── */
+document.getElementById('sortSel').addEventListener('change', function() {
+  var list = document.getElementById('cardList');
+  list.style.opacity = '.3';
+  setTimeout(function() { list.style.opacity = '1'; }, 250);
+});
+
+/* ── TAB ── */
+document.querySelectorAll('.tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(function(x) { x.classList.remove('on'); });
+    this.classList.add('on');
+  });
+});
+
+/* ── FAV ── */
+window.toggleFav = function(btn) {
+  btn.classList.toggle('on');
+  btn.textContent = btn.classList.contains('on') ? '❤️' : '🤍';
+};
+
+/* ── KART ── */
+window.goDetail = function() { window.location.href = 'tesis-zuzu.html'; };
+
+/* ── SAYFALAMA ── */
+document.querySelectorAll('.pg-btn:not(.arr)').forEach(function(b) {
+  b.addEventListener('click', function() {
+    document.querySelectorAll('.pg-btn:not(.arr)').forEach(function(x) { x.classList.remove('on'); });
+    this.classList.add('on');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+
+/* ── URL PARAMETRELERİNİ OKU & FİLTRELE ── */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var konum  = params.get('konum');
+  var tip    = params.get('tip');
+  var tarih  = params.get('tarih');
+  var gps    = params.get('gps');
+
+  // Konum inputu doldur
+  var locInp = document.getElementById('locInput');
+  if(gps === '1') {
+    locInp.value = '';
+    locInp.placeholder = '📍 Konumunuz kullanılıyor...';
+    document.getElementById('gpsBtn').classList.add('on');
+    document.getElementById('gpsBtn').innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>✓ GPS';
+    document.getElementById('kmRow').classList.add('on');
+  } else if(konum) {
+    locInp.value = konum;
+  }
+
+  // Tarih
+  if(tarih) {
+    var dateInp = document.querySelector('.sbox input[type=date]');
+    if(dateInp) dateInp.value = tarih;
+  }
+
+  // Tesis tipi dropdown
+  if(tip) {
+    var typeSelect = document.querySelector('.sbox select:nth-child(1)');
+    var tipler = tip.split(',');
+    if(typeSelect && tipler.length > 0) {
+      for(var i=0; i<typeSelect.options.length; i++){
+        if(tipler.includes(typeSelect.options[i].value) || tipler.some(function(t){ return typeSelect.options[i].text.toLowerCase().includes(t.toLowerCase()); })){
+          typeSelect.selectedIndex = i;
+          break;
+        }
+      }
+    }
+  }
+
+  // Sonuç sayısını ve başlığı güncelle
+  var infoEl  = document.querySelector('.rbar-info');
+  var countEl = document.getElementById('resultCount');
+  
+  if(gps === '1') {
+    var kmVal = params.get('km') || '10';
+    if(infoEl) infoEl.innerHTML = '<b>📍 Konumunuza yakın</b> · ' + kmVal + ' km yarıçap · <b>8</b> tesis bulundu';
+    if(countEl) countEl.innerHTML = '8 tesis bulundu';
+    // Hero başlığını güncelle
+    var heroTitle = document.querySelector('.hero-title');
+    if(heroTitle) heroTitle.textContent = '📍 Konumunuza Yakın Tesisler';
+    var heroSub = document.querySelector('.hero-sub');
+    if(heroSub) heroSub.textContent = kmVal + ' km yarıçap içindeki tüm tesisler';
+  } else if(konum) {
+    var bolge = konum;
+    if(infoEl) infoEl.innerHTML = '<b>' + bolge + '</b> bölgesinde' + (tip ? ' · ' + tip : '') + ' · <b>8</b> tesis bulundu';
+    if(countEl) countEl.innerHTML = '8 tesis bulundu';
+    var heroTitle = document.querySelector('.hero-title');
+    if(heroTitle) heroTitle.textContent = '🔍 ' + bolge + ' Tesisleri';
+    var heroSub = document.querySelector('.hero-sub');
+    if(heroSub) heroSub.textContent = bolge + ' bölgesindeki tüm beach club, hotel ve tesisler';
+    // Şehir filtresini işaretle
+    document.querySelectorAll('.fg input[type=checkbox]').forEach(function(cb){
+      if(cb.dataset.label && cb.dataset.label.toLowerCase() === bolge.toLowerCase()){
+        cb.checked = true;
+      }
+    });
+  }
+
+  // Aktif filtre etiketi göster
+  if(konum || gps==='1') {
+    setTimeout(function(){
+      var wrap = document.getElementById('afWrap');
+      if(!wrap) return;
+      var el = document.createElement('div');
+      el.className = 'af-tag';
+      el.innerHTML = (gps==='1' ? '📍 GPS Konumu' : '📍 ' + konum) + ' <svg class="af-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      el.onclick = function(){
+        el.remove();
+        document.querySelector('.hero-title').textContent = '🔍 Tesis Ara';
+        document.querySelector('.hero-sub').textContent = 'Beach club, hotel ve aqua park — Türkiye geneli';
+        if(infoEl) infoEl.innerHTML = '<b>8</b> tesis listeleniyor';
+        history.replaceState(null,'','arama.html');
+      };
+      wrap.prepend(el);
+    }, 100);
+  }
+})();
+
+});
+</script>
+
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="myloungers-v33-fixed.html" style="display:flex;align-items:center;flex-shrink:0">
+    <img src="logo.png" alt="MyLoungers" style="height:44px;width:auto">
+  </a>
+  <a href="myloungers-v33-fixed.html" class="nav-back">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Ana Sayfa
+  </a>
+  <span style="flex:1"></span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onclick="window.location.href='profil.html'" style="padding:7px 16px;border:1.5px solid var(--bd);border-radius:50px;font-size:.78rem;font-weight:700;color:var(--i2);background:#fff;cursor:pointer;font-family:'GR',sans-serif">Profilim</button>
+    <button onclick="window.location.href='giris.html'" style="padding:7px 16px;border:none;border-radius:50px;font-size:.78rem;font-weight:700;color:#fff;background:var(--or);cursor:pointer;font-family:'GR',sans-serif">Giriş Yap</button>
+  </div>
+</nav>
+
+<!-- HERO ARAMA -->
+<div class="hero">
+  <div class="hero-wrap">
+    <div class="hero-title">🔍 Tesis Ara</div>
+    <div class="hero-sub">Beach club, hotel ve aqua park — Türkiye geneli</div>
+    <div class="sbox">
+      <div class="sf" style="flex:2;min-width:180px">
+        <label>Konum</label>
+        <div class="sf-loc">
+          <input type="text" id="locInput" placeholder="Bodrum, Antalya, Marmaris...">
+          <button class="gps-btn" id="gpsBtn" onclick="toggleGPS()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            GPS
+          </button>
+        </div>
+      </div>
+      <div class="sf" style="min-width:130px">
+        <label>Tesis Tipi</label>
+        <select>
+          <option value="">Tümü</option>
+          <option value="beach">Beach Club</option>
+          <option value="hotel">Hotel</option>
+          <option value="aqua">Aqua Park</option>
+          <option value="tatil">Tatil Köyü</option>
+          <option value="pansiyon">Pansiyon</option>
+        </select>
+      </div>
+      <div class="sf" style="min-width:130px">
+        <label>Tarih</label>
+        <input type="date">
+      </div>
+      <div class="sf" style="min-width:100px;max-width:120px">
+        <label>Kişi</label>
+        <select>
+          <option>1 Kişi</option>
+          <option>2 Kişi</option>
+          <option>3 Kişi</option>
+          <option>4 Kişi</option>
+          <option>5+ Kişi</option>
+        </select>
+      </div>
+      <button class="sbtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Ara
+      </button>
+    </div>
+    <div class="km-row" id="kmRow">
+      <span class="km-lbl">📍 Çevremdeki tesisler — yarıçap:</span>
+      <input type="range" id="kmSlider" class="km-slider" min="1" max="50" value="10">
+      <span class="km-val" id="kmVal">10 km</span>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tabs-inner">
+    <div class="tab on">🏖️ Tümü (8)</div>
+    <div class="tab">🌊 Beach Club (5)</div>
+    <div class="tab">🏨 Hotel (2)</div>
+    <div class="tab">💦 Aqua Park (1)</div>
+    <div class="tab">🏕️ Tatil Köyü</div>
+    <div class="tab">🗺️ Harita</div>
+  </div>
+</div>
+
+<!-- SAYFA İÇERİĞİ -->
+<div class="page">
+
+  <!-- SONUÇ BAR -->
+  <div class="rbar">
+    <div class="rbar-info"><b>8</b> tesis listeleniyor</div>
+    <button class="filter-open-btn" onclick="openFilter()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      Filtrele
+      <div class="filter-badge" id="filterBadge">0</div>
+    </button>
+    <select class="sort-sel" id="sortSel">
+      <option>📌 Önerilen</option>
+      <option>⭐ Puana Göre</option>
+      <option>💰 Fiyat: Düşük → Yüksek</option>
+      <option>💰 Fiyat: Yüksek → Düşük</option>
+      <option>📍 Mesafeye Göre</option>
+      <option>💬 Yorum Sayısı</option>
+    </select>
+    <div class="view-btns">
+      <button class="vbtn on" id="btnList" onclick="setView('list')" title="Liste">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+      <button class="vbtn" id="btnGrid" onclick="setView('grid')" title="Grid">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- AKTİF FİLTRE ETİKETLERİ -->
+  <div id="afWrap" class="af-wrap"></div>
+
+  <!-- KARTLAR -->
+  <div class="cards" id="cardList">
+    <div class="card" onclick="goDetail()">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_1" alt="Zuzuu Beach Hotel">
+        <span class="card-badge badge-top">TOP 10</span>
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Zuzuu Beach Hotel</div>
+          <div class="card-score">9.6</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Beach Club</span>
+          <span class="card-stars">★★★★☆</span>
+          <span class="card-rev">128 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Bodrum, Muğla<span class="card-dist">📍 2.4 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Özel İskele</span><span class="card-feat">Havuz</span><span class="card-feat">Beach Bar</span><span class="card-feat">Vale Park</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺1.000</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail ok"><div class="avail-dot dot-ok"></div>✓ 23 şezlong müsait</div>
+            <button class="card-btn" onclick="event.stopPropagation();goDetail()">Şezlong Seç →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="card" onclick="goDetail()">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_2" alt="Marmaris Beach Resort">
+        <span class="card-badge badge-pop">Popüler</span>
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Marmaris Beach Resort</div>
+          <div class="card-score">9.2</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Beach Club</span>
+          <span class="card-stars">★★★★★</span>
+          <span class="card-rev">94 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Marmaris, Muğla<span class="card-dist">📍 1.1 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Deniz Manzarası</span><span class="card-feat">Restoran</span><span class="card-feat">Su Sporları</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺850</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail few"><div class="avail-dot dot-few"></div>⚡ 8 şezlong kaldı</div>
+            <button class="card-btn" onclick="event.stopPropagation();goDetail()">Şezlong Seç →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="card" onclick="goDetail()">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_3" alt="Fethiye Paradise Club">
+        <span class="card-badge badge-new">Yeni</span>
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Fethiye Paradise Club</div>
+          <div class="card-score">9.0</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Beach Club</span>
+          <span class="card-stars">★★★★☆</span>
+          <span class="card-rev">47 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Fethiye, Muğla<span class="card-dist">📍 5.2 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Özel Plaj</span><span class="card-feat">Havuz</span><span class="card-feat">Spa</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺750</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail ok"><div class="avail-dot dot-ok"></div>✓ 41 şezlong müsait</div>
+            <button class="card-btn" onclick="event.stopPropagation();goDetail()">Şezlong Seç →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="card" onclick="goDetail()">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_4" alt="Bodrum Luxury Suites">
+        <span class="card-badge badge-top">TOP 10</span>
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Bodrum Luxury Suites</div>
+          <div class="card-score">9.4</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Hotel</span>
+          <span class="card-stars">★★★★★</span>
+          <span class="card-rev">203 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Bodrum, Muğla<span class="card-dist">📍 3.8 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Infinity Havuz</span><span class="card-feat">Spa</span><span class="card-feat">Özel Plaj</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺1.800</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail few"><div class="avail-dot dot-few"></div>⚡ 5 şezlong kaldı</div>
+            <button class="card-btn" onclick="event.stopPropagation();goDetail()">Şezlong Seç →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="card" onclick="goDetail()">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_5" alt="Antalya Sunset Beach">
+        
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Antalya Sunset Beach</div>
+          <div class="card-score">8.8</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Beach Club</span>
+          <span class="card-stars">★★★★☆</span>
+          <span class="card-rev">76 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Antalya<span class="card-dist">📍 0.8 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Özel Plaj</span><span class="card-feat">Beach Bar</span><span class="card-feat">Müzik</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺650</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail ok"><div class="avail-dot dot-ok"></div>✓ 56 şezlong müsait</div>
+            <button class="card-btn" onclick="event.stopPropagation();goDetail()">Şezlong Seç →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="card" style="cursor:default">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_6" alt="Çeşme Aqua Resort">
+        <span class="card-badge badge-new">Yeni</span>
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Çeşme Aqua Resort</div>
+          <div class="card-score">9.1</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Aqua Park</span>
+          <span class="card-stars">★★★★☆</span>
+          <span class="card-rev">31 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Çeşme, İzmir<span class="card-dist">📍 4.5 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Su Parkı</span><span class="card-feat">Havuz</span><span class="card-feat">Çocuk Alanı</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺550</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail full"><div class="avail-dot dot-full"></div>✗ Bu tarih dolu</div>
+            <button class="card-btn" disabled onclick="event.stopPropagation();">Dolu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="card" onclick="goDetail()">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_7" alt="Kuşadası Marina Hotel">
+        
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Kuşadası Marina Hotel</div>
+          <div class="card-score">8.9</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Hotel</span>
+          <span class="card-stars">★★★★★</span>
+          <span class="card-rev">88 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Kuşadası, Aydın<span class="card-dist">📍 7.2 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Marina Manzarası</span><span class="card-feat">Havuz</span><span class="card-feat">Restoran</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺1.200</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail ok"><div class="avail-dot dot-ok"></div>✓ 18 şezlong müsait</div>
+            <button class="card-btn" onclick="event.stopPropagation();goDetail()">Şezlong Seç →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+<div class="card" onclick="goDetail()">
+      <div class="card-img">
+        <img src="data:image/jpeg;base64,PLACEHOLDER_IMAGE_8" alt="Kaş Panorama Beach">
+        <span class="card-badge badge-pop">Popüler</span>
+        <button class="card-fav" onclick="event.stopPropagation();toggleFav(this)">🤍</button>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">Kaş Panorama Beach</div>
+          <div class="card-score">9.3</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-cat">Beach Club</span>
+          <span class="card-stars">★★★★☆</span>
+          <span class="card-rev">115 yorum</span>
+        </div>
+        <div class="card-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Kaş, Antalya<span class="card-dist">📍 6.1 km</span>
+        </div>
+        <div class="card-feats"><span class="card-feat">Kayalık Plaj</span><span class="card-feat">Dalış Merkezi</span></div>
+        <div class="card-footer">
+          <div>
+            <div class="card-price-from">başlangıç</div>
+            <div class="card-price-val">₺900</div>
+            <div class="card-price-unit">/ şezlong / gün</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div class="avail few"><div class="avail-dot dot-few"></div>⚡ 12 şezlong kaldı</div>
+            <button class="card-btn" onclick="event.stopPropagation();goDetail()">Şezlong Seç →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAYFALAMA -->
+  <div class="pagination">
+    <button class="pg-btn arr">&#8249;</button>
+    <button class="pg-btn on">1</button>
+    <button class="pg-btn">2</button>
+    <button class="pg-btn">3</button>
+    <span style="color:var(--i3);font-size:.8rem;padding:0 6px">...</span>
+    <button class="pg-btn">12</button>
+    <button class="pg-btn arr">&#8250;</button>
+  </div>
+
+</div>
+
+<!-- SAĞDA AÇILIR FİLTRE PANELİ -->
+<div class="fp-overlay" id="fpOverlay"></div>
+<div class="fp" id="fp">
+  <div class="fp-head">
+    <span class="fp-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      Filtreler
+    </span>
+    <button class="fp-close" onclick="closeFilter()">✕</button>
+  </div>
+  <div class="fp-body">
+
+    <!-- KONUM -->
+    <div class="fg">
+      <div class="fg-title">📍 Konum</div>
+      <label class="fc"><input type="checkbox" data-label="Konumumu Kullan"><span class="fc-lbl">Konumumu kullan</span></label>
+      <div style="margin-top:8px">
+        <input type="range" id="kmSlider2" class="frange" min="1" max="50" value="10" oninput="document.getElementById('kmVal2').textContent=this.value+' km'">
+        <div class="frange-vals"><span>1 km</span><span id="kmVal2">10 km</span></div>
+      </div>
+    </div>
+
+    <!-- ŞEHİR -->
+    <div class="fg">
+      <div class="fg-title">🏙️ Şehir</div>
+      <label class="fc"><input type="checkbox" data-label="Bodrum"><span class="fc-lbl">Bodrum</span><span class="fc-cnt">3</span></label>
+      <label class="fc"><input type="checkbox" data-label="Marmaris"><span class="fc-lbl">Marmaris</span><span class="fc-cnt">1</span></label>
+      <label class="fc"><input type="checkbox" data-label="Fethiye"><span class="fc-lbl">Fethiye</span><span class="fc-cnt">1</span></label>
+      <label class="fc"><input type="checkbox" data-label="Antalya"><span class="fc-lbl">Antalya</span><span class="fc-cnt">1</span></label>
+      <label class="fc"><input type="checkbox" data-label="Çeşme"><span class="fc-lbl">Çeşme / İzmir</span><span class="fc-cnt">1</span></label>
+      <label class="fc"><input type="checkbox" data-label="Kuşadası"><span class="fc-lbl">Kuşadası / Aydın</span><span class="fc-cnt">1</span></label>
+    </div>
+
+    <!-- TESİS TİPİ -->
+    <div class="fg">
+      <div class="fg-title">🏖️ Tesis Tipi</div>
+      <label class="fc"><input type="checkbox" data-label="Beach Club"><span class="fc-lbl">Beach Club</span><span class="fc-cnt">5</span></label>
+      <label class="fc"><input type="checkbox" data-label="Hotel"><span class="fc-lbl">Hotel</span><span class="fc-cnt">2</span></label>
+      <label class="fc"><input type="checkbox" data-label="Aqua Park"><span class="fc-lbl">Aqua Park</span><span class="fc-cnt">1</span></label>
+      <label class="fc"><input type="checkbox" data-label="Tatil Köyü"><span class="fc-lbl">Tatil Köyü</span><span class="fc-cnt">0</span></label>
+    </div>
+
+    <!-- MÜSAİTLİK -->
+    <div class="fg">
+      <div class="fg-title">✅ Müsaitlik</div>
+      <label class="fc"><input type="checkbox" data-label="Müsait"><span class="fc-lbl">Müsait</span><span class="fc-cnt">5</span></label>
+      <label class="fc"><input type="checkbox" data-label="Az yer kaldı"><span class="fc-lbl">Az yer kaldı</span><span class="fc-cnt">3</span></label>
+    </div>
+
+    <!-- FİYAT -->
+    <div class="fg">
+      <div class="fg-title">💰 Max Fiyat / Gün</div>
+      <input type="range" id="priceSlider" class="frange" min="200" max="5000" step="100" value="5000">
+      <div class="frange-vals"><span>₺200</span><span id="priceVal">₺5.000</span></div>
+    </div>
+
+    <!-- PUAN -->
+    <div class="fg">
+      <div class="fg-title">⭐ Min Puan</div>
+      <div class="ftags">
+        <button class="ftag" data-label="8.0+">8.0+</button>
+        <button class="ftag" data-label="8.5+">8.5+</button>
+        <button class="ftag" data-label="9.0+">9.0+</button>
+        <button class="ftag" data-label="9.5+">9.5+</button>
+      </div>
+    </div>
+
+    <!-- ÖZELLİKLER -->
+    <div class="fg">
+      <div class="fg-title">🏊 Özellikler</div>
+      <div class="ftags">
+        <button class="ftag" data-label="Wi-Fi">📶 Wi-Fi</button>
+        <button class="ftag" data-label="Havuz">🏊 Havuz</button>
+        <button class="ftag" data-label="Restoran">🍽️ Restoran</button>
+        <button class="ftag" data-label="Şemsiye">⛱️ Şemsiye</button>
+        <button class="ftag" data-label="Deniz">🌊 Denize sıfır</button>
+        <button class="ftag" data-label="Bar">🍹 Bar</button>
+        <button class="ftag" data-label="Spa">💆 Spa</button>
+        <button class="ftag" data-label="Vale">🚗 Vale Park</button>
+        <button class="ftag" data-label="Su Sporları">🤿 Su Sporları</button>
+        <button class="ftag" data-label="Transfer">✈️ HVL Transfer</button>
+      </div>
+    </div>
+
+    <!-- SIRALAMA -->
+    <div class="fg">
+      <div class="fg-title">🔃 Sıralama</div>
+      <label class="fc"><input type="radio" name="sort" data-label="Fiyat artan"><span class="fc-lbl">Fiyat artan</span></label>
+      <label class="fc"><input type="radio" name="sort" data-label="Fiyat azalan"><span class="fc-lbl">Fiyat azalan</span></label>
+      <label class="fc"><input type="radio" name="sort" data-label="Puan artan"><span class="fc-lbl">Puan artan</span></label>
+      <label class="fc"><input type="radio" name="sort" data-label="Puan azalan"><span class="fc-lbl">Puan azalan</span></label>
+      <label class="fc"><input type="radio" name="sort" data-label="En çok tercih" checked><span class="fc-lbl">En çok tercih edilen</span></label>
+    </div>
+
+  </div>
+  <div class="fp-footer">
+    <button class="fp-clear" onclick="clearFilters()">✕ Temizle</button>
+    <button class="fp-apply" onclick="applyFilters()">Sonuçları Gör →</button>
+  </div>
+</div>
+
+<!-- HARİTA FAB -->
+<button class="map-fab" onclick="alert('🗺️ Harita görünümü yakında aktif olacak!')">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+  Harita Görünümü
+</button>
+
+<script>
+// ── URL PARAMETRELERİNDEN FİLTRE ──
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var tip = params.get('tip');
+  var bolge = params.get('bolge');
+  if(tip) {
+    var tabMap = {'beach':'🌊 Beach Club','hotel':'🏨 Hotel','aqua':'💦 Aqua Park'};
+    document.querySelectorAll('.tab').forEach(function(t){
+      t.classList.remove('on');
+      if(t.textContent.indexOf(tabMap[tip] || tip) > -1) t.classList.add('on');
+    });
+  }
+  if(bolge) {
+    var heroSub = document.querySelector('.hero-sub');
+    if(heroSub) heroSub.textContent = bolge + ' bölgesinde tesis aranıyor...';
+  }
+})();
+</script>
+</body>
+</html>
