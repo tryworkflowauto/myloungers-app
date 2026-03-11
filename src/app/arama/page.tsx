@@ -35,8 +35,6 @@ function AramaContent() {
   const [filterBadge, setFilterBadge] = useState(0);
   const [priceMax, setPriceMax] = useState(5000);
   const [activeTags, setActiveTags] = useState<string[]>([]);
-  const [heroTitle, setHeroTitle] = useState("🔍 Tesis Ara");
-  const [heroSub, setHeroSub] = useState("Beach club, hotel ve aqua park — Türkiye geneli");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -44,17 +42,12 @@ function AramaContent() {
     const tip = params.get("tip");
     const tarih = params.get("tarih");
     const gps = params.get("gps");
-    const kmParam = params.get("km");
 
     if (gps === "1") {
       setGpsOn(true);
-      setHeroTitle("📍 Konumunuza Yakın Tesisler");
-      setHeroSub(`${kmParam || 10} km yarıçap içindeki tüm tesisler`);
       setActiveTags(["📍 GPS Konumu"]);
     } else if (konum) {
       setLocInput(konum);
-      setHeroTitle(`🔍 ${konum} Tesisleri`);
-      setHeroSub(`${konum} bölgesindeki tüm beach club, hotel ve tesisler`);
       setActiveTags([`📍 ${konum}`]);
     }
     if (tarih) setDateVal(tarih);
@@ -112,8 +105,8 @@ function AramaContent() {
       {/* HERO */}
       <div className="hero">
         <div className="hero-wrap">
-          <div className="hero-title">{heroTitle}</div>
-          <div className="hero-sub">{heroSub}</div>
+          <div className="hero-title">🔍 Tesis Ara</div>
+          <div className="hero-sub">Beach club, hotel ve aqua park — Türkiye geneli</div>
           <div className="sbox">
             <div className="sf" style={{ flex: 2, minWidth: 180 }}>
               <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "rgba(255,255,255,0.9)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block" }}>Konum</label>
