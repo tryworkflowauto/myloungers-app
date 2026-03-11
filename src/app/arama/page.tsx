@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -58,28 +58,6 @@ function AramaContent() {
     return "Beach club, hotel ve aqua park — Türkiye geneli";
   });
 
-  useEffect(() => {
-    setLocInput(konum ?? "");
-    setGpsOn(gps === "1");
-    setKm(kmParam ? parseInt(kmParam, 10) : 10);
-    setTypeVal(tip ?? "");
-    setDateVal(tarih ?? "");
-    if (tip && TAB_MAP[tip]) setActiveTab(TAB_MAP[tip]);
-    if (gps === "1") {
-      setHeroTitle("📍 Konumunuza Yakın Tesisler");
-      setHeroSub(`${kmParam || 10} km yarıçap içindeki tüm tesisler`);
-      setActiveTags(["📍 GPS Konumu"]);
-    } else if (konum) {
-      setHeroTitle(`🔍 ${konum} Tesisleri`);
-      setHeroSub(`${konum} bölgesindeki tüm beach club, hotel ve tesisler`);
-      setActiveTags([`📍 ${konum}`]);
-    } else {
-      setHeroTitle("🔍 Tesis Ara");
-      setHeroSub("Beach club, hotel ve aqua park — Türkiye geneli");
-      setActiveTags([]);
-    }
-  }, [konum, tip, tarih, gps, kmParam]);
-
   function toggleGPS() {
     setGpsOn(!gpsOn);
     if (!gpsOn) setLocInput("");
@@ -126,10 +104,10 @@ function AramaContent() {
         .hero-sub{font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:16px}
         .sbox{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:16px;padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
         .sf{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px}
-        .sf label{font-size:.6rem;font-weight:800;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.1em;display:block}
+        .sf label{font-size:.6rem;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em}
         .sf-loc{display:flex;gap:6px}
-        .sf input,.sf select{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.25);border-radius:10px;padding:9px 12px;font-size:.82rem;color:#fff;outline:none;transition:border .12s;width:100%}
-        .sf input::placeholder{color:rgba(255,255,255,.55)}
+        .sf input,.sf select{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;padding:9px 12px;font-size:.82rem;color:#fff;outline:none;transition:border .12s;width:100%}
+        .sf input::placeholder{color:rgba(255,255,255,.35)}
         .sf select{color:rgba(255,255,255,.75);cursor:pointer}
         .sf select option{background:var(--navy);color:#fff}
         .sf input:focus,.sf select:focus{border-color:var(--teal)}
@@ -468,17 +446,9 @@ function AramaContent() {
   );
 }
 
-function AramaLoading() {
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F6F9" }}>
-      <div style={{ fontSize: "1rem", fontWeight: 700, color: "#374151" }}>Yükleniyor...</div>
-    </div>
-  );
-}
-
 export default function AramaPage() {
   return (
-    <Suspense fallback={<AramaLoading />}>
+    <Suspense fallback={null}>
       <AramaContent />
     </Suspense>
   );
