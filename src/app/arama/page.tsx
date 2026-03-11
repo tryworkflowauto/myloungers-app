@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -17,7 +17,7 @@ const CARDS = [
 
 type Card = typeof CARDS[0];
 
-export default function AramaPage() {
+function AramaContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -449,5 +449,21 @@ export default function AramaPage() {
         Harita Görünümü
       </button>
     </>
+  );
+}
+
+function AramaLoading() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F6F9" }}>
+      <div style={{ fontSize: "1rem", fontWeight: 700, color: "#374151" }}>Yükleniyor...</div>
+    </div>
+  );
+}
+
+export default function AramaPage() {
+  return (
+    <Suspense fallback={<AramaLoading />}>
+      <AramaContent />
+    </Suspense>
   );
 }
