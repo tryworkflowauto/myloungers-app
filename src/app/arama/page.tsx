@@ -110,6 +110,12 @@ function AramaContent() {
         <div className="hero-wrap">
           <div className="hero-title">🔍 Tesis Ara</div>
           <div className="hero-sub">Beach club, hotel ve aqua park — Türkiye geneli</div>
+        </div>
+      </div>
+
+      {/* SEARCH BAR — beyaz kart toolbar */}
+      <div className="arama-srch-wrap">
+        <div className="arama-srch-in">
           <SearchBar
             locInput={locInput}
             onLocInputChange={setLocInput}
