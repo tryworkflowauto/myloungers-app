@@ -254,6 +254,8 @@ export default function HotelDetailPage() {
         .nav-back{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--i3);text-decoration:none;border:1.5px solid var(--bd);padding:6px 12px;border-radius:9px;transition:all .12s}
         .nav-back:hover{border-color:var(--navy);color:var(--navy)}
         .nav-sp{flex:1}
+        .nav-profil{display:flex;align-items:center;font-size:.78rem;font-weight:700;color:var(--i3);text-decoration:none;border:1.5px solid var(--bd);padding:7px 14px;border-radius:10px;transition:all .12s}
+        .nav-profil:hover{border-color:var(--navy);color:var(--navy)}
         .fav-btn{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--i3);background:none;border:1.5px solid var(--bd);padding:7px 14px;border-radius:10px;cursor:pointer;transition:all .12s}
         .fav-btn.on{border-color:#EF4444;color:#EF4444;background:#FEF2F2}
         .wrap{max-width:1240px;margin:0 auto;padding:0 20px}
@@ -486,6 +488,7 @@ export default function HotelDetailPage() {
           Ana Sayfa
         </Link>
         <span className="nav-sp" />
+        <Link href="/profil" className="nav-profil">Profilim</Link>
         <button className={`fav-btn${fav ? " on" : ""}`} onClick={() => setFav(!fav)}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill={fav ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
           {fav ? "Kaydedildi" : "Kaydet"}
