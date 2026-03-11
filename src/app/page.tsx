@@ -1060,8 +1060,7 @@ export default function Home() {
           </div>
         </div>
         <div className="fb">
-          <span id="ft-copy">© 2025 MyLoungers · BGS İnteraktif</span>
-          <span id="ft-made">🇹🇷 Türkiye&apos;de yapıldı</span>
+          <span id="ft-copy">© 2025 MyLoungers · Reklamotv</span>
         </div>
       </footer>
 
