@@ -790,15 +790,12 @@ export default function Home() {
           {filteredTesis.map((tesis) => {
             const origIdx = TESISLER.indexOf(tesis);
             const prices = [450, 320, 280, 395];
-            return (
-              <div
-                key={tesis.name}
-                className="pc"
-                data-type={tesis.type}
-              >
+            const isZuzuu = tesis.name === "Zuzuu Beach Hotel";
+            const cardContent = (
+              <>
                 <div className="pw0">
                   <img src={TESIS_IMGS[origIdx]} alt={tesis.name} />
-                  <button type="button" className="pfav">♡</button>
+                  <button type="button" className="pfav" onClick={(e) => e.stopPropagation()}>♡</button>
                   <span className="prat">★ 4.8</span>
                   <span className={`ptag ${tesis.type === "aqua" ? "co" : "ct"}`}>{t.tag_daily}</span>
                 </div>
@@ -809,6 +806,15 @@ export default function Home() {
                   <span className="pfc">Bar</span>
                 </div>
                 <div className="pp"><b>₺{prices[origIdx] ?? 395}</b><span> {t.card_per_day}</span></div>
+              </>
+            );
+            return isZuzuu ? (
+              <Link key={tesis.name} href="/hotel/slug" className="pc pc-link" data-type={tesis.type}>
+                {cardContent}
+              </Link>
+            ) : (
+              <div key={tesis.name} className="pc" data-type={tesis.type}>
+                {cardContent}
               </div>
             );
           })}
