@@ -13,7 +13,7 @@ const COUNTRY_CODES = [
   { code: "RU", flag: "🇷🇺", dial: "+7" },
 ];
 
-export default function GirisPage() {
+function GirisContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [pane, setPane] = useState<1 | 2 | 3 | 4 | 5>(1);
