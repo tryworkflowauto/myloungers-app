@@ -4,12 +4,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const RESERVATIONS = [
+type Reservation = {
+  id: number;
+  name: string;
+  cat: string;
+  loc: string;
+  code: string;
+  dates: string;
+  szl: string;
+  gun: string;
+  odenen: string;
+  status: string;
+  statusTxt: string;
+  statusCss: string;
+  img: string;
+  stars?: number;
+  review?: boolean;
+};
+
+const RESERVATIONS: Reservation[] = [
   { id:1, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-7842", dates:"15–17 Tem 2025", szl:"A3, A4 · İskele", gun:"2 gün", odenen:"₺5.000", status:"upcoming", statusTxt:"📅 Yaklaşan", statusCss:"background:#EFF6FF;color:#2563EB;border-color:#BFDBFE", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
   { id:2, name:"Marmaris Beach Resort", cat:"Beach Club", loc:"Marmaris", code:"MYL-7651", dates:"3–5 Haz 2025", szl:"B7 · Silver", gun:"2 gün", odenen:"₺3.400", status:"active", statusTxt:"✅ Aktif", statusCss:"background:#F0FDF4;color:#16A34A;border-color:#BBF7D0", img:"https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&fit=crop" },
   { id:3, name:"Fethiye Paradise Club", cat:"Beach Club", loc:"Fethiye", code:"MYL-7420", dates:"20 May 2025", szl:"C2 · VIP", gun:"1 gün", odenen:"₺1.500", status:"past", statusTxt:"✓ Tamamlandı", statusCss:"background:#F9FAFB;color:#6B7280;border-color:#E5E7EB", img:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&fit=crop", stars:4 },
   { id:4, name:"Bodrum Luxury Suites", cat:"Hotel", loc:"Bodrum", code:"MYL-7201", dates:"1–2 May 2025", szl:"D1, D2 · VIP", gun:"1 gün", odenen:"₺3.600", status:"past", statusTxt:"✓ Tamamlandı", statusCss:"background:#F9FAFB;color:#6B7280;border-color:#E5E7EB", img:"https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&fit=crop", review:true },
-  { id:5, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-6988", dates:"10 Nis 2025", szl:"A5 · İskele", gun:"1 gün", odened:"₺1.250", status:"cancel", statusTxt:"✗ İptal", statusCss:"background:#FEF2F2;color:#DC2626;border-color:#FECACA", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
+  { id:5, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-6988", dates:"10 Nis 2025", szl:"A5 · İskele", gun:"1 gün", odenen:"₺1.250", status:"cancel", statusTxt:"✗ İptal", statusCss:"background:#FEF2F2;color:#DC2626;border-color:#FECACA", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
 ];
 
 const FAVS = [
@@ -406,7 +424,7 @@ export default function ProfilPage() {
                       <div className="rc-row"><span>📅</span><span className="rc-row-t">Tarih</span><span className="rc-row-v">{r.dates}</span></div>
                       <div className="rc-row"><span>🛏</span><span className="rc-row-t">Şezlong</span><span className="rc-row-v">{r.szl}</span></div>
                       <div className="rc-row"><span>📆</span><span className="rc-row-t">Süre</span><span className="rc-row-v">{r.gun}</span></div>
-                      <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>{r.odenen || r.odened}</span></div>
+                      <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>{r.odenen}</span></div>
                     </div>
                     <div className="rc-footer">
                       {"stars" in r && r.stars && <span className="rc-stars">{"★".repeat(r.stars as number)}{"☆".repeat(5-(r.stars as number))}</span>}
