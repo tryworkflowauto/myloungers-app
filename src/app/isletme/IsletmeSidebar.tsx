@@ -26,7 +26,7 @@ export default function IsletmeSidebar() {
       {/* Logo */}
       <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/MyLoungers_Logo-02.png" width={140} height={40} style={{ borderRadius: '10px', objectFit: 'contain' }} alt="MyLoungers" />
+          <img src="/MyLoungers_Logo-02.png" width={100} height={60} style={{ borderRadius: '10px', objectFit: 'contain' }} alt="MyLoungers" />
           <div>
             <span style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#fff' }}>MY LOUNGERS</span>
             <span style={{ display: 'block', fontSize: '10px', color: '#0ABAB5' }}>İşletme Paneli</span>
