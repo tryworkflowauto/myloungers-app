@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type ResData = {
@@ -21,6 +22,14 @@ const DEFAULT_RES: ResData = {
   toplam: 5000,
 };
 
+// Formats "2026-03-12" → "12 Mart 2026"
+const TR_MONTHS = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+function fmtISO(iso: string) {
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return parseInt(d) + " " + TR_MONTHS[parseInt(m) - 1] + " " + y;
+}
+
 const QR_PATTERN = [
   1,1,1,1,1,1,1,0,1,0,
   1,0,0,0,0,0,1,0,0,1,
@@ -34,7 +43,8 @@ const QR_PATTERN = [
   0,1,0,0,1,0,1,0,1,0,
 ];
 
-export default function OdemePage() {
+function OdemeContent() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [res, setRes] = useState<ResData>(DEFAULT_RES);
   const [payMethod, setPayMethod] = useState("pm-card");
@@ -44,16 +54,40 @@ export default function OdemePage() {
   const [kvkkErr, setKvkkErr] = useState(false);
 
   useEffect(() => {
+    // 1. Try URL query params (preferred — passed from hotel detail page)
+    const pTesis   = searchParams.get("tesis");
+    const pBaslangic = searchParams.get("tarihBaslangic");
+    const pBitis   = searchParams.get("tarihBitis");
+    const pGun     = searchParams.get("gun");
+    const pSzl     = searchParams.get("sezlonglar");
+    const pKisi    = searchParams.get("kisi");
+    const pFiyat   = searchParams.get("fiyat");
+
+    if (pBaslangic && pSzl) {
+      const tarihLabel = pBitis && pBitis !== pBaslangic
+        ? fmtISO(pBaslangic) + " – " + fmtISO(pBitis)
+        : fmtISO(pBaslangic) + " (tek gün)";
+      setRes({
+        tesis:  pTesis  || DEFAULT_RES.tesis,
+        tarih:  tarihLabel,
+        gun:    parseInt(pGun  || "1"),
+        szl:    (pSzl   || "").replace(/,/g, ", "),
+        kisi:   parseInt(pKisi || "1"),
+        toplam: parseInt(pFiyat || "0"),
+      });
+      return;
+    }
+    // 2. Fall back to sessionStorage (legacy)
     try {
-      const tesis = sessionStorage.getItem("ml_tesis") || DEFAULT_RES.tesis;
-      const tarih = sessionStorage.getItem("ml_tarih") || DEFAULT_RES.tarih;
-      const gun = parseInt(sessionStorage.getItem("ml_gun") || "2");
-      const szl = sessionStorage.getItem("ml_szl") || DEFAULT_RES.szl;
-      const kisi = parseInt(sessionStorage.getItem("ml_kisi") || "2");
+      const tesis  = sessionStorage.getItem("ml_tesis")  || DEFAULT_RES.tesis;
+      const tarih  = sessionStorage.getItem("ml_tarih")  || DEFAULT_RES.tarih;
+      const gun    = parseInt(sessionStorage.getItem("ml_gun")  || "2");
+      const szl    = sessionStorage.getItem("ml_szl")    || DEFAULT_RES.szl;
+      const kisi   = parseInt(sessionStorage.getItem("ml_kisi") || "2");
       const toplam = parseInt(sessionStorage.getItem("ml_toplam") || "5000");
       setRes({ tesis, tarih, gun, szl, kisi, toplam });
-    } catch (e) {}
-  }, []);
+    } catch (_) {}
+  }, [searchParams]);
 
   function validate() {
     const e: Record<string, boolean> = {};
@@ -554,7 +588,7 @@ export default function OdemePage() {
                 Yalıkavak, Bodrum · Beach Club
               </div>
               <div className="sum-rows">
-                <div className="sum-row"><span className="sum-row-l">📅 Tarih</span><span className="sum-row-v">{res.tarih.split("–")[0].trim()}</span></div>
+                <div className="sum-row"><span className="sum-row-l">📅 Tarih</span><span className="sum-row-v">{res.tarih}</span></div>
                 <div className="sum-row"><span className="sum-row-l">🛏 Şezlong</span><span className="sum-row-v">{res.szl}</span></div>
                 <div className="sum-row"><span className="sum-row-l">👥 Kişi</span><span className="sum-row-v">{res.kisi} kişi</span></div>
                 <div className="sum-row"><span className="sum-row-l">📆 Süre</span><span className="sum-row-v">{res.gun} gün</span></div>
@@ -575,5 +609,13 @@ export default function OdemePage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function OdemePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif", color: "#94A3B8" }}>Yükleniyor…</div>}>
+      <OdemeContent />
+    </Suspense>
   );
 }

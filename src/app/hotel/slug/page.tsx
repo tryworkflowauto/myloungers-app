@@ -165,7 +165,25 @@ export default function HotelDetailPage() {
   function goRes() {
     if (!selStart) { alert("Lütfen giriş tarihini seçin."); return; }
     if (selSzls.length === 0) { alert("Lütfen en az 1 şezlong seçin."); return; }
-    router.push("/odeme");
+    // Build tarih string
+    function padZ(n: number) { return String(n).padStart(2, "0"); }
+    const startStr = selStart.getFullYear() + "-" + padZ(selStart.getMonth() + 1) + "-" + padZ(selStart.getDate());
+    const endStr   = selEnd
+      ? selEnd.getFullYear() + "-" + padZ(selEnd.getMonth() + 1) + "-" + padZ(selEnd.getDate())
+      : startStr;
+    const gunSayisi = days;
+    const sezlonglar = selSzls.map(s => s.no).join(",");
+    const toplamFiyat = total;
+    const params = new URLSearchParams({
+      tesis: HOTEL.name,
+      tarihBaslangic: startStr,
+      tarihBitis: endStr,
+      gun: String(gunSayisi),
+      sezlonglar,
+      kisi: String(selSzls.length),
+      fiyat: String(toplamFiyat),
+    });
+    router.push("/odeme?" + params.toString());
   }
 
   function loadVideo() {
