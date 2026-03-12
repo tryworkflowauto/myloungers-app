@@ -221,6 +221,33 @@ export default function IsletmeSezlongPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [kilitliToastNo, setKilitliToastNo] = useState<string | null>(null);
   const [seciliRenk, setSeciliRenk] = useState("#0ABAB5");
+  const [gruplar, setGruplar] = useState(MOCK_GRUPLAR);
+  const [duzenleModal, setDuzenleModal] = useState<(typeof MOCK_GRUPLAR)[0] | null>(null);
+  const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "" });
+  const [silModal, setSilModal] = useState<(typeof MOCK_GRUPLAR)[0] | null>(null);
+
+  function openDuzenle(g: (typeof MOCK_GRUPLAR)[0]) {
+    setDuzenleForm({ name: g.name, count: String(g.count), color: g.color, fiyat: g.fiyat });
+    setDuzenleModal(g);
+  }
+
+  function saveDuzenle() {
+    if (!duzenleModal) return;
+    setGruplar((prev) =>
+      prev.map((g) =>
+        g.name === duzenleModal.name
+          ? { ...g, name: duzenleForm.name, count: Number(duzenleForm.count), color: duzenleForm.color, fiyat: duzenleForm.fiyat }
+          : g
+      )
+    );
+    setDuzenleModal(null);
+  }
+
+  function silGrup() {
+    if (!silModal) return;
+    setGruplar((prev) => prev.filter((g) => g.name !== silModal.name));
+    setSilModal(null);
+  }
 
   function handleSezlongClick(no: string, grupKey: string, durum: string) {
     if (durum === "kilitli") {
@@ -398,7 +425,7 @@ export default function IsletmeSezlongPage() {
               Gruplar
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {MOCK_GRUPLAR.map((g) => (
+              {gruplar.map((g) => (
                 <div
                   key={g.name}
                   style={{
@@ -421,6 +448,7 @@ export default function IsletmeSezlongPage() {
                     <span style={{ fontSize: 11, color: GRAY400 }}>{g.count} şezlong</span>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
+                        onClick={(e) => { e.stopPropagation(); openDuzenle(g); }}
                         style={{
                           width: 24,
                           height: 24,
@@ -437,6 +465,7 @@ export default function IsletmeSezlongPage() {
                         ✏️
                       </button>
                       <button
+                        onClick={(e) => { e.stopPropagation(); setSilModal(g); }}
                         style={{
                           width: 24,
                           height: 24,
@@ -1002,6 +1031,104 @@ export default function IsletmeSezlongPage() {
               >
                 ✅ Grubu Ekle
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grubu Düzenle Modal */}
+      {duzenleModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={(e) => e.target === e.currentTarget && setDuzenleModal(null)}
+        >
+          <div
+            style={{ background: "white", borderRadius: 14, width: 380, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>✏️ Grubu Düzenle</h3>
+              <button onClick={() => setDuzenleModal(null)} style={{ background: GRAY100, border: "none", borderRadius: 7, width: 26, height: 26, cursor: "pointer", fontSize: 13 }}>✕</button>
+            </div>
+            <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Grup Adı</label>
+                <input
+                  type="text"
+                  value={duzenleForm.name}
+                  onChange={(e) => setDuzenleForm((f) => ({ ...f, name: e.target.value }))}
+                  style={{ width: "100%", padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Şezlong Sayısı</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={duzenleForm.count}
+                  onChange={(e) => setDuzenleForm((f) => ({ ...f, count: e.target.value }))}
+                  style={{ width: "100%", padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Renk</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {COLOR_OPTS.map((c) => (
+                    <div
+                      key={c}
+                      onClick={() => setDuzenleForm((f) => ({ ...f, color: c }))}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        background: c,
+                        cursor: "pointer",
+                        border: duzenleForm.color === c ? "3px solid #0A1628" : "3px solid transparent",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Fiyat/gün</label>
+                <input
+                  type="text"
+                  value={duzenleForm.fiyat}
+                  onChange={(e) => setDuzenleForm((f) => ({ ...f, fiyat: e.target.value }))}
+                  placeholder="₺1.000"
+                  style={{ width: "100%", padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
+                />
+              </div>
+            </div>
+            <div style={{ padding: "12px 20px", borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setDuzenleModal(null)} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={saveDuzenle} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grup Sil Onay Modal */}
+      {silModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={(e) => e.target === e.currentTarget && setSilModal(null)}
+        >
+          <div
+            style={{ background: "white", borderRadius: 14, width: 340, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "20px 20px 16px", textAlign: "center" }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>🗑️</div>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Emin misiniz?</h3>
+              <p style={{ fontSize: 13, color: GRAY600, lineHeight: 1.5 }}>
+                <strong style={{ color: NAVY }}>{silModal.name}</strong> grubunu silmek istediğinize emin misiniz?
+              </p>
+            </div>
+            <div style={{ padding: "12px 20px 20px", display: "flex", gap: 8, justifyContent: "center" }}>
+              <button onClick={() => setSilModal(null)} style={{ padding: "8px 20px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={silGrup} style={{ padding: "8px 20px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: "#EF4444", color: "white", cursor: "pointer" }}>Evet, Sil</button>
             </div>
           </div>
         </div>
