@@ -44,7 +44,8 @@ const GECMIS_SIPARISLER = [
   { no: "#086", urunler: "2x Mojito", sezlong: "İ-3 (İskele)", saat: "12:50 → İptal", garson: { inits: "MG", name: "Mehmet G.", color: TEAL }, tutar: "₺120", durum: "iptal", tutarColor: RED },
 ];
 
-type SiparisKart = typeof YENI_SIPARISLER[0] & { opacity?: number };
+type Garson = { name: string; inits: string; color: string };
+type SiparisKart = Omit<typeof YENI_SIPARISLER[0], "garson"> & { garson: Garson | null; opacity?: number };
 
 function SiparisKart({ s, headerBg, showActions, primaryBtn, secondaryBtn }: { s: SiparisKart; headerBg: string; showActions: boolean; primaryBtn: string; secondaryBtn?: string }) {
   return (
