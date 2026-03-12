@@ -5,6 +5,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminToastProvider } from "./AdminToastContext";
 
+// CSV export helper (komisyon summary)
+function komisyonCsvIndir() {
+  const BOM = "\uFEFF";
+  const rows = [
+    ["Tesis", "Ciro", "Oran", "Komisyon"],
+    ["Zuzuu Beach",   "₺148K", "%15", "₺22.2K"],
+    ["Palmiye Beach", "₺68K",  "%15", "₺10.2K"],
+    ["Poseidon Lux",  "₺41K",  "%15", "₺6.1K" ],
+    ["TOPLAM",        "₺284K", "—",   "₺42.6K"],
+  ];
+  const csv = BOM + rows.map(r => r.join(";")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "komisyon-ozet.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
 const ORANGE = "#F5821F";
 const GRAY100 = "#F1F5F9";
 const GRAY200 = "#E2E8F0";
@@ -17,29 +35,31 @@ const RED = "#EF4444";
 const SIDEBAR_W = 240;
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard", icon: "📊", activePath: "/admin" },
-  { href: "/admin", label: "Tesisler", icon: "🏖️", badge: 2, badgeColor: ORANGE },
-  { href: "/admin", label: "Kullanıcılar", icon: "👤" },
-  { href: "/admin/komisyon", label: "Komisyon Takibi", icon: "💰", activePath: "/admin/komisyon" },
-  { href: "/admin", label: "Abonelikler", icon: "📄" },
-  { href: "/admin", label: "Yorum Yönetimi", icon: "⭐", badge: 3, badgeColor: RED },
-  { href: "/admin", label: "Şikayetler", icon: "🚨", badge: 1, badgeColor: RED },
-  { href: "/admin", label: "Platform Ayarları", icon: "⚙️" },
+  { href: "/admin",               label: "Dashboard",         icon: "📊", activePath: "/admin"          },
+  { href: "/admin/tesisler",      label: "Tesisler",          icon: "🏖️", badge: 2, badgeColor: ORANGE, yakinda: true },
+  { href: "/admin/kullanicilar",  label: "Kullanıcılar",      icon: "👤", yakinda: true                  },
+  { href: "/admin/komisyon",      label: "Komisyon Takibi",   icon: "💰", activePath: "/admin/komisyon"  },
+  { href: "/admin/abonelikler",   label: "Abonelikler",       icon: "📄", yakinda: true                  },
+  { href: "/admin/yorumlar",      label: "Yorum Yönetimi",    icon: "⭐", badge: 3, badgeColor: RED, yakinda: true },
+  { href: "/admin/sikayetler",    label: "Şikayetler",        icon: "🚨", badge: 1, badgeColor: RED, yakinda: true },
+  { href: "/admin/ayarlar",       label: "Platform Ayarları", icon: "⚙️", yakinda: true                  },
 ];
 
-function NavLink({ item }: { item: (typeof NAV_ITEMS)[0] }) {
+function NavLink({ item, onYakinda }: { item: (typeof NAV_ITEMS)[0]; onYakinda: (label: string) => void }) {
   const pathname = usePathname();
-  const isActive = item.activePath ? pathname === item.activePath : false;
+  const isActive = item.activePath ? pathname === item.activePath : pathname === item.href && !item.yakinda;
+
+  function handleClick(e: React.MouseEvent) {
+    if (item.yakinda) { e.preventDefault(); onYakinda(item.label); }
+  }
+
   return (
     <Link
       href={item.href}
+      onClick={handleClick}
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "9px 16px",
-        cursor: "pointer",
-        textDecoration: "none",
+        display: "flex", alignItems: "center", gap: 10, padding: "9px 16px",
+        cursor: "pointer", textDecoration: "none",
         background: isActive ? "rgba(245,130,31,0.12)" : "transparent",
         position: "relative",
         borderLeft: isActive ? `3px solid ${ORANGE}` : "none",
@@ -49,6 +69,7 @@ function NavLink({ item }: { item: (typeof NAV_ITEMS)[0] }) {
       <div style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, fontSize: 14, background: isActive ? "rgba(245,130,31,0.2)" : "transparent" }}>{item.icon}</div>
       <span style={{ fontSize: 13, color: isActive ? ORANGE : "#CBD5E1", fontWeight: isActive ? 600 : 500 }}>{item.label}</span>
       {item.badge && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10, background: item.badgeColor, color: "white" }}>{item.badge}</span>}
+      {item.yakinda && !item.badge && <span style={{ marginLeft: "auto", fontSize: 8, color: GRAY400 }}>Yakında</span>}
     </Link>
   );
 }
@@ -87,21 +108,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav style={{ padding: "4px 0", flex: 1 }}>
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Platform</div>
           {NAV_ITEMS.slice(0, 3).map((n) => (
-            <NavLink key={n.label} item={n} />
+            <NavLink key={n.label} item={n} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
           ))}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Finans</div>
           {NAV_ITEMS.slice(3, 5).map((n) => (
-            <NavLink key={n.label} item={n} />
+            <NavLink key={n.label} item={n} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
           ))}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Moderasyon</div>
           {NAV_ITEMS.slice(5, 7).map((n) => (
-            <NavLink key={n.label} item={n} />
+            <NavLink key={n.label} item={n} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
           ))}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Sistem</div>
-          <Link href="/admin" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", textDecoration: "none" }}>
-            <div style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, fontSize: 14 }}>⚙️</div>
-            <span style={{ fontSize: 13, color: "#CBD5E1" }}>Platform Ayarları</span>
-          </Link>
+          <NavLink item={NAV_ITEMS[7]} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
         </nav>
         <div style={{ padding: 14, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -119,7 +137,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span style={{ fontSize: 11, color: GRAY400 }}>MyLoungers Admin · 11 Mart 2026</span>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>📥 Rapor İndir</button>
+            <button onClick={() => { komisyonCsvIndir(); showToast("📥 Komisyon raporu indirildi", GREEN); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>📥 Rapor İndir</button>
             <button onClick={() => setModalOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>➕ Yeni Tesis Ekle</button>
           </div>
         </header>
