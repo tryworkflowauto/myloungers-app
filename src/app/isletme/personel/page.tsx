@@ -56,6 +56,7 @@ type Personel = {
   yetkiler: string[];
   yetkiKilitli: string[];
   aktif: boolean;
+  photo?: string;
 };
 
 const INIT_PERSONELLER: Personel[] = [
@@ -97,7 +98,11 @@ function PersonelKart({ p, onEdit, onYetki, onToggle, onSil }: {
     <div className="personel-kart" style={{ background: "white", borderRadius: 16, border: `1.5px solid ${GRAY200}`, overflow: "hidden", transition: "all 0.2s", opacity: p.aktif ? 1 : 0.65 }}>
       <div style={{ padding: 16, display: "flex", alignItems: "center", gap: 14, borderBottom: `1px solid ${GRAY100}` }}>
         <div style={{ position: "relative" }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "white", background: p.avatarBg }}>{p.inits}</div>
+          <div style={{ width: 52, height: 52, borderRadius: 14, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "white", background: p.photo ? "transparent" : p.avatarBg }}>
+            {p.photo
+              ? <img src={p.photo} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : p.inits}
+          </div>
           <div style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: "50%", border: "2px solid white", background: p.online ? GREEN : GRAY300 }} />
         </div>
         <div style={{ flex: 1 }}>
@@ -174,6 +179,10 @@ export default function IsletmePersonelPage() {
   const [yeniForm, setYeniForm] = useState(emptyForm);
   const [editForm, setEditForm] = useState(emptyForm);
 
+  // Photo states (base64)
+  const [yeniPhoto, setYeniPhoto] = useState<string>("");
+  const [editPhoto, setEditPhoto] = useState<string>("");
+
   // Yetki modal checks: flat map of yetki item name → boolean
   const [yetkiChecks, setYetkiChecks] = useState<Record<string, boolean>>({});
 
@@ -214,6 +223,7 @@ export default function IsletmePersonelPage() {
 
   function openEdit(p: Personel) {
     setEditForm({ name: p.name, phone: p.phone, rol: p.rol, sezlonglar: p.sezlonglar?.join(", ") ?? "", aktif: p.aktif });
+    setEditPhoto(p.photo ?? "");
     setEditModal(p);
   }
 
@@ -231,6 +241,7 @@ export default function IsletmePersonelPage() {
               aktif: editForm.aktif,
               sezlonglar: editForm.sezlonglar ? editForm.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean) : p.sezlonglar,
               inits: editForm.name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join(""),
+              photo: editPhoto || undefined,
             }
           : p
       )
@@ -255,9 +266,11 @@ export default function IsletmePersonelPage() {
       yetkiler: yeniForm.rol === "mudur" ? ["Tüm Yetkiler"] : ["Siparişler"],
       yetkiKilitli: yeniForm.rol !== "mudur" ? ["Fiyatlar (Kilitli)"] : [],
       aktif: yeniForm.aktif,
+      photo: yeniPhoto || undefined,
     };
     setPersoneller((prev) => [newP, ...prev]);
     setYeniForm(emptyForm);
+    setYeniPhoto("");
     setAddModalOpen(false);
     showToast(`✅ ${yeniForm.name} personel olarak eklendi`);
   }
@@ -355,7 +368,7 @@ export default function IsletmePersonelPage() {
           <button onClick={csvIndir} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>
             📥 Rapor İndir
           </button>
-          <button onClick={() => { setYeniForm(emptyForm); setAddModalOpen(true); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>
+          <button onClick={() => { setYeniForm(emptyForm); setYeniPhoto(""); setAddModalOpen(true); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>
             ➕ Personel Ekle
           </button>
         </div>
@@ -414,10 +427,10 @@ export default function IsletmePersonelPage() {
               <button onClick={() => setAddModalOpen(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
             <div style={{ padding: "20px 24px" }}>
-              <PersonelForm form={yeniForm} setForm={setYeniForm} inputStyle={inputStyle} labelStyle={labelStyle} />
+              <PersonelForm form={yeniForm} setForm={setYeniForm} photo={yeniPhoto} setPhoto={setYeniPhoto} inputStyle={inputStyle} labelStyle={labelStyle} />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
-              <button onClick={() => setAddModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={() => { setAddModalOpen(false); setYeniPhoto(""); }} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
               <button onClick={saveYeni} disabled={!yeniForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !yeniForm.name ? GRAY200 : TEAL, color: !yeniForm.name ? GRAY400 : "white", cursor: !yeniForm.name ? "not-allowed" : "pointer" }}>✅ Kaydet</button>
             </div>
           </div>
@@ -436,7 +449,7 @@ export default function IsletmePersonelPage() {
               <button onClick={() => setEditModal(null)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
             <div style={{ padding: "20px 24px" }}>
-              <PersonelForm form={editForm} setForm={setEditForm} inputStyle={inputStyle} labelStyle={labelStyle} />
+              <PersonelForm form={editForm} setForm={setEditForm} photo={editPhoto} setPhoto={setEditPhoto} inputStyle={inputStyle} labelStyle={labelStyle} />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
               <button onClick={() => setEditModal(null)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -541,9 +554,11 @@ export default function IsletmePersonelPage() {
 }
 
 // ── Shared PersonelForm ───────────────────────────────────────────────────
-function PersonelForm({ form, setForm, inputStyle, labelStyle }: {
+function PersonelForm({ form, setForm, photo, setPhoto, inputStyle, labelStyle }: {
   form: typeof emptyForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyForm>>;
+  photo: string;
+  setPhoto: React.Dispatch<React.SetStateAction<string>>;
   inputStyle: React.CSSProperties;
   labelStyle: React.CSSProperties;
 }) {
@@ -551,8 +566,54 @@ function PersonelForm({ form, setForm, inputStyle, labelStyle }: {
   const set = (key: keyof typeof emptyForm, val: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: val }));
 
+  const inits = f.name
+    .split(" ")
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .slice(0, 2)
+    .join("") || "?";
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (typeof ev.target?.result === "string") setPhoto(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
   return (
     <>
+      {/* ── AVATAR UPLOAD ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, padding: "14px 16px", background: GRAY50, borderRadius: 12 }}>
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, color: "white", background: photo ? "transparent" : `linear-gradient(135deg,${TEAL},${NAVY})`, border: `2px solid ${photo ? TEAL : GRAY200}` }}>
+            {photo
+              ? <img src={photo} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : inits}
+          </div>
+          {photo && (
+            <button
+              type="button"
+              onClick={() => setPhoto("")}
+              title="Fotoğrafı kaldır"
+              style={{ position: "absolute", top: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: RED, border: "2px solid white", color: "white", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
+            >✕</button>
+          )}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 4 }}>Profil Fotoğrafı</div>
+          <div style={{ fontSize: 11, color: GRAY400, marginBottom: 10 }}>
+            {photo ? "Fotoğraf yüklendi — kaldırmak için ✕ butonuna basın" : "Fotoğraf yüklenmedi — baş harfler gösterilecek"}
+          </div>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, border: `1.5px solid ${TEAL}`, background: "rgba(10,186,181,0.06)", color: TEAL, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            📷 {photo ? "Değiştir" : "Fotoğraf Yükle"}
+            <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: "none" }} />
+          </label>
+        </div>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
         <div>
           <label style={labelStyle}>Ad Soyad *</label>
