@@ -27,7 +27,7 @@ const KATEGORILER = [
 ];
 
 // Mock data - Ürünler
-const URUNLER = [
+const URUNLER: { icon: string; badges: string[]; stok: boolean; name: string; desc: string; price: string; birim: string; aktif: boolean; descStyle?: { color: string; fontWeight: number }; imgBg?: string }[] = [
   { icon: "🍹", badges: ["populer"], stok: true, name: "Mojito", desc: "Nane, limon, soda ve beyaz rom ile hazırlanır", price: "₺120", birim: "/ adet", aktif: true },
   { icon: "🍋", badges: ["yeni"], stok: true, name: "Limonata", desc: "Taze sıkılmış limon, şeker, nane", price: "₺45", birim: "/ adet", aktif: true },
   { icon: "🐟", badges: ["populer"], stok: true, name: "Izgara Levrek", desc: "Taze levrek, yanında salata ve limon", price: "₺150", birim: "/ adet", aktif: true },
