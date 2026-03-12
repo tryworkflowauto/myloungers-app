@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Plus,
-  UtensilsCrossed,
-  ClipboardList,
-  Waves,
-  MessageSquare,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
@@ -92,10 +86,10 @@ const MOCK_BAKIYE = [
 
 // TODO: API'den çekilecek
 const HIZLI_EYLEMLER = [
-  { ikon: ClipboardList, label: "Rezervasyon Oluştur", href: "/isletme/rezervasyonlar" },
-  { ikon: Waves, label: "Şezlong Haritası", href: "/isletme/sezlong-haritasi" },
-  { ikon: UtensilsCrossed, label: "Siparişlere Git", href: "/isletme/siparisler" },
-  { ikon: MessageSquare, label: "Yorumları Cevapla", href: "/isletme/yorumlar" },
+  { ikon: "📋", label: "Rezervasyon Oluştur", href: "/isletme/rezervasyonlar" },
+  { ikon: "🏖️", label: "Şezlong Haritası", href: "/isletme/sezlong-haritasi" },
+  { ikon: "🍽️", label: "Siparişlere Git", href: "/isletme/siparisler" },
+  { ikon: "💬", label: "Yorumları Cevapla", href: "/isletme/yorumlar" },
 ];
 
 export default function IsletmeDashboardPage() {
@@ -146,8 +140,9 @@ export default function IsletmeDashboardPage() {
       <div className="flex-1" style={{ padding: "20px 24px" }}>
         {/* SEZON BANNER — .sezon-banner exact */}
         <div
-          className="flex flex-wrap items-center justify-between gap-4 mb-5"
+          className="flex flex-wrap items-center justify-between gap-4"
           style={{
+            marginBottom: 20,
             background: "linear-gradient(135deg,#0A1628 0%,#0d2244 50%,#0a3d3b 100%)",
             borderRadius: 14,
             padding: "18px 24px",
@@ -267,9 +262,7 @@ export default function IsletmeDashboardPage() {
 
         {/* HIZLI EYLEMLER — .hizli-grid, .hizli-btn, emoji yerine lucide */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
-          {HIZLI_EYLEMLER.map((h, i) => {
-            const IconComp = h.ikon;
-            return (
+          {HIZLI_EYLEMLER.map((h, i) => (
               <Link
                 key={i}
                 href={h.href}
@@ -290,11 +283,10 @@ export default function IsletmeDashboardPage() {
                   e.currentTarget.style.transform = "";
                 }}
               >
-                <IconComp size={26} style={{ color: NAVY }} />
+                <span style={{ fontSize: 26 }}>{h.ikon}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: NAVY, textAlign: "center" }}>{h.label}</span>
               </Link>
-            );
-          })}
+            ))}
         </div>
 
         {/* 3 KOLON — .three-col */}
