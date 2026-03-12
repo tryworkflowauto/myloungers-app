@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 
 const menuItems = [
   { section: 'ANA MENÜ' },
@@ -21,6 +22,31 @@ const menuItems = [
 
 export default function IsletmeSidebar() {
   const pathname = usePathname();
+  const [dropdownOpen,  setDropdownOpen]  = useState(false);
+  const [cikisModal,    setCikisModal]    = useState(false);
+  const [toast,         setToast]         = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // ESC closes modal
+  useEffect(() => {
+    function h(e: KeyboardEvent) { if (e.key === 'Escape') { setDropdownOpen(false); setCikisModal(false); } }
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
+
   return (
     <aside style={{ width: '240px', background: '#0A1628', minHeight: '100vh', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', zIndex: 100 }}>
       {/* Logo */}
@@ -56,15 +82,104 @@ export default function IsletmeSidebar() {
         })}
       </nav>
       {/* Alt kullanıcı */}
-      <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg,#0ABAB5,#F5821F)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white' }}>ZB</div>
-          <div>
-            <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'white' }}>Zafer Bakır</span>
+      <div ref={dropdownRef} style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', position: 'relative' }}>
+        {/* Dropdown menu — opens upward */}
+        {dropdownOpen && (
+          <div style={{
+            position: 'absolute', bottom: '72px', left: '12px', right: '12px',
+            background: '#1E293B', borderRadius: '12px',
+            border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.4)',
+            overflow: 'hidden', zIndex: 200,
+          }}>
+            {[
+              { icon: '👤', label: 'Profil Ayarları', color: 'white' },
+              { icon: '🔔', label: 'Bildirimler',     color: 'white' },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => { setDropdownOpen(false); showToast(`ℹ️ ${item.label} — Yakında aktif olacak`); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '11px 14px', background: 'transparent', border: 'none',
+                  cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: item.color,
+                  textAlign: 'left', transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span style={{ fontSize: '15px' }}>{item.icon}</span> {item.label}
+              </button>
+            ))}
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '2px 0' }} />
+            <button
+              onClick={() => { setDropdownOpen(false); setCikisModal(true); }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '11px 14px', background: 'transparent', border: 'none',
+                cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#EF4444',
+                textAlign: 'left', transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span style={{ fontSize: '15px' }}>🚪</span> Çıkış Yap
+            </button>
+          </div>
+        )}
+
+        {/* User row — clickable */}
+        <div
+          onClick={() => setDropdownOpen(o => !o)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+            padding: '6px 8px', borderRadius: '10px', transition: 'background 0.15s',
+            background: dropdownOpen ? 'rgba(255,255,255,0.06)' : 'transparent',
+          }}
+          onMouseEnter={(e) => { if (!dropdownOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+          onMouseLeave={(e) => { if (!dropdownOpen) e.currentTarget.style.background = 'transparent'; }}
+        >
+          <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg,#0ABAB5,#F5821F)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0 }}>ZB</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Zafer Bakır</span>
             <span style={{ display: 'block', fontSize: '10px', color: '#94A3B8' }}>İşletme Yöneticisi</span>
           </div>
+          <span style={{ color: '#94A3B8', fontSize: '11px', transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }}>▲</span>
         </div>
       </div>
+
+      {/* ── ÇIKIŞ ONAY MODAL ──────────────────────────────────────────────── */}
+      {cikisModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500 }}
+          onClick={(e) => e.target === e.currentTarget && setCikisModal(false)}
+        >
+          <div style={{ background: 'white', borderRadius: '16px', padding: '28px', width: '340px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+            <div style={{ fontSize: '44px', marginBottom: '12px' }}>🚪</div>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0A1628', marginBottom: '8px' }}>Çıkış Yap</h3>
+            <p style={{ fontSize: '13px', color: '#475569', marginBottom: '24px' }}>Hesabınızdan çıkış yapmak istediğinize emin misiniz?</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setCikisModal(false)}
+                style={{ padding: '9px 22px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: '1px solid #E2E8F0', background: '#F1F5F9', color: '#1E293B', cursor: 'pointer' }}
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={() => { setCikisModal(false); showToast('🚪 Çıkış yapıldı — Yakında aktif olacak'); }}
+                style={{ padding: '9px 22px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, border: 'none', background: '#EF4444', color: 'white', cursor: 'pointer' }}
+              >
+                🚪 Çıkış Yap
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TOAST ─────────────────────────────────────────────────────────── */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '24px', left: '260px', background: '#0A1628', color: 'white', padding: '12px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: 600, zIndex: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', pointerEvents: 'none' }}>{toast}</div>
+      )}
     </aside>
   );
 }
