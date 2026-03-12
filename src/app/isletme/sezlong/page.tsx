@@ -231,6 +231,10 @@ export default function IsletmeSezlongPage() {
   const [cikisModal, setCikisModal] = useState(false);
   const [rezModal, setRezModal] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
+  const [durumFiltresi, setDurumFiltresi] = useState<string | null>(null);
+  const [grupFiltresi, setGrupFiltresi] = useState<string | null>(null);
+  const [seciliTarih, setSeciliTarih] = useState("2026-03-11");
+  const [mod, setMod] = useState<"duzenleme" | "goruntulem" | "musteri">("duzenleme");
 
   function showToast(msg: string) {
     setToast(msg);
@@ -279,10 +283,34 @@ export default function IsletmeSezlongPage() {
       setTimeout(() => setKilitliToastNo(null), 2500);
       return;
     }
+    if (mod === "musteri") {
+      // Müşteri görünümü: sadece bilgi göster, state'e yaz ama düzenleme paneli açılmasın
+      setSeciliNo(no);
+      setSeciliGrup(grupKey);
+      setSeciliDurum(durum);
+      return;
+    }
     setSeciliNo(no);
     setSeciliGrup(grupKey);
     setSeciliDurum(durum);
   }
+
+  // Legend label → durum key eşlemesi
+  const LEGEND_DURUM_MAP: Record<string, string> = {
+    "Boş": "bos",
+    "Dolu": "dolu",
+    "Rezerve": "rezerve",
+    "Bakımda": "bakim",
+    "İşletme Rezervi": "kilitli",
+  };
+
+  // Grup adı → MAP_BLOCKS key eşlemesi
+  const GRUP_KEY_MAP: Record<string, string> = {
+    "Silver": "silver",
+    "VIP": "vip",
+    "İskele": "iskele",
+    "Gold": "gold",
+  };
 
   return (
     <div
@@ -354,16 +382,22 @@ export default function IsletmeSezlongPage() {
             💾 Değişiklikleri Kaydet
           </button>
           <select
+            value={mod === "duzenleme" ? "duzenleme" : mod === "goruntulem" ? "goruntulem" : "musteri"}
+            onChange={(e) => setMod(e.target.value as "duzenleme" | "goruntulem" | "musteri")}
             style={{
               padding: "7px 10px",
-              border: `1px solid ${GRAY200}`,
+              border: `2px solid ${mod === "musteri" ? "#7C3AED" : mod === "goruntulem" ? TEAL : ORANGE}`,
               borderRadius: 8,
               fontSize: 12,
+              fontWeight: 600,
+              background: mod === "musteri" ? "#F5F3FF" : mod === "goruntulem" ? "rgba(10,186,181,0.08)" : "rgba(245,130,31,0.08)",
+              color: mod === "musteri" ? "#7C3AED" : mod === "goruntulem" ? TEAL : ORANGE,
+              cursor: "pointer",
             }}
           >
-            <option>Düzenleme Modu</option>
-            <option>Görüntüleme Modu</option>
-            <option>Müşteri Görünümü</option>
+            <option value="duzenleme">✏️ Düzenleme Modu</option>
+            <option value="goruntulem">👁️ Görüntüleme Modu</option>
+            <option value="musteri">👤 Müşteri Görünümü</option>
           </select>
         </div>
       </header>
@@ -395,43 +429,49 @@ export default function IsletmeSezlongPage() {
               Durum Göstergesi
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {LEGEND_ITEMS.map((item) => (
-                <div
-                  key={item.label}
-                  className="legend-item-hover"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
-                >
+              {LEGEND_ITEMS.map((item) => {
+                const durumKey = LEGEND_DURUM_MAP[item.label];
+                const isActive = durumFiltresi === durumKey;
+                return (
                   <div
+                    key={item.label}
+                    onClick={() => setDurumFiltresi(isActive ? null : durumKey)}
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      flexShrink: 0,
-                      background: item.emoji === "🟢" ? "#DCFCE7" : item.emoji === "🟠" ? "#FFEDD5" : item.emoji === "🔵" ? "#DBEAFE" : item.emoji === "⚪" ? "#F1F5F9" : "#EDE9FE",
-                      border: item.emoji === "🔒" ? "2px dashed #7C3AED" : item.emoji === "🟢" ? "2px solid #86EFAC" : item.emoji === "🟠" ? "2px solid #FB923C" : item.emoji === "🔵" ? "2px solid #60A5FA" : "2px solid #CBD5E1",
+                      gap: 10,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      transition: "background 0.15s",
+                      background: isActive ? (item.emoji === "🟢" ? "#DCFCE7" : item.emoji === "🟠" ? "#FFEDD5" : item.emoji === "🔵" ? "#DBEAFE" : item.emoji === "⚪" ? "#F1F5F9" : "#EDE9FE") : "transparent",
+                      border: isActive ? `2px solid ${item.countColor}` : "2px solid transparent",
                     }}
                   >
-                    {item.emoji}
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 12,
+                        flexShrink: 0,
+                        background: item.emoji === "🟢" ? "#DCFCE7" : item.emoji === "🟠" ? "#FFEDD5" : item.emoji === "🔵" ? "#DBEAFE" : item.emoji === "⚪" ? "#F1F5F9" : "#EDE9FE",
+                        border: item.emoji === "🔒" ? "2px dashed #7C3AED" : item.emoji === "🟢" ? "2px solid #86EFAC" : item.emoji === "🟠" ? "2px solid #FB923C" : item.emoji === "🔵" ? "2px solid #60A5FA" : "2px solid #CBD5E1",
+                      }}
+                    >
+                      {item.emoji}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: isActive ? NAVY : NAVY }}>{item.label}</strong>
+                      <span style={{ fontSize: 10, color: GRAY400 }}>{item.sub}</span>
+                    </div>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: item.countColor }}>{item.count}</span>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: NAVY }}>{item.label}</strong>
-                    <span style={{ fontSize: 10, color: GRAY400 }}>{item.sub}</span>
-                  </div>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: item.countColor }}>{item.count}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -554,7 +594,8 @@ export default function IsletmeSezlongPage() {
             </div>
             <input
               type="date"
-              defaultValue="2026-03-11"
+              value={seciliTarih}
+              onChange={(e) => setSeciliTarih(e.target.value)}
               style={{
                 width: "100%",
                 padding: "8px 10px",
@@ -564,39 +605,59 @@ export default function IsletmeSezlongPage() {
                 marginBottom: 8,
               }}
             />
+            {seciliTarih !== "2026-03-11" && (
+              <div style={{ fontSize: 11, color: GRAY400, marginBottom: 8, background: GRAY100, borderRadius: 6, padding: "5px 8px" }}>
+                📅 {seciliTarih} için rezervasyon bulunamadı
+              </div>
+            )}
             <select
+              value={grupFiltresi ?? ""}
+              onChange={(e) => setGrupFiltresi(e.target.value || null)}
               style={{
                 width: "100%",
                 padding: "8px 10px",
-                border: `1px solid ${GRAY200}`,
+                border: `1px solid ${grupFiltresi ? TEAL : GRAY200}`,
                 borderRadius: 8,
                 fontSize: 12,
                 marginBottom: 8,
-                background: "white",
+                background: grupFiltresi ? "rgba(10,186,181,0.06)" : "white",
+                fontWeight: grupFiltresi ? 600 : 400,
               }}
             >
-              <option>Tüm Gruplar</option>
-              <option>Silver</option>
-              <option>VIP</option>
-              <option>İskele</option>
-              <option>Gold</option>
+              <option value="">Tüm Gruplar</option>
+              <option value="silver">Silver</option>
+              <option value="vip">VIP</option>
+              <option value="iskele">İskele</option>
+              <option value="gold">Gold</option>
             </select>
             <select
+              value={durumFiltresi ?? ""}
+              onChange={(e) => setDurumFiltresi(e.target.value || null)}
               style={{
                 width: "100%",
                 padding: "8px 10px",
-                border: `1px solid ${GRAY200}`,
+                border: `1px solid ${durumFiltresi ? TEAL : GRAY200}`,
                 borderRadius: 8,
                 fontSize: 12,
-                background: "white",
+                background: durumFiltresi ? "rgba(10,186,181,0.06)" : "white",
+                fontWeight: durumFiltresi ? 600 : 400,
               }}
             >
-              <option>Tüm Durumlar</option>
-              <option>Sadece Boş</option>
-              <option>Sadece Dolu</option>
-              <option>Rezerve</option>
-              <option>Bakımda</option>
+              <option value="">Tüm Durumlar</option>
+              <option value="bos">Sadece Boş</option>
+              <option value="dolu">Sadece Dolu</option>
+              <option value="rezerve">Rezerve</option>
+              <option value="bakim">Bakımda</option>
+              <option value="kilitli">İşletme Rezervi</option>
             </select>
+            {(durumFiltresi || grupFiltresi) && (
+              <button
+                onClick={() => { setDurumFiltresi(null); setGrupFiltresi(null); }}
+                style={{ marginTop: 6, width: "100%", padding: "5px 10px", fontSize: 11, fontWeight: 600, border: `1px solid ${GRAY200}`, borderRadius: 7, background: GRAY100, color: GRAY600, cursor: "pointer" }}
+              >
+                ✕ Filtreleri Temizle
+              </button>
+            )}
           </div>
         </div>
 
@@ -639,6 +700,9 @@ export default function IsletmeSezlongPage() {
               const g = GRUPLAR[mb.key];
               if (!g) return null;
 
+              // Grup filtresi: başka grup varsa soluk göster
+              const grupGizli = grupFiltresi !== null && grupFiltresi !== mb.key;
+
               return (
                 <div
                   key={mb.key}
@@ -647,8 +711,9 @@ export default function IsletmeSezlongPage() {
                     marginBottom: 20,
                     borderRadius: 14,
                     overflow: "hidden",
-                    border: "2px solid transparent",
-                    transition: "border-color 0.2s",
+                    border: grupFiltresi === mb.key ? `2px solid ${TEAL}` : "2px solid transparent",
+                    transition: "all 0.2s",
+                    opacity: grupGizli ? 0.3 : 1,
                   }}
                 >
                   <div
@@ -682,15 +747,25 @@ export default function IsletmeSezlongPage() {
                       {g.durumlar.map((durum, i) => {
                         const no = g.prefix + (i + 1);
                         const isSecili = seciliNo === no && seciliGrup === mb.key;
+                        // Durum filtresi: farklı durumdakiler soluk
+                        const durumSoluk = durumFiltresi !== null && durum !== durumFiltresi;
                         return (
-                          <SezlongItem
+                          <div
                             key={no}
-                            no={no}
-                            durum={durum}
-                            grupKey={mb.key}
-                            isSecili={isSecili}
-                            onClick={() => handleSezlongClick(no, mb.key, durum)}
-                          />
+                            style={{
+                              opacity: durumSoluk ? 0.2 : 1,
+                              transition: "opacity 0.2s",
+                              pointerEvents: (durumSoluk || grupGizli) ? "none" : "auto",
+                            }}
+                          >
+                            <SezlongItem
+                              no={no}
+                              durum={durum}
+                              grupKey={mb.key}
+                              isSecili={isSecili}
+                              onClick={() => handleSezlongClick(no, mb.key, durum)}
+                            />
+                          </div>
                         );
                       })}
                     </div>
@@ -711,9 +786,11 @@ export default function IsletmeSezlongPage() {
             flexShrink: 0,
           }}
         >
-          <div style={{ padding: 16, background: NAVY, color: "white" }}>
+          <div style={{ padding: 16, background: mod === "musteri" ? "#7C3AED" : mod === "goruntulem" ? TEAL : NAVY, color: "white" }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Şezlong Detayı</h3>
-            <span style={{ fontSize: 11, opacity: 0.6 }}>Bir şezlonga tıklayın</span>
+            <span style={{ fontSize: 11, opacity: 0.6 }}>
+              {mod === "musteri" ? "👤 Müşteri Görünümü" : mod === "goruntulem" ? "👁️ Görüntüleme" : "Bir şezlonga tıklayın"}
+            </span>
           </div>
 
           <div style={{ padding: "14px 16px", borderBottom: `1px solid ${GRAY100}` }}>
@@ -744,44 +821,69 @@ export default function IsletmeSezlongPage() {
                   {seciliGrup ? seciliGrup.charAt(0).toUpperCase() + seciliGrup.slice(1) : "Seçilmedi"}
                 </span>
               </div>
-              <select
-                value={seciliDurum}
-                onChange={(e) => setSeciliDurum(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  border: `1.5px solid ${GRAY200}`,
-                  borderRadius: 8,
-                  fontSize: 12,
-                  marginBottom: 8,
-                }}
-              >
-                <option value="bos">🟢 Boş</option>
-                <option value="dolu">🟠 Dolu</option>
-                <option value="rezerve">🔵 Rezerve</option>
-                <option value="bakim">⚪ Bakımda</option>
-                <option value="kilitli">🔒 İşletme Rezervi</option>
-              </select>
-              <button
-                onClick={() => showToast("✅ Değişiklikler kaydedildi!")}
-                style={{
-                  width: "100%",
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  border: "none",
-                  background: TEAL,
-                  color: "white",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-              >
-                💾 Kaydet
-              </button>
+              {mod === "musteri" ? (
+                /* Müşteri görünümü: readonly bilgi */
+                <div style={{ fontSize: 12, color: GRAY600, padding: "6px 0" }}>
+                  <div style={{ marginBottom: 4 }}>📍 Durum: <strong>{DURUM_LABELS[seciliDurum] ?? "—"}</strong></div>
+                  {seciliDurum === "bos" && <div style={{ color: GREEN, fontWeight: 600, marginTop: 6 }}>✅ Rezervasyon yapılabilir</div>}
+                  {seciliDurum === "dolu" && <div style={{ color: ORANGE, fontWeight: 600, marginTop: 6 }}>🟠 Şu an dolu</div>}
+                  {seciliDurum === "rezerve" && <div style={{ color: BLUE, fontWeight: 600, marginTop: 6 }}>🔵 Rezerve edilmiş</div>}
+                  {seciliDurum === "bakim" && <div style={{ color: GRAY400, fontWeight: 600, marginTop: 6 }}>⚪ Bakımda</div>}
+                  {seciliDurum === "kilitli" && <div style={{ color: "#7C3AED", fontWeight: 600, marginTop: 6 }}>🔒 İşletme Rezervi</div>}
+                </div>
+              ) : (
+                /* Düzenleme / Görüntüleme modu */
+                <>
+                  <select
+                    value={seciliDurum}
+                    onChange={(e) => mod === "duzenleme" && setSeciliDurum(e.target.value)}
+                    disabled={mod !== "duzenleme"}
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      border: `1.5px solid ${GRAY200}`,
+                      borderRadius: 8,
+                      fontSize: 12,
+                      marginBottom: 8,
+                      opacity: mod === "goruntulem" ? 0.6 : 1,
+                      cursor: mod === "duzenleme" ? "pointer" : "default",
+                    }}
+                  >
+                    <option value="bos">🟢 Boş</option>
+                    <option value="dolu">🟠 Dolu</option>
+                    <option value="rezerve">🔵 Rezerve</option>
+                    <option value="bakim">⚪ Bakımda</option>
+                    <option value="kilitli">🔒 İşletme Rezervi</option>
+                  </select>
+                  {mod === "duzenleme" && (
+                    <button
+                      onClick={() => showToast("✅ Değişiklikler kaydedildi!")}
+                      style={{
+                        width: "100%",
+                        padding: "8px 14px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        border: "none",
+                        background: TEAL,
+                        color: "white",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                    >
+                      💾 Kaydet
+                    </button>
+                  )}
+                  {mod === "goruntulem" && (
+                    <div style={{ fontSize: 11, color: GRAY400, textAlign: "center", padding: "4px 0" }}>
+                      👁️ Salt okunur mod
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {seciliDurum === "dolu" && seciliNo && (
@@ -803,6 +905,7 @@ export default function IsletmeSezlongPage() {
           </div>
 
           {/* Hızlı İşlemler */}
+          {mod !== "musteri" && (
           <div style={{ padding: "14px 16px", borderBottom: `1px solid ${GRAY100}` }}>
             <div
               style={{
@@ -823,17 +926,22 @@ export default function IsletmeSezlongPage() {
                 { label: "💰 Bakiye Gör", action: () => router.push("/isletme/raporlar") },
                 {
                   label: "🔧 Bakıma Al",
+                  disabled: mod === "goruntulem",
                   action: () => {
-                    if (seciliNo) {
-                      setSeciliDurum("bakim");
-                      showToast(`🔧 ${seciliNo} bakıma alındı`);
-                    } else {
-                      showToast("Önce bir şezlong seçin");
-                    }
+                    if (mod === "goruntulem") { showToast("Düzenleme moduna geçin"); return; }
+                    if (seciliNo) { setSeciliDurum("bakim"); showToast(`🔧 ${seciliNo} bakıma alındı`); }
+                    else { showToast("Önce bir şezlong seçin"); }
                   },
                 },
-                { label: "📤 Çıkış Yaptır", action: () => { if (seciliNo) { setCikisModal(true); } else { showToast("Önce bir şezlong seçin"); } } },
-              ].map(({ label, action }) => (
+                {
+                  label: "📤 Çıkış Yaptır",
+                  disabled: mod === "goruntulem",
+                  action: () => {
+                    if (mod === "goruntulem") { showToast("Düzenleme moduna geçin"); return; }
+                    if (seciliNo) { setCikisModal(true); } else { showToast("Önce bir şezlong seçin"); }
+                  },
+                },
+              ].map(({ label, action, disabled }) => (
                 <button
                   key={label}
                   onClick={action}
@@ -845,13 +953,14 @@ export default function IsletmeSezlongPage() {
                     padding: "9px 12px",
                     borderRadius: 8,
                     border: `1px solid ${GRAY200}`,
-                    background: "white",
-                    cursor: "pointer",
+                    background: disabled ? GRAY100 : "white",
+                    cursor: disabled ? "not-allowed" : "pointer",
                     fontSize: 12,
                     fontWeight: 500,
-                    color: GRAY800,
+                    color: disabled ? GRAY400 : GRAY800,
                     textAlign: "left",
                     transition: "all 0.15s",
+                    opacity: disabled ? 0.6 : 1,
                   }}
                 >
                   {label}
@@ -859,6 +968,7 @@ export default function IsletmeSezlongPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* Bugün Özeti */}
           <div style={{ padding: "14px 16px" }}>
