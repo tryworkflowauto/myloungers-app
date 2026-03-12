@@ -6,9 +6,9 @@ export default function IsletmeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#F4F6F9]">
+    <div className="min-h-screen bg-[#F4F6F9]">
       <IsletmeSidebar />
-      <main className="flex-1 overflow-auto">
+      <main className="overflow-auto" style={{ marginLeft: 220 }}>
         {children}
       </main>
     </div>

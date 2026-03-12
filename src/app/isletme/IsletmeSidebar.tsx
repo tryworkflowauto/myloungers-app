@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
-const GRAY400 = "#94A3B8";
+const ORANGE = "#F5821F";
+const GREEN = "#10B981";
 
 const MENU_SECTIONS = [
   {
-    title: "Ana Menü",
+    title: "ANA MENÜ",
     items: [
       { label: "Dashboard", href: "/isletme", icon: "📊", badge: null },
       { label: "Şezlong Haritası", href: "/isletme/sezlong-haritasi", icon: "🏖️", badge: null },
@@ -18,7 +19,7 @@ const MENU_SECTIONS = [
     ],
   },
   {
-    title: "Yönetim",
+    title: "YÖNETİM",
     items: [
       { label: "Menü Yönetimi", href: "/isletme/menu-yonetimi", icon: "🍹", badge: null },
       { label: "Personel", href: "/isletme/personel", icon: "👥", badge: null },
@@ -27,7 +28,7 @@ const MENU_SECTIONS = [
     ],
   },
   {
-    title: "Tesis",
+    title: "TESİS",
     items: [
       { label: "Tesis Bilgileri", href: "/isletme/tesis-bilgileri", icon: "🏨", badge: null },
       { label: "Yorumlar", href: "/isletme/yorumlar", icon: "⭐", badge: 3 },
@@ -39,23 +40,53 @@ export default function IsletmeSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 min-h-screen flex-shrink-0 flex flex-col border-r border-[#E5E7EB] bg-white">
-      <div className="p-5 border-b border-[#E5E7EB]">
-        <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="MyLoungers" className="h-10 w-auto" />
-        </Link>
+    <aside
+      className="fixed left-0 top-0 z-[100] flex flex-col min-h-screen"
+      style={{ width: 220, background: NAVY }}
+    >
+      {/* Logo bölümü */}
+      <div className="px-5 pt-5 pb-4 border-b border-white/10">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-9 h-9 rounded-[10px] flex items-center justify-center text-lg flex-shrink-0"
+            style={{ background: TEAL }}
+          >
+            🏖️
+          </div>
+          <div>
+            <div className="text-[13px] font-extrabold text-white leading-tight">MyLoungers</div>
+            <div className="text-[10px] leading-tight" style={{ color: TEAL }}>İşletme Paneli</div>
+          </div>
+        </div>
       </div>
 
+      {/* Tesis seçici */}
+      <div
+        className="mx-4 mt-3 flex items-center gap-2 px-3 py-2.5 rounded-[10px] cursor-pointer"
+        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+      >
+        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: GREEN }} />
+        <span className="text-[12px] font-semibold text-white flex-1">Zuzuu Beach Hotel</span>
+        <span className="text-white/70 text-xs">▾</span>
+      </div>
+
+      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2">
         {MENU_SECTIONS.map((section) => (
-          <div key={section.title} className="mb-2">
+          <div key={section.title} className="mb-1">
             <div
               className="px-4 pt-4 pb-1.5"
-              style={{ fontSize: 9, fontWeight: 700, color: GRAY400, letterSpacing: "1.5px", textTransform: "uppercase" }}
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: "#6B7280",
+                letterSpacing: "1.5px",
+                textTransform: "uppercase",
+              }}
             >
               {section.title}
             </div>
-            <ul className="space-y-0">
+            <ul>
               {section.items.map((item) => {
                 const isActive =
                   item.href === "/isletme"
@@ -65,15 +96,15 @@ export default function IsletmeSidebar() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="flex items-center gap-2.5 px-4 py-2.5 relative transition-colors"
+                      className="flex items-center gap-2.5 relative"
                       style={{
-                        background: isActive ? NAVY : undefined,
+                        padding: "10px 16px",
+                        background: isActive ? "rgba(10,186,181,0.15)" : undefined,
                         borderLeft: isActive ? `3px solid ${TEAL}` : "3px solid transparent",
-                        color: isActive ? "white" : NAVY,
                       }}
                       onMouseEnter={(e) => {
                         if (!isActive) {
-                          e.currentTarget.style.background = "rgba(10,186,181,0.08)";
+                          e.currentTarget.style.background = "rgba(255,255,255,0.06)";
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -82,12 +113,24 @@ export default function IsletmeSidebar() {
                         }
                       }}
                     >
-                      <span className="text-[15px]">{item.icon}</span>
-                      <span className="text-[13px] font-medium flex-1">{item.label}</span>
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[15px] flex-shrink-0"
+                        style={{
+                          background: isActive ? "rgba(10,186,181,0.2)" : "transparent",
+                        }}
+                      >
+                        {item.icon}
+                      </div>
+                      <span
+                        className="text-[13px] font-medium flex-1"
+                        style={{ color: isActive ? TEAL : "#D1D5DB" }}
+                      >
+                        {item.label}
+                      </span>
                       {item.badge != null && (
                         <span
-                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-[10px]"
-                          style={{ background: TEAL, color: "white" }}
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-[10px] flex-shrink-0"
+                          style={{ background: ORANGE, color: "white" }}
                         >
                           {item.badge}
                         </span>
@@ -101,17 +144,21 @@ export default function IsletmeSidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-[#E5E7EB]">
+      {/* Alt kullanıcı bölümü */}
+      <div
+        className="p-4"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+      >
         <div className="flex items-center gap-2.5">
           <div
             className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0"
-            style={{ background: `linear-gradient(135deg, ${TEAL}, #F5821F)` }}
+            style={{ background: `linear-gradient(135deg, ${TEAL}, ${ORANGE})` }}
           >
             ZB
           </div>
           <div className="min-w-0">
-            <div className="text-[12px] font-semibold text-[#1E293B] truncate">Zafer Bakır</div>
-            <div className="text-[10px] text-[#94A3B8] truncate">İşletme Yöneticisi</div>
+            <div className="text-[12px] font-semibold text-white truncate">Zafer Bakır</div>
+            <div className="text-[10px] truncate" style={{ color: "#6B7280" }}>İşletme Yöneticisi</div>
           </div>
         </div>
       </div>
