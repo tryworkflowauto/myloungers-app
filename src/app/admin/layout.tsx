@@ -36,27 +36,22 @@ const SIDEBAR_W = 240;
 
 const NAV_ITEMS = [
   { href: "/admin",               label: "Dashboard",         icon: "📊", activePath: "/admin"          },
-  { href: "/admin/tesisler",      label: "Tesisler",          icon: "🏖️", badge: 2, badgeColor: ORANGE, yakinda: true },
-  { href: "/admin/kullanicilar",  label: "Kullanıcılar",      icon: "👤", yakinda: true                  },
+  { href: "/admin/tesisler",      label: "Tesisler",          icon: "🏖️", badge: 2, badgeColor: ORANGE  },
+  { href: "/admin/kullanicilar",  label: "Kullanıcılar",      icon: "👤"                                 },
   { href: "/admin/komisyon",      label: "Komisyon Takibi",   icon: "💰", activePath: "/admin/komisyon"  },
-  { href: "/admin/abonelikler",   label: "Abonelikler",       icon: "📄", yakinda: true                  },
-  { href: "/admin/yorumlar",      label: "Yorum Yönetimi",    icon: "⭐", badge: 3, badgeColor: RED, yakinda: true },
-  { href: "/admin/sikayetler",    label: "Şikayetler",        icon: "🚨", badge: 1, badgeColor: RED, yakinda: true },
-  { href: "/admin/ayarlar",       label: "Platform Ayarları", icon: "⚙️", yakinda: true                  },
+  { href: "/admin/abonelikler",   label: "Abonelikler",       icon: "📄"                                 },
+  { href: "/admin/yorumlar",      label: "Yorum Yönetimi",    icon: "⭐", badge: 3, badgeColor: RED      },
+  { href: "/admin/sikayetler",    label: "Şikayetler",        icon: "🚨", badge: 1, badgeColor: RED      },
+  { href: "/admin/ayarlar",       label: "Platform Ayarları", icon: "⚙️"                                 },
 ];
 
-function NavLink({ item, onYakinda }: { item: (typeof NAV_ITEMS)[0]; onYakinda: (label: string) => void }) {
+function NavLink({ item }: { item: (typeof NAV_ITEMS)[0] }) {
   const pathname = usePathname();
-  const isActive = item.activePath ? pathname === item.activePath : pathname === item.href && !item.yakinda;
-
-  function handleClick(e: React.MouseEvent) {
-    if (item.yakinda) { e.preventDefault(); onYakinda(item.label); }
-  }
+  const isActive = item.activePath ? pathname === item.activePath : pathname.startsWith(item.href) && (item.href === "/admin" ? pathname === "/admin" : true);
 
   return (
     <Link
       href={item.href}
-      onClick={handleClick}
       style={{
         display: "flex", alignItems: "center", gap: 10, padding: "9px 16px",
         cursor: "pointer", textDecoration: "none",
@@ -69,7 +64,6 @@ function NavLink({ item, onYakinda }: { item: (typeof NAV_ITEMS)[0]; onYakinda: 
       <div style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, fontSize: 14, background: isActive ? "rgba(245,130,31,0.2)" : "transparent" }}>{item.icon}</div>
       <span style={{ fontSize: 13, color: isActive ? ORANGE : "#CBD5E1", fontWeight: isActive ? 600 : 500 }}>{item.label}</span>
       {item.badge && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10, background: item.badgeColor, color: "white" }}>{item.badge}</span>}
-      {item.yakinda && !item.badge && <span style={{ marginLeft: "auto", fontSize: 8, color: GRAY400 }}>Yakında</span>}
     </Link>
   );
 }
@@ -107,19 +101,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{ margin: "10px 16px", background: "rgba(245,130,31,0.15)", border: "1px solid rgba(245,130,31,0.3)", borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 700, color: ORANGE }}>🔐 Platform Yöneticisi</div>
         <nav style={{ padding: "4px 0", flex: 1 }}>
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Platform</div>
-          {NAV_ITEMS.slice(0, 3).map((n) => (
-            <NavLink key={n.label} item={n} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
-          ))}
+          {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Finans</div>
-          {NAV_ITEMS.slice(3, 5).map((n) => (
-            <NavLink key={n.label} item={n} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
-          ))}
+          {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Moderasyon</div>
-          {NAV_ITEMS.slice(5, 7).map((n) => (
-            <NavLink key={n.label} item={n} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
-          ))}
+          {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Sistem</div>
-          <NavLink item={NAV_ITEMS[7]} onYakinda={(label) => showToast(`ℹ️ ${label} — Yakında aktif olacak`)} />
+          <NavLink item={NAV_ITEMS[7]} />
         </nav>
         <div style={{ padding: 14, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

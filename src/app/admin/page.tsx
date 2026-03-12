@@ -46,13 +46,159 @@ const INIT_YORUMLAR: YorumTalep[] = [
   { puan: 6.2, tesis: "Palmiye Beach", kisi: "Selin A.", metin: "Beklediğim gibi değildi...",            talep: "Talep: Sahte yorum şüphesi" },
 ];
 
-const STAT_DETAYLAR = [
-  { baslik: "Aktif Tesisler", icerik: "Platforma kayıtlı ve aktif olarak hizmet veren tesisler. Bodrum: 8 · İstanbul: 3 · Antalya: 1" },
-  { baslik: "Bu Ay Ciro",     icerik: "Zuzuu Beach: ₺148K · Palmiye: ₺68K · Poseidon: ₺41K · Diğer: ₺27K · Toplam: ₺284K" },
-  { baslik: "Platform Komisyonu", icerik: "Mart 2026 komisyon geliri: ₺42.6K · Şubat 2026: ₺36.1K · Ocak 2026: ₺31.4K" },
-  { baslik: "Aktif Müşteri",  icerik: "Platforma kayıtlı aktif müşteri sayısı. Bu hafta 124 yeni kayıt. Toplam rezervasyon: 4.822" },
-  { baslik: "Ort. Tesis Puanı", icerik: "Tüm tesislerin ortalama müşteri puanı. En yüksek: Poseidon Lux 9.5 · En düşük: Palmiye 8.8" },
-];
+// ── Rich stat modal content ────────────────────────────────────────────────
+function StatModalContent({ idx, onClose }: { idx: number; onClose: () => void }) {
+  const NAVY2 = "#0A1628"; const TEAL2 = "#0ABAB5"; const ORANGE2 = "#F5821F";
+  const G50 = "#F8FAFC"; const G100 = "#F1F5F9"; const G200 = "#E2E8F0"; const G400 = "#94A3B8"; const G600 = "#475569";
+  const GREEN2 = "#10B981"; const RED2 = "#EF4444"; const BLUE2 = "#3B82F6"; const PURPLE2 = "#7C3AED";
+  const rowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${G100}` };
+  const badge = (c: string, txt: string) => <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: c + "22", color: c }}>{txt}</span>;
+
+  if (idx === 0) return (
+    <>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: NAVY2, marginBottom: 4 }}>🏖️ 12 Aktif Tesis</h3>
+      <p style={{ fontSize: 11, color: G400, marginBottom: 14 }}>Platforma kayıtlı ve aktif hizmet veren tesisler</p>
+      {[
+        { ad: "Zuzuu Beach Hotel",  sehir: "Bodrum",  ciro: "₺148K", puan: "9.2" },
+        { ad: "Palmiye Beach Club", sehir: "Bodrum",  ciro: "₺68K",  puan: "8.8" },
+        { ad: "Poseidon Lux",       sehir: "Bodrum",  ciro: "₺41K",  puan: "9.5" },
+        { ad: "Olimpia Beach",      sehir: "Antalya", ciro: "₺27K",  puan: "8.5" },
+        { ad: "Kemer Sea Club",     sehir: "Antalya", ciro: "₺18K",  puan: "7.9" },
+      ].map((t, i) => (
+        <div key={i} style={rowStyle}>
+          <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY2 }}>{t.ad}</div><div style={{ fontSize: 10, color: G400 }}>📍 {t.sehir}</div></div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <span style={{ fontSize: 12, fontWeight: 700 }}>{t.ciro}</span>
+            <span style={{ fontSize: 11, color: "#F59E0B" }}>★ {t.puan}</span>
+          </div>
+        </div>
+      ))}
+      <div style={{ marginTop: 14, padding: "10px 14px", background: G50, borderRadius: 9 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+          <span style={{ color: G600 }}>Bodrum</span><strong>8 tesis</strong>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
+          <span style={{ color: G600 }}>Antalya</span><strong>3 tesis</strong>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
+          <span style={{ color: G600 }}>Diğer</span><strong>1 tesis</strong>
+        </div>
+      </div>
+    </>
+  );
+
+  if (idx === 1) return (
+    <>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: NAVY2, marginBottom: 4 }}>💰 Bu Ay Ciro — ₺284K</h3>
+      <p style={{ fontSize: 11, color: G400, marginBottom: 14 }}>Mart 2026 tesis bazlı ciro dağılımı</p>
+      {[
+        { ad: "Zuzuu Beach Hotel",  ciro: 148, renk: TEAL2  },
+        { ad: "Palmiye Beach Club", ciro: 68,  renk: ORANGE2 },
+        { ad: "Poseidon Lux",       ciro: 41,  renk: PURPLE2 },
+        { ad: "Diğer Tesisler",     ciro: 27,  renk: G400   },
+      ].map((t, i) => (
+        <div key={i} style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+            <span style={{ color: NAVY2, fontWeight: 600 }}>{t.ad}</span>
+            <span style={{ fontWeight: 700 }}>₺{t.ciro}K</span>
+          </div>
+          <div style={{ height: 7, background: G200, borderRadius: 20, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: (t.ciro / 284 * 100) + "%", background: t.renk, borderRadius: 20 }} />
+          </div>
+        </div>
+      ))}
+      <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", padding: "10px 14px", background: G50, borderRadius: 9, fontWeight: 700 }}>
+        <span>Toplam</span><span>₺284K</span>
+      </div>
+    </>
+  );
+
+  if (idx === 2) return (
+    <>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: NAVY2, marginBottom: 4 }}>📊 Platform Komisyonu — ₺42K</h3>
+      <p style={{ fontSize: 11, color: G400, marginBottom: 14 }}>Tesis bazlı %5 komisyon detayı</p>
+      {[
+        { ad: "Zuzuu Beach Hotel",  ciro: "₺148K", oran: "%5", kom: "₺7.4K"  },
+        { ad: "Palmiye Beach Club", ciro: "₺68K",  oran: "%5", kom: "₺3.4K"  },
+        { ad: "Poseidon Lux",       ciro: "₺41K",  oran: "%5", kom: "₺2.05K" },
+        { ad: "Diğer",              ciro: "₺27K",  oran: "%5", kom: "₺1.35K" },
+      ].map((r, i) => (
+        <div key={i} style={rowStyle}>
+          <span style={{ fontSize: 13, color: NAVY2 }}>{r.ad}</span>
+          <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
+            <span style={{ color: G400 }}>{r.ciro}</span>
+            <span style={{ color: G400 }}>{r.oran}</span>
+            <span style={{ fontWeight: 700, color: GREEN2 }}>{r.kom}</span>
+          </div>
+        </div>
+      ))}
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, padding: "10px 14px", background: G50, borderRadius: 9, fontWeight: 700 }}>
+        <span>Toplam</span><span style={{ color: GREEN2 }}>₺14.2K</span>
+      </div>
+      <div style={{ marginTop: 10, fontSize: 11, color: G400 }}>Önceki aylar: Şubat ₺36.1K · Ocak ₺31.4K</div>
+    </>
+  );
+
+  if (idx === 3) return (
+    <>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: NAVY2, marginBottom: 4 }}>👥 1.847 Aktif Müşteri</h3>
+      <p style={{ fontSize: 11, color: G400, marginBottom: 14 }}>Tesis bazlı müşteri dağılımı</p>
+      {[
+        { ad: "Zuzuu Beach Hotel",  musteri: 742, yeni: 48 },
+        { ad: "Palmiye Beach Club", musteri: 534, yeni: 31 },
+        { ad: "Poseidon Lux",       musteri: 389, yeni: 27 },
+        { ad: "Diğer Tesisler",     musteri: 182, yeni: 18 },
+      ].map((t, i) => (
+        <div key={i} style={rowStyle}>
+          <span style={{ fontSize: 13, color: NAVY2, fontWeight: 600 }}>{t.ad}</span>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{t.musteri.toLocaleString("tr-TR")}</span>
+            {badge(GREEN2, `+${t.yeni} bu hafta`)}
+          </div>
+        </div>
+      ))}
+      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div style={{ padding: "10px 14px", background: G50, borderRadius: 9, textAlign: "center" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: BLUE2 }}>4.822</div>
+          <div style={{ fontSize: 10, color: G400 }}>Toplam Rezervasyon</div>
+        </div>
+        <div style={{ padding: "10px 14px", background: G50, borderRadius: 9, textAlign: "center" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: GREEN2 }}>+124</div>
+          <div style={{ fontSize: 10, color: G400 }}>Bu Hafta Yeni</div>
+        </div>
+      </div>
+    </>
+  );
+
+  if (idx === 4) return (
+    <>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: NAVY2, marginBottom: 4 }}>⭐ 9.2 Ort. Tesis Puanı</h3>
+      <p style={{ fontSize: 11, color: G400, marginBottom: 14 }}>Müşteri değerlendirmelerine göre tesis sıralaması</p>
+      {[
+        { ad: "Poseidon Lux",       puan: 9.5, yorum: 312 },
+        { ad: "Zuzuu Beach Hotel",  puan: 9.2, yorum: 847 },
+        { ad: "Palmiye Beach Club", puan: 8.8, yorum: 534 },
+        { ad: "Olimpia Beach",      puan: 8.5, yorum: 213 },
+        { ad: "Kemer Sea Club",     puan: 7.9, yorum: 98  },
+      ].map((t, i) => (
+        <div key={i} style={rowStyle}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: NAVY2 }}>{t.ad}</div>
+            <div style={{ fontSize: 10, color: G400 }}>{t.yorum} yorum</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 80, height: 5, background: G200, borderRadius: 20, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: (t.puan / 10 * 100) + "%", background: t.puan >= 9 ? GREEN2 : t.puan >= 8 ? ORANGE2 : RED2, borderRadius: 20 }} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 800, color: t.puan >= 9 ? GREEN2 : t.puan >= 8 ? ORANGE2 : RED2 }}>{t.puan}</span>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+
+  return null;
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminPage() {
@@ -384,12 +530,11 @@ export default function AdminPage() {
       {/* ── STAT DETAY MODAL ──────────────────────────────────────────────── */}
       {statDetay !== null && (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setStatDetay(null)}>
-          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 400, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{STAT_DETAYLAR[statDetay].baslik}</h3>
+          <div style={{ background: "white", borderRadius: 16, padding: 24, width: 440, maxWidth: "95vw", maxHeight: "80vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
               <button onClick={() => setStatDetay(null)} style={{ width: 28, height: 28, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
-            <p style={{ fontSize: 13, color: GRAY600, lineHeight: 1.6 }}>{STAT_DETAYLAR[statDetay].icerik}</p>
+            <StatModalContent idx={statDetay} onClose={() => setStatDetay(null)} />
           </div>
         </div>
       )}
