@@ -146,7 +146,7 @@ export default function GarsonPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
                 {SILVER_SZL.map((sz) => {
                   const d = SILVER_DURUM[sz];
-                  const st: Record<string, object> = { dolu: { background: "#FFF7ED", color: ORANGE, borderColor: "#FED7AA" }, bos: { background: "#F0FDF4", color: GREEN, borderColor: "#BBF7D0" }, rezerve: { background: "#EFF6FF", color: BLUE, borderColor: "#BFDBFE" }, cagri: { background: "#FEF2F2", color: RED, borderColor: "#FECACA" } };
+                  const st: Record<string, { background: string; color: string; borderColor: string }> = { dolu: { background: "#FFF7ED", color: ORANGE, borderColor: "#FED7AA" }, bos: { background: "#F0FDF4", color: GREEN, borderColor: "#BBF7D0" }, rezerve: { background: "#EFF6FF", color: BLUE, borderColor: "#BFDBFE" }, cagri: { background: "#FEF2F2", color: RED, borderColor: "#FECACA" } };
                   return (
                     <div key={sz} style={{ borderRadius: 8, padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, cursor: "pointer", border: `1.5px solid ${st[d]?.borderColor ?? "transparent"}`, ...st[d] }}>
                       <span style={{ fontSize: 14 }}>{d === "dolu" ? "🟠" : d === "bos" ? "🟢" : d === "rezerve" ? "🔵" : "🔴"}</span>
@@ -164,7 +164,7 @@ export default function GarsonPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
                 {ISKELE_SZL.map((sz) => {
                   const d = ISKELE_DURUM[sz];
-                  const st: Record<string, object> = { dolu: { background: "#FFF7ED", color: ORANGE, borderColor: "#FED7AA" }, bos: { background: "#F0FDF4", color: GREEN, borderColor: "#BBF7D0" }, rezerve: { background: "#EFF6FF", color: BLUE, borderColor: "#BFDBFE" } };
+                  const st: Record<string, { background: string; color: string; borderColor: string }> = { dolu: { background: "#FFF7ED", color: ORANGE, borderColor: "#FED7AA" }, bos: { background: "#F0FDF4", color: GREEN, borderColor: "#BBF7D0" }, rezerve: { background: "#EFF6FF", color: BLUE, borderColor: "#BFDBFE" } };
                   return (
                     <div key={sz} style={{ borderRadius: 8, padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, cursor: "pointer", border: `1.5px solid ${st[d]?.borderColor ?? "transparent"}`, ...st[d] }}>
                       <span style={{ fontSize: 14 }}>{d === "dolu" ? "🟠" : d === "bos" ? "🟢" : "🔵"}</span>
