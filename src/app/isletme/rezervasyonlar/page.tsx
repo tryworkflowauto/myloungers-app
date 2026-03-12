@@ -220,27 +220,25 @@ export default function IsletmeRezervasyonlarPage() {
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Rezervasyonlar</h1>
-            <span style={{ fontSize: 11, color: GRAY400 }}>11 Mart 2026 • Toplam 47 rezervasyon</span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                background: "#F0FFFE",
-                border: `1px solid ${TEAL}`,
-                borderRadius: 20,
-                padding: "3px 10px",
-                fontSize: 10,
-                fontWeight: 700,
-                color: TEAL,
-                marginLeft: 10,
-              }}
-            >
-              💰 Ön Ödemeli Sistem
-            </span>
-          </div>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Rezervasyonlar</h1>
+          <span style={{ fontSize: 11, color: GRAY400 }}>11 Mart 2026 • Toplam 47 rezervasyon</span>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: "#F0FFFE",
+              border: `1px solid ${TEAL}`,
+              borderRadius: 20,
+              padding: "3px 10px",
+              fontSize: 10,
+              fontWeight: 700,
+              color: TEAL,
+              marginLeft: 10,
+            }}
+          >
+            💰 Ön Ödemeli Sistem
+          </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
