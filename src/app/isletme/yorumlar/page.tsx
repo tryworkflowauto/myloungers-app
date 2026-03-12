@@ -247,7 +247,7 @@ export default function IsletmeYorumlarPage() {
         <div style={{ fontSize: 11, fontWeight: 700, color: isSikayet ? RED : GRAY600, marginBottom: 6 }}>{isSikayet ? "⚠️ Şikayet Yanıtı — Dikkatli ve yapıcı bir dil kullanın" : "İşletme Cevabı"}</div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
           {(isSikayet ? SABLON_SIKAYET : SABLON_NORMAL).map((s, si) => (
-            <button key={si} onClick={() => { compact ? sablonEkle(y.id, s.metin) && setDetayCevap(s.metin) : sablonEkle(y.id, s.metin); if (compact) setDetayCevap(s.metin); }} style={{ padding: "4px 10px", border: `1px solid ${GRAY200}`, borderRadius: 20, background: "white", fontSize: 10, fontWeight: 600, cursor: "pointer", color: GRAY600 }}>{s.label}</button>
+            <button key={si} onClick={() => { sablonEkle(y.id, s.metin); if (compact) setDetayCevap(s.metin); }} style={{ padding: "4px 10px", border: `1px solid ${GRAY200}`, borderRadius: 20, background: "white", fontSize: 10, fontWeight: 600, cursor: "pointer", color: GRAY600 }}>{s.label}</button>
           ))}
         </div>
         <textarea
