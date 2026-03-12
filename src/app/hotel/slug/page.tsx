@@ -23,17 +23,35 @@ const HOTEL = {
 };
 
 const MN = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
-const GC: Record<string, string> = { i: "ai", v: "av", s: "as" };
-const GN: Record<string, string> = { i: "İskele", v: "VIP", s: "Silver" };
-const PW: Record<string, number> = { i: 1250, v: 1500, s: 1000 };
-const PE: Record<string, number> = { i: 1500, v: 2000, s: 1250 };
 
-const RSV: Record<string, Record<string, number[]>> = {
-  i: { A: [3, 8], B: [5, 12], C: [1, 9] },
-  v: { D: [4, 7], E: [2, 10] },
-  s: { F: [6, 13], G: [3, 9], H: [7], I: [4, 11], J: [2, 8] },
-};
-const MAINT: Record<string, number[]> = { B: [10], G: [5] };
+type SzlStatus = "avail" | "full" | "rsv" | "maint" | "lock";
+
+const ZONES: { key: string; prefix: string; label: string; icon: string; pw: number; pe: number; gradient: string; statuses: SzlStatus[] }[] = [
+  {
+    key: "gold", prefix: "G", label: "Gold Bölge", icon: "⭐",
+    pw: 2000, pe: 2500,
+    gradient: "linear-gradient(135deg,#7C3AED,#8B5CF6)",
+    statuses: ["full","full","full","lock","full","full","full","lock","full","full"],
+  },
+  {
+    key: "isk", prefix: "İ", label: "İskele Bölge", icon: "⚓",
+    pw: 1250, pe: 1500,
+    gradient: "linear-gradient(135deg,#D97706,#F59E0B)",
+    statuses: ["full","full","avail","full","rsv","avail","full","avail","full","lock","full","avail","rsv","avail","full","maint","avail","lock","avail","avail"],
+  },
+  {
+    key: "vip", prefix: "V", label: "VIP Bölge", icon: "🔥",
+    pw: 1500, pe: 2000,
+    gradient: "linear-gradient(135deg,#EA580C,#F5821F)",
+    statuses: Array.from({length:40}, (_, i) => (i===8||i===25||i===38)?"rsv":(i===16||i===30)?"maint":(i===11||i===23||i===35)?"lock":(i===2||i===5||i===13||i===18||i===22||i===28||i===33||i===37||i===39)?"avail":"full") as SzlStatus[],
+  },
+  {
+    key: "slv", prefix: "S", label: "Silver Bölge", icon: "🌊",
+    pw: 1000, pe: 1250,
+    gradient: "linear-gradient(135deg,#0891B2,#0ABAB5)",
+    statuses: Array.from({length:55}, (_, i) => (i%9===0)?"lock":(i%7===0)?"maint":(i%5===0)?"rsv":(i%3===0||i===1||i===4||i===10||i===19||i===28||i===37||i===46)?"avail":"full") as SzlStatus[],
+  },
+];
 
 function isWE(dt: Date) {
   const dow = dt.getDay();
@@ -51,7 +69,7 @@ function fmtRange(start: Date | null, end: Date | null) {
   return fmtDate(start) + " – " + fmtDate(end);
 }
 
-type SelSzl = { num: number; row: string; grp: string; price: number };
+type SelSzl = { no: string; zoneKey: string; price: number };
 
 export default function HotelDetailPage() {
   const router = useRouter();
@@ -117,14 +135,15 @@ export default function HotelDetailPage() {
     }
   }
 
-  function pickSzl(num: number, row: string, grp: string) {
-    if (!selEnd) {
-      alert("Lütfen önce giriş ve çıkış tarihini seçin.");
+  function pickSzl(no: string, zoneKey: string, status: SzlStatus, pw: number, pe: number) {
+    if (!selStart) {
+      alert("Lütfen önce giriş tarihini seçin.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    const price = isWE(selStart!) ? PE[grp] : PW[grp];
-    const exists = selSzls.findIndex((s) => s.num === num && s.row === row);
+    if (status !== "avail") return;
+    const price = selStart && isWE(selStart) ? pe : pw;
+    const exists = selSzls.findIndex((s) => s.no === no);
     if (exists > -1) {
       setSelSzls((prev) => prev.filter((_, i) => i !== exists));
       return;
@@ -133,7 +152,7 @@ export default function HotelDetailPage() {
       alert("Maksimum " + paxCount + " şezlong seçebilirsiniz.\nKişi sayısını artırmak için + butonunu kullanın.");
       return;
     }
-    setSelSzls((prev) => [...prev, { num, row, grp, price }]);
+    setSelSzls((prev) => [...prev, { no, zoneKey, price }]);
   }
 
   function clearAll() {
@@ -144,7 +163,7 @@ export default function HotelDetailPage() {
   }
 
   function goRes() {
-    if (!selEnd) { alert("Lütfen giriş ve çıkış tarihi seçin."); return; }
+    if (!selStart) { alert("Lütfen giriş tarihini seçin."); return; }
     if (selSzls.length === 0) { alert("Lütfen en az 1 şezlong seçin."); return; }
     router.push("/odeme");
   }
@@ -164,9 +183,9 @@ export default function HotelDetailPage() {
     setVideoEmbed(embed);
   }
 
-  const days = selStart && selEnd ? daysBetween(selStart, selEnd) : 0;
-  const total = selSzls.reduce((a, s) => a + s.price * days, 0);
-  const szlNames = selSzls.map((s) => "Sıra " + s.row + "-" + s.num).join(", ");
+  const days = selStart && selEnd ? daysBetween(selStart, selEnd) : selStart ? 1 : 0;
+  const total = selSzls.reduce((a, s) => a + s.price * Math.max(days, 1), 0);
+  const szlNames = selSzls.map((s) => s.no).join(", ");
   const units = [...new Set(selSzls.map((s) => "₺" + s.price.toLocaleString("tr-TR")))].join(" / ");
 
   // Calendar render
@@ -196,45 +215,57 @@ export default function HotelDetailPage() {
     return cls;
   }
 
-  // Sunbed grid render
-  function SzlGrid({ zone, rows }: { zone: string; rows: { letter: string; count: number }[] }) {
+  // Sunbed status style map
+  const SZL_ST: Record<SzlStatus | "sel", { bg:string; bdr:string; dsh:boolean; pillow:string; legs:string; nc:string }> = {
+    avail: { bg:"#DCFCE7", bdr:"#86EFAC", dsh:false, pillow:"#A7F3D0", legs:"#86EFAC", nc:"#16A34A" },
+    full:  { bg:"#FFEDD5", bdr:"#FB923C", dsh:false, pillow:"#FED7AA", legs:"#FB923C", nc:"#EA580C" },
+    rsv:   { bg:"#DBEAFE", bdr:"#60A5FA", dsh:false, pillow:"#BFDBFE", legs:"#60A5FA", nc:"#2563EB" },
+    maint: { bg:"#F1F5F9", bdr:"#CBD5E1", dsh:false, pillow:"#E2E8F0", legs:"#CBD5E1", nc:"#94A3B8" },
+    lock:  { bg:"#EDE9FE", bdr:"#7C3AED", dsh:true,  pillow:"#DDD6FE", legs:"#7C3AED", nc:"#7C3AED" },
+    sel:   { bg:"#FFF7ED", bdr:"#F5821F", dsh:false, pillow:"#FDBA74", legs:"#F5821F", nc:"#F5821F" },
+  };
+
+  function SzlGrid({ zoneKey, prefix, statuses, pw, pe }: { zoneKey:string; prefix:string; statuses:SzlStatus[]; pw:number; pe:number }) {
     return (
-      <div className="srows">
-        {rows.map(({ letter, count }) => (
-          <div key={letter} className="srow">
-            <span className={`rl ${zone === "v" ? "rl-v" : zone === "s" ? "rl-s" : ""}`}>{letter}</span>
-            <div className="su">
-              {Array.from({ length: count }, (_, i) => i + 1).map((n) => {
-                const isRsv = (RSV[zone][letter] || []).includes(n);
-                const isMaint = (MAINT[letter] || []).includes(n);
-                const isSel = selSzls.some((s) => s.num === n && s.row === letter);
-                let cls = "sz";
-                if (isRsv) cls += " rsv";
-                else if (isMaint) cls += " maint";
-                else if (isSel) cls += " sel";
-                else cls += " " + GC[zone];
-                return (
-                  <div
-                    key={n}
-                    className={cls}
-                    title={isRsv ? "Dolu" : isMaint ? "Bakımda" : ""}
-                    onClick={() => !isRsv && !isMaint && pickSzl(n, letter, zone)}
-                  >
-                    <span className="sz-i">🛏️</span>
-                    <span className="sz-n">{n}</span>
-                  </div>
-                );
-              })}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:10, padding:"16px 18px" }}>
+        {statuses.map((status, i) => {
+          const no = prefix + (i + 1);
+          const isSel = selSzls.some(s => s.no === no);
+          const ss = SZL_ST[isSel ? "sel" : status];
+          const canClick = status === "avail";
+          const statusLabel: Record<SzlStatus, string> = { avail:"Boş", full:"Dolu", rsv:"Rezerve", maint:"Bakımda", lock:"Kilitli" };
+          return (
+            <div
+              key={no}
+              onClick={() => canClick && pickSzl(no, zoneKey, status, pw, pe)}
+              title={no + " — " + statusLabel[status]}
+              style={{ position:"relative", cursor:canClick?"pointer":"not-allowed", marginTop:8, marginBottom:6, transition:"transform 0.12s" }}
+              onMouseEnter={e => canClick && ((e.currentTarget as HTMLDivElement).style.transform="scale(1.1)")}
+              onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.transform="scale(1)")}
+            >
+              {/* Pillow */}
+              <div style={{ position:"absolute", top:-9, left:"50%", transform:"translateX(-50%)", width:28, height:11, borderRadius:"5px 5px 0 0", background:ss.pillow, zIndex:0 }} />
+              {/* Body */}
+              <div style={{ width:42, height:33, borderRadius:"5px 5px 4px 4px", background:ss.bg, border:`2px ${ss.dsh?"dashed":"solid"} ${ss.bdr}`, position:"relative", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isSel?"0 0 0 2px rgba(245,130,31,.5)":undefined, zIndex:1 }}>
+                <span style={{ fontSize:9, fontWeight:800, color:ss.nc, zIndex:2, position:"relative" }}>
+                  {status==="lock" ? "🔒" : no}
+                </span>
+                {/* 👤 badge for dolu */}
+                {status === "full" && (
+                  <div style={{ position:"absolute", top:-5, right:-5, width:14, height:14, borderRadius:"50%", background:"#F5821F", border:"2px solid white", display:"flex", alignItems:"center", justifyContent:"center", fontSize:7, zIndex:3 }}>👤</div>
+                )}
+              </div>
+              {/* Legs */}
+              <div style={{ position:"absolute", bottom:-6, left:"50%", transform:"translateX(-50%)", width:34, height:5, borderRadius:3, background:ss.legs, zIndex:0 }} />
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
 
-  const btnDisabled = !selEnd || selSzls.length === 0;
+  const btnDisabled = !selStart || selSzls.length === 0;
   const btnText = !selStart ? "Tarih Seçerek Başlayın"
-    : !selEnd ? "Bitiş Tarihi Seçin"
     : selSzls.length === 0 ? "🛏 Haritadan Şezlong Seç"
     : "📅 Rezervasyonu Tamamla →";
 
@@ -636,39 +667,36 @@ export default function HotelDetailPage() {
               </div>
               {openPanels.szl && <div className="pb" style={{ padding: 22 }}>
                 <div className="schema">
-                  <div className="sea"><div className="sea-w">🌊 🌊 🌊</div><div className="sea-t">D E N İ Z</div></div>
-                  <div className="shore">⚓  İSKELE — Deniz Platformu</div>
-                  <div className="iz">
-                    <div className="gh">
-                      <div className="gh-title">⚓ İskele Bölgesi</div>
-                      <div className="gh-price"><div className="gh-pw">Hafta içi</div><div className="gh-we">₺1.250</div><div className="gh-pw">Hafta sonu</div><div className="gh-we">₺1.500</div></div>
-                    </div>
-                    <SzlGrid zone="i" rows={[{letter:"A",count:10},{letter:"B",count:13},{letter:"C",count:10}]} />
+                  {/* ~ D E N İ Z ~ */}
+                  <div style={{ background:"linear-gradient(180deg,#0C4A6E,#0369A1 55%,#38BDF8)", padding:"18px 20px 14px", textAlign:"center" }}>
+                    <div style={{ color:"rgba(255,255,255,.22)", fontSize:".6rem", fontWeight:900, textTransform:"uppercase", letterSpacing:".2em", marginBottom:4 }}>🌊 🌊 🌊</div>
+                    <div style={{ color:"#fff", fontSize:".85rem", fontWeight:900, letterSpacing:".28em", opacity:.85 }}>~ D E N İ Z ~</div>
                   </div>
-                  <div className="shore">🏖️  Kumsal Şeridi</div>
-                  <div className="vipz">
-                    <div className="gh">
-                      <div className="gh-title">💎 VIP Bölge</div>
-                      <div className="gh-price"><div className="gh-pw">Hafta içi</div><div className="gh-we">₺1.500</div><div className="gh-pw">Hafta sonu</div><div className="gh-we">₺2.000</div></div>
+                  {/* Groups */}
+                  {ZONES.map((z, zi) => (
+                    <div key={z.key} style={{ borderTop: zi > 0 ? "1px solid #E5E7EB" : undefined }}>
+                      {/* Group header */}
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 18px", background:z.gradient }}>
+                        <div style={{ fontWeight:800, fontSize:13, color:"white" }}>{z.icon} {z.label} — {z.prefix}1–{z.prefix}{z.statuses.length}</div>
+                        <div style={{ textAlign:"right" }}>
+                          <div style={{ fontSize:10, color:"rgba(255,255,255,.7)" }}>Hafta içi / Hafta sonu</div>
+                          <div style={{ fontSize:12, fontWeight:800, color:"white" }}>₺{z.pw.toLocaleString("tr-TR")} / ₺{z.pe.toLocaleString("tr-TR")}</div>
+                        </div>
+                      </div>
+                      <div style={{ background:"white" }}>
+                        <SzlGrid zoneKey={z.key} prefix={z.prefix} statuses={z.statuses} pw={z.pw} pe={z.pe} />
+                      </div>
                     </div>
-                    <SzlGrid zone="v" rows={[{letter:"D",count:10},{letter:"E",count:10}]} />
-                  </div>
-                  <div className="slvz">
-                    <div className="gh">
-                      <div className="gh-title">⭐ Silver Bölge</div>
-                      <div className="gh-price"><div className="gh-pw">Hafta içi</div><div className="gh-we">₺1.000</div><div className="gh-pw">Hafta sonu</div><div className="gh-we">₺1.250</div></div>
-                    </div>
-                    <SzlGrid zone="s" rows={[{letter:"F",count:10},{letter:"G",count:10},{letter:"H",count:10},{letter:"I",count:10},{letter:"J",count:10}]} />
-                  </div>
+                  ))}
                   <div className="bldz">🏨  TESİS BİNASI</div>
                 </div>
-                <p style={{ fontSize: ".68rem", color: "var(--i3)", marginTop: 12, textAlign: "center", lineHeight: 1.8 }}>
-                  <span style={{ background: "#FEE2E2", borderRadius: 4, padding: "2px 8px" }}>🚫 Dolu</span> &nbsp;
-                  <span style={{ background: "#F3F4F6", borderRadius: 4, padding: "2px 8px" }}>🔧 Bakım</span> &nbsp;
-                  <span style={{ background: "var(--or)", color: "#fff", borderRadius: 4, padding: "2px 8px" }}>✓ Seçili</span>
+                <p style={{ fontSize: ".68rem", color: "var(--i3)", marginTop: 12, textAlign: "center", lineHeight: 2, display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center" }}>
+                  {[["#DCFCE7","#86EFAC","Boş"],["#FFEDD5","#FB923C","Dolu"],["#DBEAFE","#60A5FA","Rezerve"],["#F1F5F9","#CBD5E1","Bakım"],["#EDE9FE","#7C3AED","Kilitli"],["#FFF7ED","#F5821F","Seçili"]].map(([bg,bdr,lbl])=>(
+                    <span key={lbl} style={{ background:bg, border:`1.5px solid ${bdr}`, borderRadius:5, padding:"2px 9px", fontWeight:700 }}>{lbl}</span>
+                  ))}
                 </p>
                 <p style={{ fontSize: ".75rem", fontWeight: 700, color: "var(--i3)", textAlign: "center", marginTop: 10 }}>
-                  📅 {selStart && selEnd ? fmtRange(selStart, selEnd) : "Rezervasyon için tarih seçin"}
+                  📅 {selStart ? fmtRange(selStart, selEnd) + (selEnd ? "" : " (tek gün)") : "Rezervasyon için tarih seçin"}
                 </p>
               </div>}
             </div>
@@ -844,9 +872,9 @@ export default function HotelDetailPage() {
                 <div className="cal-lgi"><div className="cal-lgd" style={{ background: "var(--or)" }}></div>Seçili aralık</div>
               </div>
 
-              {selStart && !selEnd && <div className="cal-hint">📅 Şimdi bitiş tarihini seçin</div>}
+              {selStart && !selEnd && <div className="cal-hint">📅 İsteğe bağlı: bitiş tarihi seçin (seçmezseniz tek gün)</div>}
 
-              {selEnd && (
+              {selStart && (
                 <div className="pax-row">
                   <div><div className="pax-lbl">👥 Kişi Sayısı</div><div className="pax-sub">Maks. 5 · Her kişi 1 şezlong</div></div>
                   <div className="pax-ctrl">
@@ -857,21 +885,21 @@ export default function HotelDetailPage() {
                 </div>
               )}
 
-              {selEnd && (
+              {selStart && (
                 <div className="szl-bar">
                   <span className="szl-bar-t">Seçilen şezlong</span>
                   <span className="szl-bar-n">{selSzls.length} / {paxCount}</span>
                 </div>
               )}
 
-              {selSzls.length > 0 && selEnd && (
+              {selSzls.length > 0 && selStart && (
                 <div className="bsum">
                   <div className="bsum-head">
                     <span className="bsum-ht">Rezervasyon Özeti</span>
                     <button className="bsum-clr" onClick={clearAll}>✕ Temizle</button>
                   </div>
                   <div className="bsum-rows">
-                    <div className="bsum-row"><span>Tarih aralığı</span><b>{fmtRange(selStart, selEnd)}</b></div>
+                    <div className="bsum-row"><span>Tarih</span><b>{fmtRange(selStart, selEnd)}{!selEnd ? " (tek gün)" : ""}</b></div>
                     <div className="bsum-row"><span>Süre</span><b>{days} gün</b></div>
                     <div className="bsum-row"><span>Şezlong(lar)</span><b>{szlNames}</b></div>
                     <div className="bsum-row"><span>Kişi sayısı</span><b>{selSzls.length} kişi / şezlong</b></div>
@@ -917,9 +945,9 @@ export default function HotelDetailPage() {
       </div>
 
       {/* BOTTOM BANNER */}
-      {selSzls.length > 0 && selEnd && (
+      {selSzls.length > 0 && selStart && (
         <div className="bb">
-          <div className="bb-i">Seçilen: <b>{szlNames}</b> &nbsp;·&nbsp; <b>{days} gün</b></div>
+          <div className="bb-i">Seçilen: <b>{szlNames}</b> &nbsp;·&nbsp; <b>{days} gün</b>{!selEnd ? " (tek gün)" : ""}</div>
           <div className="bb-p">₺{total.toLocaleString("tr-TR")}</div>
           <button className="bb-btn" onClick={goRes}>Rezervasyonu Tamamla →</button>
         </div>
