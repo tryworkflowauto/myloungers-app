@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -15,43 +16,46 @@ const GRAY800 = "#1E293B";
 const GREEN = "#10B981";
 const RED = "#EF4444";
 
-// Mock - Kategoriler
-const KATEGORILER = [
-  { name: "BEACH CLUB", emoji: "🏖️", checked: true },
-  { name: "OTEL", emoji: "🏨", checked: true },
-  { name: "RESTORAN", emoji: "🍽️", checked: false },
-  { name: "SU SPORLARI", emoji: "🌊", checked: false },
+// ── Types ─────────────────────────────────────────────────────────────────────
+type Photo = { id: number; src?: string; mockBg?: string; mockEmoji?: string; };
+type ImkanItem = { emoji: string; name: string; active: boolean; custom?: boolean };
+type GunItem = { name: string; acilis: string; kapanis: string; kapali: boolean; vurgu?: boolean };
+type ListItem = { emoji: string; text: string };
+
+// ── Initial data ──────────────────────────────────────────────────────────────
+const INIT_PHOTOS: Photo[] = [
+  { id: 1, mockBg: "linear-gradient(135deg,#0A1628,#0ABAB5)", mockEmoji: "🏖️" },
+  { id: 2, mockBg: "linear-gradient(135deg,#1a3a5c,#2d6a4f)",  mockEmoji: "☕" },
+  { id: 3, mockBg: "linear-gradient(135deg,#1e4d8c,#0ABAB5)",  mockEmoji: "🏊" },
+  { id: 4, mockBg: "linear-gradient(135deg,#2d1b69,#0A1628)",  mockEmoji: "🌙" },
 ];
 
-// Mock - İmkânlar
-const IMKANLAR = [
-  { emoji: "🏊", name: "Özel Yüzme Havuzu", active: true },
-  { emoji: "☕", name: "Kahvaltı Dahil", active: true },
-  { emoji: "🍽️", name: "Beach Bar & Restoran", active: true },
-  { emoji: "🚗", name: "Ücretsiz Vale Park", active: true },
-  { emoji: "🎶", name: "Canlı Müzik (Haftasonları)", active: true },
-  { emoji: "🚤", name: "Su Sporları Merkezi", active: true },
-  { emoji: "🌍", name: "TR / EN / RU Personel", active: true },
-  { emoji: "📱", name: "Ücretsiz Wi-Fi", active: true },
-  { emoji: "🅿️", name: "Otopark", active: false },
-  { emoji: "♿", name: "Engelli Erişimi", active: false },
-  { emoji: "🐾", name: "Evcil Hayvan Kabul", active: false },
-  { emoji: "🧖", name: "Spa & Masaj", active: false },
+const INIT_IMKANLAR: ImkanItem[] = [
+  { emoji: "🏊", name: "Özel Yüzme Havuzu",         active: true  },
+  { emoji: "☕", name: "Kahvaltı Dahil",              active: true  },
+  { emoji: "🍽️", name: "Beach Bar & Restoran",       active: true  },
+  { emoji: "🚗", name: "Ücretsiz Vale Park",          active: true  },
+  { emoji: "🎶", name: "Canlı Müzik (Haftasonları)", active: true  },
+  { emoji: "🚤", name: "Su Sporları Merkezi",         active: true  },
+  { emoji: "🌍", name: "TR / EN / RU Personel",      active: true  },
+  { emoji: "📱", name: "Ücretsiz Wi-Fi",             active: true  },
+  { emoji: "🅿️", name: "Otopark",                   active: false },
+  { emoji: "♿", name: "Engelli Erişimi",             active: false },
+  { emoji: "🐾", name: "Evcil Hayvan Kabul",         active: false },
+  { emoji: "🧖", name: "Spa & Masaj",                active: false },
 ];
 
-// Mock - Çalışma saatleri
-const GUNLER = [
-  { name: "Pzt", acilis: "09:00", kapanis: "19:00" },
-  { name: "Sal", acilis: "09:00", kapanis: "19:00" },
-  { name: "Çar", acilis: "09:00", kapanis: "19:00" },
-  { name: "Per", acilis: "09:00", kapanis: "19:00" },
-  { name: "Cum", acilis: "09:00", kapanis: "21:00" },
-  { name: "Cmt", acilis: "09:00", kapanis: "21:00", vurgu: true },
-  { name: "Paz", acilis: "09:00", kapanis: "21:00", vurgu: true },
+const INIT_GUNLER: GunItem[] = [
+  { name: "Pzt", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Sal", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Çar", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Per", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Cum", acilis: "09:00", kapanis: "21:00", kapali: false },
+  { name: "Cmt", acilis: "09:00", kapanis: "21:00", kapali: false, vurgu: true },
+  { name: "Paz", acilis: "09:00", kapanis: "21:00", kapali: false, vurgu: true },
 ];
 
-// Mock - Kurallar
-const KURALLAR = [
+const INIT_KURALLAR: ListItem[] = [
   { emoji: "🚫", text: "Evcil hayvan kabul edilmez" },
   { emoji: "🚫", text: "Dışarıdan yiyecek/içecek getirilmez" },
   { emoji: "🚫", text: "18 yaş altı 21:00'dan sonra tesis içinde bulunamaz" },
@@ -59,67 +63,173 @@ const KURALLAR = [
   { emoji: "✅", text: "İptal: 48 saat öncesine kadar ücretsiz" },
 ];
 
-// Mock - Kampanya notları
-const KAMPANYA_NOTLARI = [
+const INIT_KAMPANYA_NOTLARI: ListItem[] = [
   { emoji: "🌟", text: "Erken Rezervasyon: 30 gün öncesi %10 indirim" },
   { emoji: "🌟", text: "Grup (5+): %15 indirim" },
   { emoji: "🌟", text: "Hafta içi 3 gün full: Kahvaltı dahil" },
   { emoji: "🌟", text: "Sadakat: 5. rezervasyonda %20 indirim" },
 ];
 
-// Emoji seçenekleri
-const EMOJI_PICKER = ["🏄", "🎯", "🎪", "🛁", "🔒", "🌿", "🎠", "🏋️", "🧊", "🎭", "🌅", "🍷"];
+const KATEGORILER = [
+  { name: "BEACH CLUB", emoji: "🏖️", checked: true },
+  { name: "OTEL",       emoji: "🏨", checked: true  },
+  { name: "RESTORAN",   emoji: "🍽️", checked: false },
+  { name: "SU SPORLARI",emoji: "🌊", checked: false },
+];
 
+const EMOJI_PICKER = ["🏄","🎯","🎪","🛁","🔒","🌿","🎠","🏋️","🧊","🎭","🌅","🍷"];
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+function toEmbedUrl(url: string): string {
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  const vm = url.match(/vimeo\.com\/(\d+)/);
+  if (vm) return `https://player.vimeo.com/video/${vm[1]}`;
+  return url;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function IsletmeTesisPage() {
+  const router = useRouter();
+
+  // Sections collapse
   const [sections, setSections] = useState<Record<string, boolean>>({ temel: true, foto: true, hakkinda: true, imkan: true, saat: true, video: true, harita: true, ulasim: true, kurallar: true });
-  const [imkanlar, setImkanlar] = useState(IMKANLAR);
-  const [kurallar, setKurallar] = useState(KURALLAR);
-  const [kampanyaNotlari, setKampanyaNotlari] = useState(KAMPANYA_NOTLARI);
-  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState("😊");
-  const [imkanInput, setImkanInput] = useState("");
-  const [kuralInput, setKuralInput] = useState("");
-  const [kampanyaInput, setKampanyaInput] = useState("");
-  const [kuralEmojiSel, setKuralEmojiSel] = useState("🚫");
-  const [kampanyaEmojiSel, setKampanyaEmojiSel] = useState("🌟");
+  const toggleSection = (k: string) => setSections(s => ({ ...s, [k]: !s[k] }));
+
+  // Content state
+  const [photos, setPhotos]             = useState<Photo[]>(INIT_PHOTOS);
+  const [imkanlar, setImkanlar]         = useState<ImkanItem[]>(INIT_IMKANLAR);
+  const [gunler, setGunler]             = useState<GunItem[]>(INIT_GUNLER);
+  const [kurallar, setKurallar]         = useState<ListItem[]>(INIT_KURALLAR);
+  const [kampanyaNotlari, setKampanyaNotlari] = useState<ListItem[]>(INIT_KAMPANYA_NOTLARI);
   const [kisaAciklama, setKisaAciklama] = useState("Bodrum'un en güzel koyunda butik beach club & otel deneyimi");
   const [detayAciklama, setDetayAciklama] = useState("Zuzuu Beach Hotel, Bodrum'un en güzel koylarından birinde konumlanan butik bir beach club ve oteldir. Kristal berraklığında deniz suyu ve özel iskelesiyle misafirlerine unutulmaz bir deniz deneyimi sunmaktadır.\n\n100 şezlongluk kapasitesiyle İskele, VIP ve Silver olmak üzere üç farklı bölgede hizmet vermekte; sabah kahvaltısından gün batımı kokteyllerine kadar eksiksiz bir beach club deneyimi sağlamaktadır.");
-  const [tesisAktif, setTesisAktif] = useState(true);
-  const [videoUrl, setVideoUrl] = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
-  const [toast, setToast] = useState(false);
-  const [fotoHover, setFotoHover] = useState<number | null>(null);
+  const [tesisAktif, setTesisAktif]     = useState(true);
+  const [videoUrl, setVideoUrl]         = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
+  const [videoInput, setVideoInput]     = useState("");
+  const [enlem, setEnlem]               = useState("37.032048");
+  const [boylam, setBoylam]             = useState("27.430012");
 
-  const toggleSection = (key: string) => setSections((s) => ({ ...s, [key]: !s[key] }));
-  const saveAll = () => { setToast(true); setTimeout(() => setToast(false), 3000); };
+  // Form inputs
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [selectedEmoji, setSelectedEmoji]     = useState("😊");
+  const [imkanInput, setImkanInput]           = useState("");
+  const [kuralInput, setKuralInput]           = useState("");
+  const [kampanyaInput, setKampanyaInput]     = useState("");
+  const [kuralEmojiSel, setKuralEmojiSel]     = useState("🚫");
+  const [kampanyaEmojiSel, setKampanyaEmojiSel] = useState("🌟");
 
+  // Modals
+  const [tesisAktifModal, setTesisAktifModal] = useState(false);
+  const [onizlemeModal, setOnizlemeModal]     = useState(false);
+
+  // Photo gallery hover + drag state
+  const [fotoHover, setFotoHover]     = useState<number | null>(null);
+  const [dragSrc, setDragSrc]         = useState<number | null>(null);
+  const [dragOver, setDragOver]       = useState<number | null>(null);
+  const [dropZoneDrag, setDropZoneDrag] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
+
+  // ESC closes modals
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") { setTesisAktifModal(false); setOnizlemeModal(false); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  // ── Photo actions ──────────────────────────────────────────────────────────
+  function readFiles(files: FileList | null) {
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      if (photos.length >= 20) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (typeof ev.target?.result === "string") {
+          setPhotos(p => [...p, { id: Date.now() + Math.random(), src: ev.target!.result as string }]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  function deletePhoto(id: number) { setPhotos(p => p.filter(x => x.id !== id)); showToast("🗑️ Fotoğraf silindi"); }
+  function makeAna(id: number)      { setPhotos(p => { const idx = p.findIndex(x => x.id === id); if (idx <= 0) return p; const arr = [...p]; const [item] = arr.splice(idx, 1); arr.unshift(item); return arr; }); showToast("⭐ Ana fotoğraf güncellendi"); }
+  function onPhotoDrop(e: React.DragEvent, targetId: number) {
+    e.preventDefault();
+    if (dragSrc === null || dragSrc === targetId) { setDragSrc(null); setDragOver(null); return; }
+    setPhotos(p => {
+      const arr = [...p];
+      const fromIdx = arr.findIndex(x => x.id === dragSrc);
+      const toIdx   = arr.findIndex(x => x.id === targetId);
+      const [item]  = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, item);
+      return arr;
+    });
+    setDragSrc(null); setDragOver(null);
+  }
+
+  // ── Çalışma saatleri ──────────────────────────────────────────────────────
+  function updateGun(i: number, key: keyof GunItem, val: string | boolean) {
+    setGunler(p => p.map((g, j) => j === i ? { ...g, [key]: val } : g));
+  }
+
+  // ── İmkânlar ──────────────────────────────────────────────────────────────
+  const toggleImkan = (i: number) => setImkanlar(p => p.map((x, j) => j === i ? { ...x, active: !x.active } : x));
+  const delImkan    = (i: number) => { setImkanlar(p => p.filter((_, j) => j !== i)); showToast("🗑️ İmkân silindi"); };
   const addImkan = () => {
     if (!imkanInput.trim()) return;
-    setImkanlar((prev) => [...prev, { emoji: selectedEmoji, name: imkanInput.trim(), active: true }]);
-    setImkanInput("");
-    setEmojiPickerOpen(false);
+    setImkanlar(p => [...p, { emoji: selectedEmoji, name: imkanInput.trim(), active: true, custom: true }]);
+    setImkanInput(""); setEmojiPickerOpen(false);
   };
 
-  const addKural = () => {
-    if (!kuralInput.trim()) return;
-    setKurallar((prev) => [...prev, { emoji: kuralEmojiSel, text: kuralInput.trim() }]);
-    setKuralInput("");
-  };
-
-  const addKampanya = () => {
-    if (!kampanyaInput.trim()) return;
-    setKampanyaNotlari((prev) => [...prev, { emoji: kampanyaEmojiSel, text: kampanyaInput.trim() }]);
-    setKampanyaInput("");
-  };
-
+  // ── Kurallar & Kampanya ────────────────────────────────────────────────────
+  const addKural = () => { if (!kuralInput.trim()) return; setKurallar(p => [...p, { emoji: kuralEmojiSel, text: kuralInput.trim() }]); setKuralInput(""); };
+  const addKampanya = () => { if (!kampanyaInput.trim()) return; setKampanyaNotlari(p => [...p, { emoji: kampanyaEmojiSel, text: kampanyaInput.trim() }]); setKampanyaInput(""); };
   const delKural = (i: number, list: "kural" | "kampanya") => {
-    if (list === "kural") setKurallar((p) => p.filter((_, j) => j !== i));
-    else setKampanyaNotlari((p) => p.filter((_, j) => j !== i));
+    if (list === "kural") setKurallar(p => p.filter((_, j) => j !== i));
+    else setKampanyaNotlari(p => p.filter((_, j) => j !== i));
+    showToast("🗑️ Silindi");
   };
 
-  const toggleImkan = (i: number) => setImkanlar((p) => p.map((x, j) => (j === i ? { ...x, active: !x.active } : x)));
+  // ── Video ──────────────────────────────────────────────────────────────────
+  function yukleVideo() {
+    const url = videoInput.trim();
+    if (!url) return;
+    setVideoUrl(toEmbedUrl(url));
+    setVideoInput("");
+    showToast("▶ Video yüklendi");
+  }
+
+  // ── Konum ─────────────────────────────────────────────────────────────────
+  function haritadaGoster() {
+    if (!enlem || !boylam) return;
+    window.open(`https://www.google.com/maps?q=${enlem},${boylam}`, "_blank");
+  }
+
+  // ── Tesis Aktif toggle ────────────────────────────────────────────────────
+  function handleTesisToggle(checked: boolean) {
+    if (!checked) { setTesisAktifModal(true); }
+    else { setTesisAktif(true); showToast("✅ Tesis yayında!"); }
+  }
+  function confirmedTesisKapat() { setTesisAktif(false); setTesisAktifModal(false); showToast("⏸ Tesis yayından kaldırıldı"); }
+
+  // ── Save all ──────────────────────────────────────────────────────────────
+  function saveAll() { showToast("✅ Tüm değişiklikler kaydedildi!"); }
+
+  // ── Shared styles ──────────────────────────────────────────────────────────
+  const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 };
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800, display: "flex", flexDirection: "column", minHeight: "100%" }}>
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 24, background: NAVY, color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600, zIndex: 999, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", transition: "all 0.3s" }}>{toast}</div>
+      )}
+
       {/* TOPBAR */}
       <header style={{ background: "white", borderBottom: `1px solid ${GRAY200}`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div>
@@ -127,7 +237,7 @@ export default function IsletmeTesisPage() {
           <span style={{ fontSize: 11, color: GRAY400 }}>Müşteri sayfasında görünen tüm içeriği buradan yönet</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>👁️ Müşteri Önizleme</button>
+          <button onClick={() => setOnizlemeModal(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>👁️ Müşteri Önizleme</button>
           <button onClick={saveAll} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>💾 Tümünü Kaydet</button>
         </div>
       </header>
@@ -136,15 +246,15 @@ export default function IsletmeTesisPage() {
         {/* ÖNİZLEME BARI */}
         <div style={{ background: "linear-gradient(135deg," + NAVY + ",#1a2f50)", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
-            <p style={{ fontSize: 13, color: "white", fontWeight: 600 }}>✅ Tesis Yayında — Zuzuu Beach Hotel</p>
+            <p style={{ fontSize: 13, color: "white", fontWeight: 600 }}>{tesisAktif ? "✅ Tesis Yayında" : "⏸ Tesis Yayında Değil"} — Zuzuu Beach Hotel</p>
             <span style={{ fontSize: 11, color: GRAY400 }}>Son güncelleme: 11 Mart 2026 · Tüm değişiklikler anında müşteri sayfasına yansır</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 12, color: GRAY400 }}>Tesis Aktif</span>
             <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer" }}>
-              <input type="checkbox" checked={tesisAktif} onChange={(e) => setTesisAktif(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-              <span style={{ position: "absolute", inset: 0, background: tesisAktif ? TEAL : GRAY300, borderRadius: 20 }}>
-                <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transform: tesisAktif ? "translateX(16px)" : "translateX(0)" }} />
+              <input type="checkbox" checked={tesisAktif} onChange={(e) => handleTesisToggle(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+              <span style={{ position: "absolute", inset: 0, background: tesisAktif ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+                <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: tesisAktif ? "translateX(16px)" : "translateX(0)" }} />
               </span>
             </label>
           </div>
@@ -154,26 +264,25 @@ export default function IsletmeTesisPage() {
         <SectionCard open={sections.temel} onToggle={() => toggleSection("temel")} icon="📍" iconBg="#EFF6FF" title="Temel Bilgiler" sub="Tesis adı, konum, iletişim">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             {[
-              { label: "Tesis Adı", value: "Zuzuu Beach Hotel", type: "text" },
-              { label: "Şehir / İlçe", value: "Bodrum, Muğla", type: "text" },
-              { label: "Tam Adres", value: "Kumbahçe Mah. Neyzen Tevfik Cad. No:12, Bodrum", type: "text" },
-              { label: "Telefon", value: "+90 252 316 XX XX", type: "tel" },
-              { label: "E-posta", value: "info@zuzuubeach.com", type: "email" },
-              { label: "Web Sitesi", value: "https://zuzuubeach.com", type: "url" },
+              { label: "Tesis Adı",    value: "Zuzuu Beach Hotel",                              type: "text"  },
+              { label: "Şehir / İlçe", value: "Bodrum, Muğla",                                  type: "text"  },
+              { label: "Tam Adres",    value: "Kumbahçe Mah. Neyzen Tevfik Cad. No:12, Bodrum", type: "text"  },
+              { label: "Telefon",      value: "+90 252 316 XX XX",                              type: "tel"   },
+              { label: "E-posta",      value: "info@zuzuubeach.com",                            type: "email" },
+              { label: "Web Sitesi",   value: "https://zuzuubeach.com",                         type: "url"   },
             ].map((f, i) => (
               <div key={i} style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>{f.label}</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>{f.label}</label>
                 <input type={f.type as "text"} defaultValue={f.value} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
               </div>
             ))}
           </div>
           <div style={{ marginTop: 8 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Tesis Kategorisi</label>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tesis Kategorisi</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {KATEGORILER.map((k, i) => (
                 <label key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: `1.5px solid ${k.checked ? TEAL : GRAY200}`, borderRadius: 20, cursor: "pointer", background: k.checked ? "#F0FFFE" : "transparent", fontSize: 12, fontWeight: 600, color: k.checked ? NAVY : GRAY600 }}>
-                  <input type="checkbox" defaultChecked={k.checked} style={{ accentColor: TEAL }} />
-                  {k.emoji} {k.name}
+                  <input type="checkbox" defaultChecked={k.checked} style={{ accentColor: TEAL }} /> {k.emoji} {k.name}
                 </label>
               ))}
             </div>
@@ -181,59 +290,85 @@ export default function IsletmeTesisPage() {
         </SectionCard>
 
         {/* 2. FOTOĞRAF GALERİSİ */}
-        <SectionCard open={sections.foto} onToggle={() => toggleSection("foto")} icon="📸" iconBg="#FFF9F5" title="Fotoğraf Galerisi" sub="4 fotoğraf yüklü · Max 20 fotoğraf">
+        <SectionCard open={sections.foto} onToggle={() => toggleSection("foto")} icon="📸" iconBg="#FFF9F5" title="Fotoğraf Galerisi" sub={`${photos.length} fotoğraf · Max 20`}>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => readFiles(e.target.files)} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
-            <div onMouseEnter={() => setFotoHover(0)} onMouseLeave={() => setFotoHover(null)} style={{ gridColumn: "1/3", gridRow: "1/3", aspectRatio: "auto", position: "relative", borderRadius: 10, overflow: "hidden", border: `2px solid ${GRAY200}`, background: "linear-gradient(135deg,#0A1628,#0ABAB5)", minHeight: 200 }}>
-              <div style={{ width: "100%", height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", fontSize: 48 }}>🏖️</div>
-              <span style={{ position: "absolute", top: 6, left: 6, background: ORANGE, color: "white", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 20 }}>Ana Fotoğraf</span>
-              {fotoHover === 0 && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <button style={{ background: "white", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", color: NAVY }}>🔄 Değiştir</button>
-                <button style={{ background: RED, color: "white", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
-              </div>}
-            </div>
-            {[
-              { bg: "linear-gradient(135deg,#1a3a5c,#2d6a4f)", emoji: "☕" },
-              { bg: "linear-gradient(135deg,#1e4d8c,#0ABAB5)", emoji: "🏊" },
-              { bg: "linear-gradient(135deg,#2d1b69,#0A1628)", emoji: "🌙" },
-            ].map((f, i) => (
-              <div key={i} onMouseEnter={() => setFotoHover(i + 1)} onMouseLeave={() => setFotoHover(null)} style={{ position: "relative", aspectRatio: 1, borderRadius: 10, overflow: "hidden", border: `2px solid ${GRAY200}`, background: f.bg }}>
-                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", fontSize: 32 }}>{f.emoji}</div>
-                {fotoHover === i + 1 && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <button style={{ background: "white", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", color: NAVY }}>🔄</button>
-                  <button style={{ background: RED, color: "white", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
-                </div>}
+            {photos.map((photo, i) => (
+              <div
+                key={photo.id}
+                draggable
+                onDragStart={() => setDragSrc(photo.id)}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(photo.id); }}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={(e) => onPhotoDrop(e, photo.id)}
+                onMouseEnter={() => setFotoHover(photo.id)}
+                onMouseLeave={() => setFotoHover(null)}
+                style={{
+                  gridColumn: i === 0 ? "1/3" : undefined,
+                  gridRow:    i === 0 ? "1/3" : undefined,
+                  minHeight:  i === 0 ? 200   : undefined,
+                  aspectRatio: i === 0 ? undefined : "1",
+                  position: "relative", borderRadius: 10, overflow: "hidden",
+                  border: `2px solid ${dragOver === photo.id ? TEAL : GRAY200}`,
+                  background: photo.src ? "transparent" : photo.mockBg,
+                  cursor: "grab", transition: "border-color 0.15s",
+                  opacity: dragSrc === photo.id ? 0.5 : 1,
+                }}
+              >
+                {photo.src
+                  ? <img src={photo.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <div style={{ width: "100%", height: "100%", minHeight: i === 0 ? 200 : 80, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", fontSize: i === 0 ? 48 : 32 }}>{photo.mockEmoji}</div>
+                }
+                {i === 0 && <span style={{ position: "absolute", top: 6, left: 6, background: ORANGE, color: "white", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 20 }}>Ana Fotoğraf</span>}
+                {fotoHover === photo.id && (
+                  <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    {i !== 0 && (
+                      <button onClick={() => makeAna(photo.id)} style={{ background: ORANGE, color: "white", border: "none", borderRadius: 7, padding: "5px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>⭐ Ana Foto</button>
+                    )}
+                    <button onClick={() => deletePhoto(photo.id)} style={{ background: RED, color: "white", border: "none", borderRadius: 7, padding: "5px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>🗑️ Sil</button>
+                  </div>
+                )}
               </div>
             ))}
-            <label style={{ aspectRatio: 1, borderRadius: 10, border: `2px dashed ${GRAY200}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", background: GRAY50 }}>
+            {/* Upload zone */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDropZoneDrag(true); }}
+              onDragLeave={() => setDropZoneDrag(false)}
+              onDrop={(e) => { e.preventDefault(); setDropZoneDrag(false); readFiles(e.dataTransfer.files); }}
+              style={{ aspectRatio: "1", borderRadius: 10, border: `2px dashed ${dropZoneDrag ? TEAL : GRAY200}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", background: dropZoneDrag ? "rgba(10,186,181,0.04)" : GRAY50, transition: "all 0.15s" }}
+            >
               <span style={{ fontSize: 24 }}>➕</span>
-              <p style={{ fontSize: 11, fontWeight: 600, color: TEAL }}>Fotoğraf Ekle</p>
-              <input type="file" accept="image/*" multiple style={{ display: "none" }} />
-            </label>
+              <p style={{ fontSize: 10, fontWeight: 600, color: TEAL, textAlign: "center" }}>Fotoğraf Ekle</p>
+            </div>
           </div>
-          <p style={{ fontSize: 11, color: GRAY400, marginTop: 8 }}>💡 İlk fotoğraf ana görsel olarak kullanılır. Sürükle-bırak ile sıralayabilirsiniz. JPG, PNG, WEBP · Max 10MB</p>
+          <p style={{ fontSize: 11, color: GRAY400, marginTop: 8 }}>💡 İlk fotoğraf ana görsel. Sürükleyerek sıralayın • ⭐ Ana Foto yapın. JPG, PNG, WEBP · Max 10MB</p>
         </SectionCard>
 
         {/* 3. HAKKINDA */}
         <SectionCard open={sections.hakkinda} onToggle={() => toggleSection("hakkinda")} icon="📝" iconBg="#F0FDF4" title="Tesis Hakkında" sub="Açıklama metni">
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Kısa Açıklama <span style={{ color: GRAY400, fontWeight: 400, textTransform: "none" }}>(Arama sonuçlarında görünür)</span></label>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Kısa Açıklama <span style={{ color: GRAY400, fontWeight: 400 }}>(Arama sonuçlarında görünür)</span></label>
             <input type="text" value={kisaAciklama} onChange={(e) => setKisaAciklama(e.target.value)} maxLength={100} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{kisaAciklama.length}/100</div>
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Detaylı Açıklama <span style={{ color: GRAY400, fontWeight: 400, textTransform: "none" }}>(Tesis detay sayfasında görünür)</span></label>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Detaylı Açıklama <span style={{ color: GRAY400, fontWeight: 400 }}>(Tesis detay sayfasında görünür)</span></label>
             <textarea value={detayAciklama} onChange={(e) => setDetayAciklama(e.target.value)} rows={5} maxLength={800} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, resize: "vertical", minHeight: 100 }} />
             <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{detayAciklama.length}/800</div>
           </div>
         </SectionCard>
 
         {/* 4. TESİS İMKÂNLARI */}
-        <SectionCard open={sections.imkan} onToggle={() => toggleSection("imkan")} icon="✨" iconBg="#F5F3FF" title="Tesis İmkânları" sub={imkanlar.filter((x) => x.active).length + " özellik aktif"}>
+        <SectionCard open={sections.imkan} onToggle={() => toggleSection("imkan")} icon="✨" iconBg="#F5F3FF" title="Tesis İmkânları" sub={`${imkanlar.filter(x => x.active).length} özellik aktif`}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
             {imkanlar.map((im, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: `1.5px solid ${im.active ? TEAL : GRAY200}`, borderRadius: 10, background: im.active ? "#F0FFFE" : "transparent" }}>
                 <span style={{ fontSize: 20 }}>{im.emoji}</span>
                 <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: NAVY }}>{im.name}</span>
+                {im.custom && (
+                  <button onClick={() => delImkan(i)} style={{ background: "none", border: "none", color: GRAY400, cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1 }} title="Kaldır">✕</button>
+                )}
                 <label style={{ cursor: "pointer" }}>
                   <input type="checkbox" checked={im.active} onChange={() => toggleImkan(i)} style={{ accentColor: TEAL, width: 16, height: 16, cursor: "pointer" }} />
                 </label>
@@ -241,7 +376,7 @@ export default function IsletmeTesisPage() {
             ))}
           </div>
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${GRAY100}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: GRAY600, textTransform: "none", letterSpacing: 0.5, marginBottom: 8 }}>Özel İmkan Ekle</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 8 }}>Özel İmkan Ekle</div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <div onClick={() => setEmojiPickerOpen(!emojiPickerOpen)} style={{ width: 36, height: 36, border: `1.5px solid ${GRAY200}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer" }}>{selectedEmoji}</div>
               <input type="text" placeholder="İmkan adı yazın..." value={imkanInput} onChange={(e) => setImkanInput(e.target.value)} style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} onKeyDown={(e) => e.key === "Enter" && addImkan()} />
@@ -260,12 +395,17 @@ export default function IsletmeTesisPage() {
         {/* 5. ÇALIŞMA SAATLERİ */}
         <SectionCard open={sections.saat} onToggle={() => toggleSection("saat")} icon="🕐" iconBg="#FFFBEB" title="Çalışma Saatleri" sub="09:00 — 19:00 hafta içi, 09:00 — 21:00 hafta sonu">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
-            {GUNLER.map((g, i) => (
-              <div key={i} style={{ background: GRAY50, border: `1.5px solid ${g.vurgu ? TEAL : GRAY200}`, borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: g.vurgu ? TEAL : NAVY, marginBottom: 8 }}>{g.name}</div>
-                <input type="time" defaultValue={g.acilis} style={{ width: "100%", padding: 6, border: `1px solid ${GRAY200}`, borderRadius: 6, fontSize: 11, textAlign: "center" }} />
-                <input type="time" defaultValue={g.kapanis} style={{ width: "100%", padding: 6, border: `1px solid ${GRAY200}`, borderRadius: 6, fontSize: 11, textAlign: "center", marginTop: 4 }} />
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6, fontSize: 9, color: GRAY400, cursor: "pointer" }}><label><input type="checkbox" /> Kapalı</label></div>
+            {gunler.map((g, i) => (
+              <div key={i} style={{ background: g.kapali ? GRAY100 : GRAY50, border: `1.5px solid ${g.kapali ? GRAY300 : g.vurgu ? TEAL : GRAY200}`, borderRadius: 10, padding: "10px 8px", textAlign: "center", opacity: g.kapali ? 0.7 : 1, transition: "all 0.2s" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: g.kapali ? GRAY400 : g.vurgu ? TEAL : NAVY, marginBottom: 8 }}>{g.name}</div>
+                <input type="time" value={g.acilis} disabled={g.kapali} onChange={(e) => updateGun(i, "acilis", e.target.value)} style={{ width: "100%", padding: 6, border: `1px solid ${GRAY200}`, borderRadius: 6, fontSize: 11, textAlign: "center", background: g.kapali ? GRAY200 : "white" }} />
+                <input type="time" value={g.kapanis} disabled={g.kapali} onChange={(e) => updateGun(i, "kapanis", e.target.value)} style={{ width: "100%", padding: 6, border: `1px solid ${GRAY200}`, borderRadius: 6, fontSize: 11, textAlign: "center", marginTop: 4, background: g.kapali ? GRAY200 : "white" }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6, fontSize: 9, color: g.kapali ? RED : GRAY400, cursor: "pointer", fontWeight: g.kapali ? 700 : 400 }}>
+                  <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
+                    <input type="checkbox" checked={g.kapali} onChange={(e) => updateGun(i, "kapali", e.target.checked)} style={{ accentColor: RED, cursor: "pointer" }} />
+                    Kapalı
+                  </label>
+                </div>
               </div>
             ))}
           </div>
@@ -273,13 +413,20 @@ export default function IsletmeTesisPage() {
 
         {/* 6. VİDEO */}
         <SectionCard open={sections.video} onToggle={() => toggleSection("video")} icon="🎬" iconBg="#FEF2F2" title="Tesis Videosu" sub="YouTube veya Vimeo URL">
-          <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 10, background: GRAY800, overflow: "hidden", marginBottom: 10 }}>
-            <iframe src={videoUrl} allowFullScreen style={{ width: "100%", height: "100%", border: "none" }} title="Video" />
-          </div>
+          {videoUrl ? (
+            <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 10, background: GRAY800, overflow: "hidden", marginBottom: 10 }}>
+              <iframe src={videoUrl} allowFullScreen style={{ width: "100%", height: "100%", border: "none" }} title="Video" />
+            </div>
+          ) : (
+            <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 10, background: GRAY100, overflow: "hidden", marginBottom: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, border: `2px dashed ${GRAY200}` }}>
+              <span style={{ fontSize: 36 }}>🎬</span>
+              <p style={{ fontSize: 12, color: GRAY400, fontWeight: 600 }}>Video yüklenmedi</p>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8 }}>
-            <input type="text" placeholder="https://youtube.com/watch?v=... veya https://vimeo.com/..." style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-            <button style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>▶ Yükle</button>
-            <button onClick={() => { setVideoUrl(""); }} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✕ Kaldır</button>
+            <input type="text" value={videoInput} onChange={(e) => setVideoInput(e.target.value)} placeholder="https://youtube.com/watch?v=... veya https://vimeo.com/..." style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} onKeyDown={(e) => e.key === "Enter" && yukleVideo()} />
+            <button onClick={yukleVideo} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>▶ Yükle</button>
+            <button onClick={() => { setVideoUrl(""); setVideoInput(""); showToast("🎬 Video kaldırıldı"); }} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✕ Kaldır</button>
           </div>
         </SectionCard>
 
@@ -295,20 +442,20 @@ export default function IsletmeTesisPage() {
             <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -100%)", fontSize: 32, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}>📍</div>
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-            <div style={{ flex: 1, marginBottom: 0 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Enlem (Latitude)</label>
-              <input type="text" defaultValue="37.032048" placeholder="37.032048" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Enlem (Latitude)</label>
+              <input type="text" value={enlem} onChange={(e) => setEnlem(e.target.value)} placeholder="37.032048" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             </div>
-            <div style={{ flex: 1, marginBottom: 0 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Boylam (Longitude)</label>
-              <input type="text" defaultValue="27.430012" placeholder="27.430012" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Boylam (Longitude)</label>
+              <input type="text" value={boylam} onChange={(e) => setBoylam(e.target.value)} placeholder="27.430012" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 0 }}>
-              <button style={{ height: 42, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>📍 Haritada Göster</button>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              <button onClick={haritadaGoster} disabled={!enlem || !boylam} style={{ height: 42, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${enlem && boylam ? TEAL : GRAY200}`, background: enlem && boylam ? "rgba(10,186,181,0.08)" : GRAY100, color: enlem && boylam ? TEAL : GRAY400, cursor: enlem && boylam ? "pointer" : "not-allowed" }}>📍 Haritada Göster</button>
             </div>
           </div>
           <div style={{ marginTop: 12 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Google Maps Linki</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 6 }}>Google Maps Linki</label>
             <input type="url" defaultValue="https://maps.google.com/?q=Zuzuu+Beach+Hotel+Bodrum" placeholder="https://maps.google.com/..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
           </div>
         </SectionCard>
@@ -321,7 +468,7 @@ export default function IsletmeTesisPage() {
               <div style={{ padding: 14 }}>
                 {[{ label: "Merkeze Uzaklık", value: "Bodrum merkeze 7 dk" }, { label: "Havalimanına Uzaklık", value: "Milas-Bodrum Havalimanı 45 dk" }, { label: "Taksi Telefon 1", value: "+90 252 316 XX XX" }, { label: "Taksi Telefon 2", value: "", placeholder: "+90 ..." }].map((f, i) => (
                   <div key={i} style={{ marginBottom: i < 3 ? 16 : 0 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>{f.label}</label>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>{f.label}</label>
                     <input type="text" defaultValue={f.value} placeholder={f.placeholder} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                   </div>
                 ))}
@@ -330,24 +477,22 @@ export default function IsletmeTesisPage() {
             <div style={{ border: `1.5px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden" }}>
               <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 13, background: "#EFF6FF", borderBottom: `1px solid ${GRAY100}` }}>🚐 Dolmuş Bilgileri</div>
               <div style={{ padding: 14 }}>
+                {[{ label: "Hat / Güzergah", val: "Bodrum - Turgutreis hattı" }, { label: "İnilecek Durak", val: "Zuzuu Beach durağı" }].map((f, i) => (
+                  <div key={i} style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>{f.label}</label>
+                    <input type="text" defaultValue={f.val} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  </div>
+                ))}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Hat / Güzergah</label>
-                  <input type="text" defaultValue="Bodrum - Turgutreis hattı" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Sefer Saatleri</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Sefer Saatleri</label>
                   <div style={{ display: "flex", gap: 8 }}>
                     <input type="time" defaultValue="07:00" style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                     <span style={{ lineHeight: "42px", color: GRAY400 }}>—</span>
                     <input type="time" defaultValue="22:00" style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                   </div>
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>İnilecek Durak</label>
-                  <input type="text" defaultValue="Zuzuu Beach durağı" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-                </div>
-                <div style={{ marginBottom: 0 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Ek Not</label>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Ek Not</label>
                   <input type="text" placeholder="örn: Şoföre 'Zuzuu' deyin..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                 </div>
               </div>
@@ -396,17 +541,102 @@ export default function IsletmeTesisPage() {
                 <button onClick={addKampanya} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>+ Ekle</button>
               </div>
               <div style={{ marginTop: 10, padding: 10, background: "#FFFBEB", borderRadius: 8, fontSize: 11, color: "#92400E" }}>
-                💡 Aktif kampanyalar otomatik olarak buraya yansır. <a href="#" style={{ color: TEAL }}>Sezon & Fiyatlar&apos;dan yönet →</a>
+                💡 Aktif kampanyalar otomatik olarak buraya yansır.{" "}
+                <button onClick={() => router.push("/isletme/sezon")} style={{ color: TEAL, background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0 }}>Sezon &amp; Fiyatlar&apos;dan yönet →</button>
               </div>
             </div>
           </div>
         </SectionCard>
       </div>
 
-      {/* TOAST */}
-      {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, background: GREEN, color: "white", padding: "12px 20px", borderRadius: 10, fontSize: 13, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,0.2)", zIndex: 500 }}>
-          ✅ Tüm değişiklikler kaydedildi!
+      {/* ── TESİS AKTİF ONAY MODAL ──────────────────────────────────────────── */}
+      {tesisAktifModal && (
+        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setTesisAktifModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>⏸</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Tesis Yayından Kaldırılsın mı?</h3>
+            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 6 }}>Tesis yayından kaldırılırsa müşteriler rezervasyon yapamaz.</p>
+            <p style={{ fontSize: 12, color: GRAY400, marginBottom: 24 }}>Mevcut rezervasyonlar etkilenmez.</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setTesisAktifModal(false)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={confirmedTesisKapat} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>⏸ Yayından Kaldır</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MÜŞTERİ ÖNİZLEME MODAL ─────────────────────────────────────────── */}
+      {onizlemeModal && (
+        <div style={{ ...overlayStyle, alignItems: "flex-start", paddingTop: 20, overflowY: "auto" }} onClick={(e) => e.target === e.currentTarget && setOnizlemeModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, width: 560, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", marginBottom: 20 }} onClick={(e) => e.stopPropagation()}>
+            {/* Preview header */}
+            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, color: GRAY400 }}>👁️ Müşteri Görünümü</span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: tesisAktif ? "#DCFCE7" : "#FEE2E2", color: tesisAktif ? "#16A34A" : RED }}>{tesisAktif ? "● Yayında" : "⏸ Yayında Değil"}</span>
+              </div>
+              <button onClick={() => setOnizlemeModal(false)} style={{ width: 28, height: 28, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
+            </div>
+            {/* Ana fotoğraf */}
+            <div style={{ width: "100%", height: 200, background: photos[0]?.src ? "transparent" : photos[0]?.mockBg, overflow: "hidden", position: "relative" }}>
+              {photos[0]?.src
+                ? <img src={photos[0].src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 60, color: "rgba(255,255,255,0.4)" }}>{photos[0]?.mockEmoji}</div>
+              }
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 20px 16px", background: "linear-gradient(transparent,rgba(0,0,0,0.7))" }}>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "white", margin: 0 }}>Zuzuu Beach Hotel</h2>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: "4px 0 0" }}>📍 Bodrum, Muğla</p>
+              </div>
+            </div>
+            {/* Mini galeri */}
+            {photos.length > 1 && (
+              <div style={{ display: "flex", gap: 6, padding: "10px 16px", overflowX: "auto" }}>
+                {photos.slice(1).map((p, i) => (
+                  <div key={i} style={{ width: 64, height: 48, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: p.mockBg }}>
+                    {p.src ? <img src={p.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: "rgba(255,255,255,0.5)" }}>{p.mockEmoji}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Kısa açıklama */}
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${GRAY100}` }}>
+              <p style={{ fontSize: 13, color: GRAY600 }}>{kisaAciklama}</p>
+            </div>
+            {/* İmkânlar */}
+            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${GRAY100}` }}>
+              <h4 style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 10 }}>✨ Tesis İmkânları</h4>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {imkanlar.filter(x => x.active).map((im, i) => (
+                  <span key={i} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 20, background: "#F0FFFE", border: `1px solid ${TEAL}`, color: TEAL, fontWeight: 600 }}>{im.emoji} {im.name}</span>
+                ))}
+              </div>
+            </div>
+            {/* Çalışma saatleri */}
+            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${GRAY100}` }}>
+              <h4 style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 10 }}>🕐 Çalışma Saatleri</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+                {gunler.map((g, i) => (
+                  <div key={i} style={{ textAlign: "center", padding: "6px 8px", borderRadius: 8, background: g.kapali ? GRAY100 : GRAY50, opacity: g.kapali ? 0.5 : 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: g.vurgu ? TEAL : NAVY }}>{g.name}</div>
+                    <div style={{ fontSize: 10, color: GRAY600, marginTop: 2 }}>{g.kapali ? "Kapalı" : `${g.acilis}–${g.kapanis}`}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Kurallar */}
+            {kurallar.length > 0 && (
+              <div style={{ padding: "14px 20px" }}>
+                <h4 style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 10 }}>📋 Bilinmesi Gerekenler</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {kurallar.map((k, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: GRAY600 }}>
+                      <span>{k.emoji}</span><span>{k.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
