@@ -38,10 +38,10 @@ const MOCK_SEZON = {
 };
 
 const MOCK_UYARILAR = [
-  { ikon: "🍽️", baslik: "5 Bekleyen Sipariş", detay: "En eskisi 18 dk önce", renk: "turuncu" },
-  { ikon: "⭐", baslik: "3 Cevaplanmayan Yorum", detay: "1 şikayet içeriyor", renk: "kirmizi" },
-  { ikon: "💰", baslik: "5 Bakiye Sona Eriyor", detay: "3 gün içinde · ₺3.840", renk: "sari" },
-  { ikon: "📋", baslik: "Yarın 8 Rezervasyon", detay: "İlk giriş saat 09:00", renk: "mavi" },
+  { ikon: "🍽️", baslik: "5 Bekleyen Sipariş", detay: "En eskisi 18 dk önce", renk: "turuncu", href: "/isletme/siparisler" },
+  { ikon: "⭐", baslik: "3 Cevaplanmayan Yorum", detay: "1 şikayet içeriyor", renk: "kirmizi", href: "/isletme/yorumlar" },
+  { ikon: "💰", baslik: "5 Bakiye Sona Eriyor", detay: "3 gün içinde · ₺3.840", renk: "sari", href: "/isletme/raporlar" },
+  { ikon: "📋", baslik: "Yarın 8 Rezervasyon", detay: "İlk giriş saat 09:00", renk: "mavi", href: "/isletme/rezervasyonlar" },
 ];
 
 const MOCK_STAT = [
@@ -95,6 +95,9 @@ const HIZLI_EYLEMLER = [
 export default function IsletmeDashboardPage() {
   const [tarih, setTarih] = useState("");
   const [saat, setSaat] = useState("--:--");
+  const [rezervasyonModalOpen, setRezervasyonModalOpen] = useState(false);
+  const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", sezlongGrubu: "Gold", sezlongNo: "", tarih: "", kisiSayisi: "" });
+  const [siparisDetayModal, setSiparisDetayModal] = useState<typeof MOCK_SIPARISLER[0] | null>(null);
 
   useEffect(() => {
     const now = new Date();
@@ -106,6 +109,17 @@ export default function IsletmeDashboardPage() {
     guncelle();
     const t = setInterval(guncelle, 10000);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setRezervasyonModalOpen(false);
+        setSiparisDetayModal(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
   return (
@@ -126,9 +140,9 @@ export default function IsletmeDashboardPage() {
             {saat}
           </div>
           <button
-            className="inline-flex items-center gap-1.5 rounded-lg text-white transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg text-white transition-colors cursor-pointer"
             style={{ background: TEAL, padding: "8px 14px", fontSize: 12, fontWeight: 600 }}
-            onClick={() => { /* TODO: Hızlı rezervasyon modalı aç */ }}
+            onClick={() => setRezervasyonModalOpen(true)}
           >
             <Plus size={14} />
             Hızlı Rezervasyon
@@ -184,17 +198,18 @@ export default function IsletmeDashboardPage() {
             };
             const s = styles[u.renk];
             return (
-              <div
+              <Link
                 key={i}
+                href={u.href}
                 className="flex-1 min-w-[200px] rounded-xl flex items-center gap-2.5 cursor-pointer"
-                style={{ background: s.bg, border: `1.5px solid ${s.border}`, padding: "12px 16px" }}
+                style={{ background: s.bg, border: `1.5px solid ${s.border}`, padding: "12px 16px", textDecoration: "none", color: "inherit" }}
               >
                 <span style={{ fontSize: 22 }}>{u.ikon}</span>
                 <div>
                   <strong style={{ display: "block", fontSize: 12, fontWeight: 700, color: s.strong }}>{u.baslik}</strong>
                   <span style={{ fontSize: 11, opacity: 0.8, color: s.span }}>{u.detay}</span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -262,31 +277,41 @@ export default function IsletmeDashboardPage() {
 
         {/* HIZLI EYLEMLER — .hizli-grid, .hizli-btn, emoji yerine lucide */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
-          {HIZLI_EYLEMLER.map((h, i) => (
-              <Link
-                key={i}
-                href={h.href}
-                className="flex flex-col items-center gap-2 cursor-pointer transition-all rounded-xl"
-                style={{
-                  background: "white",
-                  border: `1.5px solid ${GRAY200}`,
-                  padding: "16px 12px",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = TEAL;
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(10,186,181,0.15)";
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = GRAY200;
-                  e.currentTarget.style.boxShadow = "";
-                  e.currentTarget.style.transform = "";
-                }}
-              >
+          {HIZLI_EYLEMLER.map((h, i) => {
+            const cardStyle = {
+              background: "white" as const,
+              border: `1.5px solid ${GRAY200}`,
+              padding: "16px 12px",
+            };
+            const commonProps = {
+              className: "flex flex-col items-center gap-2 cursor-pointer transition-all rounded-xl",
+              style: cardStyle,
+              onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
+                e.currentTarget.style.borderColor = TEAL;
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(10,186,181,0.15)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+              },
+              onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
+                e.currentTarget.style.borderColor = GRAY200;
+                e.currentTarget.style.boxShadow = "";
+                e.currentTarget.style.transform = "";
+              },
+            };
+            if (h.label === "Rezervasyon Oluştur") {
+              return (
+                <div key={i} {...commonProps} onClick={() => setRezervasyonModalOpen(true)} role="button">
+                  <span style={{ fontSize: 26 }}>{h.ikon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: NAVY, textAlign: "center" }}>{h.label}</span>
+                </div>
+              );
+            }
+            return (
+              <Link key={i} href={h.href} {...commonProps}>
                 <span style={{ fontSize: 26 }}>{h.ikon}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: NAVY, textAlign: "center" }}>{h.label}</span>
               </Link>
-            ))}
+            );
+          })}
         </div>
 
         {/* 3 KOLON — .three-col */}
@@ -304,6 +329,7 @@ export default function IsletmeDashboardPage() {
                 style={{ padding: "11px 18px", borderBottom: `1px solid ${GRAY100}` }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = GRAY50; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                onClick={() => setSiparisDetayModal(s)}
               >
                 <div
                   className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-[11px] font-extrabold flex-shrink-0"
@@ -342,19 +368,9 @@ export default function IsletmeDashboardPage() {
               </div>
             ))}
             <div style={{ padding: "10px 18px", borderTop: `1px solid ${GRAY100}` }}>
-              <button
-                className="w-full rounded-lg"
-                style={{
-                  padding: "5px 10px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  background: GRAY100,
-                  color: GRAY800,
-                  border: `1px solid ${GRAY200}`,
-                }}
-              >
+              <Link href="/isletme/siparisler" className="block w-full rounded-lg text-center" style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, background: GRAY100, color: GRAY800, border: `1px solid ${GRAY200}`, textDecoration: "none" }}>
                 Tüm Siparişleri Gör →
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -386,19 +402,9 @@ export default function IsletmeDashboardPage() {
               </div>
             ))}
             <div style={{ padding: "10px 18px", borderTop: `1px solid ${GRAY100}` }}>
-              <button
-                className="w-full rounded-lg"
-                style={{
-                  padding: "5px 10px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  background: GRAY100,
-                  color: GRAY800,
-                  border: `1px solid ${GRAY200}`,
-                }}
-              >
+              <Link href="/isletme/rezervasyonlar" className="block w-full rounded-lg text-center" style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, background: GRAY100, color: GRAY800, border: `1px solid ${GRAY200}`, textDecoration: "none" }}>
                 Tüm Rezervasyonlar →
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -443,19 +449,9 @@ export default function IsletmeDashboardPage() {
                 </div>
               ))}
               <div style={{ padding: "10px 18px", borderTop: `1px solid ${GRAY100}` }}>
-                <button
-                  className="w-full rounded-lg"
-                  style={{
-                    padding: "5px 10px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: GRAY100,
-                    color: GRAY800,
-                    border: `1px solid ${GRAY200}`,
-                  }}
-                >
+                <Link href="/isletme/yorumlar" className="block w-full rounded-lg text-center" style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, background: GRAY100, color: GRAY800, border: `1px solid ${GRAY200}`, textDecoration: "none" }}>
                   Yorumları Cevapla →
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -488,24 +484,145 @@ export default function IsletmeDashboardPage() {
                 </div>
               ))}
               <div style={{ padding: "10px 18px", borderTop: `1px solid ${GRAY100}` }}>
-                <button
-                  className="w-full rounded-lg"
-                  style={{
-                    padding: "5px 10px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: GRAY100,
-                    color: GRAY800,
-                    border: `1px solid ${GRAY200}`,
-                  }}
-                >
+                <Link href="/isletme/raporlar" className="block w-full rounded-lg text-center" style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, background: GRAY100, color: GRAY800, border: `1px solid ${GRAY200}`, textDecoration: "none" }}>
                   Bakiye Raporuna Git →
-                </button>
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Sipariş Detay Modal */}
+      {siparisDetayModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={(e) => e.target === e.currentTarget && setSiparisDetayModal(null)}
+        >
+          <div
+            style={{ background: "white", borderRadius: 14, width: 340, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>🍽️ Sipariş Detayı</h3>
+              <button onClick={() => setSiparisDetayModal(null)} style={{ background: GRAY100, border: "none", borderRadius: 8, width: 28, height: 28, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
+            <div style={{ padding: "18px 18px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: NAVY, color: TEAL, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800 }}>{siparisDetayModal.no}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{siparisDetayModal.musteri}</div>
+                  <div style={{ fontSize: 12, color: GRAY600, marginTop: 2 }}>{siparisDetayModal.urunler}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: siparisDetayModal.sureTip === "ok" ? "#DCFCE7" : siparisDetayModal.sureTip === "warn" ? "#FEF3C7" : "#FEE2E2", color: siparisDetayModal.sureTip === "ok" ? "#16A34A" : siparisDetayModal.sureTip === "warn" ? "#D97706" : RED }}>{siparisDetayModal.sure}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: siparisDetayModal.durumTip === "yeni" ? "#EFF6FF" : "#FEF3C7", color: siparisDetayModal.durumTip === "yeni" ? BLUE : "#D97706" }}>{siparisDetayModal.durum}</span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setSiparisDetayModal(null)} style={{ flex: 1, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Hazırlandı</button>
+                <button onClick={() => setSiparisDetayModal(null)} style={{ flex: 1, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>Teslim Et</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rezervasyon Modal */}
+      {rezervasyonModalOpen && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={(e) => e.target === e.currentTarget && setRezervasyonModalOpen(false)}
+        >
+          <div
+            style={{ background: "white", borderRadius: 16, width: 400, maxWidth: "90vw", maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "18px 24px", borderBottom: `1px solid ${GRAY100}` }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>Yeni Rezervasyon Oluştur</h2>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Müşteri Adı</label>
+                <input
+                  type="text"
+                  value={rezForm.musteriAdi}
+                  onChange={(e) => setRezForm((f) => ({ ...f, musteriAdi: e.target.value }))}
+                  placeholder="Ad Soyad"
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Telefon</label>
+                <input
+                  type="tel"
+                  value={rezForm.telefon}
+                  onChange={(e) => setRezForm((f) => ({ ...f, telefon: e.target.value }))}
+                  placeholder="+90 5xx xxx xx xx"
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Şezlong Grubu</label>
+                <select
+                  value={rezForm.sezlongGrubu}
+                  onChange={(e) => setRezForm((f) => ({ ...f, sezlongGrubu: e.target.value }))}
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}
+                >
+                  <option value="Gold">Gold</option>
+                  <option value="VIP">VIP</option>
+                  <option value="İskele">İskele</option>
+                  <option value="Silver">Silver</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Şezlong No</label>
+                <input
+                  type="text"
+                  value={rezForm.sezlongNo}
+                  onChange={(e) => setRezForm((f) => ({ ...f, sezlongNo: e.target.value }))}
+                  placeholder="örn: S-22"
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Tarih</label>
+                <input
+                  type="date"
+                  value={rezForm.tarih}
+                  onChange={(e) => setRezForm((f) => ({ ...f, tarih: e.target.value }))}
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                />
+              </div>
+              <div style={{ marginBottom: 0 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Kişi Sayısı</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={rezForm.kisiSayisi}
+                  onChange={(e) => setRezForm((f) => ({ ...f, kisiSayisi: e.target.value }))}
+                  placeholder="2"
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                />
+              </div>
+            </div>
+            <div style={{ padding: "14px 24px", borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setRezervasyonModalOpen(false)}
+                style={{ padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}
+              >
+                İptal
+              </button>
+              <button
+                onClick={() => { /* TODO: API'ye kaydet */ setRezervasyonModalOpen(false); setRezForm({ musteriAdi: "", telefon: "", sezlongGrubu: "Gold", sezlongNo: "", tarih: "", kisiSayisi: "" }); }}
+                style={{ padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}
+              >
+                Rezervasyonu Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
