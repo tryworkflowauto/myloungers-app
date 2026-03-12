@@ -95,6 +95,23 @@ const DURUM_LABELS: Record<string, string> = {
 
 const COLOR_OPTS = ["#0ABAB5", "#F5821F", "#F59E0B", "#8B5CF6", "#EF4444", "#10B981", "#3B82F6", "#EC4899", "#0A1628"];
 
+// Legend label → durum key eşlemesi (module seviyesinde - stable reference)
+const LEGEND_DURUM_MAP: Record<string, string> = {
+  "Boş": "bos",
+  "Dolu": "dolu",
+  "Rezerve": "rezerve",
+  "Bakımda": "bakim",
+  "İşletme Rezervi": "kilitli",
+};
+
+const GRUP_BUTTONS = [
+  { label: "Tüm Gruplar", key: null, color: GRAY400 },
+  { label: "Silver", key: "silver", color: "#0ABAB5" },
+  { label: "VIP", key: "vip", color: "#F5821F" },
+  { label: "İskele", key: "iskele", color: "#F59E0B" },
+  { label: "Gold", key: "gold", color: "#8B5CF6" },
+];
+
 function SezlongItem({
   no,
   durum,
@@ -294,23 +311,6 @@ export default function IsletmeSezlongPage() {
     setSeciliGrup(grupKey);
     setSeciliDurum(durum);
   }
-
-  // Legend label → durum key eşlemesi
-  const LEGEND_DURUM_MAP: Record<string, string> = {
-    "Boş": "bos",
-    "Dolu": "dolu",
-    "Rezerve": "rezerve",
-    "Bakımda": "bakim",
-    "İşletme Rezervi": "kilitli",
-  };
-
-  // Grup adı → MAP_BLOCKS key eşlemesi
-  const GRUP_KEY_MAP: Record<string, string> = {
-    "Silver": "silver",
-    "VIP": "vip",
-    "İskele": "iskele",
-    "Gold": "gold",
-  };
 
   return (
     <div
@@ -610,50 +610,35 @@ export default function IsletmeSezlongPage() {
                 📅 {seciliTarih} için rezervasyon bulunamadı
               </div>
             )}
-            <select
-              value={grupFiltresi ?? ""}
-              onChange={(e) => setGrupFiltresi(e.target.value || null)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                border: `1px solid ${grupFiltresi ? TEAL : GRAY200}`,
-                borderRadius: 8,
-                fontSize: 12,
-                marginBottom: 8,
-                background: grupFiltresi ? "rgba(10,186,181,0.06)" : "white",
-                fontWeight: grupFiltresi ? 600 : 400,
-              }}
-            >
-              <option value="">Tüm Gruplar</option>
-              <option value="silver">Silver</option>
-              <option value="vip">VIP</option>
-              <option value="iskele">İskele</option>
-              <option value="gold">Gold</option>
-            </select>
-            <select
-              value={durumFiltresi ?? ""}
-              onChange={(e) => setDurumFiltresi(e.target.value || null)}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                border: `1px solid ${durumFiltresi ? TEAL : GRAY200}`,
-                borderRadius: 8,
-                fontSize: 12,
-                background: durumFiltresi ? "rgba(10,186,181,0.06)" : "white",
-                fontWeight: durumFiltresi ? 600 : 400,
-              }}
-            >
-              <option value="">Tüm Durumlar</option>
-              <option value="bos">Sadece Boş</option>
-              <option value="dolu">Sadece Dolu</option>
-              <option value="rezerve">Rezerve</option>
-              <option value="bakim">Bakımda</option>
-              <option value="kilitli">İşletme Rezervi</option>
-            </select>
+            {/* Grup Filtre Butonları */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+              {GRUP_BUTTONS.map((gb) => {
+                const isActive = grupFiltresi === gb.key;
+                return (
+                  <button
+                    key={gb.label}
+                    onClick={() => setGrupFiltresi(isActive ? null : gb.key)}
+                    style={{
+                      padding: "5px 10px",
+                      fontSize: 11,
+                      fontWeight: isActive ? 700 : 500,
+                      border: isActive ? `2px solid ${gb.color}` : `1.5px solid ${GRAY200}`,
+                      borderRadius: 20,
+                      background: isActive ? `${gb.color}18` : "white",
+                      color: isActive ? gb.color : GRAY600,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {gb.label}
+                  </button>
+                );
+              })}
+            </div>
             {(durumFiltresi || grupFiltresi) && (
               <button
                 onClick={() => { setDurumFiltresi(null); setGrupFiltresi(null); }}
-                style={{ marginTop: 6, width: "100%", padding: "5px 10px", fontSize: 11, fontWeight: 600, border: `1px solid ${GRAY200}`, borderRadius: 7, background: GRAY100, color: GRAY600, cursor: "pointer" }}
+                style={{ marginTop: 4, width: "100%", padding: "5px 10px", fontSize: 11, fontWeight: 600, border: `1px solid ${GRAY200}`, borderRadius: 7, background: GRAY100, color: GRAY600, cursor: "pointer" }}
               >
                 ✕ Filtreleri Temizle
               </button>
@@ -753,7 +738,7 @@ export default function IsletmeSezlongPage() {
                           <div
                             key={no}
                             style={{
-                              opacity: durumSoluk ? 0.2 : 1,
+                              opacity: durumSoluk ? 0.3 : 1,
                               transition: "opacity 0.2s",
                               pointerEvents: (durumSoluk || grupGizli) ? "none" : "auto",
                             }}
