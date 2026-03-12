@@ -72,6 +72,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; color: string } | null>(null);
   const [sifre, setSifre] = useState("MyL2026beach");
+  const [komisyonSec, setKomisyonSec] = useState("%15 Standart");
+  const [ozelKomisyon, setOzelKomisyon] = useState("");
 
   const showToast = useCallback((msg: string, color: string = GREEN) => {
     setToast({ msg, color });
@@ -139,14 +141,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* MODAL */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={(e) => e.target === e.currentTarget && setModalOpen(false)}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={(e) => { if (e.target === e.currentTarget) { setModalOpen(false); setKomisyonSec("%15 Standart"); setOzelKomisyon(""); } }}>
           <div style={{ background: "white", borderRadius: 16, width: 680, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: "18px 24px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "white", zIndex: 10 }}>
               <div>
                 <h2 style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>➕ Yeni Tesis Ekle</h2>
                 <p style={{ fontSize: 11, color: GRAY400, marginTop: 2 }}>Bilgileri siz doldurun, işletme sonradan tamamlayabilir</p>
               </div>
-              <button onClick={() => setModalOpen(false)} style={{ background: GRAY100, border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer" }}>✕</button>
+              <button onClick={() => { setModalOpen(false); setKomisyonSec("%15 Standart"); setOzelKomisyon(""); }} style={{ background: GRAY100, border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer" }}>✕</button>
             </div>
             <div style={{ padding: "20px 24px" }}>
               <div style={{ marginBottom: 20 }}>
@@ -171,7 +173,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Toplam Şezlong</label><input type="number" placeholder="örn: 80" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} /></div>
                   <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>İşletme Modu</label><select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}><option>Ön Ödemeli Bakiye Sistemi</option><option>Sadece Şezlong Kiralama</option></select></div>
-                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Komisyon Oranı</label><select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}><option>%15 Standart</option><option>%12 Premium Partner</option><option>%10 Özel Anlaşma</option></select></div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Komisyon Oranı</label>
+                    <select value={komisyonSec} onChange={e => setKomisyonSec(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
+                      <option>%15 Standart</option>
+                      <option>%12 Premium Partner</option>
+                      <option>%10 Özel Anlaşma</option>
+                      <option value="ozel">✏️ Özel Oran Gir</option>
+                    </select>
+                    {komisyonSec === "ozel" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                        <span style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap" }}>Özel oran:</span>
+                        <input
+                          type="number" min={0} max={50} value={ozelKomisyon}
+                          onChange={e => setOzelKomisyon(e.target.value.replace(/[^0-9.]/g, ""))}
+                          placeholder="örn: 8"
+                          style={{ width: 80, padding: "7px 10px", border: `1.5px solid ${ORANGE}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "center" }}
+                        />
+                        <span style={{ fontSize: 12, color: "#475569" }}>%</span>
+                        {ozelKomisyon && <span style={{ fontSize: 11, color: ORANGE, fontWeight: 600 }}>→ %{ozelKomisyon} uygulanacak</span>}
+                      </div>
+                    )}
+                  </div>
                   <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Abonelik Paketi</label><select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}><option>Başlangıç 990 TL/ay</option><option>Büyüme 2.490 TL/ay</option><option>Kurumsal 4.990 TL/ay</option></select></div>
                 </div>
               </div>
@@ -182,7 +205,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
             <div style={{ padding: "14px 24px", borderTop: `1px solid ${GRAY100}`, display: "flex", justifyContent: "flex-end", gap: 8, position: "sticky", bottom: 0, background: "white" }}>
-              <button onClick={() => setModalOpen(false)} style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={() => { setModalOpen(false); setKomisyonSec("%15 Standart"); setOzelKomisyon(""); }} style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
               <button style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Taslak Kaydet</button>
               <button onClick={() => { setModalOpen(false); showToast("Tesis oluşturuldu! Erişim bilgileri e-posta ile gönderildi.", ORANGE); }} style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>✓ Tesis Oluştur ve Paneli Aç</button>
             </div>

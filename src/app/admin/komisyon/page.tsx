@@ -85,8 +85,8 @@ export default function AdminKomisyonPage() {
   const isletmeAmt = akisTutar - mlBrutAmt;
 
   function saveOranlar() {
-    const iy = parseFloat(iyzicoTmp) || iyzicoOranG;
-    const ml = parseFloat(mlTmp) || mlBrutOranG;
+    const iyP = parseFloat(iyzicoTmp); const iy = isNaN(iyP) || iyP < 0 ? 0 : iyP;
+    const mlP = parseFloat(mlTmp);     const ml = isNaN(mlP) || mlP < 0 ? 0 : mlP;
     setIyzicoOranG(iy); setMlBrutOranG(ml);
     setIyzicoEdit(false); setMlEdit(false);
     setOranDirty(false);
@@ -150,7 +150,7 @@ export default function AdminKomisyonPage() {
         {/* Tutar input */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, background: GRAY50, borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
           <label style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>Müşteri Ödeme Tutarı:</label>
-          <input type="number" value={akisTutar} onChange={e => setAkisTutar(Number(e.target.value) || 0)} style={{ padding: "6px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 14, fontWeight: 800, color: BLUE, width: 120 }} />
+          <input type="number" min={0} value={akisTutar} onChange={e => { const v = Number(e.target.value); setAkisTutar(v < 0 ? 0 : v); }} style={{ padding: "6px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 14, fontWeight: 800, color: BLUE, width: 120 }} />
           <span style={{ fontSize: 11, color: ORANGE, fontStyle: "italic" }}>← Şezlong kirası tutarını gir</span>
         </div>
 
@@ -174,9 +174,9 @@ export default function AdminKomisyonPage() {
             <div style={{ fontSize: 10, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
               {iyzicoEdit ? (
                 <input
-                  type="number" value={iyzicoTmp}
-                  onChange={e => { setIyzicoTmp(e.target.value); setOranDirty(true); }}
-                  onBlur={() => { setIyzicoOranG(parseFloat(iyzicoTmp) || iyzicoOranG); }}
+                  type="number" min={0} max={50} value={iyzicoTmp}
+                  onChange={e => { const v = e.target.value; setIyzicoTmp(v); setOranDirty(true); }}
+                  onBlur={() => { const v = parseFloat(iyzicoTmp); setIyzicoOranG(isNaN(v) || v < 0 ? 0 : v); }}
                   autoFocus style={{ ...inlineInput, color: RED, borderColor: RED }}
                 />
               ) : (
@@ -200,9 +200,9 @@ export default function AdminKomisyonPage() {
             <div style={{ fontSize: 10, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 3, flexWrap: "wrap" }}>
               {mlEdit ? (
                 <input
-                  type="number" value={mlTmp}
-                  onChange={e => { setMlTmp(e.target.value); setOranDirty(true); }}
-                  onBlur={() => { setMlBrutOranG(parseFloat(mlTmp) || mlBrutOranG); }}
+                  type="number" min={0} max={50} value={mlTmp}
+                  onChange={e => { const v = e.target.value; setMlTmp(v); setOranDirty(true); }}
+                  onBlur={() => { const v = parseFloat(mlTmp); setMlBrutOranG(isNaN(v) || v < 0 ? 0 : v); }}
                   autoFocus style={{ ...inlineInput, color: GREEN, borderColor: GREEN }}
                 />
               ) : (
