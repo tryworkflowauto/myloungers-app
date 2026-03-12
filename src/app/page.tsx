@@ -881,7 +881,7 @@ export default function Home() {
             </div>
           </div>
           <div className="how-cta">
-            <button type="button" className="how-cta-btn" id="how-cta-btn">🔍 Tesis Aramaya Başla</button>
+            <a href="/hotel/slug" className="how-cta-btn" id="how-cta-btn">🔍 Tesis Aramaya Başla</a>
             <p className="how-cta-sub">Ücretsiz üyelik · Kredi kartı gerekmez</p>
           </div>
         </div>
@@ -900,7 +900,7 @@ export default function Home() {
             <li id="plan-f4">Garson çağırma ve sipariş</li>
           </ul>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <button type="button" className="btn-solid" id="plan-btn1">Tesis planını gör →</button>
+            <a href="/hotel/slug" className="btn-solid" id="plan-btn1">Tesis planını gör →</a>
             <button type="button" className="btn-ghost" id="plan-btn2">Daha fazla bilgi</button>
           </div>
         </div>
