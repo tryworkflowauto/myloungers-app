@@ -42,7 +42,7 @@ export default function IsletmeSidebar() {
   return (
     <aside
       className="fixed left-0 top-0 z-[100] flex flex-col min-h-screen"
-      style={{ width: 220, background: NAVY }}
+      style={{ width: 260, background: NAVY }}
     >
       {/* Logo bölümü */}
       <div className="px-5 pt-5 pb-4 border-b border-white/10">
@@ -54,7 +54,7 @@ export default function IsletmeSidebar() {
             🏖️
           </div>
           <div>
-            <div className="text-[13px] font-extrabold text-white leading-tight">MyLoungers</div>
+            <div className="text-[13px] font-extrabold text-white leading-tight uppercase">MY LOUNGERS</div>
             <div className="text-[10px] leading-tight" style={{ color: TEAL }}>İşletme Paneli</div>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function IsletmeSidebar() {
       >
         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: GREEN }} />
         <span className="text-[12px] font-semibold text-white flex-1">Zuzuu Beach Hotel</span>
-        <span className="text-white/70 text-xs">▾</span>
+        <span className="text-white/80 text-sm flex-shrink-0">▾</span>
       </div>
 
       {/* Nav */}
@@ -75,8 +75,10 @@ export default function IsletmeSidebar() {
         {MENU_SECTIONS.map((section) => (
           <div key={section.title} className="mb-1">
             <div
-              className="px-4 pt-4 pb-1.5"
               style={{
+                paddingTop: 16,
+                paddingBottom: 6,
+                paddingLeft: 16,
                 fontSize: 9,
                 fontWeight: 700,
                 color: "#6B7280",
@@ -99,6 +101,7 @@ export default function IsletmeSidebar() {
                       className="flex items-center gap-2.5 relative"
                       style={{
                         padding: "10px 16px",
+                        minHeight: 42,
                         background: isActive ? "rgba(10,186,181,0.15)" : undefined,
                         borderLeft: isActive ? `3px solid ${TEAL}` : "3px solid transparent",
                       }}
@@ -114,7 +117,8 @@ export default function IsletmeSidebar() {
                       }}
                     >
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[15px] flex-shrink-0"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ fontSize: 16 }}
                         style={{
                           background: isActive ? "rgba(10,186,181,0.2)" : "transparent",
                         }}
@@ -122,7 +126,8 @@ export default function IsletmeSidebar() {
                         {item.icon}
                       </div>
                       <span
-                        className="text-[13px] font-medium flex-1"
+                        className="font-medium flex-1"
+                        style={{ fontSize: 13 }}
                         style={{ color: isActive ? TEAL : "#D1D5DB" }}
                       >
                         {item.label}
@@ -130,7 +135,7 @@ export default function IsletmeSidebar() {
                       {item.badge != null && (
                         <span
                           className="text-[10px] font-bold px-1.5 py-0.5 rounded-[10px] flex-shrink-0"
-                          style={{ background: ORANGE, color: "white" }}
+                          style={{ background: "#F5821F", color: "white" }}
                         >
                           {item.badge}
                         </span>
