@@ -116,7 +116,7 @@ export default function IsletmeSezonPage() {
   const [seciliSezon, setSeciliSezon] = useState("erken");
 
   // Genel Ayarlar (controlled)
-  const [genelAyarlar, setGA] = useState({ minRezSure: 2, erkenIndirim: 10, grupBonus: 15, sonDakikaToggle: true, sonDakikaPct: 20, iptalPolitika: "24 saat öncesine kadar tam iade" });
+  const [genelAyarlar, setGA] = useState({ minRezSure: 2, erkenIndirim: 10, grupBonus: 15, sonDakikaToggle: true, sonDakikaPct: 20, iptalPolitika: "24 saat öncesine kadar tam iade", ozelSaat: 6 });
   const setGAf = <K extends keyof typeof genelAyarlar>(k: K, v: typeof genelAyarlar[K]) => setGA(p => ({ ...p, [k]: v }));
 
   // Sezon modal
@@ -313,14 +313,31 @@ export default function IsletmeSezonPage() {
                 </div>
               </div>
               {/* İptal Politikası */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
-                <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>İptal Politikası</div><div style={{ fontSize: 11, color: GRAY400 }}>Rezervasyon iptalinde iade süresi</div></div>
-                <select value={genelAyarlar.iptalPolitika} onChange={(e) => setGAf("iptalPolitika", e.target.value)} style={{ padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
-                  <option>24 saat öncesine kadar tam iade</option>
-                  <option>48 saat öncesine kadar tam iade</option>
-                  <option>İade yok</option>
-                  <option>%50 iade</option>
-                </select>
+              <div style={{ padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>İptal Politikası</div><div style={{ fontSize: 11, color: GRAY400 }}>Rezervasyon iptalinde iade süresi</div></div>
+                  <select value={genelAyarlar.iptalPolitika} onChange={(e) => setGAf("iptalPolitika", e.target.value)} style={{ padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
+                    <option>24 saat öncesine kadar tam iade</option>
+                    <option>48 saat öncesine kadar tam iade</option>
+                    <option>İade yok</option>
+                    <option>%50 iade</option>
+                    <option value="ozel">✏️ Özel Süre Belirle</option>
+                  </select>
+                </div>
+                {genelAyarlar.iptalPolitika === "ozel" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${GRAY200}` }}>
+                    <span style={{ fontSize: 12, color: GRAY600, whiteSpace: "nowrap" }}>İade süresi:</span>
+                    <input
+                      type="number"
+                      value={genelAyarlar.ozelSaat}
+                      onChange={(e) => setGAf("ozelSaat", Math.min(168, Math.max(1, Number(e.target.value))))}
+                      min={1} max={168}
+                      style={{ width: 70, padding: "7px 10px", border: `1.5px solid ${TEAL}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "center" }}
+                    />
+                    <span style={{ fontSize: 12, color: GRAY600, whiteSpace: "nowrap" }}>saat öncesine kadar tam iade</span>
+                    <span style={{ marginLeft: "auto", fontSize: 10, color: GRAY400 }}>1 – 168 saat arası</span>
+                  </div>
+                )}
               </div>
               <button onClick={kaydetDegisiklikler} style={{ padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer", alignSelf: "flex-end" }}>💾 Kaydet</button>
             </div>
