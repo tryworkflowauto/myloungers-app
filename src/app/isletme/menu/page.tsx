@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -15,47 +15,74 @@ const GREEN = "#10B981";
 const RED = "#EF4444";
 const ORANGE = "#F5821F";
 
-// Mock data - Kategoriler
-const KATEGORILER = [
-  { id: "tumu", icon: "📋", name: "Tümü", sub: "Tüm ürünler", count: 42 },
-  { id: "soguk", icon: "🥤", name: "Soğuk İçecekler", sub: "8 ürün", count: 8 },
-  { id: "sicak", icon: "☕", name: "Sıcak İçecekler", sub: "5 ürün", count: 5 },
-  { id: "alkol", icon: "🍹", name: "Alkollü İçecekler", sub: "10 ürün", count: 10 },
-  { id: "ana", icon: "🍽️", name: "Ana Yemekler", sub: "9 ürün", count: 9 },
-  { id: "atistirma", icon: "🍟", name: "Atıştırmalık", sub: "7 ürün", count: 7 },
-  { id: "tatli", icon: "🍦", name: "Tatlılar", sub: "3 ürün", count: 3 },
+// ── Types ──────────────────────────────────────────────────────────────────
+type Urun = {
+  id: string;
+  icon: string;
+  badges: string[];
+  stok: boolean;
+  name: string;
+  desc: string;
+  price: string;
+  priceNum: number;
+  birim: string;
+  aktif: boolean;
+  kategori: string;
+  descStyle?: { color: string; fontWeight: number };
+  imgBg?: string;
+};
+
+type KategoriItem = {
+  id: string;
+  icon: string;
+  name: string;
+};
+
+// ── Mock Data ──────────────────────────────────────────────────────────────
+const INIT_KATEGORILER: KategoriItem[] = [
+  { id: "tumu", icon: "📋", name: "Tümü" },
+  { id: "soguk", icon: "🥤", name: "Soğuk İçecekler" },
+  { id: "sicak", icon: "☕", name: "Sıcak İçecekler" },
+  { id: "alkol", icon: "🍹", name: "Alkollü İçecekler" },
+  { id: "ana", icon: "🍽️", name: "Ana Yemekler" },
+  { id: "atistirma", icon: "🍟", name: "Atıştırmalık" },
+  { id: "tatli", icon: "🍦", name: "Tatlılar" },
 ];
 
-// Mock data - Ürünler
-const URUNLER: { icon: string; badges: string[]; stok: boolean; name: string; desc: string; price: string; birim: string; aktif: boolean; descStyle?: { color: string; fontWeight: number }; imgBg?: string }[] = [
-  { icon: "🍹", badges: ["populer"], stok: true, name: "Mojito", desc: "Nane, limon, soda ve beyaz rom ile hazırlanır", price: "₺120", birim: "/ adet", aktif: true },
-  { icon: "🍋", badges: ["yeni"], stok: true, name: "Limonata", desc: "Taze sıkılmış limon, şeker, nane", price: "₺45", birim: "/ adet", aktif: true },
-  { icon: "🐟", badges: ["populer"], stok: true, name: "Izgara Levrek", desc: "Taze levrek, yanında salata ve limon", price: "₺150", birim: "/ adet", aktif: true },
-  { icon: "🍷", badges: ["alkol"], stok: true, name: "Rosé Şarap", desc: "Yerli rosé şarap, bardak veya şişe", price: "₺180", birim: "/ bardak", aktif: true },
-  { icon: "🍟", badges: [], stok: true, name: "Nachos", desc: "Cips, salsa sos, guacamole ile", price: "₺65", birim: "/ porsiyon", aktif: true },
-  { icon: "☕", badges: [], stok: false, name: "Türk Kahvesi", desc: "⚠️ Stok Yok", descStyle: { color: RED, fontWeight: 600 }, imgBg: "#F1F5F9", price: "₺35", birim: "/ fincan", aktif: false },
-  { icon: "🍦", badges: [], stok: true, name: "Dondurma", desc: "3 top dondurma, seçimli tat", price: "₺55", birim: "/ porsiyon", aktif: true },
-  { icon: "🥗", badges: [], stok: true, name: "Mevsim Salatası", desc: "Taze mevsim sebzeleri, zeytinyağı", price: "₺70", birim: "/ porsiyon", aktif: true },
-  { icon: "🍺", badges: ["alkol"], stok: true, name: "Bira", desc: "Efes, Tuborg — soğuk şişe", price: "₺85", birim: "/ şişe", aktif: true },
+const INIT_URUNLER: Urun[] = [
+  { id: "U1", icon: "🍹", badges: ["populer"], stok: true, name: "Mojito", desc: "Nane, limon, soda ve beyaz rom ile hazırlanır", price: "₺120", priceNum: 120, birim: "/ adet", aktif: true, kategori: "alkol" },
+  { id: "U2", icon: "🍋", badges: ["yeni"], stok: true, name: "Limonata", desc: "Taze sıkılmış limon, şeker, nane", price: "₺45", priceNum: 45, birim: "/ adet", aktif: true, kategori: "soguk" },
+  { id: "U3", icon: "🐟", badges: ["populer"], stok: true, name: "Izgara Levrek", desc: "Taze levrek, yanında salata ve limon", price: "₺150", priceNum: 150, birim: "/ adet", aktif: true, kategori: "ana" },
+  { id: "U4", icon: "🍷", badges: ["alkol"], stok: true, name: "Rosé Şarap", desc: "Yerli rosé şarap, bardak veya şişe", price: "₺180", priceNum: 180, birim: "/ bardak", aktif: true, kategori: "alkol" },
+  { id: "U5", icon: "🍟", badges: [], stok: true, name: "Nachos", desc: "Cips, salsa sos, guacamole ile", price: "₺65", priceNum: 65, birim: "/ porsiyon", aktif: true, kategori: "atistirma" },
+  { id: "U6", icon: "☕", badges: [], stok: false, name: "Türk Kahvesi", desc: "⚠️ Stok Yok", descStyle: { color: RED, fontWeight: 600 }, imgBg: "#F1F5F9", price: "₺35", priceNum: 35, birim: "/ fincan", aktif: false, kategori: "sicak" },
+  { id: "U7", icon: "🍦", badges: [], stok: true, name: "Dondurma", desc: "3 top dondurma, seçimli tat", price: "₺55", priceNum: 55, birim: "/ porsiyon", aktif: true, kategori: "tatli" },
+  { id: "U8", icon: "🥗", badges: [], stok: true, name: "Mevsim Salatası", desc: "Taze mevsim sebzeleri, zeytinyağı", price: "₺70", priceNum: 70, birim: "/ porsiyon", aktif: true, kategori: "ana" },
+  { id: "U9", icon: "🍺", badges: ["alkol"], stok: true, name: "Bira", desc: "Efes, Tuborg — soğuk şişe", price: "₺85", priceNum: 85, birim: "/ şişe", aktif: true, kategori: "alkol" },
 ];
 
 const EMOJI_OPTS_KAT = ["🥤", "☕", "🍹", "🍺", "🍽️", "🐟", "🥗", "🍟", "🍦", "🍕", "🍰", "🧃"];
-const EMOJI_OPTS_URUN = ["🍹", "🥤", "☕", "🍺", "🍷", "🍽️", "🐟", "🥗", "🍟", "🍦", "🍕", "🍔", "🥙", "🍰", "🥐", "🧃"];
+const EMOJI_OPTS_URUN = ["🍹", "🥤", "☕", "🍺", "🍷", "🍽️", "🐟", "🥗", "🍟", "🍦", "🍕", "🍔", "🥙", "🍰", "🥐", "🧃", "🍋", "🧉", "🥂"];
 
-function ProductCard({ u, onEdit }: { u: typeof URUNLER[0]; onEdit: () => void }) {
-  const [aktif, setAktif] = useState(u.aktif);
+const BIRIM_OPTS = ["adet", "porsiyon", "bardak", "şişe", "fincan", "dilim"];
+const BADGE_OPTS = [{ val: "", label: "Etiket Yok" }, { val: "populer", label: "⭐ Popüler" }, { val: "yeni", label: "🆕 Yeni" }, { val: "alkol", label: "🔞 Alkollü" }];
 
+const emptyUrunForm = { name: "", desc: "", icon: "🍹", kategori: "soguk", price: "", birim: "adet", badge: "", aktif: true };
+const emptyCatForm = { name: "", icon: "🥤" };
+
+// ── ProductCard ────────────────────────────────────────────────────────────
+function ProductCard({
+  u, onEdit, onSil, onToggle,
+}: {
+  u: Urun;
+  onEdit: () => void;
+  onSil: () => void;
+  onToggle: () => void;
+}) {
   return (
     <div
       className="menu-product-card"
-      style={{
-        background: "white",
-        borderRadius: 14,
-        border: `1.5px solid ${GRAY200}`,
-        overflow: "hidden",
-        transition: "all 0.2s",
-        opacity: aktif ? 1 : 0.6,
-      }}
+      style={{ background: "white", borderRadius: 14, border: `1.5px solid ${GRAY200}`, overflow: "hidden", transition: "all 0.2s", opacity: u.aktif ? 1 : 0.6 }}
     >
       <div style={{ height: 130, background: u.imgBg ?? GRAY100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, position: "relative" }}>
         {u.icon}
@@ -67,20 +94,7 @@ function ProductCard({ u, onEdit }: { u: typeof URUNLER[0]; onEdit: () => void }
         <div style={{ position: "absolute", top: 8, right: 8 }}>
           <button
             title={u.stok ? "Stokta var" : "Stok yok"}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: u.stok ? "#DCFCE7" : "#FEE2E2",
-              color: u.stok ? "#16A34A" : RED,
-            }}
+            style={{ width: 28, height: 28, borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", background: u.stok ? "#DCFCE7" : "#FEE2E2", color: u.stok ? "#16A34A" : RED }}
           >
             {u.stok ? "✓" : "✗"}
           </button>
@@ -90,63 +104,193 @@ function ProductCard({ u, onEdit }: { u: typeof URUNLER[0]; onEdit: () => void }
         <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{u.name}</div>
         <div style={{ fontSize: 11, color: GRAY400, marginBottom: 10, lineHeight: 1.4, ...u.descStyle }}>{u.desc}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>{u.price} <span style={{ fontSize: 10, color: GRAY400, fontWeight: 400 }}>{u.birim}</span></div>
-          <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer" }}>
-            <input type="checkbox" checked={aktif} onChange={(e) => setAktif(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-            <span
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: aktif ? TEAL : GRAY300,
-                borderRadius: 20,
-                transition: "0.3s",
-              }}
-            >
-              <span
-                style={{
-                  position: "absolute",
-                  width: 14,
-                  height: 14,
-                  left: 3,
-                  top: 3,
-                  background: "white",
-                  borderRadius: "50%",
-                  transition: "0.3s",
-                  transform: aktif ? "translateX(16px)" : "translateX(0)",
-                }}
-              />
+          <div style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>
+            {u.price} <span style={{ fontSize: 10, color: GRAY400, fontWeight: 400 }}>{u.birim}</span>
+          </div>
+          {/* Toggle */}
+          <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer" }} title={u.aktif ? "Pasife al" : "Aktive et"}>
+            <input type="checkbox" checked={u.aktif} onChange={onToggle} style={{ opacity: 0, width: 0, height: 0 }} />
+            <span style={{ position: "absolute", inset: 0, background: u.aktif ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+              <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: u.aktif ? "translateX(16px)" : "translateX(0)" }} />
             </span>
           </label>
         </div>
       </div>
       <div style={{ padding: "0 14px 12px", display: "flex", gap: 6 }}>
         <button className="menu-pc-action" onClick={onEdit} style={{ flex: 1, padding: 7, borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: GRAY800 }}>✏️ Düzenle</button>
-        <button className="menu-pc-action menu-pc-danger" style={{ flex: 1, padding: 7, borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: GRAY800 }}>🗑️ Sil</button>
+        <button className="menu-pc-action menu-pc-danger" onClick={onSil} style={{ flex: 1, padding: 7, borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: GRAY800 }}>🗑️ Sil</button>
       </div>
     </div>
   );
 }
 
+// ── Main Page ──────────────────────────────────────────────────────────────
 export default function IsletmeMenuPage() {
-  const [seciliKat, setSeciliKat] = useState("tumu");
-  const [urunModalOpen, setUrunModalOpen] = useState(false);
-  const [catModalOpen, setCatModalOpen] = useState(false);
-  const [seciliEmoji, setSeciliEmoji] = useState("🍹");
-  const [seciliCatEmoji, setSeciliCatEmoji] = useState("🥤");
+  const [urunler, setUrunler] = useState<Urun[]>(INIT_URUNLER);
+  const [kategoriler, setKategoriler] = useState<KategoriItem[]>(INIT_KATEGORILER);
 
-  const areaTitle = seciliKat === "tumu" ? "Tüm Ürünler" : KATEGORILER.find((k) => k.id === seciliKat)?.name ?? "Tüm Ürünler";
+  const [seciliKat, setSeciliKat] = useState("tumu");
+  const [aramaMetni, setAramaMetni] = useState("");
+  const [filtreDurum, setFiltreDurum] = useState("");
+  const [siralama, setSiralama] = useState("default");
+
+  // Modals
+  const [urunModalOpen, setUrunModalOpen] = useState(false);
+  const [editModal, setEditModal] = useState<Urun | null>(null);
+  const [silModal, setSilModal] = useState<Urun | null>(null);
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [onizlemeOpen, setOnizlemeOpen] = useState(false);
+
+  // Forms
+  const [yeniForm, setYeniForm] = useState(emptyUrunForm);
+  const [editForm, setEditForm] = useState(emptyUrunForm);
+  const [catForm, setCatForm] = useState(emptyCatForm);
+
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  // ESC closes all modals
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setUrunModalOpen(false); setEditModal(null);
+        setSilModal(null); setCatModalOpen(false); setOnizlemeOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // ── Actions ────────────────────────────────────────────────────────────
+  function toggleAktif(id: string) {
+    setUrunler((prev) =>
+      prev.map((u) => {
+        if (u.id !== id) return u;
+        const next = !u.aktif;
+        showToast(next ? `✅ ${u.name} aktif yapıldı` : `⏸️ ${u.name} pasif yapıldı`);
+        return { ...u, aktif: next };
+      })
+    );
+  }
+
+  function openEdit(u: Urun) {
+    setEditForm({ name: u.name, desc: u.desc, icon: u.icon, kategori: u.kategori, price: String(u.priceNum), birim: u.birim.replace("/ ", ""), badge: u.badges[0] ?? "", aktif: u.aktif });
+    setEditModal(u);
+  }
+
+  function saveEdit() {
+    if (!editModal) return;
+    const priceNum = Number(editForm.price) || 0;
+    setUrunler((prev) =>
+      prev.map((u) =>
+        u.id === editModal.id
+          ? { ...u, name: editForm.name, desc: editForm.desc, icon: editForm.icon, kategori: editForm.kategori, price: `₺${editForm.price}`, priceNum, birim: `/ ${editForm.birim}`, badges: editForm.badge ? [editForm.badge] : [], aktif: editForm.aktif }
+          : u
+      )
+    );
+    setEditModal(null);
+    showToast(`✅ ${editForm.name} güncellendi`);
+  }
+
+  function saveUrun() {
+    if (!yeniForm.name) return;
+    const priceNum = Number(yeniForm.price) || 0;
+    const newUrun: Urun = {
+      id: "U" + Date.now(),
+      icon: yeniForm.icon,
+      badges: yeniForm.badge ? [yeniForm.badge] : [],
+      stok: true,
+      name: yeniForm.name,
+      desc: yeniForm.desc,
+      price: `₺${yeniForm.price}`,
+      priceNum,
+      birim: `/ ${yeniForm.birim}`,
+      aktif: yeniForm.aktif,
+      kategori: yeniForm.kategori,
+    };
+    setUrunler((prev) => [newUrun, ...prev]);
+    setYeniForm(emptyUrunForm);
+    setUrunModalOpen(false);
+    showToast(`✅ ${yeniForm.name} menüye eklendi`);
+  }
+
+  function silUrun() {
+    if (!silModal) return;
+    setUrunler((prev) => prev.filter((u) => u.id !== silModal.id));
+    showToast(`🗑️ ${silModal.name} silindi`);
+    setSilModal(null);
+  }
+
+  function saveKategori() {
+    if (!catForm.name) return;
+    const newKat: KategoriItem = { id: "kat_" + Date.now(), icon: catForm.icon, name: catForm.name };
+    setKategoriler((prev) => [...prev, newKat]);
+    setCatForm(emptyCatForm);
+    setCatModalOpen(false);
+    showToast(`✅ "${catForm.name}" kategorisi eklendi`);
+  }
+
+  // ── Filtering & Sorting ────────────────────────────────────────────────
+  const filtered = urunler
+    .filter((u) => {
+      if (seciliKat !== "tumu" && u.kategori !== seciliKat) return false;
+      if (aramaMetni && !u.name.toLowerCase().includes(aramaMetni.toLowerCase())) return false;
+      if (filtreDurum === "aktif" && !u.aktif) return false;
+      if (filtreDurum === "pasif" && u.aktif) return false;
+      if (filtreDurum === "stok" && u.stok) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (siralama === "fiyat_asc") return a.priceNum - b.priceNum;
+      if (siralama === "fiyat_desc") return b.priceNum - a.priceNum;
+      if (siralama === "isim") return a.name.localeCompare(b.name, "tr");
+      if (siralama === "kategori") return a.kategori.localeCompare(b.kategori);
+      return 0;
+    });
+
+  const aktifSayisi = urunler.filter((u) => u.aktif).length;
+  const pasifSayisi = urunler.filter((u) => !u.aktif).length;
+  const stokYokSayisi = urunler.filter((u) => !u.stok).length;
+
+  // Category counts
+  const katCounts: Record<string, number> = { tumu: urunler.length };
+  urunler.forEach((u) => { katCounts[u.kategori] = (katCounts[u.kategori] ?? 0) + 1; });
+
+  const areaTitle = seciliKat === "tumu" ? "Tüm Ürünler" : kategoriler.find((k) => k.id === seciliKat)?.name ?? "Tüm Ürünler";
+
+  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" };
+  const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 };
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800, display: "flex", flexDirection: "column", minHeight: "100%" }}>
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 24, background: NAVY, color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600, zIndex: 999, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+          {toast}
+        </div>
+      )}
+
       {/* TOPBAR */}
       <header style={{ background: "white", borderBottom: `1px solid ${GRAY200}`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Menü Yönetimi</h1>
-          <span style={{ fontSize: 11, color: GRAY400 }}>6 kategori • 42 ürün • 38 aktif</span>
+          <span style={{ fontSize: 11, color: GRAY400 }}>
+            {kategoriler.length - 1} kategori • {urunler.length} ürün • {aktifSayisi} aktif
+          </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>👁️ Müşteri Önizleme</button>
-          <button onClick={() => setUrunModalOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>➕ Ürün Ekle</button>
+          <button onClick={() => setOnizlemeOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>
+            👁️ Müşteri Önizleme
+          </button>
+          <button onClick={() => { setYeniForm(emptyUrunForm); setUrunModalOpen(true); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>
+            ➕ Ürün Ekle
+          </button>
         </div>
       </header>
 
@@ -155,44 +299,24 @@ export default function IsletmeMenuPage() {
         <div style={{ width: 220, background: "white", borderRight: `1px solid ${GRAY200}`, overflowY: "auto", flexShrink: 0, padding: 16 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Kategoriler</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 16 }}>
-            {KATEGORILER.map((k) => (
+            {kategoriler.map((k) => (
               <div
                 key={k.id}
                 onClick={() => setSeciliKat(k.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "9px 12px",
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  background: seciliKat === k.id ? "rgba(10,186,181,0.1)" : "transparent",
-                  border: seciliKat === k.id ? "1.5px solid rgba(10,186,181,0.3)" : "1.5px solid transparent",
-                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, cursor: "pointer", transition: "all 0.15s", background: seciliKat === k.id ? "rgba(10,186,181,0.1)" : "transparent", border: seciliKat === k.id ? "1.5px solid rgba(10,186,181,0.3)" : "1.5px solid transparent" }}
               >
                 <div style={{ fontSize: 18, width: 28, textAlign: "center" }}>{k.icon}</div>
                 <div style={{ flex: 1 }}>
                   <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: NAVY }}>{k.name}</strong>
-                  <span style={{ fontSize: 10, color: GRAY400 }}>{k.sub}</span>
+                  <span style={{ fontSize: 10, color: GRAY400 }}>{katCounts[k.id] ?? 0} ürün</span>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: TEAL }}>{k.count}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: TEAL }}>{katCounts[k.id] ?? 0}</span>
               </div>
             ))}
           </div>
           <button
-            onClick={() => setCatModalOpen(true)}
-            style={{
-              width: "100%",
-              padding: 9,
-              border: `1.5px dashed ${GRAY300}`,
-              borderRadius: 10,
-              background: "none",
-              cursor: "pointer",
-              fontSize: 12,
-              color: GRAY400,
-              transition: "all 0.15s",
-            }}
+            onClick={() => { setCatForm(emptyCatForm); setCatModalOpen(true); }}
+            style={{ width: "100%", padding: 9, border: `1.5px dashed ${GRAY300}`, borderRadius: 10, background: "none", cursor: "pointer", fontSize: 12, color: GRAY400, transition: "all 0.15s" }}
           >
             ➕ Kategori Ekle
           </button>
@@ -200,10 +324,10 @@ export default function IsletmeMenuPage() {
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${GRAY100}` }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Özet</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Aktif Ürün</span><span style={{ fontWeight: 700, color: GREEN }}>38</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Pasif Ürün</span><span style={{ fontWeight: 700, color: GRAY400 }}>4</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Stok Yok</span><span style={{ fontWeight: 700, color: RED }}>2</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Ort. Fiyat</span><span style={{ fontWeight: 700, color: NAVY }}>₺87</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Aktif Ürün</span><span style={{ fontWeight: 700, color: GREEN }}>{aktifSayisi}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Pasif Ürün</span><span style={{ fontWeight: 700, color: GRAY400 }}>{pasifSayisi}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Stok Yok</span><span style={{ fontWeight: 700, color: RED }}>{stokYokSayisi}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: GRAY600 }}>Toplam Ürün</span><span style={{ fontWeight: 700, color: NAVY }}>{urunler.length}</span></div>
             </div>
           </div>
         </div>
@@ -213,159 +337,196 @@ export default function IsletmeMenuPage() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <div>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: NAVY }}>{areaTitle}</h2>
-              <span style={{ fontSize: 12, color: GRAY400 }}>42 ürün listeleniyor</span>
+              <span style={{ fontSize: 12, color: GRAY400 }}>{filtered.length} ürün listeleniyor</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <select style={{ padding: "7px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
-                <option>Tümü</option>
-                <option>Aktif</option>
-                <option>Pasif</option>
-                <option>Stok Yok</option>
+              <select
+                value={filtreDurum}
+                onChange={(e) => setFiltreDurum(e.target.value)}
+                style={{ padding: "7px 10px", border: `1px solid ${filtreDurum ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 12 }}
+              >
+                <option value="">Tümü</option>
+                <option value="aktif">Aktif</option>
+                <option value="pasif">Pasif</option>
+                <option value="stok">Stok Yok</option>
               </select>
-              <select style={{ padding: "7px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
-                <option>Fiyata Göre ↕</option>
-                <option>Ada Göre A-Z</option>
-                <option>En Çok Satılan</option>
+              <select
+                value={siralama}
+                onChange={(e) => setSiralama(e.target.value)}
+                style={{ padding: "7px 10px", border: `1px solid ${siralama !== "default" ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 12 }}
+              >
+                <option value="default">Varsayılan Sıra</option>
+                <option value="fiyat_asc">Fiyata Göre ↑</option>
+                <option value="fiyat_desc">Fiyata Göre ↓</option>
+                <option value="isim">İsme Göre A-Z</option>
+                <option value="kategori">Kategoriye Göre</option>
               </select>
             </div>
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <input type="text" placeholder="🔍  Ürün adı ara..." style={{ flex: 1, width: "100%", padding: "9px 14px", border: `1px solid ${GRAY200}`, borderRadius: 10, fontSize: 12 }} />
+            <input
+              type="text"
+              value={aramaMetni}
+              onChange={(e) => setAramaMetni(e.target.value)}
+              placeholder="🔍  Ürün adı ara..."
+              style={{ width: "100%", padding: "9px 14px", border: `1px solid ${aramaMetni ? TEAL : GRAY200}`, borderRadius: 10, fontSize: 12, outline: "none", boxSizing: "border-box" }}
+            />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
-            {URUNLER.map((u, i) => (
-              <ProductCard key={i} u={u} onEdit={() => setUrunModalOpen(true)} />
-            ))}
-          </div>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: GRAY400 }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Ürün bulunamadı</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Filtreleri temizleyin veya yeni ürün ekleyin.</div>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
+              {filtered.map((u) => (
+                <ProductCard
+                  key={u.id} u={u}
+                  onToggle={() => toggleAktif(u.id)}
+                  onEdit={() => openEdit(u)}
+                  onSil={() => setSilModal(u)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* KATEGORİ EKLE MODAL */}
+      {/* ── KATEGORİ EKLE MODAL ──────────────────────────────────────────── */}
       {catModalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setCatModalOpen(false)}>
           <div style={{ background: "white", borderRadius: 16, padding: 24, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 20 }}>➕ Yeni Kategori</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>➕ Yeni Kategori</h3>
+              <button onClick={() => setCatModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
+            </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Kategori İkonu</label>
+              <label style={labelStyle}>Kategori İkonu</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {EMOJI_OPTS_KAT.map((e) => (
-                  <button key={e} type="button" onClick={() => setSeciliCatEmoji(e)} style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${seciliCatEmoji === e ? TEAL : GRAY200}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer", background: seciliCatEmoji === e ? "rgba(10,186,181,0.1)" : "transparent" }}>{e}</button>
+                  <button key={e} type="button" onClick={() => setCatForm((f) => ({ ...f, icon: e }))} style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${catForm.icon === e ? TEAL : GRAY200}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer", background: catForm.icon === e ? "rgba(10,186,181,0.1)" : "transparent" }}>{e}</button>
                 ))}
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Kategori Adı</label>
-              <input type="text" placeholder="örn: Smoothieler" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
+              <label style={labelStyle}>Kategori Adı *</label>
+              <input type="text" value={catForm.name} onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))} placeholder="örn: Smoothieler" style={inputStyle} />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
               <button onClick={() => setCatModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
-              <button onClick={() => setCatModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>✅ Ekle</button>
+              <button onClick={saveKategori} disabled={!catForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !catForm.name ? GRAY200 : TEAL, color: !catForm.name ? GRAY400 : "white", cursor: !catForm.name ? "not-allowed" : "pointer" }}>✅ Ekle</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ÜRÜN EKLE MODAL */}
+      {/* ── ÜRÜN EKLE MODAL ─────────────────────────────────────────────── */}
       {urunModalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setUrunModalOpen(false)}>
           <div style={{ background: "white", borderRadius: 16, padding: 24, width: 520, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 20 }}>➕ Yeni Ürün Ekle</h3>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Ürün İkonu (Emoji)</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {EMOJI_OPTS_URUN.map((e) => (
-                  <button key={e} type="button" onClick={() => setSeciliEmoji(e)} style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${seciliEmoji === e ? TEAL : GRAY200}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer", background: seciliEmoji === e ? "rgba(10,186,181,0.1)" : "transparent" }}>{e}</button>
-                ))}
-              </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>➕ Yeni Ürün Ekle</h3>
+              <button onClick={() => setUrunModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Ürün Adı</label>
-                <input type="text" placeholder="örn: Mojito" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Kategori</label>
-                <select style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}>
-                  <option>Soğuk İçecekler</option>
-                  <option>Sıcak İçecekler</option>
-                  <option>Alkollü İçecekler</option>
-                  <option>Ana Yemekler</option>
-                  <option>Atıştırmalık</option>
-                  <option>Tatlılar</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Açıklama</label>
-              <textarea rows={2} placeholder="Ürün hakkında kısa açıklama..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, resize: "vertical" }} />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Fiyat (₺)</label>
-                <input type="number" placeholder="örn: 120" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Birim</label>
-                <select style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}>
-                  <option>adet</option>
-                  <option>porsiyon</option>
-                  <option>bardak</option>
-                  <option>şişe</option>
-                  <option>fincan</option>
-                  <option>dilim</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Hazırlama Süresi (dk)</label>
-                <input type="number" placeholder="örn: 10" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Etiket</label>
-                <select style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}>
-                  <option>Etiket Yok</option>
-                  <option>⭐ Popüler</option>
-                  <option>🆕 Yeni</option>
-                  <option>🔞 Alkollü</option>
-                  <option>🌱 Vegan</option>
-                  <option>🌶️ Acılı</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Fotoğraf</label>
-              <div style={{ border: `2px dashed ${GRAY300}`, borderRadius: 12, padding: 24, textAlign: "center", cursor: "pointer", transition: "all 0.2s" }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
-                <p style={{ fontSize: 12, color: GRAY400 }}><strong style={{ color: TEAL }}>Fotoğraf yükle</strong> veya sürükle bırak</p>
-                <p style={{ fontSize: 12, color: GRAY400 }}>PNG, JPG — max 5MB</p>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: GRAY50, borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Aktif olarak yayınla</div>
-                <div style={{ fontSize: 11, color: GRAY400 }}>Müşteriler menüde görebilir</div>
-              </div>
-              <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer" }}>
-                <input type="checkbox" defaultChecked style={{ opacity: 0, width: 0, height: 0 }} />
-                <span style={{ position: "absolute", inset: 0, background: TEAL, borderRadius: 20 }}>
-                  <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transform: "translateX(16px)" }} />
-                </span>
-              </label>
-            </div>
+            <UrunForm form={yeniForm} setForm={setYeniForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} />
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setUrunModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
-              <button onClick={() => setUrunModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>✅ Ürünü Kaydet</button>
+              <button onClick={saveUrun} disabled={!yeniForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !yeniForm.name ? GRAY200 : TEAL, color: !yeniForm.name ? GRAY400 : "white", cursor: !yeniForm.name ? "not-allowed" : "pointer" }}>✅ Ürünü Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DÜZENLE MODAL ────────────────────────────────────────────────── */}
+      {editModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setEditModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 24, width: 520, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>✏️ Ürünü Düzenle — {editModal.name}</h3>
+              <button onClick={() => setEditModal(null)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
+            </div>
+
+            <UrunForm form={editForm} setForm={setEditForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} />
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setEditModal(null)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={saveEdit} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>💾 Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SİL ONAY MODAL ───────────────────────────────────────────────── */}
+      {silModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setSilModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>{silModal.icon}</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Ürünü Sil</h3>
+            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu işlem geri alınamaz.</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 24 }}>{silModal.name}</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setSilModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={silUrun} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️ Evet, Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MÜŞTERİ ÖNİZLEME MODAL ──────────────────────────────────────── */}
+      {onizlemeOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setOnizlemeOpen(false)}>
+          <div style={{ background: "white", borderRadius: 20, width: 480, maxWidth: "95vw", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.4)", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ background: `linear-gradient(135deg, ${NAVY}, #1e3a5f)`, padding: "20px 24px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>🏖️ MyLoungers Menü</div>
+                <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>Müşterinin gördüğü görünüm</div>
+              </div>
+              <button onClick={() => setOnizlemeOpen(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, color: "white", width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            </div>
+            {/* Body */}
+            <div style={{ overflowY: "auto", padding: "16px 20px" }}>
+              {kategoriler.filter((k) => k.id !== "tumu").map((kat) => {
+                const katUrunler = urunler.filter((u) => u.kategori === kat.id && u.aktif && u.stok);
+                if (katUrunler.length === 0) return null;
+                return (
+                  <div key={kat.id} style={{ marginBottom: 24 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: `2px solid ${GRAY100}` }}>
+                      <span style={{ fontSize: 22 }}>{kat.icon}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{kat.name}</span>
+                      <span style={{ fontSize: 11, color: GRAY400 }}>{katUrunler.length} ürün</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {katUrunler.map((u) => (
+                        <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: GRAY50, borderRadius: 12, border: `1px solid ${GRAY100}` }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 10, background: GRAY100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>{u.icon}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, display: "flex", alignItems: "center", gap: 6 }}>
+                              {u.name}
+                              {u.badges.includes("populer") && <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 10, background: TEAL, color: "white" }}>⭐ POP</span>}
+                              {u.badges.includes("yeni") && <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 10, background: ORANGE, color: "white" }}>🆕</span>}
+                              {u.badges.includes("alkol") && <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 10, background: "#7C3AED", color: "white" }}>🔞</span>}
+                            </div>
+                            <div style={{ fontSize: 11, color: GRAY400, marginTop: 2 }}>{u.desc}</div>
+                          </div>
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: TEAL }}>{u.price}</div>
+                            <div style={{ fontSize: 10, color: GRAY400 }}>{u.birim}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ textAlign: "center", padding: "12px 0", color: GRAY400, fontSize: 11 }}>
+                Sadece aktif ve stokta olan ürünler gösterilir
+              </div>
             </div>
           </div>
         </div>
@@ -379,5 +540,86 @@ export default function IsletmeMenuPage() {
         `,
       }} />
     </div>
+  );
+}
+
+// ── Shared form component (used in both add + edit modal) ─────────────────
+function UrunForm({
+  form, setForm, kategoriler, inputStyle, labelStyle,
+}: {
+  form: typeof emptyUrunForm;
+  setForm: React.Dispatch<React.SetStateAction<typeof emptyUrunForm>>;
+  kategoriler: KategoriItem[];
+  inputStyle: React.CSSProperties;
+  labelStyle: React.CSSProperties;
+}) {
+  const f = form;
+  const set = (key: string, val: string | boolean) => setForm((prev) => ({ ...prev, [key]: val }));
+
+  return (
+    <>
+      {/* Emoji */}
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle}>Ürün İkonu (Emoji)</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {EMOJI_OPTS_URUN.map((e) => (
+            <button key={e} type="button" onClick={() => set("icon", e)} style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${f.icon === e ? TEAL : GRAY200}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer", background: f.icon === e ? "rgba(10,186,181,0.1)" : "transparent" }}>{e}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+        <div>
+          <label style={labelStyle}>Ürün Adı *</label>
+          <input type="text" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="örn: Mojito" style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Kategori</label>
+          <select value={f.kategori} onChange={(e) => set("kategori", e.target.value)} style={inputStyle}>
+            {kategoriler.filter((k) => k.id !== "tumu").map((k) => (
+              <option key={k.id} value={k.id}>{k.icon} {k.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle}>Açıklama</label>
+        <textarea rows={2} value={f.desc} onChange={(e) => set("desc", e.target.value)} placeholder="Ürün hakkında kısa açıklama..." style={{ ...inputStyle, resize: "vertical" as const }} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+        <div>
+          <label style={labelStyle}>Fiyat (₺)</label>
+          <input type="number" value={f.price} onChange={(e) => set("price", e.target.value)} placeholder="örn: 120" style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Birim</label>
+          <select value={f.birim} onChange={(e) => set("birim", e.target.value)} style={inputStyle}>
+            {BIRIM_OPTS.map((b) => <option key={b}>{b}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle}>Etiket</label>
+        <select value={f.badge} onChange={(e) => set("badge", e.target.value)} style={inputStyle}>
+          {BADGE_OPTS.map((b) => <option key={b.val} value={b.val}>{b.label}</option>)}
+        </select>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: GRAY50, borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Aktif olarak yayınla</div>
+          <div style={{ fontSize: 11, color: GRAY400 }}>Müşteriler menüde görebilir</div>
+        </div>
+        <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer" }}>
+          <input type="checkbox" checked={f.aktif} onChange={(e) => set("aktif", e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+          <span style={{ position: "absolute", inset: 0, background: f.aktif ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+            <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: f.aktif ? "translateX(16px)" : "translateX(0)" }} />
+          </span>
+        </label>
+      </div>
+    </>
   );
 }
