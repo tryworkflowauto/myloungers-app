@@ -9,6 +9,7 @@ const ORANGE = "#F5821F";
 const GRAY100 = "#F1F5F9";
 const GRAY200 = "#E2E8F0";
 const GRAY400 = "#94A3B8";
+const GRAY600 = "#475569";
 const GRAY800 = "#1E293B";
 const GREEN = "#10B981";
 const NAVY = "#0A1628";
