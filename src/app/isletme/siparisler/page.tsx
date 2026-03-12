@@ -32,8 +32,8 @@ const HAZIRLANIYOR = [
 
 // Mock data - Teslim Edildi (son 2)
 const TESLIM_EDILDI = [
-  { sezlong: "S8", grup: "Silver", kisi: 1, musteri: "Ali K.", timer: "✓ 9 dk", timerClass: "ok", saat: "13:38", bg: "#10B981", urunler: [{ adet: 2, ad: "Soğuk Kahve", fiyat: "₺90" }], garson: { inits: "MG", name: "Mehmet G. • 13:29→13:38", color: TEAL }, tutar: "₺90", opacity: 0.75 },
-  { sezlong: "G1", grup: "Gold", kisi: 1, musteri: "Mehmet K.", timer: "✓ 7 dk", timerClass: "ok", saat: "13:22", bg: "#8B5CF6", urunler: [{ adet: 1, ad: "Izgara Levrek", fiyat: "₺150" }, { adet: 1, ad: "Rosé Şarap", fiyat: "₺180" }], garson: { inits: "AT", name: "Ayşe T. • 13:15→13:22", color: ORANGE }, tutar: "₺330", opacity: 0.75 },
+  { sezlong: "S8", grup: "Silver", kisi: 1, musteri: "Ali K.", timer: "✓ 9 dk", timerClass: "ok", saat: "13:38", bg: "#10B981", urunler: [{ adet: 2, ad: "Soğuk Kahve", fiyat: "₺90" }], garson: { inits: "MG", name: "Mehmet G. • 13:29→13:38", color: TEAL }, tutar: "₺90", opacity: 0.75, isYeni: false },
+  { sezlong: "G1", grup: "Gold", kisi: 1, musteri: "Mehmet K.", timer: "✓ 7 dk", timerClass: "ok", saat: "13:22", bg: "#8B5CF6", urunler: [{ adet: 1, ad: "Izgara Levrek", fiyat: "₺150" }, { adet: 1, ad: "Rosé Şarap", fiyat: "₺180" }], garson: { inits: "AT", name: "Ayşe T. • 13:15→13:22", color: ORANGE }, tutar: "₺330", opacity: 0.75, isYeni: false },
 ];
 
 // Mock data - Geçmiş
