@@ -5,21 +5,27 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import "./arama.css";
+import { supabase } from "@/lib/supabase";
 
 const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 
-const CARDS = [
-  { id:1, name:"Zuzuu Beach Hotel", score:9.6, cat:"Beach Club", stars:4, rev:128, loc:"Bodrum, Muğla", dist:"2.4", feats:["Özel İskele","Havuz","Beach Bar","Vale Park"], price:1000, avail:"ok", availTxt:"23 şezlong müsait", badge:"top", badgeTxt:"TOP 10", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
-  { id:2, name:"Marmaris Beach Resort", score:9.2, cat:"Beach Club", stars:5, rev:94, loc:"Marmaris, Muğla", dist:"1.1", feats:["Deniz Manzarası","Restoran","Su Sporları"], price:850, avail:"few", availTxt:"8 şezlong kaldı", badge:"pop", badgeTxt:"Popüler", img:"https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&fit=crop" },
-  { id:3, name:"Fethiye Paradise Club", score:9.0, cat:"Beach Club", stars:4, rev:47, loc:"Fethiye, Muğla", dist:"5.2", feats:["Özel Plaj","Havuz","Spa"], price:750, avail:"ok", availTxt:"41 şezlong müsait", badge:"new", badgeTxt:"Yeni", img:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&fit=crop" },
-  { id:4, name:"Bodrum Luxury Suites", score:9.4, cat:"Hotel", stars:5, rev:203, loc:"Bodrum, Muğla", dist:"3.8", feats:["Infinity Havuz","Spa","Özel Plaj"], price:1800, avail:"few", availTxt:"5 şezlong kaldı", badge:"top", badgeTxt:"TOP 10", img:"https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&fit=crop" },
-  { id:5, name:"Antalya Sunset Beach", score:8.8, cat:"Beach Club", stars:4, rev:76, loc:"Antalya", dist:"0.8", feats:["Özel Plaj","Beach Bar","Müzik"], price:650, avail:"ok", availTxt:"56 şezlong müsait", badge:"", badgeTxt:"", img:"https://images.unsplash.com/photo-1530538987395-032d1800fdd4?w=400&fit=crop" },
-  { id:6, name:"Çeşme Aqua Resort", score:9.1, cat:"Aqua Park", stars:4, rev:31, loc:"Çeşme, İzmir", dist:"4.5", feats:["Su Parkı","Havuz","Çocuk Alanı"], price:550, avail:"full", availTxt:"Bu tarih dolu", badge:"new", badgeTxt:"Yeni", img:"https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&fit=crop" },
-  { id:7, name:"Kuşadası Marina Hotel", score:8.9, cat:"Hotel", stars:5, rev:88, loc:"Kuşadası, Aydın", dist:"7.2", feats:["Marina Manzarası","Havuz","Restoran"], price:1200, avail:"ok", availTxt:"18 şezlong müsait", badge:"", badgeTxt:"", img:"https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&fit=crop" },
-  { id:8, name:"Kaş Panorama Beach", score:9.3, cat:"Beach Club", stars:4, rev:115, loc:"Kaş, Antalya", dist:"6.1", feats:["Kayalık Plaj","Dalış Merkezi"], price:900, avail:"few", availTxt:"12 şezlong kaldı", badge:"pop", badgeTxt:"Popüler", img:"https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&fit=crop" },
-];
-
-type Card = typeof CARDS[0];
+type Card = {
+  id: string;
+  name: string;
+  score: number;
+  cat: string;
+  stars: number;
+  rev: number;
+  loc: string;
+  dist: string;
+  feats: string[];
+  price: number;
+  avail: string;
+  availTxt: string;
+  badge: string;
+  badgeTxt: string;
+  img: string;
+};
 
 function AramaContent() {
   const router = useRouter();
@@ -33,11 +39,43 @@ function AramaContent() {
   const [sortVal, setSortVal] = useState("Önerilen");
   const [viewMode, setViewMode] = useState<"list"|"grid">("list");
   const [fpOpen, setFpOpen] = useState(false);
-  const [favs, setFavs] = useState<Set<number>>(new Set());
+  const [favs, setFavs] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("Tümü");
   const [filterBadge, setFilterBadge] = useState(0);
   const [priceMax, setPriceMax] = useState(5000);
   const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTesisler() {
+      const { data, error } = await supabase
+        .from("tesisler")
+        .select("*")
+        .eq("aktif", true);
+      if (!error && data) {
+        setCards(data.map((t: Record<string, unknown>) => ({
+          id: String(t.id),
+          name: String(t.ad),
+          score: Number(t.puan) || 9.0,
+          cat: String(t.kategori || "Beach Club"),
+          stars: 4,
+          rev: 0,
+          loc: `${t.ilce ?? ""}, ${t.sehir ?? ""}`,
+          dist: "–",
+          feats: [],
+          price: 1000,
+          avail: "ok",
+          availTxt: "Müsait",
+          badge: "",
+          badgeTxt: "",
+          img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
+        })));
+      }
+      setLoading(false);
+    }
+    fetchTesisler();
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -62,18 +100,18 @@ function AramaContent() {
     if (!gpsOn) setLocInput("");
   }
 
-  function toggleFav(id: number, e: React.MouseEvent) {
+  function toggleFav(id: string, e: React.MouseEvent) {
     e.stopPropagation();
     setFavs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
   function getFilteredCards(): Card[] {
-    let cards = [...CARDS];
-    if (activeTab === "Beach Club") cards = cards.filter(c => c.cat === "Beach Club");
-    else if (activeTab === "Hotel") cards = cards.filter(c => c.cat === "Hotel");
-    else if (activeTab === "Aqua Park") cards = cards.filter(c => c.cat === "Aqua Park");
-    cards = cards.filter(c => c.price <= priceMax);
-    return cards;
+    let result = [...cards];
+    if (activeTab === "Beach Club") result = result.filter(c => c.cat === "Beach Club");
+    else if (activeTab === "Hotel") result = result.filter(c => c.cat === "Hotel");
+    else if (activeTab === "Aqua Park") result = result.filter(c => c.cat === "Aqua Park");
+    result = result.filter(c => c.price <= priceMax);
+    return result;
   }
 
   const filtered = getFilteredCards();
@@ -177,6 +215,8 @@ function AramaContent() {
         )}
 
         <div className={`cards${viewMode==="grid"?" grid":""}`}>
+          {loading && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesisler yükleniyor…</div>}
+          {!loading && filtered.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Sonuç bulunamadı.</div>}
           {filtered.map(c => (
             <div key={c.id} className="card" onClick={() => router.push("/hotel/slug")}>
               <div className="card-img">
