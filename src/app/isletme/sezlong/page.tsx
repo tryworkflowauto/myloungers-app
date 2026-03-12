@@ -1,60 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Save } from "lucide-react";
 
+// HTML'deki :root değişkenleri
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
 const ORANGE = "#F5821F";
-const GREEN = "#10B981";
-const RED = "#EF4444";
-const YELLOW = "#F59E0B";
-const BLUE = "#3B82F6";
 const GRAY50 = "#F8FAFC";
 const GRAY100 = "#F1F5F9";
 const GRAY200 = "#E2E8F0";
 const GRAY400 = "#94A3B8";
 const GRAY600 = "#475569";
 const GRAY800 = "#1E293B";
-const PURPLE = "#7C3AED";
-const GOLD_PURPLE = "#8B5CF6";
+const GREEN = "#10B981";
+const BLUE = "#3B82F6";
 
-// TODO: API'den çekilecek
-const LEGEND_ITEMS = [
-  { emoji: "🟢", label: "Boş", sub: "Rezervasyon yapılabilir", count: 41, color: GREEN },
-  { emoji: "🟠", label: "Dolu", sub: "Aktif müşteri var", count: 74, color: ORANGE },
-  { emoji: "🔵", label: "Rezerve", sub: "Gelecek rezervasyon", count: 8, color: BLUE },
-  { emoji: "⚪", label: "Bakımda", sub: "Geçici kapalı", count: 10, color: GRAY400 },
-  { emoji: "🔒", label: "İşletme Rezervi", sub: "Satın alınamaz", count: 7, color: PURPLE },
-];
-
-const MOCK_GRUPLAR = [
-  { name: "Silver", count: 55, color: TEAL, dolu: 38, bos: 17, fiyat: "₺1.000", doluluk: "69%" },
-  { name: "VIP", count: 40, color: ORANGE, dolu: 28, bos: 12, fiyat: "₺1.500", doluluk: "70%" },
-  { name: "İskele", count: 20, color: YELLOW, dolu: 8, bos: 12, fiyat: "₺1.250", doluluk: "40%" },
-  { name: "Gold", count: 10, color: GOLD_PURPLE, dolu: 10, bos: 0, fiyat: "₺2.000", doluluk: "100%" },
-];
-
-const DURUM_LABELS: Record<string, string> = {
-  bos: "Boş",
-  dolu: "Dolu",
-  rezerve: "Rezerve",
-  bakim: "Bakımda",
-  kilitli: "İşletme Rezervi",
-};
-
-// TODO: API'den çekilecek
-const GRUP_DATA: Record<string, { prefix: string; count: number; color: string; durumlar: string[] }> = {
+// Mock data - HTML'deki gruplar objesiyle birebir
+const GRUPLAR: Record<string, { prefix: string; count: number; color: string; durumlar: string[] }> = {
   gold: {
     prefix: "G",
     count: 10,
-    color: GOLD_PURPLE,
+    color: "#8B5CF6",
     durumlar: ["dolu", "dolu", "dolu", "kilitli", "dolu", "dolu", "dolu", "kilitli", "dolu", "dolu"],
   },
   iskele: {
     prefix: "İ",
     count: 20,
-    color: YELLOW,
+    color: "#F59E0B",
     durumlar: [
       "dolu", "dolu", "bos", "dolu", "rezerve", "bos", "dolu", "bos", "dolu", "kilitli",
       "dolu", "bos", "rezerve", "bos", "dolu", "bakim", "bos", "kilitli", "bos", "bos",
@@ -63,7 +35,7 @@ const GRUP_DATA: Record<string, { prefix: string; count: number; color: string; 
   vip: {
     prefix: "V",
     count: 40,
-    color: ORANGE,
+    color: "#F5821F",
     durumlar: [
       "dolu", "dolu", "bos", "dolu", "dolu", "bos", "dolu", "dolu", "rezerve", "bos",
       "dolu", "kilitli", "dolu", "bos", "dolu", "dolu", "bakim", "dolu", "bos", "dolu",
@@ -74,34 +46,186 @@ const GRUP_DATA: Record<string, { prefix: string; count: number; color: string; 
   silver: {
     prefix: "S",
     count: 55,
-    color: TEAL,
+    color: "#0ABAB5",
     durumlar: Array.from({ length: 55 }, (_, i) =>
       i % 9 === 0 ? "kilitli" : i % 7 === 0 ? "bakim" : i % 5 === 0 ? "rezerve" : i % 3 === 0 ? "bos" : "dolu"
     ),
   },
 };
 
-const MAP_GRUPLAR = [
-  { key: "gold", title: "Gold", sub: "Denize Sıfır VIP", icon: "⭐", gradient: "linear-gradient(135deg,#7C3AED,#8B5CF6)", doluluk: "100% Dolu" },
-  { key: "iskele", title: "İskele", sub: "Ahşap Platform", icon: "⚓", gradient: "linear-gradient(135deg,#D97706,#F59E0B)", doluluk: "40% Dolu" },
-  { key: "vip", title: "VIP", sub: "Birinci Sıra", icon: "🔥", gradient: "linear-gradient(135deg,#EA580C,#F5821F)", doluluk: "70% Dolu" },
-  { key: "silver", title: "Silver", sub: "Standart Bölge", icon: "🌊", gradient: "linear-gradient(135deg,#0891B2,#0ABAB5)", doluluk: "69% Dolu" },
+// Şezlong durumuna göre renkler - HTML CSS'inden
+const SEZ_STYLES: Record<string, { bg: string; border: string; borderStyle?: "solid" | "dashed"; pillow: string; legs: string; noColor: string }> = {
+  bos: { bg: "#DCFCE7", border: "#86EFAC", pillow: "#A7F3D0", legs: "#86EFAC", noColor: "#16A34A" },
+  dolu: { bg: "#FFEDD5", border: "#FB923C", pillow: "#FED7AA", legs: "#FB923C", noColor: "#EA580C" },
+  rezerve: { bg: "#DBEAFE", border: "#60A5FA", pillow: "#BFDBFE", legs: "#60A5FA", noColor: "#2563EB" },
+  bakim: { bg: "#F1F5F9", border: "#CBD5E1", pillow: "#E2E8F0", legs: "#CBD5E1", noColor: "#94A3B8" },
+  kilitli: { bg: "#EDE9FE", border: "#7C3AED", borderStyle: "dashed", pillow: "#DDD6FE", legs: "#7C3AED", noColor: "#7C3AED" },
+};
+
+const LEGEND_ITEMS = [
+  { emoji: "🟢", label: "Boş", sub: "Rezervasyon yapılabilir", count: 41, countColor: GREEN },
+  { emoji: "🟠", label: "Dolu", sub: "Aktif müşteri var", count: 74, countColor: ORANGE },
+  { emoji: "🔵", label: "Rezerve", sub: "Gelecek rezervasyon", count: 8, countColor: BLUE },
+  { emoji: "⚪", label: "Bakımda", sub: "Geçici kapalı", count: 10, countColor: GRAY400 },
+  { emoji: "🔒", label: "İşletme Rezervi", sub: "Satın alınamaz", count: 7, countColor: "#7C3AED" },
 ];
 
-const RENK_OPTS = ["#0ABAB5", "#F5821F", "#F59E0B", "#8B5CF6", "#EF4444", "#10B981", "#3B82F6", "#EC4899", "#0A1628"];
+const MOCK_GRUPLAR = [
+  { name: "Silver", count: 55, color: "#0ABAB5", dolu: 38, bos: 17, fiyat: "₺1.000", doluluk: "69%" },
+  { name: "VIP", count: 40, color: "#F5821F", dolu: 28, bos: 12, fiyat: "₺1.500", doluluk: "70%" },
+  { name: "İskele", count: 20, color: "#F59E0B", dolu: 8, bos: 12, fiyat: "₺1.250", doluluk: "40%" },
+  { name: "Gold", count: 10, color: "#8B5CF6", dolu: 10, bos: 0, fiyat: "₺2.000", doluluk: "100%" },
+];
+
+const MAP_BLOCKS = [
+  { key: "gold", title: "Gold", sub: "Denize Sıfır VIP", icon: "⭐", gradient: "linear-gradient(135deg,#7C3AED,#8B5CF6)", doluluk: "100% Dolu", count: 10 },
+  { key: "iskele", title: "İskele", sub: "Ahşap Platform", icon: "⚓", gradient: "linear-gradient(135deg,#D97706,#F59E0B)", doluluk: "40% Dolu", count: 20 },
+  { key: "vip", title: "VIP", sub: "Birinci Sıra", icon: "🔥", gradient: "linear-gradient(135deg,#EA580C,#F5821F)", doluluk: "70% Dolu", count: 40 },
+  { key: "silver", title: "Silver", sub: "Standart Bölge", icon: "🌊", gradient: "linear-gradient(135deg,#0891B2,#0ABAB5)", doluluk: "69% Dolu", count: 55 },
+];
+
+const DURUM_LABELS: Record<string, string> = {
+  bos: "Boş",
+  dolu: "Dolu",
+  rezerve: "Rezerve",
+  bakim: "Bakımda",
+  kilitli: "İşletme Rezervi",
+};
+
+const COLOR_OPTS = ["#0ABAB5", "#F5821F", "#F59E0B", "#8B5CF6", "#EF4444", "#10B981", "#3B82F6", "#EC4899", "#0A1628"];
+
+function SezlongItem({
+  no,
+  durum,
+  grupKey,
+  isSecili,
+  onClick,
+}: {
+  no: string;
+  durum: string;
+  grupKey: string;
+  isSecili: boolean;
+  onClick: () => void;
+}) {
+  const s = SEZ_STYLES[durum] ?? SEZ_STYLES.bos;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      className={durum === "kilitli" ? "sezlong-item sezlong-kilitli" : "sezlong-item"}
+      style={{
+        position: "relative",
+        cursor: durum === "kilitli" ? "not-allowed" : "pointer",
+      }}
+      title={`${no} — ${DURUM_LABELS[durum]}`}
+    >
+      <div
+        className="sezlong-inner"
+        style={{
+          width: 52,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+          transition: "transform 0.15s",
+        }}
+      >
+        <div
+          style={{
+            width: 44,
+            height: 36,
+            borderRadius: "6px 6px 4px 4px",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: s.bg,
+            border: `2px ${s.borderStyle ?? "solid"} ${s.border}`,
+            boxShadow: isSecili ? "0 0 0 3px var(--teal, #0ABAB5)" : undefined,
+            transform: isSecili ? "scale(1.05)" : undefined,
+          }}
+        >
+          {/* Yastık (::before) */}
+          <div
+            style={{
+              position: "absolute",
+              top: -8,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: 30,
+              height: 14,
+              borderRadius: "6px 6px 0 0",
+              background: s.pillow,
+            }}
+          />
+          {/* Numara */}
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 800,
+              lineHeight: 1,
+              color: s.noColor,
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            {durum === "kilitli" ? "🔒" : no}
+          </span>
+          {/* Müşteri ikonu (dolu ise) */}
+          {durum === "dolu" && (
+            <div
+              style={{
+                position: "absolute",
+                top: -4,
+                right: -4,
+                width: 16,
+                height: 16,
+                background: ORANGE,
+                borderRadius: "50%",
+                border: "2px solid white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 8,
+                zIndex: 2,
+              }}
+            >
+              👤
+            </div>
+          )}
+          {/* Ayaklar (::after) */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: -6,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: 36,
+              height: 6,
+              borderRadius: 3,
+              background: s.legs,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function IsletmeSezlongPage() {
   const [seciliNo, setSeciliNo] = useState<string | null>(null);
   const [seciliGrup, setSeciliGrup] = useState<string | null>(null);
   const [seciliDurum, setSeciliDurum] = useState<string>("bos");
-  const [grupRenk, setGrupRenk] = useState<string>(TEAL);
   const [modalOpen, setModalOpen] = useState(false);
-  const [kilitliToast, setKilitliToast] = useState(false);
+  const [kilitliToastNo, setKilitliToastNo] = useState<string | null>(null);
+  const [seciliRenk, setSeciliRenk] = useState("#0ABAB5");
 
   function handleSezlongClick(no: string, grupKey: string, durum: string) {
     if (durum === "kilitli") {
-      setKilitliToast(true);
-      setTimeout(() => setKilitliToast(false), 2500);
+      setKilitliToastNo(no);
+      setTimeout(() => setKilitliToastNo(null), 2500);
       return;
     }
     setSeciliNo(no);
@@ -111,36 +235,79 @@ export default function IsletmeSezlongPage() {
 
   return (
     <div
-      className="flex flex-col min-h-full"
-      style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}
+      style={{
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        background: GRAY100,
+        color: GRAY800,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100%",
+      }}
     >
-      {/* TOPBAR */}
+      {/* TOPBAR - HTML ile aynı */}
       <header
-        className="sticky top-0 z-50 flex items-center justify-between"
-        style={{ background: "white", borderBottom: `1px solid ${GRAY200}`, padding: "0 24px", height: 60 }}
+        style={{
+          background: "white",
+          borderBottom: `1px solid ${GRAY200}`,
+          padding: "0 24px",
+          height: 60,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+        }}
       >
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Şezlong Haritası</h1>
           <span style={{ fontSize: 11, color: GRAY400 }}>125 şezlong • 74 dolu • 41 boş • 10 bakımda</span>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border transition-colors"
-            style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, background: GRAY100, color: GRAY800, border: `1px solid ${GRAY200}` }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              border: `1px solid ${GRAY200}`,
+              background: GRAY100,
+              color: GRAY800,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
           >
-            <Plus size={14} />
-            Grup Ekle
+            ➕ Grup Ekle
           </button>
           <button
-            className="inline-flex items-center gap-1.5 rounded-lg text-white"
-            style={{ padding: "8px 14px", fontSize: 12, fontWeight: 600, background: TEAL }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              border: "none",
+              background: TEAL,
+              color: "white",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
           >
-            <Save size={14} />
-            Değişiklikleri Kaydet
+            💾 Değişiklikleri Kaydet
           </button>
           <select
-            style={{ padding: "7px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}
+            style={{
+              padding: "7px 10px",
+              border: `1px solid ${GRAY200}`,
+              borderRadius: 8,
+              fontSize: 12,
+            }}
           >
             <option>Düzenleme Modu</option>
             <option>Görüntüleme Modu</option>
@@ -150,8 +317,8 @@ export default function IsletmeSezlongPage() {
       </header>
 
       {/* PAGE LAYOUT */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* SOL ARAÇ PANELİ */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        {/* SOL ARAÇ PANELİ - tool-panel */}
         <div
           style={{
             width: 280,
@@ -161,71 +328,153 @@ export default function IsletmeSezlongPage() {
             flexShrink: 0,
           }}
         >
+          {/* Durum Göstergesi */}
           <div style={{ padding: 16, borderBottom: `1px solid ${GRAY100}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: GRAY400,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 12,
+              }}
+            >
               Durum Göstergesi
             </div>
-            <div className="flex flex-col gap-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {LEGEND_ITEMS.map((item) => (
                 <div
                   key={item.label}
-                  className="flex items-center gap-2.5 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                  style={{ padding: "8px 10px" }}
+                  className="legend-item-hover"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
                 >
                   <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0"
                     style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 12,
+                      flexShrink: 0,
                       background: item.emoji === "🟢" ? "#DCFCE7" : item.emoji === "🟠" ? "#FFEDD5" : item.emoji === "🔵" ? "#DBEAFE" : item.emoji === "⚪" ? "#F1F5F9" : "#EDE9FE",
-                      border: `2px solid ${item.emoji === "🟢" ? "#86EFAC" : item.emoji === "🟠" ? "#FB923C" : item.emoji === "🔵" ? "#60A5FA" : item.emoji === "⚪" ? "#CBD5E1" : "#7C3AED"}`,
-                      borderStyle: item.emoji === "🔒" ? "dashed" : "solid",
+                      border: item.emoji === "🔒" ? "2px dashed #7C3AED" : item.emoji === "🟢" ? "2px solid #86EFAC" : item.emoji === "🟠" ? "2px solid #FB923C" : item.emoji === "🔵" ? "2px solid #60A5FA" : "2px solid #CBD5E1",
                     }}
                   >
                     {item.emoji}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>{item.label}</div>
-                    <div style={{ fontSize: 10, color: GRAY400 }}>{item.sub}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: NAVY }}>{item.label}</strong>
+                    <span style={{ fontSize: 10, color: GRAY400 }}>{item.sub}</span>
                   </div>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: item.color }}>{item.count}</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: item.countColor }}>{item.count}</span>
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Gruplar */}
           <div style={{ padding: 16, borderBottom: `1px solid ${GRAY100}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: GRAY400,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 12,
+              }}
+            >
               Gruplar
             </div>
-            <div className="flex flex-col gap-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {MOCK_GRUPLAR.map((g) => (
                 <div
                   key={g.name}
-                  className="rounded-[10px] overflow-hidden"
-                  style={{ border: `1.5px solid ${g.color}` }}
+                  style={{
+                    border: `1.5px solid ${g.color}`,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                  }}
                 >
-                  <div className="flex items-center gap-2 px-3 py-2.5">
-                    <div className="w-3 h-3 rounded flex-shrink-0" style={{ background: g.color }} />
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ width: 12, height: 12, borderRadius: 4, background: g.color, flexShrink: 0 }} />
                     <span style={{ fontSize: 12, fontWeight: 700, color: NAVY, flex: 1 }}>{g.name}</span>
                     <span style={{ fontSize: 11, color: GRAY400 }}>{g.count} şezlong</span>
-                    <div className="flex gap-1">
-                      <button className="w-6 h-6 rounded-md flex items-center justify-center text-[11px]" style={{ background: GRAY100 }}>✏️</button>
-                      <button className="w-6 h-6 rounded-md flex items-center justify-center text-[11px]" style={{ background: GRAY100 }}>🗑️</button>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button
+                        style={{
+                          width: 24,
+                          height: 24,
+                          border: "none",
+                          background: GRAY100,
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          fontSize: 11,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        style={{
+                          width: 24,
+                          height: 24,
+                          border: "none",
+                          background: GRAY100,
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          fontSize: 11,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5 px-3 pb-2.5">
-                    <div className="rounded-md p-1.5" style={{ background: GRAY50 }}>
+                  <div
+                    style={{
+                      padding: "0 12px 10px",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 6,
+                    }}
+                  >
+                    <div style={{ background: GRAY50, borderRadius: 6, padding: "6px 8px" }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: ORANGE }}>{g.dolu}</div>
                       <div style={{ fontSize: 9, color: GRAY400 }}>Dolu</div>
                     </div>
-                    <div className="rounded-md p-1.5" style={{ background: GRAY50 }}>
+                    <div style={{ background: GRAY50, borderRadius: 6, padding: "6px 8px" }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: GREEN }}>{g.bos}</div>
                       <div style={{ fontSize: 9, color: GRAY400 }}>Boş</div>
                     </div>
-                    <div className="rounded-md p-1.5" style={{ background: GRAY50 }}>
+                    <div style={{ background: GRAY50, borderRadius: 6, padding: "6px 8px" }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{g.fiyat}</div>
                       <div style={{ fontSize: 9, color: GRAY400 }}>Fiyat/gün</div>
                     </div>
-                    <div className="rounded-md p-1.5" style={{ background: GRAY50 }}>
+                    <div style={{ background: GRAY50, borderRadius: 6, padding: "6px 8px" }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{g.doluluk}</div>
                       <div style={{ fontSize: 9, color: GRAY400 }}>Doluluk</div>
                     </div>
@@ -235,19 +484,59 @@ export default function IsletmeSezlongPage() {
             </div>
           </div>
 
+          {/* Tarih & Filtre */}
           <div style={{ padding: 16, borderBottom: `1px solid ${GRAY100}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: GRAY400,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 12,
+              }}
+            >
               Tarih & Filtre
             </div>
-            <input type="date" defaultValue="2026-03-11" className="w-full mb-2 rounded-lg border px-2.5 py-2 text-sm" style={{ borderColor: GRAY200 }} />
-            <select className="w-full mb-2 rounded-lg border px-2.5 py-2 text-sm" style={{ borderColor: GRAY200 }}>
+            <input
+              type="date"
+              defaultValue="2026-03-11"
+              style={{
+                width: "100%",
+                padding: "8px 10px",
+                border: `1px solid ${GRAY200}`,
+                borderRadius: 8,
+                fontSize: 12,
+                marginBottom: 8,
+              }}
+            />
+            <select
+              style={{
+                width: "100%",
+                padding: "8px 10px",
+                border: `1px solid ${GRAY200}`,
+                borderRadius: 8,
+                fontSize: 12,
+                marginBottom: 8,
+                background: "white",
+              }}
+            >
               <option>Tüm Gruplar</option>
               <option>Silver</option>
               <option>VIP</option>
               <option>İskele</option>
               <option>Gold</option>
             </select>
-            <select className="w-full rounded-lg border px-2.5 py-2 text-sm" style={{ borderColor: GRAY200 }}>
+            <select
+              style={{
+                width: "100%",
+                padding: "8px 10px",
+                border: `1px solid ${GRAY200}`,
+                borderRadius: 8,
+                fontSize: 12,
+                background: "white",
+              }}
+            >
               <option>Tüm Durumlar</option>
               <option>Sadece Boş</option>
               <option>Sadece Dolu</option>
@@ -258,7 +547,8 @@ export default function IsletmeSezlongPage() {
         </div>
 
         {/* HARİTA ALANI */}
-        <div className="flex-1 flex flex-col overflow-auto">
+        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
+          {/* Deniz çubuğu */}
           <div
             style={{
               background: "linear-gradient(180deg, #0EA5E9 0%, #38BDF8 40%, #7DD3FC 100%)",
@@ -271,7 +561,6 @@ export default function IsletmeSezlongPage() {
             }}
           >
             <div
-              className="flex items-center gap-3"
               style={{
                 fontSize: 20,
                 fontWeight: 900,
@@ -279,29 +568,49 @@ export default function IsletmeSezlongPage() {
                 letterSpacing: 6,
                 textTransform: "uppercase",
                 textShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
               }}
             >
-              <span className="animate-bounce">🌊</span>
+              <span className="sezlong-wave">🌊</span>
               <span>D E N İ Z</span>
-              <span className="animate-bounce">🌊</span>
+              <span className="sezlong-wave">🌊</span>
             </div>
           </div>
 
-          <div style={{ flex: 1, padding: 24, minHeight: 500 }}>
-            {MAP_GRUPLAR.map((mg) => {
-              const g = GRUP_DATA[mg.key];
+          {/* Harita canvas */}
+          <div style={{ flex: 1, padding: 24, position: "relative", minHeight: 500 }}>
+            {MAP_BLOCKS.map((mb) => {
+              const g = GRUPLAR[mb.key];
               if (!g) return null;
+
               return (
                 <div
-                  key={mg.key}
-                  className="mb-5 rounded-[14px] overflow-hidden border-2 border-transparent hover:border-teal-300/30 transition-colors"
+                  key={mb.key}
+                  className="grup-block-hover"
+                  style={{
+                    marginBottom: 20,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    border: "2px solid transparent",
+                    transition: "border-color 0.2s",
+                  }}
                 >
                   <div
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-white"
-                    style={{ background: mg.gradient }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px 16px",
+                      color: "white",
+                      background: mb.gradient,
+                    }}
                   >
-                    <strong style={{ fontSize: 13, flex: 1 }}>{mg.icon} {mg.title} — {mg.sub}</strong>
-                    <span style={{ fontSize: 11, opacity: 0.8 }}>{g.count} şezlong</span>
+                    <strong style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>
+                      {mb.icon} {mb.title} — {mb.sub}
+                    </strong>
+                    <span style={{ fontSize: 11, opacity: 0.8 }}>{mb.count} şezlong</span>
                     <span
                       style={{
                         fontSize: 11,
@@ -311,62 +620,23 @@ export default function IsletmeSezlongPage() {
                         borderRadius: 20,
                       }}
                     >
-                      {mg.doluluk}
+                      {mb.doluluk}
                     </span>
                   </div>
                   <div style={{ background: "white", padding: 16 }}>
-                    <div className="flex flex-wrap gap-2">
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {g.durumlar.map((durum, i) => {
-                        const no = `${g.prefix}${i + 1}`;
-                        const isSecili = seciliNo === no && seciliGrup === mg.key;
+                        const no = g.prefix + (i + 1);
+                        const isSecili = seciliNo === no && seciliGrup === mb.key;
                         return (
-                          <div
+                          <SezlongItem
                             key={no}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => handleSezlongClick(no, mg.key, durum)}
-                            className="sez"
-                            style={{
-                              cursor: durum === "kilitli" ? "not-allowed" : "pointer",
-                              ...(isSecili && {
-                                outline: `2px solid ${TEAL}`,
-                                outlineOffset: 2,
-                                borderRadius: 6,
-                              }),
-                            }}
-                            title={`${no} — ${DURUM_LABELS[durum]}`}
-                          >
-                            <div
-                              className="flex flex-col items-center gap-0.5 transition-transform hover:translate-y-[-3px]"
-                              style={{ width: 52 }}
-                            >
-                              <div
-                                className="w-11 h-9 rounded flex items-center justify-center relative"
-                                style={{
-                                  background: durum === "bos" ? "#DCFCE7" : durum === "dolu" ? "#FFEDD5" : durum === "rezerve" ? "#DBEAFE" : durum === "bakim" ? "#F1F5F9" : "#EDE9FE",
-                                  border: `2px ${durum === "kilitli" ? "dashed" : "solid"} ${durum === "bos" ? "#86EFAC" : durum === "dolu" ? "#FB923C" : durum === "rezerve" ? "#60A5FA" : durum === "bakim" ? "#CBD5E1" : "#7C3AED"}`,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontSize: 9,
-                                    fontWeight: 800,
-                                    color: durum === "bos" ? "#16A34A" : durum === "dolu" ? "#EA580C" : durum === "rezerve" ? "#2563EB" : durum === "bakim" ? "#94A3B8" : "#7C3AED",
-                                  }}
-                                >
-                                  {durum === "kilitli" ? "🔒" : no}
-                                </span>
-                                {durum === "dolu" && (
-                                  <span
-                                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[8px]"
-                                    style={{ background: ORANGE }}
-                                  >
-                                    👤
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                            no={no}
+                            durum={durum}
+                            grupKey={mb.key}
+                            isSecili={isSecili}
+                            onClick={() => handleSezlongClick(no, mb.key, durum)}
+                          />
                         );
                       })}
                     </div>
@@ -377,7 +647,7 @@ export default function IsletmeSezlongPage() {
           </div>
         </div>
 
-        {/* SAĞ BİLGİ PANELİ */}
+        {/* SAĞ BİLGİ PANELİ - info-panel */}
         <div
           style={{
             width: 260,
@@ -393,21 +663,27 @@ export default function IsletmeSezlongPage() {
           </div>
 
           <div style={{ padding: "14px 16px", borderBottom: `1px solid ${GRAY100}` }}>
-            <div
-              className="rounded-xl p-3.5 mb-2.5"
-              style={{ background: GRAY50 }}
-            >
+            <div style={{ background: GRAY50, borderRadius: 12, padding: 14, marginBottom: 10 }}>
               <div style={{ fontSize: 28, fontWeight: 900, color: NAVY, marginBottom: 4 }}>
                 {seciliNo ?? "—"}
               </div>
               <div
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 mb-2.5"
-                style={{ background: "white" }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "white",
+                  borderRadius: 20,
+                  padding: "4px 10px",
+                  marginBottom: 10,
+                }}
               >
                 <div
-                  className="w-2 h-2 rounded-sm"
                   style={{
-                    background: seciliGrup ? GRUP_DATA[seciliGrup]?.color ?? "#ccc" : "#ccc",
+                    width: 8,
+                    height: 8,
+                    borderRadius: 3,
+                    background: seciliGrup ? GRUPLAR[seciliGrup]?.color ?? "#ccc" : "#ccc",
                   }}
                 />
                 <span style={{ fontSize: 11, fontWeight: 600, color: NAVY }}>
@@ -417,8 +693,14 @@ export default function IsletmeSezlongPage() {
               <select
                 value={seciliDurum}
                 onChange={(e) => setSeciliDurum(e.target.value)}
-                className="w-full rounded-lg border px-2.5 py-2 text-sm mb-2"
-                style={{ borderColor: GRAY200 }}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  border: `1.5px solid ${GRAY200}`,
+                  borderRadius: 8,
+                  fontSize: 12,
+                  marginBottom: 8,
+                }}
               >
                 <option value="bos">🟢 Boş</option>
                 <option value="dolu">🟠 Dolu</option>
@@ -427,8 +709,21 @@ export default function IsletmeSezlongPage() {
                 <option value="kilitli">🔒 İşletme Rezervi</option>
               </select>
               <button
-                className="w-full py-2 rounded-lg text-white text-[11px] font-semibold flex items-center justify-center gap-1.5"
-                style={{ background: TEAL }}
+                style={{
+                  width: "100%",
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  border: "none",
+                  background: TEAL,
+                  color: "white",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
               >
                 💾 Kaydet
               </button>
@@ -436,8 +731,12 @@ export default function IsletmeSezlongPage() {
 
             {seciliDurum === "dolu" && seciliNo && (
               <div
-                className="rounded-[10px] p-3 border"
-                style={{ background: "white", borderColor: GRAY200 }}
+                style={{
+                  background: "white",
+                  border: `1px solid ${GRAY200}`,
+                  borderRadius: 10,
+                  padding: 12,
+                }}
               >
                 <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Ahmet Yılmaz</div>
                 <div style={{ fontSize: 11, color: GRAY400, marginBottom: 2 }}>📱 Giriş: 10:30</div>
@@ -448,18 +747,40 @@ export default function IsletmeSezlongPage() {
             )}
           </div>
 
+          {/* Hızlı İşlemler */}
           <div style={{ padding: "14px 16px", borderBottom: `1px solid ${GRAY100}` }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: GRAY400,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 10,
+              }}
+            >
               Hızlı İşlemler
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {["📋 Rezervasyon Yap", "🍽️ Sipariş Gör", "💰 Bakiye Gör", "🔧 Bakıma Al", "📤 Çıkış Yaptır"].map((label) => (
                 <button
                   key={label}
-                  className="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors"
-                  style={{ borderColor: GRAY200, background: "white", color: GRAY800 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = "white"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = GRAY800; }}
+                  className="sezlong-quick-btn"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    border: `1px solid ${GRAY200}`,
+                    background: "white",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: GRAY800,
+                    textAlign: "left",
+                    transition: "all 0.15s",
+                  }}
                 >
                   {label}
                 </button>
@@ -467,108 +788,217 @@ export default function IsletmeSezlongPage() {
             </div>
           </div>
 
+          {/* Bugün Özeti */}
           <div style={{ padding: "14px 16px" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: GRAY400,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 10,
+              }}
+            >
               Bugün Özeti
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg p-2.5 text-center" style={{ background: GRAY50 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: ORANGE }}>74</div>
-                <div style={{ fontSize: 9, color: GRAY400 }}>Dolu</div>
+                <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Dolu</div>
               </div>
-              <div className="rounded-lg p-2.5 text-center" style={{ background: GRAY50 }}>
+              <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>41</div>
-                <div style={{ fontSize: 9, color: GRAY400 }}>Boş</div>
+                <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Boş</div>
               </div>
-              <div className="rounded-lg p-2.5 text-center" style={{ background: GRAY50 }}>
+              <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>₺18K</div>
-                <div style={{ fontSize: 9, color: GRAY400 }}>Gelir</div>
+                <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Gelir</div>
               </div>
-              <div className="rounded-lg p-2.5 text-center" style={{ background: GRAY50 }}>
+              <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: TEAL }}>89</div>
-                <div style={{ fontSize: 9, color: GRAY400 }}>Sipariş</div>
+                <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Sipariş</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* KİLİTLİ TOAST */}
-      {kilitliToast && (
+      {/* Kilitli toast - HTML ile aynı */}
+      {kilitliToastNo && (
         <div
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2 rounded-xl px-6 py-3 text-white text-sm font-semibold shadow-lg transition-opacity"
-          style={{ background: PURPLE, boxShadow: "0 4px 20px rgba(124,58,237,0.4)" }}
+          style={{
+            position: "fixed",
+            bottom: 30,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#7C3AED",
+            color: "white",
+            padding: "12px 24px",
+            borderRadius: 12,
+            fontSize: 13,
+            fontWeight: 600,
+            zIndex: 999,
+            boxShadow: "0 4px 20px rgba(124,58,237,0.4)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
         >
-          🔒 Bu şezlong işletme tarafından rezerve edilmiştir
+          🔒 {kilitliToastNo} — Bu şezlong işletme tarafından rezerve edilmiştir
         </div>
       )}
 
-      {/* GRUP EKLE MODAL */}
+      {/* Grup Ekle Modal */}
       {modalOpen && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+          }}
           onClick={(e) => e.target === e.currentTarget && setModalOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-[400px] shadow-xl"
+            style={{
+              background: "white",
+              borderRadius: 16,
+              padding: 24,
+              width: 400,
+              maxWidth: "95vw",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>➕ Yeni Grup Ekle</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Grup Adı</label>
-                <input type="text" placeholder="örn: Platin, Sahil, İskele..." className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: GRAY200 }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Şezlong Sayısı</label>
-                <input type="number" placeholder="örn: 20" min={1} max={200} className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: GRAY200 }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Günlük Fiyat (₺)</label>
-                <input type="number" placeholder="örn: 1500" min={0} className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: GRAY200 }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Konum / Açıklama</label>
-                <input type="text" placeholder="örn: Denize sıfır, Gölgelik alan..." className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: GRAY200 }} />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-2">Grup Rengi</label>
-                <div className="flex gap-1.5 flex-wrap">
-                  {RENK_OPTS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setGrupRenk(c)}
-                      className="w-[22px] h-[22px] rounded-md border-2 transition-all"
-                      style={{
-                        background: c,
-                        borderColor: grupRenk === c ? NAVY : "transparent",
-                        transform: grupRenk === c ? "scale(1.2)" : "scale(1)",
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Ön Ödeme Tipi</label>
-                <select className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: GRAY200 }}>
-                  <option>Ön Ödemeli (Bakiye yüklenir)</option>
-                  <option>Sadece Sezlong Kiralama</option>
-                </select>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Grup Adı</label>
+              <input
+                type="text"
+                placeholder="örn: Platin, Sahil, İskele..."
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: `1.5px solid ${GRAY200}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Şezlong Sayısı</label>
+              <input
+                type="number"
+                placeholder="örn: 20"
+                min={1}
+                max={200}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: `1.5px solid ${GRAY200}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Günlük Fiyat (₺)</label>
+              <input
+                type="number"
+                placeholder="örn: 1500"
+                min={0}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: `1.5px solid ${GRAY200}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Konum / Açıklama</label>
+              <input
+                type="text"
+                placeholder="örn: Denize sıfır, Gölgelik alan..."
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: `1.5px solid ${GRAY200}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Grup Rengi</label>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                {COLOR_OPTS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setSeciliRenk(c)}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 6,
+                      background: c,
+                      border: seciliRenk === c ? `2px solid ${NAVY}` : "2px solid transparent",
+                      cursor: "pointer",
+                      transform: seciliRenk === c ? "scale(1.2)" : "scale(1)",
+                      transition: "all 0.15s",
+                    }}
+                  />
+                ))}
               </div>
             </div>
-            <div className="flex gap-2 justify-end mt-4">
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Ön Ödeme Tipi</label>
+              <select
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: `1.5px solid ${GRAY200}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                }}
+              >
+                <option>Ön Ödemeli (Bakiye yüklenir)</option>
+                <option>Sadece Sezlong Kiralama</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold"
-                style={{ background: GRAY100, color: GRAY800, border: `1px solid ${GRAY200}` }}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: `1px solid ${GRAY200}`,
+                  background: GRAY100,
+                  color: GRAY800,
+                  cursor: "pointer",
+                }}
               >
                 İptal
               </button>
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
-                style={{ background: TEAL }}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: "none",
+                  background: TEAL,
+                  color: "white",
+                  cursor: "pointer",
+                }}
               >
                 ✅ Grubu Ekle
               </button>
@@ -576,6 +1006,22 @@ export default function IsletmeSezlongPage() {
           </div>
         </div>
       )}
+
+      {/* HTML ile aynı stiller */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes sezlong-wave {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+          }
+          .sezlong-wave { animation: sezlong-wave 2s ease-in-out infinite; }
+          .sezlong-item:hover .sezlong-inner { transform: translateY(-3px); }
+          .sezlong-kilitli:hover .sezlong-inner { transform: none; }
+          .sezlong-quick-btn:hover { background: #0A1628 !important; color: white !important; border-color: #0A1628 !important; }
+          .legend-item-hover:hover { background: #F8FAFC; }
+          .grup-block-hover:hover { border-color: rgba(10,186,181,0.3); }
+        `,
+      }} />
     </div>
   );
 }
