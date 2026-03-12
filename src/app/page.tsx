@@ -881,7 +881,7 @@ export default function Home() {
             </div>
           </div>
           <div className="how-cta">
-            <a href="/hotel/slug" className="how-cta-btn" id="how-cta-btn">🔍 Tesis Aramaya Başla</a>
+            <a href="/arama" className="how-cta-btn" id="how-cta-btn">🔍 Tesis Aramaya Başla</a>
             <p className="how-cta-sub">Ücretsiz üyelik · Kredi kartı gerekmez</p>
           </div>
         </div>
