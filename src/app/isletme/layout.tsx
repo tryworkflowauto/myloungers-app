@@ -8,7 +8,7 @@ export default function IsletmeLayout({
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
       <IsletmeSidebar />
-      <main className="overflow-auto" style={{ marginLeft: 260 }}>
+      <main className="overflow-auto" style={{ marginLeft: '240px' }}>
         {children}
       </main>
     </div>

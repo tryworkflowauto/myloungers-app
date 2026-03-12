@@ -1,169 +1,67 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
-const NAVY = "#0A1628";
-const TEAL = "#0ABAB5";
-const ORANGE = "#F5821F";
-const GREEN = "#10B981";
-
-const MENU_SECTIONS = [
-  {
-    title: "ANA MENÜ",
-    items: [
-      { label: "Dashboard", href: "/isletme", icon: "📊", badge: null },
-      { label: "Şezlong Haritası", href: "/isletme/sezlong-haritasi", icon: "🏖️", badge: null },
-      { label: "Rezervasyonlar", href: "/isletme/rezervasyonlar", icon: "📋", badge: 12 },
-      { label: "Siparişler", href: "/isletme/siparisler", icon: "🍽️", badge: 5 },
-    ],
-  },
-  {
-    title: "YÖNETİM",
-    items: [
-      { label: "Menü Yönetimi", href: "/isletme/menu-yonetimi", icon: "🍹", badge: null },
-      { label: "Personel", href: "/isletme/personel", icon: "👥", badge: null },
-      { label: "Bakiye & Raporlar", href: "/isletme/bakiye-raporlar", icon: "💰", badge: null },
-      { label: "Sezon & Fiyatlar", href: "/isletme/sezon-fiyatlar", icon: "📅", badge: null },
-    ],
-  },
-  {
-    title: "TESİS",
-    items: [
-      { label: "Tesis Bilgileri", href: "/isletme/tesis-bilgileri", icon: "🏨", badge: null },
-      { label: "Yorumlar", href: "/isletme/yorumlar", icon: "⭐", badge: 3 },
-    ],
-  },
+const menuItems = [
+  { section: 'ANA MENÜ' },
+  { icon: '📊', label: 'Dashboard', href: '/isletme' },
+  { icon: '🏖️', label: 'Şezlong Haritası', href: '/isletme/sezlong' },
+  { icon: '📋', label: 'Rezervasyonlar', href: '/isletme/rezervasyonlar', badge: 12 },
+  { icon: '🍽️', label: 'Siparişler', href: '/isletme/siparisler', badge: 5 },
+  { section: 'YÖNETİM' },
+  { icon: '🍹', label: 'Menü Yönetimi', href: '/isletme/menu' },
+  { icon: '👥', label: 'Personel', href: '/isletme/personel' },
+  { icon: '💰', label: 'Bakiye & Raporlar', href: '/isletme/raporlar' },
+  { icon: '📅', label: 'Sezon & Fiyatlar', href: '/isletme/sezon' },
+  { section: 'TESİS' },
+  { icon: '🏨', label: 'Tesis Bilgileri', href: '/isletme/tesis' },
+  { icon: '⭐', label: 'Yorumlar', href: '/isletme/yorumlar', badge: 3 },
 ];
 
 export default function IsletmeSidebar() {
   const pathname = usePathname();
-
   return (
-    <aside
-      className="fixed left-0 top-0 z-[100] flex flex-col min-h-screen"
-      style={{ width: 260, background: NAVY }}
-    >
-      {/* Logo bölümü */}
-      <div className="px-5 pt-5 pb-4 border-b border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-9 h-9 rounded-[10px] flex items-center justify-center text-lg flex-shrink-0"
-            style={{ background: TEAL }}
-          >
-            🏖️
-          </div>
+    <aside style={{ width: '240px', background: '#0A1628', minHeight: '100vh', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', zIndex: 100 }}>
+      {/* Logo */}
+      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '36px', height: '36px', background: '#0ABAB5', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🏖️</div>
           <div>
-            <div className="text-[13px] font-extrabold text-white leading-tight uppercase">MY LOUNGERS</div>
-            <div className="text-[10px] leading-tight" style={{ color: TEAL }}>İşletme Paneli</div>
+            <span style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#fff' }}>MY LOUNGERS</span>
+            <span style={{ display: 'block', fontSize: '10px', color: '#0ABAB5' }}>İşletme Paneli</span>
           </div>
         </div>
       </div>
-
-      {/* Tesis seçici */}
-      <div
-        className="mx-4 mt-3 flex items-center gap-2 px-3 py-2.5 rounded-[10px] cursor-pointer"
-        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-      >
-        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: GREEN }} />
-        <span className="text-[12px] font-semibold text-white flex-1">Zuzuu Beach Hotel</span>
-        <span className="text-white/80 text-sm flex-shrink-0">▾</span>
+      {/* Tesis Seçici */}
+      <div style={{ margin: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+        <div style={{ width: '8px', height: '8px', background: '#10B981', borderRadius: '50%' }}></div>
+        <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, flex: 1 }}>Zuzuu Beach Hotel</span>
+        <span style={{ color: '#94A3B8', fontSize: '12px' }}>▾</span>
       </div>
-
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-2">
-        {MENU_SECTIONS.map((section) => (
-          <div key={section.title} className="mb-1">
-            <div
-              style={{
-                paddingTop: 16,
-                paddingBottom: 6,
-                paddingLeft: 16,
-                fontSize: 9,
-                fontWeight: 700,
-                color: "#6B7280",
-                letterSpacing: "1.5px",
-                textTransform: "uppercase",
-              }}
-            >
-              {section.title}
-            </div>
-            <ul>
-              {section.items.map((item) => {
-                const isActive =
-                  item.href === "/isletme"
-                    ? pathname === "/isletme"
-                    : pathname.startsWith(item.href);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className="flex items-center gap-2.5 relative"
-                      style={{
-                        padding: "10px 16px",
-                        minHeight: 42,
-                        background: isActive ? "rgba(10,186,181,0.15)" : undefined,
-                        borderLeft: isActive ? `3px solid ${TEAL}` : "3px solid transparent",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = "";
-                        }
-                      }}
-                    >
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ fontSize: 16 }}
-                        style={{
-                          background: isActive ? "rgba(10,186,181,0.2)" : "transparent",
-                        }}
-                      >
-                        {item.icon}
-                      </div>
-                      <span
-                        className="font-medium flex-1"
-                        style={{ fontSize: 13 }}
-                        style={{ color: isActive ? TEAL : "#D1D5DB" }}
-                      >
-                        {item.label}
-                      </span>
-                      {item.badge != null && (
-                        <span
-                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-[10px] flex-shrink-0"
-                          style={{ background: "#F5821F", color: "white" }}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+      <nav style={{ padding: '8px 0', flex: 1 }}>
+        {menuItems.map((item, i) => {
+          if ('section' in item) return (
+            <div key={i} style={{ padding: '16px 16px 6px', fontSize: '9px', fontWeight: 700, color: '#94A3B8', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{item.section}</div>
+          );
+          const isActive = pathname === item.href;
+          return (
+            <Link key={i} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', textDecoration: 'none', position: 'relative', background: isActive ? 'rgba(10,186,181,0.15)' : 'transparent', borderLeft: isActive ? '3px solid #0ABAB5' : '3px solid transparent' }}>
+              <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '15px', background: isActive ? 'rgba(10,186,181,0.2)' : 'transparent' }}>{item.icon}</div>
+              <span style={{ fontSize: '13px', color: isActive ? '#0ABAB5' : '#CBD5E1', fontWeight: isActive ? 600 : 500, flex: 1 }}>{item.label}</span>
+              {'badge' in item && item.badge && <span style={{ background: '#F5821F', color: 'white', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px' }}>{item.badge}</span>}
+            </Link>
+          );
+        })}
       </nav>
-
-      {/* Alt kullanıcı bölümü */}
-      <div
-        className="p-4"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0"
-            style={{ background: `linear-gradient(135deg, ${TEAL}, ${ORANGE})` }}
-          >
-            ZB
-          </div>
-          <div className="min-w-0">
-            <div className="text-[12px] font-semibold text-white truncate">Zafer Bakır</div>
-            <div className="text-[10px] truncate" style={{ color: "#6B7280" }}>İşletme Yöneticisi</div>
+      {/* Alt kullanıcı */}
+      <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg,#0ABAB5,#F5821F)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white' }}>ZB</div>
+          <div>
+            <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'white' }}>Zafer Bakır</span>
+            <span style={{ display: 'block', fontSize: '10px', color: '#94A3B8' }}>İşletme Yöneticisi</span>
           </div>
         </div>
       </div>
