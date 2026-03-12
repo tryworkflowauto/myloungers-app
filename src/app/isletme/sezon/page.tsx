@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -13,41 +13,212 @@ const GRAY400 = "#94A3B8";
 const GRAY600 = "#475569";
 const GRAY800 = "#1E293B";
 const GREEN = "#10B981";
+const RED = "#EF4444";
 const BLUE = "#3B82F6";
 const PURPLE = "#7C3AED";
 const YELLOW = "#F59E0B";
 
-// Mock - Sezon listesi
-const SEZONLAR = [
-  { name: "Erken Sezon", tarih: "1 Mart — 31 Mayıs 2026", dot: BLUE, badge: "Şu an aktif", badgeBg: "#DBEAFE", badgeColor: "#1E40AF", borderColor: BLUE, rowBg: "#EFF6FF" },
-  { name: "Yüksek Sezon", tarih: "1 Haziran — 31 Ağustos 2026", dot: ORANGE, badge: "Yaklaşıyor", badgeBg: "#FFEDD5", badgeColor: "#C2410C" },
-  { name: "Normal Sezon", tarih: "1 Eylül — 31 Ekim 2026", dot: TEAL, badge: "Planlandı", badgeBg: "#F0FFFE", badgeColor: TEAL },
-  { name: "Kapalı Dönem", tarih: "1 Kasım — 28 Şubat 2027", dot: GRAY300, badge: "Kapalı", badgeBg: GRAY100, badgeColor: GRAY600, opacity: 0.6 },
+// ── Types ─────────────────────────────────────────────────────────────────────
+type SezonItem = {
+  id: number;
+  name: string;
+  bas: string;
+  bit: string;
+  dot: string;
+  badge: string;
+  badgeBg: string;
+  badgeColor: string;
+  borderColor?: string;
+  rowBg?: string;
+  opacity?: number;
+};
+
+type FiyatRow = {
+  id: string;
+  name: string;
+  sub: string;
+  color: string;
+  erken: number;
+  yuksek: number;
+  normal: number;
+  minGun: number;
+  anlikColor: string;
+};
+
+type KampanyaDurum = "aktif" | "planli" | "tamamlandi" | "durduruldu";
+
+type Kampanya = {
+  id: number;
+  name: string;
+  bas: string;
+  bit: string;
+  tip: "oran" | "sabit";
+  indirimOran: number;
+  sabitFiyatlar: Record<string, number>;
+  gruplar: string[];
+  musteriGoster: boolean;
+  headerBg: string;
+  durum: KampanyaDurum;
+};
+
+// ── Initial data ──────────────────────────────────────────────────────────────
+const INIT_SEZONLAR: SezonItem[] = [
+  { id: 1, name: "Erken Sezon",  bas: "2026-03-01", bit: "2026-05-31", dot: BLUE,   badge: "Şu an aktif", badgeBg: "#DBEAFE", badgeColor: "#1E40AF", borderColor: BLUE, rowBg: "#EFF6FF" },
+  { id: 2, name: "Yüksek Sezon", bas: "2026-06-01", bit: "2026-08-31", dot: ORANGE, badge: "Yaklaşıyor",  badgeBg: "#FFEDD5", badgeColor: "#C2410C" },
+  { id: 3, name: "Normal Sezon", bas: "2026-09-01", bit: "2026-10-31", dot: TEAL,   badge: "Planlandı",  badgeBg: "#F0FFFE", badgeColor: TEAL },
+  { id: 4, name: "Kapalı Dönem", bas: "2026-11-01", bit: "2027-02-28", dot: GRAY300,badge: "Kapalı",     badgeBg: GRAY100,   badgeColor: GRAY600, opacity: 0.6 },
 ];
 
-// Mock - Fiyat tablosu (Erken sezon seçili)
-const FIYAT_GRUPLAR = [
-  { name: "⭐ Gold", sub: "10 şezlong • Denize sıfır", color: "#8B5CF6", erken: 2000, yuksek: 2800, normal: 1600, minGun: 1, anlik: "₺2.000", anlikColor: PURPLE },
-  { name: "🔥 VIP", sub: "40 şezlong • Birinci sıra", color: ORANGE, erken: 1500, yuksek: 2200, normal: 1200, minGun: 1, anlik: "₺1.500", anlikColor: ORANGE },
-  { name: "⚓ İskele", sub: "20 şezlong • Ahşap platform", color: YELLOW, erken: 1250, yuksek: 1800, normal: 950, minGun: 1, anlik: "₺1.250", anlikColor: YELLOW },
-  { name: "🌊 Silver", sub: "55 şezlong • Standart bölge", color: TEAL, erken: 1000, yuksek: 1400, normal: 750, minGun: 1, anlik: "₺1.000", anlikColor: TEAL },
+const INIT_FIYAT: FiyatRow[] = [
+  { id: "gold",   name: "⭐ Gold",   sub: "10 şezlong • Denize sıfır",    color: "#8B5CF6", erken: 2000, yuksek: 2800, normal: 1600, minGun: 1, anlikColor: PURPLE },
+  { id: "vip",    name: "🔥 VIP",    sub: "40 şezlong • Birinci sıra",    color: ORANGE,    erken: 1500, yuksek: 2200, normal: 1200, minGun: 1, anlikColor: ORANGE },
+  { id: "iskele", name: "⚓ İskele", sub: "20 şezlong • Ahşap platform",  color: YELLOW,    erken: 1250, yuksek: 1800, normal: 950,  minGun: 1, anlikColor: YELLOW },
+  { id: "silver", name: "🌊 Silver", sub: "55 şezlong • Standart bölge", color: TEAL,      erken: 1000, yuksek: 1400, normal: 750,  minGun: 1, anlikColor: TEAL },
 ];
 
-// Mock - Kampanyalar
-const KAMPANYALAR = [
-  { id: 1, name: "🌸 Bahar Kampanyası", tarih: "1 Mart — 31 Mayıs 2026", indirim: "%20", indirimColor: ORANGE, headerBg: `linear-gradient(135deg,${ORANGE},#C2410C)`, chip: "● Aktif", chipOn: true, tip: "Oran İndirimi", gruplar: ["Silver", "VIP"], gruplarColors: ["#DBEAFE", "#FFEDD5"], gruplarTextColors: ["#1E40AF", "#C2410C"], musteriGoster: true, preview: { silver: { eski: "₺1.000", yeni: "₺800" } }, btns: ["✏️ Düzenle", "⏸ Durdur", "🗑️"] },
-  { id: 2, name: "☀️ Yaz Açılış", tarih: "1 — 7 Haziran 2026", indirim: "%30", indirimColor: PURPLE, headerBg: `linear-gradient(135deg,${PURPLE},#4C1D95)`, chip: "◷ Planlandı", chipOn: false, tip: "Oran İndirimi", gruplar: ["Silver", "VIP", "İskele", "Gold"], gruplarColors: ["#DBEAFE", "#FFEDD5", "#FEF3C7", "#F5F3FF"], gruplarTextColors: ["#1E40AF", "#C2410C", "#92400E", PURPLE], kalanSure: "82 gün", btns: ["✏️ Düzenle", "▶ Şimdi Başlat", "🗑️"] },
-  { id: 3, name: "🎉 Yılbaşı Özel", tarih: "1 — 7 Ocak 2026", indirim: "Sabit", indirimColor: GRAY600, headerBg: `linear-gradient(135deg,${GRAY400},${GRAY600})`, chip: "✓ Tamamlandı", chipOn: false, tip: "Sabit Fiyat", gruplar: ["Silver"], gruplarColors: [GRAY100], gruplarTextColors: [GRAY600], sabitFiyat: "₺750", pasif: true, btns: ["✏️ Düzenle", "🔄 Kopyala", "🗑️"], firstBtnDisabled: true },
+const INIT_KAMPANYALAR: Kampanya[] = [
+  { id: 1, name: "🌸 Bahar Kampanyası", bas: "2026-03-01", bit: "2026-05-31", tip: "oran", indirimOran: 20, sabitFiyatlar: {}, gruplar: ["🌊 Silver", "🔥 VIP"],                        musteriGoster: true,  headerBg: `linear-gradient(135deg,${ORANGE},#C2410C)`, durum: "aktif"       },
+  { id: 2, name: "☀️ Yaz Açılış",       bas: "2026-06-01", bit: "2026-06-07", tip: "oran", indirimOran: 30, sabitFiyatlar: {}, gruplar: ["🌊 Silver", "🔥 VIP", "⚓ İskele", "⭐ Gold"], musteriGoster: true,  headerBg: `linear-gradient(135deg,${PURPLE},#4C1D95)`, durum: "planli"      },
+  { id: 3, name: "🎉 Yılbaşı Özel",     bas: "2026-01-01", bit: "2026-01-07", tip: "sabit",indirimOran: 0,  sabitFiyatlar: { "🌊 Silver": 750 }, gruplar: ["🌊 Silver"],             musteriGoster: false, headerBg: `linear-gradient(135deg,${GRAY400},${GRAY600})`, durum: "tamamlandi" },
 ];
 
+const GRUP_COLORS: Record<string, { bg: string; text: string }> = {
+  "⭐ Gold":    { bg: "#F5F3FF", text: PURPLE   },
+  "🔥 VIP":    { bg: "#FFEDD5", text: "#C2410C" },
+  "⚓ İskele": { bg: "#FEF3C7", text: "#92400E" },
+  "🌊 Silver": { bg: "#DBEAFE", text: "#1E40AF" },
+};
+const GRUPLAR_LIST = ["⭐ Gold", "🔥 VIP", "⚓ İskele", "🌊 Silver"];
+const SEZON_RENKLERI = [BLUE, ORANGE, TEAL, PURPLE, GREEN, GRAY300];
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const MONTHS_TR = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+function fmtTarih(bas: string, bit: string) {
+  const b = new Date(bas + "T00:00:00"), e = new Date(bit + "T00:00:00");
+  return `${b.getDate()} ${MONTHS_TR[b.getMonth()]} — ${e.getDate()} ${MONTHS_TR[e.getMonth()]} ${e.getFullYear()}`;
+}
+function chipOf(d: KampanyaDurum) {
+  return { aktif: "● Aktif", planli: "◷ Planlandı", tamamlandi: "✓ Tamamlandı", durduruldu: "⏸ Durduruldu" }[d];
+}
+function kalanGun(bit: string) {
+  const diff = Math.round((new Date(bit + "T00:00:00").getTime() - new Date("2026-03-10").getTime()) / 86400000);
+  return diff > 0 ? `${diff} gün` : null;
+}
+
+const emptySezonForm = { name: "", bas: "", bit: "", renk: BLUE };
+const emptyKampForm  = { name: "", bas: "2026-03-11", bit: "2026-03-31", tip: "oran" as "oran"|"sabit", indirimOran: 20, sabitFiyatlar: {} as Record<string,number>, gruplar: ["⭐ Gold","🔥 VIP","🌊 Silver"], musteriGoster: true };
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function IsletmeSezonPage() {
-  const [kampanyaModalOpen, setKampanyaModalOpen] = useState(false);
-  const [sezonModalOpen, setSezonModalOpen] = useState(false);
-  const [indirimTip, setIndirimTip] = useState<"oran" | "sabit">("oran");
+  const [sezonlar, setSezonlar]     = useState<SezonItem[]>(INIT_SEZONLAR);
+  const [fiyatlar, setFiyatlar]     = useState<FiyatRow[]>(INIT_FIYAT);
+  const [kampanyalar, setKampanyalar] = useState<Kampanya[]>(INIT_KAMPANYALAR);
   const [seciliSezon, setSeciliSezon] = useState("erken");
+
+  // Genel Ayarlar (controlled)
+  const [genelAyarlar, setGA] = useState({ minRezSure: 2, erkenIndirim: 10, grupBonus: 15, sonDakikaToggle: true, sonDakikaPct: 20, iptalPolitika: "24 saat öncesine kadar tam iade" });
+  const setGAf = <K extends keyof typeof genelAyarlar>(k: K, v: typeof genelAyarlar[K]) => setGA(p => ({ ...p, [k]: v }));
+
+  // Sezon modal
+  const [sezonModal, setSezonModal]       = useState(false);
+  const [editSezon, setEditSezon]         = useState<SezonItem | null>(null);
+  const [sezonForm, setSezonForm]         = useState(emptySezonForm);
+
+  // Kampanya modal
+  const [kampModal, setKampModal]         = useState(false);
+  const [editKamp, setEditKamp]           = useState<Kampanya | null>(null);
+  const [kampForm, setKampForm]           = useState(emptyKampForm);
+
+  // Confirmation modals
+  const [durdurModal, setDurdurModal]     = useState<Kampanya | null>(null);
+  const [baslatModal, setBaslatModal]     = useState<Kampanya | null>(null);
+  const [silModal, setSilModal]           = useState<Kampanya | null>(null);
+
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
+
+  // ESC
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setSezonModal(false); setKampModal(false);
+      setDurdurModal(null); setBaslatModal(null); setSilModal(null);
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  // ── Sezon actions ──────────────────────────────────────────────────────────
+  function openSezonEkle() { setEditSezon(null); setSezonForm(emptySezonForm); setSezonModal(true); }
+  function openSezonDuzenle(s: SezonItem) { setEditSezon(s); setSezonForm({ name: s.name, bas: s.bas, bit: s.bit, renk: s.dot }); setSezonModal(true); }
+  function saveSezon() {
+    const { name, bas, bit, renk } = sezonForm;
+    if (!name || !bas || !bit) return;
+    if (editSezon) {
+      setSezonlar(p => p.map(s => s.id === editSezon.id ? { ...s, name, bas, bit, dot: renk } : s));
+      showToast(`✅ "${name}" sezonu güncellendi`);
+    } else {
+      setSezonlar(p => [...p, { id: Date.now(), name, bas, bit, dot: renk, badge: "Planlandı", badgeBg: "#DBEAFE", badgeColor: "#1E40AF" }]);
+      showToast(`✅ "${name}" sezonu eklendi`);
+    }
+    setSezonModal(false);
+  }
+
+  // ── Fiyat / Genel ──────────────────────────────────────────────────────────
+  function updateFiyat(id: string, key: keyof FiyatRow, value: number) {
+    setFiyatlar(p => p.map(f => f.id === id ? { ...f, [key]: value } : f));
+  }
+  function anlikFiyat(f: FiyatRow) {
+    const v = seciliSezon === "yuksek" ? f.yuksek : seciliSezon === "normal" ? f.normal : f.erken;
+    return `₺${v.toLocaleString("tr")}`;
+  }
+  function kaydetDegisiklikler() { showToast("✅ Değişiklikler kaydedildi!"); }
+
+  // ── Kampanya actions ───────────────────────────────────────────────────────
+  function openKampEkle() { setEditKamp(null); setKampForm(emptyKampForm); setKampModal(true); }
+  function openKampDuzenle(k: Kampanya) {
+    setEditKamp(k);
+    setKampForm({ name: k.name, bas: k.bas, bit: k.bit, tip: k.tip, indirimOran: k.indirimOran, sabitFiyatlar: k.sabitFiyatlar, gruplar: k.gruplar, musteriGoster: k.musteriGoster });
+    setKampModal(true);
+  }
+  function saveKampanya() {
+    if (!kampForm.name) return;
+    const payload = { ...kampForm };
+    if (editKamp) {
+      setKampanyalar(p => p.map(k => k.id === editKamp.id ? { ...k, ...payload } : k));
+      showToast(`✅ "${kampForm.name}" güncellendi`);
+    } else {
+      const newK: Kampanya = { id: Date.now(), ...payload, headerBg: `linear-gradient(135deg,${ORANGE},#C2410C)`, durum: "planli" };
+      setKampanyalar(p => [...p, newK]);
+      showToast(`✅ "${kampForm.name}" kampanyası oluşturuldu`);
+    }
+    setKampModal(false);
+  }
+  function toggleGrupInForm(g: string) {
+    setKampForm(p => ({ ...p, gruplar: p.gruplar.includes(g) ? p.gruplar.filter(x => x !== g) : [...p.gruplar, g] }));
+  }
+  function kopyala(k: Kampanya) {
+    setKampanyalar(p => [...p, { ...k, id: Date.now(), name: `${k.name} (Kopya)`, durum: "planli" }]);
+    showToast(`🔄 "${k.name}" kopyalandı — taslak oluşturuldu`);
+  }
+
+  // ── Shared styles ──────────────────────────────────────────────────────────
+  const inputCls: React.CSSProperties = { width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" };
+  const labelCls: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 };
+  const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 };
+  const modalBox = (w = 540): React.CSSProperties => ({ background: "white", borderRadius: 16, width: w, maxWidth: "95vw", maxHeight: "92vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" });
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800, display: "flex", flexDirection: "column", minHeight: "100%" }}>
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{ position: "fixed", top: 20, right: 24, background: NAVY, color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600, zIndex: 999, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+          {toast}
+        </div>
+      )}
+
       {/* TOPBAR */}
       <header style={{ background: "white", borderBottom: `1px solid ${GRAY200}`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div>
@@ -55,42 +226,42 @@ export default function IsletmeSezonPage() {
           <span style={{ fontSize: 11, color: GRAY400 }}>2026 Sezonu • Şu an: Erken Sezon</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setKampanyaModalOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>🎯 Kampanya Oluştur</button>
-          <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>💾 Değişiklikleri Kaydet</button>
+          <button onClick={openKampEkle} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>🎯 Kampanya Oluştur</button>
+          <button onClick={kaydetDegisiklikler} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>💾 Değişiklikleri Kaydet</button>
         </div>
       </header>
 
       <div style={{ padding: 24, flex: 1 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+
           {/* SEZON TANIMLARI */}
           <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>📅 Sezon Tanımları</h3>
-              <button onClick={() => setSezonModalOpen(true)} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>➕ Sezon Ekle</button>
+              <button onClick={openSezonEkle} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>➕ Sezon Ekle</button>
             </div>
             <div style={{ padding: 20 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>2026 Yıl Görünümü</div>
               <div style={{ background: GRAY100, borderRadius: 12, height: 36, position: "relative", overflow: "hidden", marginBottom: 6 }}>
-                <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "16.5%", background: GRAY300, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Kapalı</div>
-                <div style={{ position: "absolute", left: "16.5%", top: 0, bottom: 0, width: "25%", background: BLUE, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Erken</div>
-                <div style={{ position: "absolute", left: "41.5%", top: 0, bottom: 0, width: "25%", background: ORANGE, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Yüksek</div>
-                <div style={{ position: "absolute", left: "66.5%", top: 0, bottom: 0, width: "16.5%", background: TEAL, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Normal</div>
-                <div style={{ position: "absolute", left: "83%", top: 0, bottom: 0, width: "17%", background: GRAY300, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Kapalı</div>
+                <div style={{ position: "absolute", left: 0,       top: 0, bottom: 0, width: "16.5%", background: GRAY300, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Kapalı</div>
+                <div style={{ position: "absolute", left: "16.5%", top: 0, bottom: 0, width: "25%",   background: BLUE,    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Erken</div>
+                <div style={{ position: "absolute", left: "41.5%", top: 0, bottom: 0, width: "25%",   background: ORANGE,  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Yüksek</div>
+                <div style={{ position: "absolute", left: "66.5%", top: 0, bottom: 0, width: "16.5%", background: TEAL,    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Normal</div>
+                <div style={{ position: "absolute", left: "83%",   top: 0, bottom: 0, width: "17%",   background: GRAY300, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>Kapalı</div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "0 2px", fontSize: 9, color: GRAY400 }}>
                 <span>Oca</span><span>Mar</span><span>Haz</span><span>Eyl</span><span>Kas</span><span>Ara</span>
               </div>
-
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-                {SEZONLAR.map((s, i) => (
-                  <div key={i} style={{ border: `1.5px solid ${s.borderColor ?? GRAY200}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, background: s.rowBg ?? "transparent", opacity: s.opacity ?? 1 }}>
+                {sezonlar.map((s) => (
+                  <div key={s.id} style={{ border: `1.5px solid ${s.borderColor ?? GRAY200}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, background: s.rowBg ?? "transparent", opacity: s.opacity ?? 1 }}>
                     <div style={{ width: 14, height: 14, borderRadius: 4, background: s.dot }} />
                     <div style={{ flex: 1 }}>
                       <strong style={{ display: "block", fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 2 }}>{s.name}</strong>
-                      <span style={{ fontSize: 11, color: GRAY400 }}>{s.tarih}</span>
+                      <span style={{ fontSize: 11, color: GRAY400 }}>{fmtTarih(s.bas, s.bit)}</span>
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: s.badgeBg, color: s.badgeColor }}>{s.badge}</span>
-                    <button style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
+                    <button onClick={() => openSezonDuzenle(s)} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
                   </div>
                 ))}
               </div>
@@ -99,43 +270,59 @@ export default function IsletmeSezonPage() {
 
           {/* GENEL AYARLAR */}
           <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}` }}><h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>⚙️ Genel Ayarlar</h3></div>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}` }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>⚙️ Genel Ayarlar</h3>
+            </div>
             <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-              {[
-                { label: "Minimum Rezervasyon Süresi", sub: "Müşteri en az kaç saat önceden rezervasyon yapabilir", val: 2, unit: "saat", type: "number" as const },
-                { label: "Erken Rezervasyon İndirimi", sub: "3+ gün önceden yapılan rezervasyonlara indirim", val: 10, unit: "%", type: "number" as const },
-                { label: "Grup Rezervasyon Bonusu", sub: "4+ şezlong aynı anda rezerve edilirse", val: 15, unit: "%", type: "number" as const },
-                { label: "Son Dakika İndirimi", sub: "Gün içi boş kalan şezlonglara otomatik indirim", val: 20, unit: "%", type: "toggle" as const },
-                { label: "İptal Politikası", sub: "Rezervasyon iptalinde iade süresi", type: "select" as const },
-              ].map((a, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>{a.label}</div>
-                    <div style={{ fontSize: 11, color: GRAY400 }}>{a.sub}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {a.type === "toggle" && (
-                      <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer", flexShrink: 0 }}>
-                        <input type="checkbox" defaultChecked style={{ opacity: 0, width: 0, height: 0 }} />
-                        <span style={{ position: "absolute", inset: 0, background: TEAL, borderRadius: 20 }}>
-                          <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transform: "translateX(16px)" }} />
-                        </span>
-                      </label>
-                    )}
-                    {a.type === "number" && <input type="number" defaultValue={a.val} min={0} max={a.unit === "%" ? 50 : undefined} style={{ width: a.unit === "saat" ? 70 : 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: a.unit === "saat" ? "center" : "center" }} />}
-                    {a.type === "number" && <span style={{ fontSize: 12, color: GRAY600 }}>{a.unit}</span>}
-                    {a.type === "toggle" && <><input type="number" defaultValue={a.val} min={0} max={50} style={{ width: 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} /><span style={{ fontSize: 12, color: GRAY600 }}>%</span></>}
-                    {a.type === "select" && (
-                      <select style={{ padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
-                        <option>24 saat öncesine kadar tam iade</option>
-                        <option>48 saat öncesine kadar tam iade</option>
-                        <option>İade yok</option>
-                        <option>%50 iade</option>
-                      </select>
-                    )}
-                  </div>
+              {/* Minimum Rezervasyon Süresi */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
+                <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Minimum Rezervasyon Süresi</div><div style={{ fontSize: 11, color: GRAY400 }}>Müşteri en az kaç saat önceden rezervasyon yapabilir</div></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input type="number" value={genelAyarlar.minRezSure} onChange={(e) => setGAf("minRezSure", Number(e.target.value))} min={0} style={{ width: 70, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                  <span style={{ fontSize: 12, color: GRAY600 }}>saat</span>
                 </div>
-              ))}
+              </div>
+              {/* Erken Rezervasyon İndirimi */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
+                <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Erken Rezervasyon İndirimi</div><div style={{ fontSize: 11, color: GRAY400 }}>3+ gün önceden yapılan rezervasyonlara indirim</div></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input type="number" value={genelAyarlar.erkenIndirim} onChange={(e) => setGAf("erkenIndirim", Number(e.target.value))} min={0} max={50} style={{ width: 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                  <span style={{ fontSize: 12, color: GRAY600 }}>%</span>
+                </div>
+              </div>
+              {/* Grup Rezervasyon Bonusu */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
+                <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Grup Rezervasyon Bonusu</div><div style={{ fontSize: 11, color: GRAY400 }}>4+ şezlong aynı anda rezerve edilirse</div></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input type="number" value={genelAyarlar.grupBonus} onChange={(e) => setGAf("grupBonus", Number(e.target.value))} min={0} max={50} style={{ width: 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                  <span style={{ fontSize: 12, color: GRAY600 }}>%</span>
+                </div>
+              </div>
+              {/* Son Dakika İndirimi */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
+                <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Son Dakika İndirimi</div><div style={{ fontSize: 11, color: GRAY400 }}>Gün içi boş kalan şezlonglara otomatik indirim</div></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer", flexShrink: 0 }}>
+                    <input type="checkbox" checked={genelAyarlar.sonDakikaToggle} onChange={(e) => setGAf("sonDakikaToggle", e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+                    <span style={{ position: "absolute", inset: 0, background: genelAyarlar.sonDakikaToggle ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+                      <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: genelAyarlar.sonDakikaToggle ? "translateX(16px)" : "translateX(0)" }} />
+                    </span>
+                  </label>
+                  <input type="number" value={genelAyarlar.sonDakikaPct} onChange={(e) => setGAf("sonDakikaPct", Number(e.target.value))} min={0} max={50} disabled={!genelAyarlar.sonDakikaToggle} style={{ width: 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center", opacity: genelAyarlar.sonDakikaToggle ? 1 : 0.4 }} />
+                  <span style={{ fontSize: 12, color: GRAY600 }}>%</span>
+                </div>
+              </div>
+              {/* İptal Politikası */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
+                <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>İptal Politikası</div><div style={{ fontSize: 11, color: GRAY400 }}>Rezervasyon iptalinde iade süresi</div></div>
+                <select value={genelAyarlar.iptalPolitika} onChange={(e) => setGAf("iptalPolitika", e.target.value)} style={{ padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
+                  <option>24 saat öncesine kadar tam iade</option>
+                  <option>48 saat öncesine kadar tam iade</option>
+                  <option>İade yok</option>
+                  <option>%50 iade</option>
+                </select>
+              </div>
+              <button onClick={kaydetDegisiklikler} style={{ padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer", alignSelf: "flex-end" }}>💾 Kaydet</button>
             </div>
           </div>
         </div>
@@ -151,34 +338,44 @@ export default function IsletmeSezonPage() {
                 <option value="yuksek">🟠 Yüksek Sezon</option>
                 <option value="normal">🟢 Normal Sezon</option>
               </select>
+              <button onClick={kaydetDegisiklikler} style={{ padding: "6px 12px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>💾 Kaydet</button>
             </div>
           </div>
           <div style={{ padding: "0 8px", overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>Grup</th>
-                  <th style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>Günlük Fiyat</th>
-                  <th style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>Yüksek Sezon</th>
-                  <th style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>Normal Sezon</th>
-                  <th style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>Min. Süre</th>
-                  <th style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>Anlık Fiyat</th>
+                  {["Grup","Erken Sezon","Yüksek Sezon","Normal Sezon","Min. Süre","Anlık Fiyat"].map((h) => (
+                    <th key={h} style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {FIYAT_GRUPLAR.map((g, i) => (
-                  <tr key={i} style={{ transition: "background 0.15s" }}>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}`, fontSize: 13 }}>
+                {fiyatlar.map((g) => (
+                  <tr key={g.id} style={{ transition: "background 0.15s" }}>
+                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 10, height: 10, borderRadius: 3, background: g.color }} />
                         <div><div style={{ fontWeight: 700, fontSize: 13 }}>{g.name}</div><div style={{ fontSize: 10, color: GRAY400 }}>{g.sub}</div></div>
                       </div>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}><input type="number" defaultValue={g.erken} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} /> <span style={{ fontSize: 11, color: GRAY400 }}>₺</span></td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}><input type="number" defaultValue={g.yuksek} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} /> <span style={{ fontSize: 11, color: GRAY400 }}>₺</span></td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}><input type="number" defaultValue={g.normal} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} /> <span style={{ fontSize: 11, color: GRAY400 }}>₺</span></td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}><input type="number" defaultValue={g.minGun} style={{ width: 70, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} /> <span style={{ fontSize: 11, color: GRAY400 }}>gün</span></td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}`, fontSize: 15, fontWeight: 900, color: g.anlikColor }}>{g.anlik}</td>
+                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
+                      <input type="number" value={g.erken} onChange={(e) => updateFiyat(g.id, "erken", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${seciliSezon === "erken" ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
+                      <span style={{ fontSize: 11, color: GRAY400 }}> ₺</span>
+                    </td>
+                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
+                      <input type="number" value={g.yuksek} onChange={(e) => updateFiyat(g.id, "yuksek", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${seciliSezon === "yuksek" ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
+                      <span style={{ fontSize: 11, color: GRAY400 }}> ₺</span>
+                    </td>
+                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
+                      <input type="number" value={g.normal} onChange={(e) => updateFiyat(g.id, "normal", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${seciliSezon === "normal" ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
+                      <span style={{ fontSize: 11, color: GRAY400 }}> ₺</span>
+                    </td>
+                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
+                      <input type="number" value={g.minGun} onChange={(e) => updateFiyat(g.id, "minGun", Number(e.target.value))} style={{ width: 70, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                      <span style={{ fontSize: 11, color: GRAY400 }}> gün</span>
+                    </td>
+                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}`, fontSize: 15, fontWeight: 900, color: g.anlikColor }}>{anlikFiyat(g)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -190,70 +387,156 @@ export default function IsletmeSezonPage() {
         <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>🎯 Kampanyalar</h3>
-            <button onClick={() => setKampanyaModalOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>➕ Kampanya Oluştur</button>
+            <button onClick={openKampEkle} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>➕ Kampanya Oluştur</button>
           </div>
           <div style={{ padding: 20 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
-              {KAMPANYALAR.map((k) => (
-                <div key={k.id} style={{ borderRadius: 14, overflow: "hidden", border: `1.5px solid ${GRAY200}`, transition: "all 0.2s", opacity: k.pasif ? 0.6 : 1 }}>
-                  <div style={{ padding: "14px 16px", color: "white", position: "relative", background: k.headerBg }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 20, position: "absolute", top: 12, left: 14, background: k.chipOn ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.15)", color: k.chipOn ? "white" : "rgba(255,255,255,0.7)" }}>{k.chip}</span>
-                    <div style={{ marginTop: 18 }}>
-                      <h4 style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>{k.name}</h4>
-                      <span style={{ fontSize: 11, opacity: 0.85 }}>{k.tarih}</span>
-                    </div>
-                    <div style={{ position: "absolute", top: 12, right: 12, background: "white", borderRadius: 10, padding: "6px 12px", fontSize: 16, fontWeight: 900, color: k.indirimColor }}>{k.indirim}</div>
-                  </div>
-                  <div style={{ padding: "14px 16px", background: "white" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>İndirim Tipi</span><span style={{ fontWeight: 700, color: NAVY }}>{k.tip}</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, fontSize: 12 }}>
-                      <span style={{ color: GRAY400 }}>Uygulanan Gruplar</span>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        {k.gruplar.map((gr, gi) => <span key={gi} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: k.gruplarColors[gi], color: k.gruplarTextColors[gi] }}>{gr}</span>)}
+              {kampanyalar.map((k) => {
+                const chip = chipOf(k.durum);
+                const chipOn = k.durum === "aktif";
+                const isTamamlandi = k.durum === "tamamlandi";
+                const kalan = k.durum === "planli" ? kalanGun(k.bit) : null;
+                return (
+                  <div key={k.id} style={{ borderRadius: 14, overflow: "hidden", border: `1.5px solid ${GRAY200}`, opacity: isTamamlandi ? 0.65 : 1 }}>
+                    <div style={{ padding: "14px 16px", color: "white", position: "relative", background: k.headerBg }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 20, position: "absolute", top: 12, left: 14, background: chipOn ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.15)", color: chipOn ? "white" : "rgba(255,255,255,0.7)" }}>{chip}</span>
+                      <div style={{ marginTop: 18 }}>
+                        <h4 style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>{k.name}</h4>
+                        <span style={{ fontSize: 11, opacity: 0.85 }}>{fmtTarih(k.bas, k.bit)}</span>
+                      </div>
+                      <div style={{ position: "absolute", top: 12, right: 12, background: "white", borderRadius: 10, padding: "6px 12px", fontSize: 16, fontWeight: 900, color: k.tip === "oran" ? ORANGE : GRAY600 }}>
+                        {k.tip === "oran" ? `%${k.indirimOran}` : "Sabit"}
                       </div>
                     </div>
-                    {k.musteriGoster && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Müşteri Görünümü</span><span style={{ fontWeight: 700, color: GREEN }}>✓ Gösteriliyor</span></div>}
-                    {k.kalanSure && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan Süre</span><span style={{ fontWeight: 700, color: PURPLE }}>{k.kalanSure}</span></div>}
-                    {k.preview && <div style={{ borderTop: `1px solid ${GRAY100}`, paddingTop: 8, marginTop: 4 }}><div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}><span style={{ color: GRAY400 }}>Silver: <s style={{ color: GRAY400 }}>₺1.000</s></span><span style={{ fontWeight: 700, color: ORANGE }}>₺800</span></div></div>}
-                    {k.sabitFiyat && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Silver Sabit Fiyat</span><span style={{ fontWeight: 700, color: NAVY }}>{k.sabitFiyat}</span></div>}
+                    <div style={{ padding: "14px 16px", background: "white" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, fontSize: 12 }}>
+                        <span style={{ color: GRAY400 }}>İndirim Tipi</span>
+                        <span style={{ fontWeight: 700, color: NAVY }}>{k.tip === "oran" ? "Oran İndirimi" : "Sabit Fiyat"}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, fontSize: 12 }}>
+                        <span style={{ color: GRAY400 }}>Uygulanan Gruplar</span>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {k.gruplar.map((gr) => {
+                            const gc = GRUP_COLORS[gr] ?? { bg: GRAY100, text: GRAY600 };
+                            return <span key={gr} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: gc.bg, color: gc.text }}>{gr.replace(/^[^ ]+ /, "")}</span>;
+                          })}
+                        </div>
+                      </div>
+                      {k.musteriGoster && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Müşteri Görünümü</span><span style={{ fontWeight: 700, color: GREEN }}>✓ Gösteriliyor</span></div>}
+                      {kalan && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan Süre</span><span style={{ fontWeight: 700, color: PURPLE }}>{kalan}</span></div>}
+                      {k.durum === "durduruldu" && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Durum</span><span style={{ fontWeight: 700, color: GRAY400 }}>Durduruldu</span></div>}
+                      {k.tip === "oran" && k.gruplar.length > 0 && (
+                        <div style={{ borderTop: `1px solid ${GRAY100}`, paddingTop: 8, marginTop: 4 }}>
+                          {k.gruplar.slice(0, 2).map((gr) => {
+                            const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
+                            const disc = Math.round(base * (1 - k.indirimOran / 100));
+                            return base > 0 ? (
+                              <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                                <span style={{ color: GRAY400 }}>{gr.replace(/^[^ ]+ /, "")}:</span>
+                                <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong></span>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding: "10px 16px", background: GRAY50, borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      {/* Düzenle */}
+                      <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>✏️ Düzenle</button>
+                      {/* Durdur / Başlat */}
+                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>⏸ Durdur</button>}
+                      {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>▶ Şimdi Başlat</button>}
+                      {/* Kopyala */}
+                      {isTamamlandi && <button onClick={() => kopyala(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🔄 Kopyala</button>}
+                      {/* Sil */}
+                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>🗑️</button>
+                    </div>
                   </div>
-                  <div style={{ padding: "10px 16px", background: GRAY50, borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                    {k.btns.map((b, bi) => (
-                      <button key={bi} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: k.firstBtnDisabled && bi === 0 ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: k.firstBtnDisabled && bi === 0 ? 0.5 : 1 }}>{b}</button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
-      {/* KAMPANYA MODAL */}
-      {kampanyaModalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setKampanyaModalOpen(false)}>
-          <div style={{ background: "white", borderRadius: 16, width: 540, maxWidth: "95vw", maxHeight: "92vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+      {/* ── SEZON MODAL ────────────────────────────────────────────────────────── */}
+      {sezonModal && (
+        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setSezonModal(false)}>
+          <div style={modalBox(440)} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: "20px 24px", borderBottom: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>🎯 Yeni Kampanya Oluştur</h3>
-              <button onClick={() => setKampanyaModalOpen(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{editSezon ? "✏️ Sezonu Düzenle" : "📅 Sezon Ekle"}</h3>
+              <button onClick={() => setSezonModal(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
             <div style={{ padding: "20px 24px" }}>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Kampanya Adı <span style={{ color: GRAY400, fontWeight: 400 }}>(Müşteride görünür)</span></label>
-                <input type="text" placeholder="örn: Bahar İndirimi, Yaz Açılış..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
+                <label style={labelCls}>Sezon Adı *</label>
+                <input type="text" value={sezonForm.name} onChange={(e) => setSezonForm(p => ({ ...p, name: e.target.value }))} placeholder="örn: Erken Sezon, Yüksek Sezon..." style={inputCls} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Başlangıç Tarihi</label><input type="date" defaultValue="2026-03-11" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} /></div>
-                <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Bitiş Tarihi</label><input type="date" defaultValue="2026-03-31" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} /></div>
+                <div>
+                  <label style={labelCls}>Başlangıç Tarihi *</label>
+                  <input type="date" value={sezonForm.bas} onChange={(e) => setSezonForm(p => ({ ...p, bas: e.target.value }))} style={inputCls} />
+                </div>
+                <div>
+                  <label style={labelCls}>Bitiş Tarihi *</label>
+                  <input type="date" value={sezonForm.bit} onChange={(e) => setSezonForm(p => ({ ...p, bit: e.target.value }))} style={inputCls} />
+                </div>
               </div>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>İndirim Tipi</label>
+                <label style={labelCls}>Renk</label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {SEZON_RENKLERI.map((c) => (
+                    <div key={c} onClick={() => setSezonForm(p => ({ ...p, renk: c }))} style={{ width: 32, height: 32, borderRadius: 10, background: c, cursor: "pointer", border: `3px solid ${sezonForm.renk === c ? NAVY : "transparent"}`, transition: "border 0.15s", boxShadow: sezonForm.renk === c ? `0 0 0 2px white inset` : "none" }} />
+                  ))}
+                </div>
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: GRAY50, borderRadius: 10 }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 4, background: sezonForm.renk }} />
+                  <span style={{ fontSize: 12, color: GRAY600 }}>Seçili renk önizlemesi</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
+              <button onClick={() => setSezonModal(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={saveSezon} disabled={!sezonForm.name || !sezonForm.bas || !sezonForm.bit} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !sezonForm.name || !sezonForm.bas || !sezonForm.bit ? GRAY200 : TEAL, color: !sezonForm.name || !sezonForm.bas || !sezonForm.bit ? GRAY400 : "white", cursor: !sezonForm.name || !sezonForm.bas || !sezonForm.bit ? "not-allowed" : "pointer" }}>✅ {editSezon ? "Güncelle" : "Sezon Ekle"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── KAMPANYA MODAL ─────────────────────────────────────────────────────── */}
+      {kampModal && (
+        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setKampModal(false)}>
+          <div style={modalBox(540)} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: "20px 24px", borderBottom: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{editKamp ? "✏️ Kampanya Düzenle" : "🎯 Yeni Kampanya Oluştur"}</h3>
+              <button onClick={() => setKampModal(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              {/* İsim */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelCls}>Kampanya Adı <span style={{ color: GRAY400, fontWeight: 400 }}>(Müşteride görünür)</span></label>
+                <input type="text" value={kampForm.name} onChange={(e) => setKampForm(p => ({ ...p, name: e.target.value }))} placeholder="örn: Bahar İndirimi, Yaz Açılış..." style={inputCls} />
+              </div>
+              {/* Tarihler */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                <div>
+                  <label style={labelCls}>Başlangıç Tarihi</label>
+                  <input type="date" value={kampForm.bas} onChange={(e) => setKampForm(p => ({ ...p, bas: e.target.value }))} style={inputCls} />
+                </div>
+                <div>
+                  <label style={labelCls}>Bitiş Tarihi</label>
+                  <input type="date" value={kampForm.bit} onChange={(e) => setKampForm(p => ({ ...p, bit: e.target.value }))} style={inputCls} />
+                </div>
+              </div>
+              {/* İndirim tipi */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelCls}>İndirim Tipi</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {[
+                  {([
                     { key: "oran", icon: "%", name: "Oran İndirimi", desc: "Mevcut fiyattan % indirim" },
                     { key: "sabit", icon: "₺", name: "Sabit Fiyat", desc: "Her grup için sabit fiyat gir" },
-                  ].map((op) => (
-                    <button key={op.key} type="button" onClick={() => setIndirimTip(op.key as typeof indirimTip)} style={{ border: `2px solid ${indirimTip === op.key ? ORANGE : GRAY200}`, borderRadius: 10, padding: 12, cursor: "pointer", textAlign: "center", background: indirimTip === op.key ? "#FFF9F5" : "transparent" }}>
+                  ] as const).map((op) => (
+                    <button key={op.key} type="button" onClick={() => setKampForm(p => ({ ...p, tip: op.key }))} style={{ border: `2px solid ${kampForm.tip === op.key ? ORANGE : GRAY200}`, borderRadius: 10, padding: 12, cursor: "pointer", textAlign: "center", background: kampForm.tip === op.key ? "#FFF9F5" : "transparent" }}>
                       <div style={{ fontSize: 22, marginBottom: 4 }}>{op.icon}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>{op.name}</div>
                       <div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>{op.desc}</div>
@@ -261,77 +544,128 @@ export default function IsletmeSezonPage() {
                   ))}
                 </div>
               </div>
-              {indirimTip === "oran" && (
+              {/* Oran input */}
+              {kampForm.tip === "oran" && (
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>İndirim Oranı</label>
+                  <label style={labelCls}>İndirim Oranı</label>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <input type="number" placeholder="örn: 20" min={1} max={90} style={{ width: 120, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
+                    <input type="number" value={kampForm.indirimOran} onChange={(e) => setKampForm(p => ({ ...p, indirimOran: Number(e.target.value) }))} min={1} max={90} style={{ width: 120, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
                     <span style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>%</span>
                     <span style={{ fontSize: 11, color: GRAY400 }}>indirim uygulanacak</span>
                   </div>
                 </div>
               )}
-              {indirimTip === "sabit" && (
+              {/* Sabit fiyatlar */}
+              {kampForm.tip === "sabit" && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                  {["⭐ Gold", "🔥 VIP", "⚓ İskele", "🌊 Silver"].map((gr) => (
-                    <div key={gr}><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>{gr} Sabit Fiyat</label><input type="number" placeholder="₺" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} /></div>
+                  {GRUPLAR_LIST.map((gr) => (
+                    <div key={gr}>
+                      <label style={labelCls}>{gr} Sabit Fiyat</label>
+                      <input type="number" value={kampForm.sabitFiyatlar[gr] ?? ""} onChange={(e) => setKampForm(p => ({ ...p, sabitFiyatlar: { ...p.sabitFiyatlar, [gr]: Number(e.target.value) } }))} placeholder="₺" style={inputCls} />
+                    </div>
                   ))}
                 </div>
               )}
+              {/* Gruplar */}
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Uygulanan Gruplar</label>
+                <label style={labelCls}>Uygulanan Gruplar</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {[{ n: "⭐ Gold", c: "#8B5CF6" }, { n: "🔥 VIP", c: ORANGE }, { n: "⚓ İskele", c: YELLOW }, { n: "🌊 Silver", c: TEAL }].map((g) => (
-                    <label key={g.n} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 10, cursor: "pointer" }}>
-                      <input type="checkbox" defaultChecked={g.n !== "⚓ İskele"} style={{ accentColor: TEAL, width: 16, height: 16 }} />
-                      <div style={{ width: 10, height: 10, borderRadius: 3, background: g.c }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>{g.n}</span>
-                    </label>
-                  ))}
+                  {GRUPLAR_LIST.map((gr) => {
+                    const gc = GRUP_COLORS[gr] ?? { bg: GRAY100, text: GRAY600 };
+                    const checked = kampForm.gruplar.includes(gr);
+                    return (
+                      <label key={gr} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", border: `1.5px solid ${checked ? TEAL : GRAY200}`, borderRadius: 10, cursor: "pointer", background: checked ? "rgba(10,186,181,0.04)" : "white" }}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleGrupInForm(gr)} style={{ accentColor: TEAL, width: 16, height: 16 }} />
+                        <div style={{ width: 10, height: 10, borderRadius: 3, background: gc.text }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>{gr}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
+              {/* Müşteri göster */}
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Müşteri Tarafında Göster</label>
+                <label style={labelCls}>Müşteri Tarafında Göster</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, background: GRAY50, padding: 12, borderRadius: 10 }}>
                   <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer" }}>
-                    <input type="checkbox" defaultChecked style={{ opacity: 0, width: 0, height: 0 }} />
-                    <span style={{ position: "absolute", inset: 0, background: TEAL, borderRadius: 20 }}><span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transform: "translateX(16px)" }} /></span>
+                    <input type="checkbox" checked={kampForm.musteriGoster} onChange={(e) => setKampForm(p => ({ ...p, musteriGoster: e.target.checked }))} style={{ opacity: 0, width: 0, height: 0 }} />
+                    <span style={{ position: "absolute", inset: 0, background: kampForm.musteriGoster ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+                      <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: kampForm.musteriGoster ? "translateX(16px)" : "translateX(0)" }} />
+                    </span>
                   </label>
                   <span style={{ fontSize: 12, color: GRAY600 }}>Rezervasyon sayfasında kampanya adı ve indirimi göster</span>
                 </div>
               </div>
-              <div style={{ background: GRAY50, borderRadius: 10, padding: 14, border: `1px solid ${GRAY200}` }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Fiyat Önizleme (%20 indirim)</div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}><span style={{ color: GRAY600 }}>⭐ Gold</span><span><s style={{ color: GRAY400 }}>₺2.000</s> → <strong style={{ color: ORANGE }}>₺1.600</strong></span></div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}><span style={{ color: GRAY600 }}>🔥 VIP</span><span><s style={{ color: GRAY400 }}>₺1.500</s> → <strong style={{ color: ORANGE }}>₺1.200</strong></span></div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, borderTop: `1px solid ${GRAY200}`, paddingTop: 6 }}><span style={{ color: GRAY600 }}>🌊 Silver</span><span><s style={{ color: GRAY400 }}>₺1.000</s> → <strong style={{ color: ORANGE }}>₺800</strong></span></div>
-              </div>
+              {/* Önizleme */}
+              {kampForm.tip === "oran" && kampForm.indirimOran > 0 && kampForm.gruplar.length > 0 && (
+                <div style={{ background: GRAY50, borderRadius: 10, padding: 14, border: `1px solid ${GRAY200}` }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Fiyat Önizleme (%{kampForm.indirimOran} indirim)</div>
+                  {kampForm.gruplar.slice(0, 3).map((gr) => {
+                    const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
+                    const disc = Math.round(base * (1 - kampForm.indirimOran / 100));
+                    return base > 0 ? (
+                      <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                        <span style={{ color: GRAY600 }}>{gr}</span>
+                        <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong></span>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
-              <button onClick={() => setKampanyaModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
-              <button onClick={() => setKampanyaModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>💾 Taslak Kaydet</button>
-              <button onClick={() => setKampanyaModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>🚀 Kampanyayı Başlat</button>
+              <button onClick={() => setKampModal(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={() => { saveKampanya(); }} disabled={!kampForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !kampForm.name ? GRAY200 : ORANGE, color: !kampForm.name ? GRAY400 : "white", cursor: !kampForm.name ? "not-allowed" : "pointer" }}>
+                {editKamp ? "💾 Güncelle" : "🚀 Kampanyayı Kaydet"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* SEZON EKLE MODAL */}
-      {sezonModalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setSezonModalOpen(false)}>
-          <div style={{ background: "white", borderRadius: 16, width: 440, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: "20px 24px", borderBottom: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>📅 Sezon Ekle</h3>
-              <button onClick={() => setSezonModalOpen(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
+      {/* ── DURDUR ONAY MODAL ──────────────────────────────────────────────────── */}
+      {durdurModal && (
+        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setDurdurModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>⏸</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Kampanyayı Durdur</h3>
+            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu kampanya durdurulacak:</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{durdurModal.name}</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setDurdurModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={() => { setKampanyalar(p => p.map(k => k.id === durdurModal.id ? { ...k, durum: "durduruldu" } : k)); showToast(`⏸ "${durdurModal.name}" durduruldu`); setDurdurModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: YELLOW, color: "white", cursor: "pointer" }}>⏸ Durdur</button>
             </div>
-            <div style={{ padding: "20px 24px" }}>
-              <div style={{ marginBottom: 14 }}><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Sezon Adı</label><input type="text" placeholder="örn: Erken Sezon, Yüksek Sezon..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} /></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}><div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Başlangıç</label><input type="date" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} /></div><div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Bitiş</label><input type="date" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} /></div></div>
-              <div style={{ marginBottom: 14 }}><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 }}>Renk</label><div style={{ display: "flex", gap: 8 }}>{[BLUE, ORANGE, TEAL, PURPLE, GREEN].map((c, i) => <div key={i} style={{ width: 28, height: 28, borderRadius: 8, background: c, cursor: "pointer", border: i === 0 ? "2px solid " + NAVY : "2px solid transparent" }}></div>)}</div></div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BAŞLAT ONAY MODAL ──────────────────────────────────────────────────── */}
+      {baslatModal && (
+        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setBaslatModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>▶️</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Kampanyayı Başlat</h3>
+            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu kampanya hemen aktif olacak:</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{baslatModal.name}</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setBaslatModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={() => { setKampanyalar(p => p.map(k => k.id === baslatModal.id ? { ...k, durum: "aktif" } : k)); showToast(`▶ "${baslatModal.name}" başlatıldı`); setBaslatModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: GREEN, color: "white", cursor: "pointer" }}>▶ Şimdi Başlat</button>
             </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
-              <button onClick={() => setSezonModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
-              <button onClick={() => setSezonModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>✅ Sezon Ekle</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SİL ONAY MODAL ────────────────────────────────────────────────────── */}
+      {silModal && (
+        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setSilModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Kampanyayı Sil</h3>
+            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu işlem geri alınamaz.</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{silModal.name}</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setSilModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={() => { setKampanyalar(p => p.filter(k => k.id !== silModal.id)); showToast(`🗑️ "${silModal.name}" silindi`); setSilModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️ Evet, Sil</button>
             </div>
           </div>
         </div>
