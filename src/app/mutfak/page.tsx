@@ -155,7 +155,7 @@ export default function MutfakPage() {
               ? <EmptyState icon="📭" msg="Yeni sipariş yok" />
               : yeni.map(s => (
                   <SiparisKartComp
-                    key={s.id} kart={s} isAcil={isAcil(s)}
+                    key={s.id} kart={s} isAcil={!!isAcil(s)}
                     onKartClick={() => setDetayModal(s)}
                     onHazirla={() => setOnayModal(s)}
                     onTamamla={() => {}}
@@ -177,7 +177,7 @@ export default function MutfakPage() {
               ? <EmptyState icon="🍳" msg="Hazırlanan sipariş yok" />
               : hazirlaniyor.map(s => (
                   <SiparisKartComp
-                    key={s.id} kart={s} isAcil={isAcil(s)}
+                    key={s.id} kart={s} isAcil={!!isAcil(s)}
                     onKartClick={() => setDetayModal(s)}
                     onHazirla={() => {}}
                     onTamamla={() => tamamla(s)}
