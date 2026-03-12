@@ -114,7 +114,12 @@ function AramaContent() {
     return result;
   }
 
-  const filtered = getFilteredCards();
+  const filtered = cards.filter(c => {
+    if (activeTab === "Beach Club") return c.cat === "Beach Club";
+    if (activeTab === "Hotel") return c.cat === "Hotel";
+    if (activeTab === "Aqua Park") return c.cat === "Aqua Park";
+    return true;
+  }).filter(c => c.price <= priceMax);
 
   const TABS = [
     { label: "🏖️ Tümü", key: "Tümü", count: 8 },
