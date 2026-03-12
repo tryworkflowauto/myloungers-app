@@ -30,6 +30,7 @@ type Urun = {
   kategori: string;
   descStyle?: { color: string; fontWeight: number };
   imgBg?: string;
+  photos?: string[];
 };
 
 type KategoriItem = {
@@ -84,8 +85,21 @@ function ProductCard({
       className="menu-product-card"
       style={{ background: "white", borderRadius: 14, border: `1.5px solid ${GRAY200}`, overflow: "hidden", transition: "all 0.2s", opacity: u.aktif ? 1 : 0.6 }}
     >
-      <div style={{ height: 130, background: u.imgBg ?? GRAY100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, position: "relative" }}>
-        {u.icon}
+      <div style={{ height: 130, background: u.imgBg ?? GRAY100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, position: "relative", overflow: "hidden" }}>
+        {u.photos && u.photos.length > 0 ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={u.photos[0]} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
+        ) : (
+          u.icon
+        )}
+        {/* Multi-photo dots */}
+        {u.photos && u.photos.length > 1 && (
+          <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+            {u.photos.map((_, i) => (
+              <div key={i} style={{ width: i === 0 ? 12 : 6, height: 6, borderRadius: 3, background: i === 0 ? "white" : "rgba(255,255,255,0.5)", transition: "all 0.2s" }} />
+            ))}
+          </div>
+        )}
         <div style={{ position: "absolute", top: 8, left: 8, display: "flex", gap: 4 }}>
           {u.badges.includes("populer") && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 20, background: TEAL, color: "white" }}>⭐ Popüler</span>}
           {u.badges.includes("yeni") && <span style={{ fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 20, background: ORANGE, color: "white" }}>🆕 Yeni</span>}
@@ -146,6 +160,13 @@ export default function IsletmeMenuPage() {
   const [editForm, setEditForm] = useState(emptyUrunForm);
   const [catForm, setCatForm] = useState(emptyCatForm);
 
+  // Photos (separate from form, because string[] doesn't fit the generic form type)
+  const [yeniPhotos, setYeniPhotos] = useState<string[]>([]);
+  const [editPhotos, setEditPhotos] = useState<string[]>([]);
+
+  // Lightbox (customer preview image viewer)
+  const [lightbox, setLightbox] = useState<{ urun: Urun; idx: number } | null>(null);
+
   // Toast
   const [toast, setToast] = useState<string | null>(null);
 
@@ -158,8 +179,15 @@ export default function IsletmeMenuPage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (lightbox) { setLightbox(null); return; }
         setUrunModalOpen(false); setEditModal(null);
         setSilModal(null); setCatModalOpen(false); setOnizlemeOpen(false);
+        return;
+      }
+      if (lightbox && lightbox.urun.photos) {
+        const len = lightbox.urun.photos.length;
+        if (e.key === "ArrowRight") setLightbox((lb) => lb ? { ...lb, idx: (lb.idx + 1) % len } : null);
+        if (e.key === "ArrowLeft") setLightbox((lb) => lb ? { ...lb, idx: (lb.idx - 1 + len) % len } : null);
       }
     };
     window.addEventListener("keydown", handler);
@@ -180,6 +208,7 @@ export default function IsletmeMenuPage() {
 
   function openEdit(u: Urun) {
     setEditForm({ name: u.name, desc: u.desc, icon: u.icon, kategori: u.kategori, price: String(u.priceNum), birim: u.birim.replace("/ ", ""), badge: u.badges[0] ?? "", aktif: u.aktif });
+    setEditPhotos(u.photos ?? []);
     setEditModal(u);
   }
 
@@ -189,7 +218,7 @@ export default function IsletmeMenuPage() {
     setUrunler((prev) =>
       prev.map((u) =>
         u.id === editModal.id
-          ? { ...u, name: editForm.name, desc: editForm.desc, icon: editForm.icon, kategori: editForm.kategori, price: `₺${editForm.price}`, priceNum, birim: `/ ${editForm.birim}`, badges: editForm.badge ? [editForm.badge] : [], aktif: editForm.aktif }
+          ? { ...u, name: editForm.name, desc: editForm.desc, icon: editForm.icon, kategori: editForm.kategori, price: `₺${editForm.price}`, priceNum, birim: `/ ${editForm.birim}`, badges: editForm.badge ? [editForm.badge] : [], aktif: editForm.aktif, photos: editPhotos }
           : u
       )
     );
@@ -212,9 +241,11 @@ export default function IsletmeMenuPage() {
       birim: `/ ${yeniForm.birim}`,
       aktif: yeniForm.aktif,
       kategori: yeniForm.kategori,
+      photos: yeniPhotos,
     };
     setUrunler((prev) => [newUrun, ...prev]);
     setYeniForm(emptyUrunForm);
+    setYeniPhotos([]);
     setUrunModalOpen(false);
     showToast(`✅ ${yeniForm.name} menüye eklendi`);
   }
@@ -432,7 +463,7 @@ export default function IsletmeMenuPage() {
               <button onClick={() => setUrunModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
 
-            <UrunForm form={yeniForm} setForm={setYeniForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} />
+            <UrunForm form={yeniForm} setForm={setYeniForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} photos={yeniPhotos} setPhotos={setYeniPhotos} />
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setUrunModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -451,7 +482,7 @@ export default function IsletmeMenuPage() {
               <button onClick={() => setEditModal(null)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
 
-            <UrunForm form={editForm} setForm={setEditForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} />
+            <UrunForm form={editForm} setForm={setEditForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} photos={editPhotos} setPhotos={setEditPhotos} />
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditModal(null)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -503,8 +534,24 @@ export default function IsletmeMenuPage() {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {katUrunler.map((u) => (
-                        <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: GRAY50, borderRadius: 12, border: `1px solid ${GRAY100}` }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 10, background: GRAY100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>{u.icon}</div>
+                        <div
+                          key={u.id}
+                          onClick={() => u.photos && u.photos.length > 0 ? setLightbox({ urun: u, idx: 0 }) : undefined}
+                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: GRAY50, borderRadius: 12, border: `1px solid ${GRAY100}`, cursor: u.photos && u.photos.length > 0 ? "pointer" : "default", transition: "border-color 0.15s" }}
+                          className={u.photos && u.photos.length > 0 ? "onizleme-urun-row" : ""}
+                        >
+                          {/* Thumbnail or emoji */}
+                          <div style={{ width: 56, height: 56, borderRadius: 10, background: GRAY100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0, overflow: "hidden", position: "relative" }}>
+                            {u.photos && u.photos.length > 0 ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={u.photos[0]} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              u.icon
+                            )}
+                            {u.photos && u.photos.length > 1 && (
+                              <div style={{ position: "absolute", bottom: 3, right: 3, background: "rgba(0,0,0,0.6)", color: "white", fontSize: 8, fontWeight: 700, padding: "1px 4px", borderRadius: 6 }}>+{u.photos.length - 1}</div>
+                            )}
+                          </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, display: "flex", alignItems: "center", gap: 6 }}>
                               {u.name}
@@ -513,6 +560,9 @@ export default function IsletmeMenuPage() {
                               {u.badges.includes("alkol") && <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 5px", borderRadius: 10, background: "#7C3AED", color: "white" }}>🔞</span>}
                             </div>
                             <div style={{ fontSize: 11, color: GRAY400, marginTop: 2 }}>{u.desc}</div>
+                            {u.photos && u.photos.length > 0 && (
+                              <div style={{ fontSize: 10, color: TEAL, marginTop: 3, fontWeight: 600 }}>📸 {u.photos.length} fotoğraf — görüntüle</div>
+                            )}
                           </div>
                           <div style={{ textAlign: "right", flexShrink: 0 }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: TEAL }}>{u.price}</div>
@@ -532,11 +582,89 @@ export default function IsletmeMenuPage() {
         </div>
       )}
 
+      {/* ── LIGHTBOX (müşteri önizleme resim görüntüleyici) ──────────────── */}
+      {lightbox && lightbox.urun.photos && lightbox.urun.photos.length > 0 && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500 }}
+          onClick={() => setLightbox(null)}
+        >
+          <div style={{ position: "relative", maxWidth: "90vw", maxHeight: "90vh", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }} onClick={(e) => e.stopPropagation()}>
+            {/* Close */}
+            <button
+              onClick={() => setLightbox(null)}
+              style={{ position: "absolute", top: -44, right: 0, background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8, color: "white", width: 36, height: 36, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}
+            >✕</button>
+
+            {/* Product info */}
+            <div style={{ color: "white", textAlign: "center", marginBottom: -4 }}>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{lightbox.urun.name}</div>
+              <div style={{ fontSize: 12, opacity: 0.6 }}>{lightbox.idx + 1} / {lightbox.urun.photos.length}</div>
+            </div>
+
+            {/* Image */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 16 }}>
+              {/* Left arrow */}
+              {lightbox.urun.photos.length > 1 && (
+                <button
+                  onClick={() => setLightbox((lb) => lb ? { ...lb, idx: (lb.idx - 1 + lb.urun.photos!.length) % lb.urun.photos!.length } : null)}
+                  style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", color: "white", fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                >‹</button>
+              )}
+
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightbox.urun.photos[lightbox.idx]}
+                alt={lightbox.urun.name}
+                style={{ maxWidth: "70vw", maxHeight: "65vh", borderRadius: 16, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}
+              />
+
+              {/* Right arrow */}
+              {lightbox.urun.photos.length > 1 && (
+                <button
+                  onClick={() => setLightbox((lb) => lb ? { ...lb, idx: (lb.idx + 1) % lb.urun.photos!.length } : null)}
+                  style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", color: "white", fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                >›</button>
+              )}
+            </div>
+
+            {/* Dot navigation */}
+            {lightbox.urun.photos.length > 1 && (
+              <div style={{ display: "flex", gap: 8 }}>
+                {lightbox.urun.photos.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setLightbox((lb) => lb ? { ...lb, idx: i } : null)}
+                    style={{ width: i === lightbox.idx ? 24 : 8, height: 8, borderRadius: 4, border: "none", background: i === lightbox.idx ? TEAL : "rgba(255,255,255,0.35)", cursor: "pointer", transition: "all 0.2s", padding: 0 }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Thumbnail strip */}
+            {lightbox.urun.photos.length > 1 && (
+              <div style={{ display: "flex", gap: 8, marginTop: -4 }}>
+                {lightbox.urun.photos.map((src, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setLightbox((lb) => lb ? { ...lb, idx: i } : null)}
+                    style={{ width: 52, height: 52, borderRadius: 8, border: `2px solid ${i === lightbox.idx ? TEAL : "transparent"}`, overflow: "hidden", cursor: "pointer", padding: 0, background: "none", transition: "border-color 0.2s" }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{
         __html: `
           .menu-product-card:hover { border-color: #0ABAB5 !important; box-shadow: 0 4px 16px rgba(10,186,181,0.12); }
           .menu-pc-action:hover { background: #0A1628 !important; color: white !important; border-color: #0A1628 !important; }
           .menu-pc-danger:hover { background: #EF4444 !important; border-color: #EF4444 !important; }
+          .onizleme-urun-row:hover { border-color: #0ABAB5 !important; }
         `,
       }} />
     </div>
@@ -545,26 +673,97 @@ export default function IsletmeMenuPage() {
 
 // ── Shared form component (used in both add + edit modal) ─────────────────
 function UrunForm({
-  form, setForm, kategoriler, inputStyle, labelStyle,
+  form, setForm, kategoriler, inputStyle, labelStyle, photos, setPhotos,
 }: {
   form: typeof emptyUrunForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyUrunForm>>;
   kategoriler: KategoriItem[];
   inputStyle: React.CSSProperties;
   labelStyle: React.CSSProperties;
+  photos: string[];
+  setPhotos: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   const f = form;
   const set = (key: string, val: string | boolean) => setForm((prev) => ({ ...prev, [key]: val }));
+  const [dragOver, setDragOver] = useState(false);
+
+  function handleFiles(files: FileList | null) {
+    if (!files) return;
+    const remaining = 3 - photos.length;
+    if (remaining <= 0) return;
+    Array.from(files).slice(0, remaining).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setPhotos((prev) => prev.length < 3 ? [...prev, result] : prev);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   return (
     <>
-      {/* Emoji */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Ürün İkonu (Emoji)</label>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {EMOJI_OPTS_URUN.map((e) => (
-            <button key={e} type="button" onClick={() => set("icon", e)} style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${f.icon === e ? TEAL : GRAY200}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer", background: f.icon === e ? "rgba(10,186,181,0.1)" : "transparent" }}>{e}</button>
-          ))}
+      {/* Fotoğraf + Emoji alanı */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={labelStyle}>Ürün Fotoğrafı{photos.length > 0 ? ` (${photos.length}/3)` : " — en fazla 3"}</label>
+
+        {/* Thumbnail'lar */}
+        {photos.length > 0 && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+            {photos.map((src, i) => (
+              <div key={i} style={{ position: "relative", width: 80, height: 80 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" style={{ width: 80, height: 80, borderRadius: 10, objectFit: "cover", border: `2px solid ${GRAY200}` }} />
+                <button
+                  type="button"
+                  onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                  style={{ position: "absolute", top: -8, right: -8, width: 22, height: 22, borderRadius: "50%", background: RED, border: "2px solid white", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
+                >✕</button>
+                {i === 0 && <div style={{ position: "absolute", bottom: 3, left: 3, background: "rgba(0,0,0,0.6)", color: "white", fontSize: 8, padding: "1px 4px", borderRadius: 4 }}>Ana</div>}
+              </div>
+            ))}
+            {/* Add more slot */}
+            {photos.length < 3 && (
+              <label style={{ width: 80, height: 80, borderRadius: 10, border: `2px dashed ${GRAY300}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10, color: GRAY400, gap: 4 }}>
+                <span style={{ fontSize: 22 }}>+</span>
+                <span>Ekle</span>
+                <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+              </label>
+            )}
+          </div>
+        )}
+
+        {/* Drag-drop yükleme alanı (fotoğraf yoksa tam, varsa mini) */}
+        {photos.length === 0 && (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+            style={{ border: `2px dashed ${dragOver ? TEAL : GRAY300}`, borderRadius: 12, padding: "20px 16px", textAlign: "center", background: dragOver ? "rgba(10,186,181,0.04)" : "transparent", transition: "all 0.2s", marginBottom: 10 }}
+          >
+            <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
+            <p style={{ fontSize: 12, color: GRAY600, margin: 0 }}>
+              Sürükle & bırak veya{" "}
+              <label style={{ color: TEAL, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>
+                dosya seç
+                <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+              </label>
+            </p>
+            <p style={{ fontSize: 11, color: GRAY400, margin: "4px 0 0" }}>PNG, JPG — max 3 fotoğraf, 5MB/adet</p>
+          </div>
+        )}
+
+        {/* Eğer fotoğraf var: emoji, yoksa: emoji grid göster */}
+        <div>
+          <label style={{ ...labelStyle, marginTop: 4 }}>
+            {photos.length > 0 ? "Yedek İkon (fotoğraf yoksa gösterilir)" : "veya Emoji İkon Seç"}
+          </label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {EMOJI_OPTS_URUN.map((e) => (
+              <button key={e} type="button" onClick={() => set("icon", e)} style={{ width: 34, height: 34, borderRadius: 8, border: `2px solid ${f.icon === e ? TEAL : GRAY200}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer", background: f.icon === e ? "rgba(10,186,181,0.1)" : "transparent" }}>{e}</button>
+            ))}
+          </div>
         </div>
       </div>
 
