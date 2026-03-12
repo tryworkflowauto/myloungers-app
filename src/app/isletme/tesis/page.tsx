@@ -17,10 +17,10 @@ const RED = "#EF4444";
 
 // Mock - Kategoriler
 const KATEGORILER = [
-  { name: "Beach Club", emoji: "🏖️", checked: true },
-  { name: "Otel", emoji: "🏨", checked: true },
-  { name: "Restoran", emoji: "🍽️", checked: false },
-  { name: "Su Sporları", emoji: "🌊", checked: false },
+  { name: "BEACH CLUB", emoji: "🏖️", checked: true },
+  { name: "OTEL", emoji: "🏨", checked: true },
+  { name: "RESTORAN", emoji: "🍽️", checked: false },
+  { name: "SU SPORLARI", emoji: "🌊", checked: false },
 ];
 
 // Mock - İmkânlar
@@ -162,13 +162,13 @@ export default function IsletmeTesisPage() {
               { label: "Web Sitesi", value: "https://zuzuubeach.com", type: "url" },
             ].map((f, i) => (
               <div key={i} style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{f.label}</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>{f.label}</label>
                 <input type={f.type as "text"} defaultValue={f.value} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
               </div>
             ))}
           </div>
           <div style={{ marginTop: 8 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Tesis Kategorisi</label>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Tesis Kategorisi</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {KATEGORILER.map((k, i) => (
                 <label key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: `1.5px solid ${k.checked ? TEAL : GRAY200}`, borderRadius: 20, cursor: "pointer", background: k.checked ? "#F0FFFE" : "transparent", fontSize: 12, fontWeight: 600, color: k.checked ? NAVY : GRAY600 }}>
@@ -216,12 +216,12 @@ export default function IsletmeTesisPage() {
         {/* 3. HAKKINDA */}
         <SectionCard open={sections.hakkinda} onToggle={() => toggleSection("hakkinda")} icon="📝" iconBg="#F0FDF4" title="Tesis Hakkında" sub="Açıklama metni">
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Kısa Açıklama <span style={{ color: GRAY400, fontWeight: 400, textTransform: "none" }}>(Arama sonuçlarında görünür)</span></label>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Kısa Açıklama <span style={{ color: GRAY400, fontWeight: 400, textTransform: "none" }}>(Arama sonuçlarında görünür)</span></label>
             <input type="text" value={kisaAciklama} onChange={(e) => setKisaAciklama(e.target.value)} maxLength={100} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{kisaAciklama.length}/100</div>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Detaylı Açıklama <span style={{ color: GRAY400, fontWeight: 400, textTransform: "none" }}>(Tesis detay sayfasında görünür)</span></label>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Detaylı Açıklama <span style={{ color: GRAY400, fontWeight: 400, textTransform: "none" }}>(Tesis detay sayfasında görünür)</span></label>
             <textarea value={detayAciklama} onChange={(e) => setDetayAciklama(e.target.value)} rows={5} maxLength={800} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, resize: "vertical", minHeight: 100 }} />
             <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{detayAciklama.length}/800</div>
           </div>
@@ -241,7 +241,7 @@ export default function IsletmeTesisPage() {
             ))}
           </div>
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${GRAY100}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: GRAY600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Özel İmkan Ekle</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: GRAY600, textTransform: "none", letterSpacing: 0.5, marginBottom: 8 }}>Özel İmkan Ekle</div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <div onClick={() => setEmojiPickerOpen(!emojiPickerOpen)} style={{ width: 36, height: 36, border: `1.5px solid ${GRAY200}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer" }}>{selectedEmoji}</div>
               <input type="text" placeholder="İmkan adı yazın..." value={imkanInput} onChange={(e) => setImkanInput(e.target.value)} style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} onKeyDown={(e) => e.key === "Enter" && addImkan()} />
@@ -296,11 +296,11 @@ export default function IsletmeTesisPage() {
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
             <div style={{ flex: 1, marginBottom: 0 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Enlem (Latitude)</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Enlem (Latitude)</label>
               <input type="text" defaultValue="37.032048" placeholder="37.032048" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             </div>
             <div style={{ flex: 1, marginBottom: 0 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Boylam (Longitude)</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Boylam (Longitude)</label>
               <input type="text" defaultValue="27.430012" placeholder="27.430012" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             </div>
             <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 0 }}>
@@ -308,7 +308,7 @@ export default function IsletmeTesisPage() {
             </div>
           </div>
           <div style={{ marginTop: 12 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Google Maps Linki</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Google Maps Linki</label>
             <input type="url" defaultValue="https://maps.google.com/?q=Zuzuu+Beach+Hotel+Bodrum" placeholder="https://maps.google.com/..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
           </div>
         </SectionCard>
@@ -321,7 +321,7 @@ export default function IsletmeTesisPage() {
               <div style={{ padding: 14 }}>
                 {[{ label: "Merkeze Uzaklık", value: "Bodrum merkeze 7 dk" }, { label: "Havalimanına Uzaklık", value: "Milas-Bodrum Havalimanı 45 dk" }, { label: "Taksi Telefon 1", value: "+90 252 316 XX XX" }, { label: "Taksi Telefon 2", value: "", placeholder: "+90 ..." }].map((f, i) => (
                   <div key={i} style={{ marginBottom: i < 3 ? 16 : 0 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{f.label}</label>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>{f.label}</label>
                     <input type="text" defaultValue={f.value} placeholder={f.placeholder} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                   </div>
                 ))}
@@ -331,11 +331,11 @@ export default function IsletmeTesisPage() {
               <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 13, background: "#EFF6FF", borderBottom: `1px solid ${GRAY100}` }}>🚐 Dolmuş Bilgileri</div>
               <div style={{ padding: 14 }}>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Hat / Güzergah</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Hat / Güzergah</label>
                   <input type="text" defaultValue="Bodrum - Turgutreis hattı" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Sefer Saatleri</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Sefer Saatleri</label>
                   <div style={{ display: "flex", gap: 8 }}>
                     <input type="time" defaultValue="07:00" style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                     <span style={{ lineHeight: "42px", color: GRAY400 }}>—</span>
@@ -343,11 +343,11 @@ export default function IsletmeTesisPage() {
                   </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>İnilecek Durak</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>İnilecek Durak</label>
                   <input type="text" defaultValue="Zuzuu Beach durağı" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                 </div>
                 <div style={{ marginBottom: 0 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Ek Not</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6, textTransform: "none", letterSpacing: 0.5 }}>Ek Not</label>
                   <input type="text" placeholder="örn: Şoföre 'Zuzuu' deyin..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
                 </div>
               </div>
