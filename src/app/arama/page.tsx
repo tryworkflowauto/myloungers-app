@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useSession, signOut } from "next-auth/react";
 import "./arama.css";
 import { supabase } from "@/lib/supabase";
 
@@ -30,6 +31,7 @@ type Card = {
 
 function AramaContent() {
   const router = useRouter();
+  const { data: session } = useSession();
 
   const [locInput, setLocInput] = useState("");
   const [gpsOn, setGpsOn] = useState(false);
@@ -155,8 +157,29 @@ function AramaContent() {
         </Link>
         <span style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Link href="/profil" style={{ padding: "7px 16px", border: "1.5px solid var(--bd)", borderRadius: 50, fontSize: ".78rem", fontWeight: 700, color: "var(--i2)", background: "#fff", cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Profilim</Link>
-          <button style={{ padding: "7px 16px", border: "none", borderRadius: 50, fontSize: ".78rem", fontWeight: 700, color: "#fff", background: "var(--or)", cursor: "pointer" }}>Giriş Yap</button>
+          {session ? (
+            <>
+              <span style={{ fontSize: ".8rem", fontWeight: 600, color: "var(--i2)" }}>
+                {session.user?.name || session.user?.email}
+              </span>
+              <button
+                style={{ padding: "7px 16px", border: "none", borderRadius: 50, fontSize: ".78rem", fontWeight: 700, color: "#fff", background: "var(--or)", cursor: "pointer" }}
+                onClick={() => signOut({ callbackUrl: "/" })}
+              >
+                Çıkış Yap
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/profil" style={{ padding: "7px 16px", border: "1.5px solid var(--bd)", borderRadius: 50, fontSize: ".78rem", fontWeight: 700, color: "var(--i2)", background: "#fff", cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Profilim</Link>
+              <button
+                style={{ padding: "7px 16px", border: "none", borderRadius: 50, fontSize: ".78rem", fontWeight: 700, color: "#fff", background: "var(--or)", cursor: "pointer" }}
+                onClick={() => router.push("/giris")}
+              >
+                Giriş Yap
+              </button>
+            </>
+          )}
         </div>
       </nav>
 

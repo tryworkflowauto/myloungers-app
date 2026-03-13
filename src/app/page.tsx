@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 import "./myloungers.css";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -195,8 +197,14 @@ const TESISLER = [
   { name: "Bodrum Blue Bay Hotel", il: "Bodrum (Muğla)", ilce: "Gümbet", type: "hotel" },
 ];
 
+type TesisSlugInfo = {
+  id: string;
+  slug?: string | null;
+};
+
 export default function Home() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru">("tr");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [slideIdx, setSlideIdx] = useState(0);
@@ -225,6 +233,7 @@ export default function Home() {
   const [filterFeatures, setFilterFeatures] = useState<number[]>([]);
   const [locationStatus, setLocationStatus] = useState<null | "loading" | "alındı" | "izin-yok" | "hata">(null);
   const [radius, setRadius] = useState(5);
+  const [tesisSlugMap, setTesisSlugMap] = useState<Record<string, TesisSlugInfo>>({});
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -232,6 +241,32 @@ export default function Home() {
     setPanelDate(false);
     setPanelName(false);
   };
+
+  useEffect(() => {
+    async function fetchTesisSlugs() {
+      const { data, error } = await supabase
+        .from("tesisler")
+        .select("id, ad, slug");
+
+      if (error) {
+        console.error("Ana sayfa tesis slug sorgu hatası:", error);
+        return;
+      }
+
+      const map: Record<string, TesisSlugInfo> = {};
+      (data ?? []).forEach((t: any) => {
+        if (t.ad) {
+          map[String(t.ad)] = {
+            id: String(t.id),
+            slug: t.slug ?? null,
+          };
+        }
+      });
+      setTesisSlugMap(map);
+    }
+
+    fetchTesisSlugs();
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setSlideIdx((s) => (s + 1) % SLIDER_IMGS.length), 5500);
@@ -416,8 +451,25 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <Link href="/giris" className="btn-login" id="btnLogin">{t.btn_login}</Link>
-            <Link href="/giris?tab=register" className="btn-signup" id="btnSignup">{t.btn_signup}</Link>
+            {session ? (
+              <>
+                <span className="nav-user">
+                  {session.user?.name || session.user?.email}
+                </span>
+                <button
+                  type="button"
+                  className="btn-login"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  Çıkış Yap
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/giris" className="btn-login" id="btnLogin">{t.btn_login}</Link>
+                <Link href="/giris?tab=register" className="btn-signup" id="btnSignup">{t.btn_signup}</Link>
+              </>
+            )}
           </div>
           <button
             type="button"
@@ -459,8 +511,28 @@ export default function Home() {
             ))}
           </div>
           <div className="mob-btns">
-            <Link href="/giris" className="mob-btn-login" onClick={() => setMenuOpen(false)}>{t.btn_login}</Link>
-            <Link href="/giris?tab=register" className="mob-btn-signup" onClick={() => setMenuOpen(false)}>{t.btn_signup}</Link>
+            {session ? (
+              <>
+                <div className="mob-user">
+                  {session.user?.name || session.user?.email}
+                </div>
+                <button
+                  type="button"
+                  className="mob-btn-login"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut({ callbackUrl: "/" });
+                  }}
+                >
+                  Çıkış Yap
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/giris" className="mob-btn-login" onClick={() => setMenuOpen(false)}>{t.btn_login}</Link>
+                <Link href="/giris?tab=register" className="mob-btn-signup" onClick={() => setMenuOpen(false)}>{t.btn_signup}</Link>
+              </>
+            )}
           </div>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>
@@ -798,6 +870,10 @@ export default function Home() {
             const origIdx = TESISLER.indexOf(tesis);
             const prices = [450, 320, 280, 395];
             const isZuzuu = tesis.name === "Zuzuu Beach Hotel";
+            const slugInfo = tesisSlugMap[tesis.name];
+            const targetSlug = slugInfo
+              ? (slugInfo.slug && String(slugInfo.slug).trim()) || slugInfo.id
+              : null;
             const cardContent = (
               <>
                 <div className="pw0">
@@ -815,11 +891,19 @@ export default function Home() {
                 <div className="pp"><b>₺{prices[origIdx] ?? 395}</b><span> {t.card_per_day}</span></div>
               </>
             );
-            return isZuzuu ? (
-              <Link key={tesis.name} href="/hotel/slug" className="pc pc-link" data-type={tesis.type}>
-                {cardContent}
-              </Link>
-            ) : (
+            if (isZuzuu && targetSlug) {
+              return (
+                <Link
+                  key={tesis.name}
+                  href={`/tesis/${encodeURIComponent(targetSlug)}`}
+                  className="pc pc-link"
+                  data-type={tesis.type}
+                >
+                  {cardContent}
+                </Link>
+              );
+            }
+            return (
               <div key={tesis.name} className="pc" data-type={tesis.type}>
                 {cardContent}
               </div>

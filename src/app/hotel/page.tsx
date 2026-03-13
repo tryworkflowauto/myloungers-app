@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import "../myloungers.css";
 import "./hotel.css";
 
@@ -32,6 +33,7 @@ const HOTEL_CARDS = [
 ];
 
 export default function HotelPage() {
+  const { data: session } = useSession();
   const [langOpen, setLangOpen] = useState(false);
   const [lang, setLang] = useState(LANG_OPTS[0]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -127,8 +129,25 @@ export default function HotelPage() {
                 ))}
               </div>
             </div>
-            <Link href="/giris" className="btn-login">Giriş Yap</Link>
-            <Link href="/uye-ol" className="btn-signup hotel-btn-signup">Üye Ol</Link>
+            {session ? (
+              <>
+                <span className="nav-user">
+                  {session.user?.name || session.user?.email}
+                </span>
+                <button
+                  type="button"
+                  className="btn-login"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  Çıkış Yap
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/giris" className="btn-login">Giriş Yap</Link>
+                <Link href="/uye-ol" className="btn-signup hotel-btn-signup">Üye Ol</Link>
+              </>
+            )}
           </div>
           <button
             type="button"
@@ -161,8 +180,29 @@ export default function HotelPage() {
             <button type="button" className="mob-close" onClick={() => setMenuOpen(false)}>×</button>
           </div>
           <div className="mob-btns">
-            <Link href="/giris" className="mob-btn-login" style={{ textDecoration: "none", flex: 1, textAlign: "center" }}>Giriş Yap</Link>
-            <Link href="/uye-ol" className="mob-btn-signup" style={{ textDecoration: "none", flex: 1, textAlign: "center" }}>Üye Ol</Link>
+            {session ? (
+              <>
+                <div className="mob-user">
+                  {session.user?.name || session.user?.email}
+                </div>
+                <button
+                  type="button"
+                  className="mob-btn-login"
+                  style={{ textDecoration: "none", flex: 1, textAlign: "center" }}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut({ callbackUrl: "/" });
+                  }}
+                >
+                  Çıkış Yap
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/giris" className="mob-btn-login" style={{ textDecoration: "none", flex: 1, textAlign: "center" }}>Giriş Yap</Link>
+                <Link href="/uye-ol" className="mob-btn-signup" style={{ textDecoration: "none", flex: 1, textAlign: "center" }}>Üye Ol</Link>
+              </>
+            )}
           </div>
           <div className="mob-sec-title">Kategoriler</div>
           <Link href="/hotel" className="mob-link" onClick={() => setMenuOpen(false)}>Hotel</Link>
