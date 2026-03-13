@@ -159,9 +159,17 @@ function AramaContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {session ? (
             <>
-              <span style={{ fontSize: ".8rem", fontWeight: 600, color: "var(--i2)" }}>
+              <Link
+                href="/profil"
+                style={{
+                  fontSize: ".8rem",
+                  fontWeight: 600,
+                  color: "var(--i2)",
+                  textDecoration: "none",
+                }}
+              >
                 {session.user?.name || session.user?.email}
-              </span>
+              </Link>
               <button
                 style={{ padding: "7px 16px", border: "none", borderRadius: 50, fontSize: ".78rem", fontWeight: 700, color: "#fff", background: "var(--or)", cursor: "pointer" }}
                 onClick={() => signOut({ callbackUrl: "/" })}

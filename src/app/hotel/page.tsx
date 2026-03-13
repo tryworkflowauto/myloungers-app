@@ -131,9 +131,9 @@ export default function HotelPage() {
             </div>
             {session ? (
               <>
-                <span className="nav-user">
+                <Link href="/profil" className="nav-user" style={{ textDecoration: "none" }}>
                   {session.user?.name || session.user?.email}
-                </span>
+                </Link>
                 <button
                   type="button"
                   className="btn-login"

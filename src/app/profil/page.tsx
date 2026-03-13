@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 type Reservation = {
   id: number;
@@ -20,6 +22,28 @@ type Reservation = {
   img: string;
   stars?: number;
   review?: boolean;
+};
+
+const STATUS_META: Record<
+  "upcoming" | "active" | "past" | "cancel",
+  { txt: string; css: string }
+> = {
+  upcoming: {
+    txt: "📅 Yaklaşan",
+    css: "background:#EFF6FF;color:#2563EB;border-color:#BFDBFE",
+  },
+  active: {
+    txt: "✅ Aktif",
+    css: "background:#F0FDF4;color:#16A34A;border-color:#BBF7D0",
+  },
+  past: {
+    txt: "✓ Tamamlandı",
+    css: "background:#F9FAFB;color:#6B7280;border-color:#E5E7EB",
+  },
+  cancel: {
+    txt: "✗ İptal",
+    css: "background:#FEF2F2;color:#DC2626;border-color:#FECACA",
+  },
 };
 
 const RESERVATIONS: Reservation[] = [
@@ -47,11 +71,13 @@ const NOTIFS = [
 
 export default function ProfilPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("reservations");
   const [resFilter, setResFilter] = useState("all");
   const [favs, setFavs] = useState(FAVS);
   const [notifs, setNotifs] = useState(NOTIFS);
-  const [reservations, setReservations] = useState(RESERVATIONS);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [resLoading, setResLoading] = useState(false);
   const [reviewModal, setReviewModal] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<number|null>(null);
   const [reviewStars, setReviewStars] = useState(0);
@@ -59,9 +85,173 @@ export default function ProfilPage() {
   const [kodModal, setKodModal] = useState(false);
   const [kodVal, setKodVal] = useState("");
   const [saveOk, setSaveOk] = useState(false);
-  const [profile, setProfile] = useState({ ad:"Zafer", soyad:"Bey", tel:"+90 532 XXX XX XX", email:"zafer@example.com", dogum:"1985-01-01", sehir:"Bodrum, Muğla" });
+  const [profile, setProfile] = useState({
+    ad: "",
+    soyad: "",
+    tel: "",
+    email: "",
+    dogum: "",
+    sehir: "",
+  });
 
-  const filteredRes = reservations.filter(r => resFilter === "all" || r.status === resFilter);
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/giris");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (session?.user) {
+      setProfile((prev) => ({
+        ...prev,
+        ad: (session.user as any).name || prev.ad || "Misafir",
+        email: session.user.email || prev.email || "",
+      }));
+    }
+  }, [session]);
+
+  useEffect(() => {
+    async function loadReservations() {
+      if (status !== "authenticated" || !session?.user) return;
+
+      try {
+        setResLoading(true);
+        const userId = (session.user as any).id;
+
+        const { data: rezData, error: rezError } = await supabase
+          .from("rezervasyonlar")
+          .select(
+            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum"
+          )
+          .eq("kullanici_id", userId)
+          .order("baslangic_tarih", { ascending: false });
+
+        if (rezError) {
+          console.error("Profil rezervasyon sorgu hatası:", rezError);
+          setResLoading(false);
+          return;
+        }
+
+        const tesisIds = Array.from(
+          new Set(
+            (rezData ?? [])
+              .map((r: any) => r.tesis_id)
+              .filter((id: any) => id != null)
+          )
+        );
+
+        const tesisMap: Record<number, { ad: string; loc: string }> = {};
+
+        if (tesisIds.length) {
+          const { data: tesisData, error: tesisError } = await supabase
+            .from("tesisler")
+            .select("id, ad, sehir, ilce")
+            .in("id", tesisIds);
+
+          if (tesisError) {
+            console.error("Profil tesis sorgu hatası:", tesisError);
+          } else {
+            (tesisData ?? []).forEach((t: any) => {
+              const locParts = [t.ilce, t.sehir].filter(Boolean).join(", ");
+              tesisMap[t.id] = {
+                ad: t.ad || `Tesis #${t.id}`,
+                loc: locParts || "-",
+              };
+            });
+          }
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+
+        const uiRes: Reservation[] = (rezData ?? []).map((r: any) => {
+          const startStr = r.baslangic_tarih as string | null;
+          const endStr = r.bitis_tarih as string | null;
+          const start = startStr ? new Date(startStr) : null;
+          const end = endStr ? new Date(endStr) : null;
+
+          let dates = "-";
+          if (start && end) {
+            const sLabel = start.toLocaleDateString("tr-TR", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+            const eLabel = end.toLocaleDateString("tr-TR", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+            dates = sLabel === eLabel ? sLabel : `${sLabel} – ${eLabel}`;
+          } else if (start) {
+            dates = start.toLocaleDateString("tr-TR", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+          }
+
+          let gun = "1 gün";
+          if (start && end) {
+            const diffDays = Math.max(
+              1,
+              Math.round((end.getTime() - start.getTime()) / 86400000)
+            );
+            gun = `${diffDays} gün`;
+          }
+
+          const durumRaw = (r.durum as string | null)?.toLowerCase() ?? "";
+          let statusKey: "upcoming" | "active" | "past" | "cancel" = "upcoming";
+
+          if (
+            durumRaw.includes("iptal") ||
+            durumRaw === "cancel" ||
+            durumRaw === "cancelled"
+          ) {
+            statusKey = "cancel";
+          } else if (startStr && startStr > today) {
+            statusKey = "upcoming";
+          } else if (startStr && startStr <= today && (!endStr || endStr >= today)) {
+            statusKey = "active";
+          } else {
+            statusKey = "past";
+          }
+
+          const meta = STATUS_META[statusKey];
+          const tesisInfo = r.tesis_id ? tesisMap[r.tesis_id] : undefined;
+
+          return {
+            id: r.id,
+            name: tesisInfo?.ad || `Tesis #${r.tesis_id ?? ""}`,
+            cat: "Beach Club",
+            loc: tesisInfo?.loc || "-",
+            code: `MYL-${String(r.id).padStart(4, "0")}`,
+            dates,
+            szl: "-",
+            gun,
+            odenen: `₺${Number(r.toplam_tutar || 0).toLocaleString("tr-TR")}`,
+            status: statusKey,
+            statusTxt: meta.txt,
+            statusCss: meta.css,
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
+            stars: undefined,
+            review: false,
+          };
+        });
+
+        setReservations(uiRes);
+        setResLoading(false);
+      } catch (e) {
+        console.error("Profil rezervasyon yükleme hatası:", e);
+        setResLoading(false);
+      }
+    }
+
+    loadReservations();
+  }, [status, session]);
+
+  const filteredRes = reservations.filter(
+    (r) => resFilter === "all" || r.status === resFilter
+  );
 
   function cancelRes(id: number) {
     if (confirm("Rezervasyonu iptal etmek istediğinize emin misiniz?")) {
@@ -89,7 +279,15 @@ export default function ProfilPage() {
     setTimeout(() => setSaveOk(false), 2000);
   }
 
-  const statusCount = (s: string) => reservations.filter(r => r.status === s).length;
+  const statusCount = (s: string) =>
+    reservations.filter((r) => r.status === s).length;
+
+  const avatarLetter =
+    (profile.ad?.trim()?.[0] ||
+      session?.user?.name?.trim()?.[0] ||
+      session?.user?.email?.trim()?.[0] ||
+      "K"
+    ).toUpperCase();
 
   return (
     <>
@@ -288,8 +486,11 @@ export default function ProfilPage() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           Ana Sayfa
         </Link>
-        <span style={{flex:1}} />
-        <button className="pnav-logout" onClick={() => router.push("/giris")}>
+        <span style={{ flex: 1 }} />
+        <button
+          className="pnav-logout"
+          onClick={() => signOut({ callbackUrl: "/giris" })}
+        >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Çıkış
         </button>
@@ -298,10 +499,14 @@ export default function ProfilPage() {
       {/* HERO */}
       <div className="phero">
         <div className="phero-inner">
-          <div className="pavatar">Z</div>
+          <div className="pavatar">{avatarLetter}</div>
           <div className="phero-info">
-            <div className="phero-name">Zafer Bey</div>
-            <div className="phero-email">zafer@example.com · +90 532 XXX XX XX</div>
+            <div className="phero-name">
+              {profile.ad || session?.user?.name || "Misafir"}
+            </div>
+            <div className="phero-email">
+              {profile.email || session?.user?.email || ""}
+            </div>
             <div className="phero-badges">
               <span className="hbadge hbadge-teal">✓ E-posta Doğrulandı</span>
               <span className="hbadge hbadge-or">🏖️ Sadık Üye</span>
