@@ -14,7 +14,7 @@ export default {
         email: { label: "E-posta", type: "email" },
         password: { label: "Şifre", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials: { email?: string; password?: string } | undefined) {
         console.log("Auth.js v5 credentials.authorize çağrıldı. Raw credentials:", {
           email: credentials?.email,
           hasPassword: !!credentials?.password,
