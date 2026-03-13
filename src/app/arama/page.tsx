@@ -12,6 +12,7 @@ const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 type Card = {
   id: string;
   name: string;
+  slug?: string;
   score: number;
   cat: string;
   stars: number;
@@ -51,29 +52,40 @@ function AramaContent() {
     async function fetchTesisler() {
       const { data, error } = await supabase
         .from("tesisler")
-        .select("*")
-        .eq("aktif", true);
-      if (!error && data) {
-        setCards(data.map((t: Record<string, unknown>) => ({
-          id: String(t.id),
-          name: String(t.ad),
-          score: Number(t.puan) || 9.0,
-          cat: String(t.kategori || "Beach Club"),
-          stars: 4,
-          rev: 0,
-          loc: `${t.ilce ?? ""}, ${t.sehir ?? ""}`,
-          dist: "–",
-          feats: [],
-          price: 1000,
-          avail: "ok",
-          availTxt: "Müsait",
-          badge: "",
-          badgeTxt: "",
-          img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
-        })));
+        .select("*");
+
+      if (error) {
+        console.error("Supabase 'tesisler' sorgu hatası:", error);
+        setLoading(false);
+        return;
       }
+
+      if (data) {
+        setCards(
+          data.map((t: Record<string, unknown>) => ({
+            id: String(t.id),
+            name: String(t.ad),
+            slug: typeof t.slug === "string" ? t.slug : undefined,
+            score: Number(t.puan) || 9.0,
+            cat: String(t.kategori || "Beach Club"),
+            stars: 4,
+            rev: 0,
+            loc: `${t.ilce ?? ""}, ${t.sehir ?? ""}`,
+            dist: "–",
+            feats: [],
+            price: 1000,
+            avail: "ok",
+            availTxt: "Müsait",
+            badge: "",
+            badgeTxt: "",
+            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
+          }))
+        );
+      }
+
       setLoading(false);
     }
+
     fetchTesisler();
   }, []);
 
@@ -223,7 +235,15 @@ function AramaContent() {
           {loading && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesisler yükleniyor…</div>}
           {!loading && filtered.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Sonuç bulunamadı.</div>}
           {filtered.map(c => (
-            <div key={c.id} className="card" onClick={() => router.push("/hotel/slug")}>
+            <div
+              key={c.id}
+              className="card"
+              onClick={() => {
+                // Slug varsa onu kullan, yoksa id ile fallback
+                const targetSlug = c.slug || c.id;
+                router.push(`/tesis/${targetSlug}`);
+              }}
+            >
               <div className="card-img">
                 <img src={c.img} alt={c.name} />
                 {c.badge && <span className={`card-badge badge-${c.badge}`}>{c.badgeTxt}</span>}
@@ -255,7 +275,15 @@ function AramaContent() {
                       <div className={`avail-dot dot-${c.avail}`} />
                       {c.avail==="ok" ? "✓" : c.avail==="few" ? "⚡" : "✗"} {c.availTxt}
                     </div>
-                    <button className="card-btn" disabled={c.avail==="full"} onClick={e => { e.stopPropagation(); router.push("/hotel/slug"); }}>
+                    <button
+                      className="card-btn"
+                      disabled={c.avail==="full"}
+                      onClick={e => {
+                        e.stopPropagation();
+                        const targetSlug = c.slug || c.id;
+                        router.push(`/tesis/${targetSlug}`);
+                      }}
+                    >
                       {c.avail==="full" ? "Dolu" : "Şezlong Seç →"}
                     </button>
                   </div>
