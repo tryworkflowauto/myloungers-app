@@ -288,7 +288,9 @@ export default function IsletmePaneliPage() {
           </div>
           <div className="topbar-right">
             <div className="saat-display">{timeLabel}</div>
-            <button className="btn btn-primary">➕ Hızlı Rezervasyon</button>
+            <Link href="/isletme-paneli/rezervasyonlar">
+              <button className="btn btn-primary">➕ Hızlı Rezervasyon</button>
+            </Link>
           </div>
         </header>
 
@@ -335,34 +337,34 @@ export default function IsletmePaneliPage() {
 
           {/* Uyarılar */}
           <div className="uyari-row">
-            <div className="uyari-kart turuncu">
+            <Link href="/isletme-paneli/siparisler" className="uyari-kart turuncu">
               <div className="uk-ikon">🍽️</div>
               <div className="uk-text">
                 <strong>5 Bekleyen Sipariş</strong>
                 <span>En eskisi 18 dk önce</span>
               </div>
-            </div>
-            <div className="uyari-kart kirmizi">
+            </Link>
+            <Link href="/isletme-paneli/yorumlar" className="uyari-kart kirmizi">
               <div className="uk-ikon">⭐</div>
               <div className="uk-text">
                 <strong>3 Cevaplanmayan Yorum</strong>
                 <span>1 şikayet içeriyor</span>
               </div>
-            </div>
-            <div className="uyari-kart sari">
+            </Link>
+            <Link href="/isletme-paneli/raporlar" className="uyari-kart sari">
               <div className="uk-ikon">💰</div>
               <div className="uk-text">
                 <strong>5 Bakiye Sona Eriyor</strong>
                 <span>3 gün içinde · ₺3.840</span>
               </div>
-            </div>
-            <div className="uyari-kart mavi">
+            </Link>
+            <Link href="/isletme-paneli/rezervasyonlar" className="uyari-kart mavi">
               <div className="uk-ikon">📋</div>
               <div className="uk-text">
                 <strong>Yarın 8 Rezervasyon</strong>
                 <span>İlk giriş saat 09:00</span>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Stat Kartları */}
@@ -497,22 +499,22 @@ export default function IsletmePaneliPage() {
 
           {/* Hızlı Eylemler */}
           <div className="hizli-grid">
-            <div className="hizli-btn">
+            <Link href="/isletme-paneli/rezervasyonlar" className="hizli-btn">
               <div className="hb-icon">📋</div>
               <div className="hb-label">Rezervasyon Oluştur</div>
-            </div>
-            <div className="hizli-btn">
+            </Link>
+            <Link href="/isletme-paneli/sezlong-haritasi" className="hizli-btn">
               <div className="hb-icon">🏖️</div>
               <div className="hb-label">Şezlong Haritası</div>
-            </div>
-            <div className="hizli-btn">
+            </Link>
+            <Link href="/isletme-paneli/siparisler" className="hizli-btn">
               <div className="hb-icon">🍽️</div>
               <div className="hb-label">Siparişlere Git</div>
-            </div>
-            <div className="hizli-btn">
+            </Link>
+            <Link href="/isletme-paneli/yorumlar" className="hizli-btn">
               <div className="hb-icon">💬</div>
               <div className="hb-label">Yorumları Cevapla</div>
-            </div>
+            </Link>
           </div>
 
           {/* 3 Kolon */}
@@ -575,9 +577,11 @@ export default function IsletmePaneliPage() {
                 <span className="sr-durum yeni-chip">Yeni</span>
               </div>
               <div className="kart-footer">
-                <button className="btn btn-secondary btn-sm" style={{ width: "100%" }}>
-                  Tüm Siparişleri Gör →
-                </button>
+                <Link href="/isletme-paneli/siparisler">
+                  <button className="btn btn-secondary btn-sm" style={{ width: "100%" }}>
+                    Tüm Siparişleri Gör →
+                  </button>
+                </Link>
               </div>
             </div>
 
@@ -661,9 +665,11 @@ export default function IsletmePaneliPage() {
                 <div className="rr-saat">13:00</div>
               </div>
               <div className="kart-footer">
-                <button className="btn btn-secondary btn-sm" style={{ width: "100%" }}>
-                  Tüm Rezervasyonlar →
-                </button>
+                <Link href="/isletme-paneli/rezervasyonlar">
+                  <button className="btn btn-secondary btn-sm" style={{ width: "100%" }}>
+                    Tüm Rezervasyonlar →
+                  </button>
+                </Link>
               </div>
             </div>
 
@@ -718,12 +724,14 @@ export default function IsletmePaneliPage() {
                   </div>
                 </div>
                 <div className="kart-footer">
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: "100%" }}
-                  >
-                    Yorumları Cevapla →
-                  </button>
+                  <Link href="/isletme-paneli/yorumlar">
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: "100%" }}
+                    >
+                      Yorumları Cevapla →
+                    </button>
+                  </Link>
                 </div>
               </div>
 
@@ -767,12 +775,14 @@ export default function IsletmePaneliPage() {
                   <div className="gun-badge acil">⚠️ 3 Gün</div>
                 </div>
                 <div className="kart-footer">
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: "100%" }}
-                  >
-                    Bakiye Raporuna Git →
-                  </button>
+                  <Link href="/isletme-paneli/raporlar">
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: "100%" }}
+                    >
+                      Bakiye Raporuna Git →
+                    </button>
+                  </Link>
                 </div>
               </div>
             </div>
