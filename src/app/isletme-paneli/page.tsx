@@ -165,7 +165,7 @@ export default function IsletmePaneliPage() {
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 .isletme-shell{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray100);color:var(--gray800);display:flex;min-height:100vh;}
-.sidebar{width:var(--sidebar-w);background:var(--navy);min-height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
+.sidebar{width:var(--sidebar-w);background:var(--navy);min-height:100vh;height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
 .sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
 .logo-box{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:36px;height:36px;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
@@ -174,7 +174,7 @@ export default function IsletmePaneliPage() {
 .tesis-selector{margin:12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;}
 .tesis-selector .dot{width:8px;height:8px;background:var(--green);border-radius:50%;}
 .tesis-selector span{font-size:12px;color:#fff;font-weight:600;flex:1;}
-.sidebar-nav{padding:8px 0;flex:1;}
+.sidebar-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .nav-section{padding:16px 16px 6px;font-size:9px;font-weight:700;color:var(--gray400);letter-spacing:1.5px;text-transform:uppercase;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;position:relative;}
 .nav-item:hover{background:rgba(255,255,255,0.06);}
