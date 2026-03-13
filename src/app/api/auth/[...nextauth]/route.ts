@@ -20,6 +20,11 @@ export const {
         password: { label: "Şifre", type: "password" },
       },
       async authorize(credentials) {
+        console.log("NextAuth authorize() çağrıldı. Raw credentials:", {
+          hasEmail: !!credentials?.email,
+          hasPassword: !!credentials?.password,
+        });
+
         const email = credentials?.email?.toLowerCase().trim();
         const password = credentials?.password ?? "";
         if (!email || !password) return null;
@@ -39,7 +44,7 @@ export const {
         }
 
         if (!data) {
-          // Email bulunamadı → yanlış email gibi davran
+          console.log("NextAuth authorize: kullanıcı bulunamadı", { email });
           return null;
         }
 
@@ -54,12 +59,19 @@ export const {
 
         const ok = await compare(password, hash);
 
-        console.log("NextAuth credentials authorize result:", {
-          email,
-          hasHash: !!hash,
-          compareOk: ok,
-          userId: (data as any).id,
-        });
+        console.log(
+          "NextAuth credentials authorize — sonuç:",
+          JSON.stringify(
+            {
+              email,
+              userId: (data as any).id,
+              hasHash: !!hash,
+              compareOk: ok,
+            },
+            null,
+            2
+          )
+        );
 
         if (!ok) return null;
 
