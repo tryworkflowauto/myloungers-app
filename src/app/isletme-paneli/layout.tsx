@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -31,58 +32,37 @@ export default function IsletmePaneliLayout({
           width: "240px",
           background: "#0A1628",
           minHeight: "100vh",
+          height: "100vh",
           position: "fixed",
           left: 0,
           top: 0,
           display: "flex",
           flexDirection: "column",
           zIndex: 100,
+          overflowY: "hidden",
         }}
       >
         <div
           style={{
-            padding: "20px 20px 16px",
+            padding: "10px 16px",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
           }}
         >
           <div
-            style={{ display: "flex", alignItems: "center", gap: "10px" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-start",
+            }}
           >
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                background: "#0ABAB5",
-                borderRadius: "10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "18px",
-              }}
-            >
-              🏖️
-            </div>
-            <div>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                  color: "#fff",
-                }}
-              >
-                MY LOUNGERS
-              </span>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: "10px",
-                  color: "#0ABAB5",
-                }}
-              >
-                İşletme Paneli
-              </span>
-            </div>
+            <Image
+              src="/MyLoungers_Logo-02.png"
+              alt="My Loungers"
+              width={80}
+              height={26}
+              style={{ objectFit: "contain" }}
+              priority
+            />
           </div>
         </div>
         <div
