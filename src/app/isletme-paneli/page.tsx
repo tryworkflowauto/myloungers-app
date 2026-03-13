@@ -165,7 +165,7 @@ export default function IsletmePaneliPage() {
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 .isletme-shell{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray100);color:var(--gray800);display:flex;min-height:100vh;}
-.sidebar{width:var(--sidebar-w);background:var(--navy);min-height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100;}
+.sidebar{width:var(--sidebar-w);background:var(--navy);min-height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
 .sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
 .logo-box{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:36px;height:36px;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
@@ -330,99 +330,50 @@ export default function IsletmePaneliPage() {
           <div className="nav-section">Ana Menü</div>
           <Link
             href="/isletme-paneli"
-            className={
-              "nav-item" + (pathname === "/isletme-paneli" ? " active" : "")
-            }
+            className={`nav-item ${
+              pathname === "/isletme-paneli" ? "active" : ""
+            }`}
           >
             <div className="nav-icon">📊</div>
             <span className="nav-label">Dashboard</span>
           </Link>
-          <Link
-            href="/isletme/sezlong"
-            className={
-              "nav-item" + (pathname === "/isletme/sezlong" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/sezlong-haritasi" className="nav-item">
             <div className="nav-icon">🏖️</div>
             <span className="nav-label">Şezlong Haritası</span>
           </Link>
-          <Link
-            href="/isletme/rezervasyonlar"
-            className={
-              "nav-item" +
-              (pathname === "/isletme/rezervasyonlar" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/rezervasyonlar" className="nav-item">
             <div className="nav-icon">📋</div>
             <span className="nav-label">Rezervasyonlar</span>
             <span className="nav-badge">12</span>
           </Link>
-          <Link
-            href="/isletme/siparisler"
-            className={
-              "nav-item" +
-              (pathname === "/isletme/siparisler" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/siparisler" className="nav-item">
             <div className="nav-icon">🍽️</div>
             <span className="nav-label">Siparişler</span>
             <span className="nav-badge">5</span>
           </Link>
-
           <div className="nav-section">Yönetim</div>
-          <Link
-            href="/isletme/menu"
-            className={
-              "nav-item" + (pathname === "/isletme/menu" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/menu" className="nav-item">
             <div className="nav-icon">🍹</div>
             <span className="nav-label">Menü Yönetimi</span>
           </Link>
-          <Link
-            href="/isletme/personel"
-            className={
-              "nav-item" + (pathname === "/isletme/personel" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/personel" className="nav-item">
             <div className="nav-icon">👥</div>
             <span className="nav-label">Personel</span>
           </Link>
-          <Link
-            href="/isletme/raporlar"
-            className={
-              "nav-item" + (pathname === "/isletme/raporlar" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/raporlar" className="nav-item">
             <div className="nav-icon">💰</div>
             <span className="nav-label">Bakiye &amp; Raporlar</span>
           </Link>
-          <Link
-            href="/isletme/sezon"
-            className={
-              "nav-item" + (pathname === "/isletme/sezon" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/sezon" className="nav-item">
             <div className="nav-icon">📅</div>
             <span className="nav-label">Sezon &amp; Fiyatlar</span>
           </Link>
-
           <div className="nav-section">Tesis</div>
-          <Link
-            href="/isletme/tesis"
-            className={
-              "nav-item" + (pathname === "/isletme/tesis" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/tesis" className="nav-item">
             <div className="nav-icon">🏨</div>
             <span className="nav-label">Tesis Bilgileri</span>
           </Link>
-          <Link
-            href="/isletme/yorumlar"
-            className={
-              "nav-item" + (pathname === "/isletme/yorumlar" ? " active" : "")
-            }
-          >
+          <Link href="/isletme-paneli/yorumlar" className="nav-item">
             <div className="nav-icon">⭐</div>
             <span className="nav-label">Yorumlar</span>
             <span className="nav-badge">3</span>
