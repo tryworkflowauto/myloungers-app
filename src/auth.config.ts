@@ -14,14 +14,14 @@ export default {
         email: { label: "E-posta", type: "email" },
         password: { label: "Şifre", type: "password" },
       },
-      async authorize(credentials: { email?: string; password?: string } | undefined) {
+      async authorize(credentials) {
         console.log("Auth.js v5 credentials.authorize çağrıldı. Raw credentials:", {
           email: credentials?.email,
           hasPassword: !!credentials?.password,
         });
 
-        const email = credentials?.email?.toLowerCase().trim();
-        const password = credentials?.password ?? "";
+        const email = ((credentials?.email as string) ?? "").toLowerCase().trim();
+        const password = (credentials?.password as string) ?? "";
         if (!email || !password) {
           console.log("Auth.js v5 authorize: email veya password boş", { email, hasPassword: !!password });
           return null;
