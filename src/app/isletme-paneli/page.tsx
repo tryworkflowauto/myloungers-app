@@ -128,8 +128,9 @@ export default function IsletmePaneliPage() {
         const allRez = rezData || [];
         const todayList = allRez.filter((r) => {
           const start = r.baslangic_tarih as string | null;
-          const end = (r.bitis_tarih as string | null) || start;
+          const rawEnd = r.bitis_tarih as string | null;
           if (!start) return false;
+          const end = rawEnd ?? start;
           return start <= todayIso && end >= todayIso;
         });
 
