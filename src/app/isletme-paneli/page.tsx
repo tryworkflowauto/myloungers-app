@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 function formatDateLabel(d: Date) {
@@ -49,6 +50,7 @@ export default function IsletmePaneliPage() {
   const { data: session, status } = useSession();
   const [timeLabel, setTimeLabel] = useState("--:--");
   const [dateLabel, setDateLabel] = useState("");
+  const pathname = usePathname();
 
   useEffect(() => {
     const now = new Date();
@@ -74,7 +76,7 @@ export default function IsletmePaneliPage() {
     displayName
       .split(" ")
       .filter(Boolean)
-      .map((p) => p[0])
+      .map((p: string) => p[0])
       .slice(0, 2)
       .join("")
       .toUpperCase() || "İP";
@@ -326,51 +328,105 @@ export default function IsletmePaneliPage() {
         </div>
         <nav className="sidebar-nav">
           <div className="nav-section">Ana Menü</div>
-          <div className="nav-item active">
+          <Link
+            href="/isletme-paneli"
+            className={
+              "nav-item" + (pathname === "/isletme-paneli" ? " active" : "")
+            }
+          >
             <div className="nav-icon">📊</div>
             <span className="nav-label">Dashboard</span>
-          </div>
-          <div className="nav-item">
+          </Link>
+          <Link
+            href="/isletme/sezlong"
+            className={
+              "nav-item" + (pathname === "/isletme/sezlong" ? " active" : "")
+            }
+          >
             <div className="nav-icon">🏖️</div>
             <span className="nav-label">Şezlong Haritası</span>
-          </div>
-          <div className="nav-item">
+          </Link>
+          <Link
+            href="/isletme/rezervasyonlar"
+            className={
+              "nav-item" +
+              (pathname === "/isletme/rezervasyonlar" ? " active" : "")
+            }
+          >
             <div className="nav-icon">📋</div>
             <span className="nav-label">Rezervasyonlar</span>
             <span className="nav-badge">12</span>
-          </div>
-          <div className="nav-item">
+          </Link>
+          <Link
+            href="/isletme/siparisler"
+            className={
+              "nav-item" +
+              (pathname === "/isletme/siparisler" ? " active" : "")
+            }
+          >
             <div className="nav-icon">🍽️</div>
             <span className="nav-label">Siparişler</span>
             <span className="nav-badge">5</span>
-          </div>
+          </Link>
+
           <div className="nav-section">Yönetim</div>
-          <div className="nav-item">
+          <Link
+            href="/isletme/menu"
+            className={
+              "nav-item" + (pathname === "/isletme/menu" ? " active" : "")
+            }
+          >
             <div className="nav-icon">🍹</div>
             <span className="nav-label">Menü Yönetimi</span>
-          </div>
-          <div className="nav-item">
+          </Link>
+          <Link
+            href="/isletme/personel"
+            className={
+              "nav-item" + (pathname === "/isletme/personel" ? " active" : "")
+            }
+          >
             <div className="nav-icon">👥</div>
             <span className="nav-label">Personel</span>
-          </div>
-          <div className="nav-item">
+          </Link>
+          <Link
+            href="/isletme/raporlar"
+            className={
+              "nav-item" + (pathname === "/isletme/raporlar" ? " active" : "")
+            }
+          >
             <div className="nav-icon">💰</div>
             <span className="nav-label">Bakiye &amp; Raporlar</span>
-          </div>
-          <div className="nav-item">
+          </Link>
+          <Link
+            href="/isletme/sezon"
+            className={
+              "nav-item" + (pathname === "/isletme/sezon" ? " active" : "")
+            }
+          >
             <div className="nav-icon">📅</div>
             <span className="nav-label">Sezon &amp; Fiyatlar</span>
-          </div>
+          </Link>
+
           <div className="nav-section">Tesis</div>
-          <div className="nav-item">
+          <Link
+            href="/isletme/tesis"
+            className={
+              "nav-item" + (pathname === "/isletme/tesis" ? " active" : "")
+            }
+          >
             <div className="nav-icon">🏨</div>
             <span className="nav-label">Tesis Bilgileri</span>
-          </div>
-          <div className="nav-item">
+          </Link>
+          <Link
+            href="/isletme/yorumlar"
+            className={
+              "nav-item" + (pathname === "/isletme/yorumlar" ? " active" : "")
+            }
+          >
             <div className="nav-icon">⭐</div>
             <span className="nav-label">Yorumlar</span>
             <span className="nav-badge">3</span>
-          </div>
+          </Link>
         </nav>
         <div className="sidebar-bottom">
           <div className="user-info">
