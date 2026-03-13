@@ -152,7 +152,7 @@ export default function IsletmePaneliPage() {
   }
 
   return (
-    <div className="isletme-shell">
+    <>
       <style>{`
 :root {
   --navy:#0A1628; --teal:#0ABAB5; --orange:#F5821F;
@@ -310,87 +310,6 @@ export default function IsletmePaneliPage() {
 }
       `}</style>
 
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <div className="logo-box">
-            <div className="logo-icon">🏖️</div>
-            <div className="logo-text">
-              <span>MY LOUNGERS</span>
-              <span>İşletme Paneli</span>
-            </div>
-          </div>
-        </div>
-        <div className="tesis-selector">
-          <div className="dot" />
-          <span>Zuzuu Beach Hotel</span>
-          <span>▾</span>
-        </div>
-        <nav className="sidebar-nav">
-          <div className="nav-section">Ana Menü</div>
-          <Link
-            href="/isletme-paneli"
-            className={`nav-item ${
-              pathname === "/isletme-paneli" ? "active" : ""
-            }`}
-          >
-            <div className="nav-icon">📊</div>
-            <span className="nav-label">Dashboard</span>
-          </Link>
-          <Link href="/isletme-paneli/sezlong-haritasi" className="nav-item">
-            <div className="nav-icon">🏖️</div>
-            <span className="nav-label">Şezlong Haritası</span>
-          </Link>
-          <Link href="/isletme-paneli/rezervasyonlar" className="nav-item">
-            <div className="nav-icon">📋</div>
-            <span className="nav-label">Rezervasyonlar</span>
-            <span className="nav-badge">12</span>
-          </Link>
-          <Link href="/isletme-paneli/siparisler" className="nav-item">
-            <div className="nav-icon">🍽️</div>
-            <span className="nav-label">Siparişler</span>
-            <span className="nav-badge">5</span>
-          </Link>
-          <div className="nav-section">Yönetim</div>
-          <Link href="/isletme-paneli/menu" className="nav-item">
-            <div className="nav-icon">🍹</div>
-            <span className="nav-label">Menü Yönetimi</span>
-          </Link>
-          <Link href="/isletme-paneli/personel" className="nav-item">
-            <div className="nav-icon">👥</div>
-            <span className="nav-label">Personel</span>
-          </Link>
-          <Link href="/isletme-paneli/raporlar" className="nav-item">
-            <div className="nav-icon">💰</div>
-            <span className="nav-label">Bakiye &amp; Raporlar</span>
-          </Link>
-          <Link href="/isletme-paneli/sezon" className="nav-item">
-            <div className="nav-icon">📅</div>
-            <span className="nav-label">Sezon &amp; Fiyatlar</span>
-          </Link>
-          <div className="nav-section">Tesis</div>
-          <Link href="/isletme-paneli/tesis" className="nav-item">
-            <div className="nav-icon">🏨</div>
-            <span className="nav-label">Tesis Bilgileri</span>
-          </Link>
-          <Link href="/isletme-paneli/yorumlar" className="nav-item">
-            <div className="nav-icon">⭐</div>
-            <span className="nav-label">Yorumlar</span>
-            <span className="nav-badge">3</span>
-          </Link>
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="user-info">
-            <div className="user-avatar">{initials}</div>
-            <div className="user-details">
-              <span>{displayName}</span>
-              <span>İşletme Yöneticisi</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main */}
       <main className="main">
         <header className="topbar">
           <div className="topbar-left">
@@ -890,7 +809,7 @@ export default function IsletmePaneliPage() {
           </div>
         </div>
       </main>
-    </div>
+    </>
   );
 }
 
