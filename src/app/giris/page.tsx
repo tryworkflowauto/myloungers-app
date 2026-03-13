@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import "./giris.css";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect, useRef } from "react";
+import { signIn } from "next-auth/react";
 
 const COUNTRY_CODES = [
   { code: "TR", flag: "🇹🇷", dial: "+90" },
@@ -15,10 +16,19 @@ const COUNTRY_CODES = [
 
 function GirisContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tabParam = searchParams.get("tab");
   const [pane, setPane] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [tab, setTab] = useState<"login" | "register">("login");
   const [showPass, setShowPass] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [regName, setRegName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -39,6 +49,60 @@ function GirisContent() {
       otpRefs.current[idx - 1]?.focus();
     }
   };
+
+  async function handleEmailLogin() {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setLoading(true);
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+    setLoading(false);
+    if (res?.error) {
+      setErrorMsg("E-posta veya şifre hatalı.");
+      return;
+    }
+    setSuccessMsg("Giriş başarılı, yönlendiriliyorsunuz…");
+    router.push("/");
+  }
+
+  async function handleRegister() {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setLoading(true);
+    try {
+      const resp = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword }),
+      });
+      const json = await resp.json();
+      if (!resp.ok || !json.ok) {
+        setErrorMsg(json.error || "Kayıt oluşturulamadı.");
+        setLoading(false);
+        return;
+      }
+      setSuccessMsg("Kayıt başarılı, otomatik giriş yapılıyor…");
+      // Kayıttan sonra otomatik giriş
+      const loginRes = await signIn("credentials", {
+        email: regEmail,
+        password: regPassword,
+        redirect: false,
+      });
+      setLoading(false);
+      if (loginRes?.error) {
+        router.push("/giris?tab=login");
+        return;
+      }
+      router.push("/");
+    } catch (e) {
+      console.error("Register error:", e);
+      setErrorMsg("Sunucu hatası. Lütfen tekrar deneyin.");
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="giris-page">
@@ -77,15 +141,31 @@ function GirisContent() {
                     📱 Telefon ile giriş
                   </button>
                   <div className="giris-divider">— veya e-posta ile —</div>
-                  <input type="email" className="giris-input" placeholder="E-posta" />
+                  <input
+                    type="email"
+                    className="giris-input"
+                    placeholder="E-posta"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
                   <div className="giris-input-wrap">
-                    <input type={showPass ? "text" : "password"} className="giris-input" placeholder="Şifre" />
+                    <input
+                      type={showPass ? "text" : "password"}
+                      className="giris-input"
+                      placeholder="Şifre"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                    />
                     <button type="button" className="giris-eye" onClick={() => setShowPass(!showPass)} aria-label="Şifreyi göster">
                       {showPass ? "🙈" : "👁"} 
                     </button>
                   </div>
                   <Link href="#" className="giris-forgot" onClick={(e) => { e.preventDefault(); setPane(4); }}>Şifremi Unuttum</Link>
-                  <button type="button" className="giris-submit">Giriş Yap →</button>
+                  {errorMsg && <p style={{ color: "#EF4444", fontSize: 12, marginTop: 4 }}>{errorMsg}</p>}
+                  {successMsg && <p style={{ color: "#16A34A", fontSize: 12, marginTop: 4 }}>{successMsg}</p>}
+                  <button type="button" className="giris-submit" disabled={loading} onClick={handleEmailLogin}>
+                    {loading ? "Giriş yapılıyor..." : "Giriş Yap →"}
+                  </button>
                   <p className="giris-switch">Hesabın yok mu? <button type="button" className="giris-link" onClick={() => setTab("register")}>Kayıt ol</button></p>
                 </div>
               )}
@@ -101,13 +181,35 @@ function GirisContent() {
                     Apple ile devam et
                   </button>
                   <div className="giris-divider">— veya e-posta ile —</div>
-                  <input type="text" className="giris-input" placeholder="Ad Soyad" />
-                  <input type="email" className="giris-input" placeholder="E-posta" />
+                  <input
+                    type="text"
+                    className="giris-input"
+                    placeholder="Ad Soyad"
+                    value={regName}
+                    onChange={e => setRegName(e.target.value)}
+                  />
+                  <input
+                    type="email"
+                    className="giris-input"
+                    placeholder="E-posta"
+                    value={regEmail}
+                    onChange={e => setRegEmail(e.target.value)}
+                  />
                   <div className="giris-input-wrap">
-                    <input type={showPass ? "text" : "password"} className="giris-input" placeholder="Şifre (min 8 karakter)" />
+                    <input
+                      type={showPass ? "text" : "password"}
+                      className="giris-input"
+                      placeholder="Şifre (min 8 karakter)"
+                      value={regPassword}
+                      onChange={e => setRegPassword(e.target.value)}
+                    />
                     <button type="button" className="giris-eye" onClick={() => setShowPass(!showPass)} aria-label="Şifreyi göster">👁</button>
                   </div>
-                  <button type="button" className="giris-submit">Kayıt Ol →</button>
+                  {errorMsg && <p style={{ color: "#EF4444", fontSize: 12, marginTop: 4 }}>{errorMsg}</p>}
+                  {successMsg && <p style={{ color: "#16A34A", fontSize: 12, marginTop: 4 }}>{successMsg}</p>}
+                  <button type="button" className="giris-submit" disabled={loading} onClick={handleRegister}>
+                    {loading ? "Kayıt oluşturuluyor..." : "Kayıt Ol →"}
+                  </button>
                   <p className="giris-kvkk">
                     Kayıt olarak <Link href="/kvkk" className="giris-link">KVKK</Link> ve <Link href="/gizlilik" className="giris-link">Gizlilik</Link> metinlerini kabul etmiş olursunuz.
                   </p>

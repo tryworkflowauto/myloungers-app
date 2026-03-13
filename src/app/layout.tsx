@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import AuthSessionProvider from "@/components/AuthSessionProvider";
 
 export const metadata: Metadata = {
   title: "Myloungers | Plaj ve Otel Şezlong Rezervasyonu",
@@ -26,7 +27,9 @@ export default function RootLayout({
         `}</style>
       </head>
       <body>
-        {children}
+        <AuthSessionProvider>
+          {children}
+        </AuthSessionProvider>
       </body>
     </html>
   );

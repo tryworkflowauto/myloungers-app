@@ -222,7 +222,7 @@ export default function TesisDetailPage() {
     setPaxCount(1);
   }
 
-  function goRes() {
+  async function goRes() {
     if (!selStart) { alert("Lütfen giriş tarihini seçin."); return; }
     if (selSzls.length === 0) { alert("Lütfen en az 1 şezlong seçin."); return; }
     function padZ(n: number) { return String(n).padStart(2, "0"); }
@@ -233,6 +233,26 @@ export default function TesisDetailPage() {
     const gunSayisi = days;
     const sezlonglar = selSzls.map(s => s.no).join(",");
     const toplamFiyat = total;
+
+    // Supabase üzerinde rezervasyon kaydı oluştur
+    try {
+      const { error: rezError } = await supabase.from("rezervasyonlar").insert({
+        tesis_id: row?.id ?? null,
+        kullanici_id: null,           // (isteğe göre giriş yapan kullanıcı id'si ile doldurulabilir)
+        sezlong_id: null,             // çoklu seçimde ayrı tabloya taşınabilir; şimdilik boş
+        baslangic_tarih: startStr,
+        bitis_tarih: endStr,
+        kisi_sayisi: selSzls.length,
+        toplam_tutar: toplamFiyat,
+        durum: "bekliyor",
+      });
+      if (rezError) {
+        console.error("Rezervasyon oluşturma hatası:", rezError);
+      }
+    } catch (e) {
+      console.error("Rezervasyon oluşturma beklenmeyen hata:", e);
+    }
+
     const params = new URLSearchParams({
       tesis: HOTEL.name,
       tarihBaslangic: startStr,
