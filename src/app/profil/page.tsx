@@ -101,11 +101,12 @@ export default function ProfilPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user) {
+    const user = session?.user;
+    if (user) {
       setProfile((prev) => ({
         ...prev,
-        ad: (session.user as any).name || prev.ad || "Misafir",
-        email: session.user.email || prev.email || "",
+        ad: (user as any).name || prev.ad || "Misafir",
+        email: user.email || prev.email || "",
       }));
     }
   }, [session]);
