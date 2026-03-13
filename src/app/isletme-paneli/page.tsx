@@ -161,36 +161,8 @@ export default function IsletmePaneliPage() {
   --gray600:#475569; --gray800:#1E293B;
   --green:#10B981; --red:#EF4444; --yellow:#F59E0B; --blue:#3B82F6;
   --purple:#7C3AED;
-  --sidebar-w:240px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-.isletme-shell{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray100);color:var(--gray800);display:flex;min-height:100vh;}
-.sidebar{width:var(--sidebar-w);background:var(--navy);min-height:100vh;height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
-.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.logo-box{display:flex;align-items:center;gap:10px;}
-.logo-icon{width:36px;height:36px;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-.logo-text span:first-child{display:block;font-size:13px;font-weight:800;color:#fff;}
-.logo-text span:last-child{display:block;font-size:10px;color:var(--teal);}
-.tesis-selector{margin:12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;}
-.tesis-selector .dot{width:8px;height:8px;background:var(--green);border-radius:50%;}
-.tesis-selector span{font-size:12px;color:#fff;font-weight:600;flex:1;}
-.sidebar-nav{padding:8px 0;flex:1;overflow-y:auto;}
-.nav-section{padding:16px 16px 6px;font-size:9px;font-weight:700;color:var(--gray400);letter-spacing:1.5px;text-transform:uppercase;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;position:relative;}
-.nav-item:hover{background:rgba(255,255,255,0.06);}
-.nav-item.active{background:rgba(10,186,181,0.15);}
-.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--teal);border-radius:0 2px 2px 0;}
-.nav-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:15px;}
-.nav-item.active .nav-icon{background:rgba(10,186,181,0.2);}
-.nav-label{font-size:13px;color:var(--gray300);font-weight:500;}
-.nav-item.active .nav-label{color:var(--teal);font-weight:600;}
-.nav-badge{margin-left:auto;background:var(--orange);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;}
-.sidebar-bottom{padding:16px;border-top:1px solid rgba(255,255,255,0.08);}
-.user-info{display:flex;align-items:center;gap:10px;}
-.user-avatar{width:34px;height:34px;background:linear-gradient(135deg,var(--teal),var(--orange));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;}
-.user-details span:first-child{display:block;font-size:12px;font-weight:600;color:white;}
-.user-details span:last-child{display:block;font-size:10px;color:var(--gray400);}
-.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;}
 .topbar{background:white;border-bottom:1px solid var(--gray200);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
 .topbar-left h1{font-size:16px;font-weight:700;color:var(--navy);}
 .topbar-left span{font-size:11px;color:var(--gray400);}
@@ -299,8 +271,6 @@ export default function IsletmePaneliPage() {
 @media (max-width: 1024px) {
   .stat-grid{grid-template-columns:repeat(2,1fr);}
   .three-col{grid-template-columns:1fr;}
-  .sidebar{display:none;}
-  .main{margin-left:0;}
 }
 
 @media (max-width: 768px) {
