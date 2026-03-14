@@ -1,11 +1,12 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function AuthConfirmContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [status, setStatus] = useState<"checking" | "error" | "ready">("checking");
   const [message, setMessage] = useState<string>("");
@@ -15,34 +16,54 @@ function AuthConfirmContent() {
 
   useEffect(() => {
     const hash = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
-    const params = new URLSearchParams(hash);
-    const access_token = params.get("access_token");
-    const refresh_token = params.get("refresh_token");
+    const hashParams = new URLSearchParams(hash);
+    const access_token = hashParams.get("access_token");
+    const refresh_token = hashParams.get("refresh_token");
 
-    if (!access_token || !refresh_token) {
+    async function tryFragmentThenQuery() {
+      if (access_token && refresh_token) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: access_token ?? "",
+          refresh_token: refresh_token ?? "",
+        });
+        if (!error && data?.session) {
+          setStatus("ready");
+          return;
+        }
+        if (error) console.error("setSession error", error);
+      }
+
+      if (access_token && !refresh_token) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(access_token);
+        if (!error && data?.session) {
+          setStatus("ready");
+          return;
+        }
+        if (error) console.error("exchangeCodeForSession error", error);
+      }
+
+      const token_hash = searchParams.get("token_hash") || searchParams.get("token") || "";
+      const type = (searchParams.get("type") as "invite" | "signup" | "recovery" | "email_change") || "invite";
+      if (token_hash) {
+        const { data, error } = await supabase.auth.verifyOtp({ token_hash, type });
+        if (!error && data?.session) {
+          setStatus("ready");
+          return;
+        }
+        if (error) {
+          console.error("verifyOtp error", error);
+          setStatus("error");
+          setMessage(error.message || "Doğrulama başarısız.");
+          return;
+        }
+      }
+
       setStatus("error");
-      setMessage("Geçersiz veya eksik doğrulama bağlantısı. Davet linkindeki # sonrası access_token ve refresh_token bulunamadı.");
-      return;
+      setMessage("Geçersiz veya eksik doğrulama bağlantısı. Davet linkini tekrar kontrol edin.");
     }
 
-    async function setSessionFromHash() {
-      const { data, error } = await supabase.auth.setSession({ access_token: access_token ?? '', refresh_token: refresh_token ?? '' });
-      if (error) {
-        console.error("setSession error", error);
-        setStatus("error");
-        setMessage(error.message || "Oturum başlatılamadı.");
-        return;
-      }
-      if (!data.session) {
-        setStatus("error");
-        setMessage("Oturum başlatılamadı. Lütfen bağlantıyı tekrar deneyin.");
-        return;
-      }
-      setStatus("ready");
-    }
-
-    setSessionFromHash();
-  }, []);
+    tryFragmentThenQuery();
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
