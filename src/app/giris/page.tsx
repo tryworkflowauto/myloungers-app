@@ -4,7 +4,7 @@ import Link from "next/link";
 import "./giris.css";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect, useRef } from "react";
-import { signIn, getSession } from "next-auth/react";
+import { signIn, getSession, useSession } from "next-auth/react";
 
 const COUNTRY_CODES = [
   { code: "TR", flag: "🇹🇷", dial: "+90" },
@@ -17,6 +17,7 @@ const COUNTRY_CODES = [
 function GirisContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const tabParam = searchParams.get("tab");
   const [pane, setPane] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [tab, setTab] = useState<"login" | "register">("login");
@@ -54,22 +55,29 @@ function GirisContent() {
     setErrorMsg(null);
     setSuccessMsg(null);
     setLoading(true);
-    const res = await signIn("credentials", {
+    const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
     });
     setLoading(false);
-    if (res?.error) {
+    if (result?.error) {
       setErrorMsg("E-posta veya şifre hatalı.");
       return;
     }
-    setSuccessMsg("Giriş başarılı, yönlendiriliyorsunuz…");
-    const session = await getSession();
-    const role = (session?.user as { role?: string } | undefined)?.role;
-    if (role === "isletme") router.push("/isletme");
-    else if (role === "admin") router.push("/admin");
-    else router.push("/");
+    if (result?.ok) {
+      setSuccessMsg("Giriş başarılı, yönlendiriliyorsunuz…");
+      let session = await getSession();
+      let role = (session?.user as { role?: string } | undefined)?.role;
+      if (role === undefined) {
+        await updateSession();
+        session = await getSession();
+        role = (session?.user as { role?: string } | undefined)?.role;
+      }
+      if (role === "isletme") router.push("/isletme");
+      else if (role === "admin") router.push("/admin");
+      else router.push("/");
+    }
   }
 
   async function handleRegister() {
@@ -89,22 +97,28 @@ function GirisContent() {
         return;
       }
       setSuccessMsg("Kayıt başarılı, otomatik giriş yapılıyor…");
-      // Kayıttan sonra otomatik giriş
-      const loginRes = await signIn("credentials", {
+      const loginResult = await signIn("credentials", {
         email: regEmail,
         password: regPassword,
         redirect: false,
       });
       setLoading(false);
-      if (loginRes?.error) {
+      if (loginResult?.error) {
         router.push("/giris?tab=login");
         return;
       }
-      const session = await getSession();
-      const role = (session?.user as { role?: string } | undefined)?.role;
-      if (role === "isletme") router.push("/isletme");
-      else if (role === "admin") router.push("/admin");
-      else router.push("/");
+      if (loginResult?.ok) {
+        let session = await getSession();
+        let role = (session?.user as { role?: string } | undefined)?.role;
+        if (role === undefined) {
+          await updateSession();
+          session = await getSession();
+          role = (session?.user as { role?: string } | undefined)?.role;
+        }
+        if (role === "isletme") router.push("/isletme");
+        else if (role === "admin") router.push("/admin");
+        else router.push("/");
+      }
     } catch (e) {
       console.error("Register error:", e);
       setErrorMsg("Sunucu hatası. Lütfen tekrar deneyin.");
