@@ -15,7 +15,20 @@ const supabase = createClient(
 );
 
 type TesisDurum = "aktif" | "onay" | "askida";
-type Tesis = { id: number; ad: string; sehir: string; emoji: string; emojiBg: string; durum: TesisDurum; sezlong: number; ciro?: string; komisyon?: string; puan?: number; puanYuzde?: number; sonAktivite: string; };
+type Tesis = {
+  id: number;
+  ad: string;
+  sehir: string;
+  emoji: string;
+  emojiBg: string;
+  durum: TesisDurum;
+  sezlong: number;
+  ciro?: string;
+  komisyon?: string;
+  puan?: number;
+  puanYuzde?: number;
+  sonAktivite: string;
+};
 
 type Basvuru = {
   id: string;
@@ -35,19 +48,9 @@ type Basvuru = {
   durum: string | null;
 };
 
-const INIT: Tesis[] = [
-  { id: 1, ad: "Zuzuu Beach Hotel",  sehir: "Bodrum",   emoji: "🌊", emojiBg: "#E0F2FE", durum: "aktif",  sezlong: 100, ciro: "₺148K", komisyon: "₺22.2K", puan: 9.2, puanYuzde: 92, sonAktivite: "2 dk önce" },
-  { id: 2, ad: "Palmiye Beach Club", sehir: "Bodrum",   emoji: "☀️", emojiBg: "#FEF3C7", durum: "aktif",  sezlong: 60,  ciro: "₺68K",  komisyon: "₺10.2K", puan: 8.8, puanYuzde: 88, sonAktivite: "14 dk önce" },
-  { id: 3, ad: "Poseidon Lux",       sehir: "Bodrum",   emoji: "🔱", emojiBg: "#EDE9FE", durum: "aktif",  sezlong: 45,  ciro: "₺41K",  komisyon: "₺6.1K",  puan: 9.5, puanYuzde: 95, sonAktivite: "1 saat önce" },
-  { id: 4, ad: "Aqua Park Bodrum",   sehir: "Bodrum",   emoji: "🌊", emojiBg: "#FEE2E2", durum: "onay",   sezlong: 80,  sonAktivite: "Başvuru: 10 Mar" },
-  { id: 5, ad: "Mavi Deniz Beach",   sehir: "Bodrum",   emoji: "🏖️", emojiBg: "#DBEAFE", durum: "onay",   sezlong: 35,  sonAktivite: "Başvuru: 9 Mar" },
-  { id: 6, ad: "Olimpia Beach",      sehir: "Antalya",  emoji: "🌴", emojiBg: "#DCFCE7", durum: "aktif",  sezlong: 55,  ciro: "₺27K",  komisyon: "₺4.0K",  puan: 8.5, puanYuzde: 85, sonAktivite: "3 saat önce" },
-  { id: 7, ad: "Kemer Sea Club",     sehir: "Antalya",  emoji: "⛵", emojiBg: "#FEF9C3", durum: "askida", sezlong: 40,  sonAktivite: "Askıya: 5 Mar" },
-];
-
 export default function AdminTesislerPage() {
   const { showToast } = useAdminToast();
-  const [tesisler, setTesisler] = useState<Tesis[]>(INIT);
+  const [tesisler, setTesisler] = useState<Tesis[]>([]);
   const [basvurular, setBasvurular] = useState<Basvuru[]>([]);
   const [basvuruLoading, setBasvuruLoading] = useState(true);
   const [basvuruSavingId, setBasvuruSavingId] = useState<string | null>(null);
@@ -56,6 +59,44 @@ export default function AdminTesislerPage() {
   const [onayModal, setOnayModal] = useState<Tesis | null>(null);
   const [reddetModal, setReddetModal] = useState<Tesis | null>(null);
   const [redSebebi, setRedSebebi] = useState("");
+
+  useEffect(() => {
+    async function fetchTesisler() {
+      const { data, error } = await supabase
+        .from("tesisler")
+        .select("*")
+        .order("id", { ascending: true });
+      if (error) {
+        console.error("Tesisler fetch error", error);
+        showToast("Tesisler yüklenemedi", RED);
+        return;
+      }
+      if (!data) return;
+      const mapped: Tesis[] = (data as any[]).map((t) => {
+        const durumRaw = (t.durum as string) || "aktif";
+        const durum: TesisDurum =
+          durumRaw === "onay" || durumRaw === "askida" ? (durumRaw as TesisDurum) : "aktif";
+        const sezlong = typeof t.kapasite === "number" ? t.kapasite : Number(t.kapasite || 0);
+        const puan = typeof t.puan === "number" ? t.puan : t.puan ? Number(t.puan) : undefined;
+        return {
+          id: Number(t.id),
+          ad: (t.ad as string) || "İsimsiz Tesis",
+          sehir: (t.sehir as string) || "-",
+          emoji: "🏖️",
+          emojiBg: "#E0F2FE",
+          durum,
+          sezlong,
+          ciro: (t.ciro as string) ?? undefined,
+          komisyon: (t.komisyon as string) ?? undefined,
+          puan,
+          puanYuzde: puan ? puan * 10 : undefined,
+          sonAktivite: (t.son_aktivite as string) || "-",
+        };
+      });
+      setTesisler(mapped);
+    }
+    fetchTesisler();
+  }, [showToast]);
 
   useEffect(() => {
     async function fetchBasvurular() {
