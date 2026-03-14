@@ -66,8 +66,12 @@ export async function POST(req: Request) {
     if (b.email) {
       const { error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(b.email);
       if (inviteErr) {
-        console.error("auth inviteUserByEmail error", inviteErr);
-        return NextResponse.json({ error: "Kullanıcı daveti gönderilemedi" }, { status: 500 });
+        const errMsg = inviteErr?.message ?? String(inviteErr);
+        console.error("auth inviteUserByEmail error", errMsg, inviteErr);
+        return NextResponse.json(
+          { error: "Kullanıcı daveti gönderilemedi", detail: errMsg },
+          { status: 500 }
+        );
       }
 
       // 4) kullanicilar tablosuna kayıt
