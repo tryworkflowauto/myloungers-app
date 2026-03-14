@@ -281,8 +281,8 @@ export default function AdminTesislerPage() {
               {goruntulenen.length === 0 && (
                 <tr><td colSpan={9} style={{ padding: "40px", textAlign: "center", color: GRAY400, fontSize: 13 }}>Bu filtrede tesis bulunamadı</td></tr>
               )}
-              {goruntulenen.map(t => (
-                <tr key={t.id} style={{ background: t.durum === "onay" ? "#FFFBEB" : t.durum === "askida" ? "#FFF1F2" : undefined }}>
+              {goruntulenen.map((t, index) => (
+                <tr key={t.id?.toString() ?? index} style={{ background: t.durum === "onay" ? "#FFFBEB" : t.durum === "askida" ? "#FFF1F2" : undefined }}>
                   <td style={{ padding: "12px 14px", borderTop: `1px solid ${GRAY100}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ width: 34, height: 34, borderRadius: 9, background: t.emojiBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>{t.emoji}</div>
