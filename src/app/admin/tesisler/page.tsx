@@ -137,47 +137,34 @@ export default function AdminTesislerPage() {
   async function onaylaBasvuru(b: Basvuru) {
     try {
       setBasvuruSavingId(b.id);
-      // 1) Başvuru durumunu güncelle
-      const { error: updErr } = await supabase
-        .from("basvurular")
-        .update({ durum: "onaylandi" })
-        .eq("id", b.id);
-      if (updErr) throw updErr;
-      // 2) Tesisler tablosuna yeni kayıt ekle
-      const { data: inserted, error: insErr } = await supabase
-        .from("tesisler")
-        .insert({
-          ad: b.isletme_adi,
-          kategori: b.tesis_tipi,
-          sehir: b.sehir,
-          ilce: b.ilce,
-          adres: b.tam_adres,
-          telefon: b.telefon,
-          email: b.email,
-          aktif: true,
-        })
-        .select("*")
-        .single();
-      if (insErr) throw insErr;
-      // 3) Local state'leri güncelle
+      const res = await fetch("/api/admin/onayla", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ basvuru: b }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        showToast(data?.error || "Onay sırasında hata oluştu", RED);
+        return;
+      }
+      const inserted = data.tesis as any | undefined;
       setBasvurular(prev => prev.filter(x => x.id !== b.id));
       if (inserted) {
-        const t = inserted as any;
-        const sezlong = typeof t.kapasite === "number" ? t.kapasite : Number(t.kapasite || 0);
-        const puan = typeof t.puan === "number" ? t.puan : t.puan ? Number(t.puan) : undefined;
+        const sezlong = typeof inserted.kapasite === "number" ? inserted.kapasite : Number(inserted.kapasite || 0);
+        const puan = typeof inserted.puan === "number" ? inserted.puan : inserted.puan ? Number(inserted.puan) : undefined;
         const yeni: Tesis = {
-          id: Number(t.id),
-          ad: (t.ad as string) || "İsimsiz Tesis",
-          sehir: (t.sehir as string) || "-",
+          id: Number(inserted.id),
+          ad: (inserted.ad as string) || "İsimsiz Tesis",
+          sehir: (inserted.sehir as string) || "-",
           emoji: "🏖️",
           emojiBg: "#E0F2FE",
           durum: "aktif",
           sezlong,
-          ciro: (t.ciro as string) ?? undefined,
-          komisyon: (t.komisyon as string) ?? undefined,
+          ciro: (inserted.ciro as string) ?? undefined,
+          komisyon: (inserted.komisyon as string) ?? undefined,
           puan,
           puanYuzde: puan ? puan * 10 : undefined,
-          sonAktivite: (t.son_aktivite as string) || "-",
+          sonAktivite: (inserted.son_aktivite as string) || "-",
         };
         setTesisler(prev => [...prev, yeni]);
       }
