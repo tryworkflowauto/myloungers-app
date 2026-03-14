@@ -1,6 +1,7 @@
-"use client";
+\"use client\";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { useAdminToast } from "../AdminToastContext";
 
 const NAVY = "#0A1628"; const TEAL = "#0ABAB5"; const ORANGE = "#F5821F";
@@ -8,8 +9,31 @@ const GRAY50 = "#F8FAFC"; const GRAY100 = "#F1F5F9"; const GRAY200 = "#E2E8F0";
 const GRAY400 = "#94A3B8"; const GRAY600 = "#475569"; const GRAY800 = "#1E293B";
 const GREEN = "#10B981"; const RED = "#EF4444"; const YELLOW = "#F59E0B";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 type TesisDurum = "aktif" | "onay" | "askida";
 type Tesis = { id: number; ad: string; sehir: string; emoji: string; emojiBg: string; durum: TesisDurum; sezlong: number; ciro?: string; komisyon?: string; puan?: number; puanYuzde?: number; sonAktivite: string; };
+
+type Basvuru = {
+  id: string;
+  isletme_adi: string;
+  sehir: string;
+  ilce: string | null;
+  tesis_tipi: string;
+  kapasite: number;
+  tam_adres: string | null;
+  sezon: string | null;
+  ozellikler: string[] | null;
+  ek_notlar: string | null;
+  ad_soyad: string;
+  gorev: string | null;
+  telefon: string;
+  email: string | null;
+  durum: string | null;
+};
 
 const INIT: Tesis[] = [
   { id: 1, ad: "Zuzuu Beach Hotel",  sehir: "Bodrum",   emoji: "🌊", emojiBg: "#E0F2FE", durum: "aktif",  sezlong: 100, ciro: "₺148K", komisyon: "₺22.2K", puan: 9.2, puanYuzde: 92, sonAktivite: "2 dk önce" },
@@ -24,11 +48,33 @@ const INIT: Tesis[] = [
 export default function AdminTesislerPage() {
   const { showToast } = useAdminToast();
   const [tesisler, setTesisler] = useState<Tesis[]>(INIT);
+  const [basvurular, setBasvurular] = useState<Basvuru[]>([]);
+  const [basvuruLoading, setBasvuruLoading] = useState(true);
+  const [basvuruSavingId, setBasvuruSavingId] = useState<string | null>(null);
   const [ara, setAra] = useState("");
   const [tab, setTab] = useState<"tumu" | "aktif" | "onay" | "askida">("tumu");
   const [onayModal, setOnayModal] = useState<Tesis | null>(null);
   const [reddetModal, setReddetModal] = useState<Tesis | null>(null);
   const [redSebebi, setRedSebebi] = useState("");
+
+  useEffect(() => {
+    async function fetchBasvurular() {
+      setBasvuruLoading(true);
+      const { data, error } = await supabase
+        .from("basvurular")
+        .select("*")
+        .eq("durum", "beklemede")
+        .order("id", { ascending: false });
+      if (error) {
+        console.error("Basvurular fetch error", error);
+        showToast("Başvurular yüklenirken hata oluştu", RED);
+      } else if (data) {
+        setBasvurular(data as Basvuru[]);
+      }
+      setBasvuruLoading(false);
+    }
+    fetchBasvurular();
+  }, [showToast]);
 
   const goruntulenen = tesisler.filter(t => {
     const tabOk = tab === "tumu" || t.durum === tab;
@@ -55,6 +101,93 @@ export default function AdminTesislerPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div><h2 style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>🏖️ Tesis Yönetimi</h2><p style={{ fontSize: 12, color: GRAY400 }}>Platforma kayıtlı tüm tesisler</p></div>
         <input type="text" placeholder="🔍 Tesis veya şehir ara..." value={ara} onChange={e => setAra(e.target.value)} style={{ padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 12, width: 220 }} />
+      </div>
+
+      {/* Bekleyen Başvurular (Supabase) */}
+      <div style={{ marginBottom: 20, background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>📥</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Bekleyen Tesis Başvuruları</div>
+              <div style={{ fontSize: 11, color: GRAY400 }}>Supabase &quot;basvurular&quot; tablosundan durum = &quot;beklemede&quot; kayıtlar</div>
+            </div>
+          </div>
+          <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, background: "#FEF3C7", color: "#D97706", fontWeight: 700 }}>
+            {basvuruLoading ? "Yükleniyor..." : `${basvurular.length} başvuru`}
+          </span>
+        </div>
+        {basvurular.length === 0 && !basvuruLoading && (
+          <div style={{ padding: "10px 4px", fontSize: 12, color: GRAY400 }}>Şu anda bekleyen başvuru bulunmuyor.</div>
+        )}
+        {basvuruLoading && (
+          <div style={{ padding: "10px 4px", fontSize: 12, color: GRAY400 }}>Veriler getiriliyor…</div>
+        )}
+        {!basvuruLoading && basvurular.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {basvurular.map(b => (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 10, background: GRAY50, border: `1px solid ${GRAY100}` }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{b.isletme_adi}</div>
+                  <div style={{ fontSize: 11, color: GRAY600 }}>
+                    📍 {b.ilce ? `${b.ilce}, ` : ""}{b.sehir} · {b.tesis_tipi === "hotel" ? "Hotel" : b.tesis_tipi === "aqua" ? "Aqua Park" : "Beach Club"}
+                  </div>
+                  <div style={{ fontSize: 11, color: GRAY400 }}>
+                    👤 {b.ad_soyad} · 📞 {b.telefon}{b.email ? ` · ✉️ ${b.email}` : ""}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    disabled={basvuruSavingId === b.id}
+                    onClick={async () => {
+                      try {
+                        setBasvuruSavingId(b.id);
+                        const { error } = await supabase
+                          .from("basvurular")
+                          .update({ durum: "onaylandi" })
+                          .eq("id", b.id);
+                        if (error) throw error;
+                        setBasvurular(prev => prev.filter(x => x.id !== b.id));
+                        showToast("✅ Başvuru onaylandı: " + b.isletme_adi, GREEN);
+                      } catch (err) {
+                        console.error(err);
+                        showToast("Onay sırasında hata oluştu", RED);
+                      } finally {
+                        setBasvuruSavingId(null);
+                      }
+                    }}
+                    style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: "none", background: TEAL, color: "white", cursor: "pointer", opacity: basvuruSavingId === b.id ? 0.7 : 1 }}
+                  >
+                    ✓ Onayla
+                  </button>
+                  <button
+                    disabled={basvuruSavingId === b.id}
+                    onClick={async () => {
+                      try {
+                        setBasvuruSavingId(b.id);
+                        const { error } = await supabase
+                          .from("basvurular")
+                          .update({ durum: "reddedildi" })
+                          .eq("id", b.id);
+                        if (error) throw error;
+                        setBasvurular(prev => prev.filter(x => x.id !== b.id));
+                        showToast("✗ Başvuru reddedildi: " + b.isletme_adi, RED);
+                      } catch (err) {
+                        console.error(err);
+                        showToast("Reddederken hata oluştu", RED);
+                      } finally {
+                        setBasvuruSavingId(null);
+                      }
+                    }}
+                    style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid #FECACA`, background: "#FEF2F2", color: RED, cursor: "pointer", opacity: basvuruSavingId === b.id ? 0.7 : 1 }}
+                  >
+                    ✗ Reddet
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
