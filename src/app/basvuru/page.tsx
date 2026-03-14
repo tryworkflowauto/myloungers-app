@@ -67,7 +67,7 @@ export default function BasvuruPage() {
     setOzellikler((p) => ({ ...p, [key]: !p[key] }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!telefon.trim()) {
       alert("Lütfen telefon numaranızı girin.");
       return;
@@ -76,7 +76,39 @@ export default function BasvuruPage() {
       alert("Lütfen Gizlilik Politikası'nı kabul edin.");
       return;
     }
-    setSubmitted(true);
+    const ozelliklerList = Object.entries(ozellikler)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    const body = {
+      isletme_adi: isletmeAdi.trim(),
+      sehir,
+      ilce: ilce.trim(),
+      tesis_tipi: tesisTipi,
+      kapasite,
+      tam_adres: tamAdres.trim(),
+      sezon: sezon || null,
+      ozellikler: ozelliklerList,
+      ek_notlar: ekNotlar.trim() || null,
+      ad_soyad: adSoyad.trim(),
+      gorev: gorev || null,
+      telefon: telefon.trim(),
+      email: email.trim() || null,
+    };
+    try {
+      const res = await fetch("/api/basvuru", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.error || "Başvuru gönderilemedi. Lütfen tekrar deneyin.");
+        return;
+      }
+      setSubmitted(true);
+    } catch (e) {
+      alert("Bağlantı hatası. Lütfen tekrar deneyin.");
+    }
   };
 
   const progressPct = currentStep === 1 ? 33.3 : currentStep === 2 ? 66.6 : 100;
