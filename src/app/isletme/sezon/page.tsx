@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -20,7 +22,7 @@ const YELLOW = "#F59E0B";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type SezonItem = {
-  id: number;
+  id: string;
   name: string;
   bas: string;
   bit: string;
@@ -61,20 +63,23 @@ type Kampanya = {
   durum: KampanyaDurum;
 };
 
-// ── Initial data ──────────────────────────────────────────────────────────────
-const INIT_SEZONLAR: SezonItem[] = [
-  { id: 1, name: "Erken Sezon",  bas: "2026-03-01", bit: "2026-05-31", dot: BLUE,   badge: "Şu an aktif", badgeBg: "#DBEAFE", badgeColor: "#1E40AF", borderColor: BLUE, rowBg: "#EFF6FF" },
-  { id: 2, name: "Yüksek Sezon", bas: "2026-06-01", bit: "2026-08-31", dot: ORANGE, badge: "Yaklaşıyor",  badgeBg: "#FFEDD5", badgeColor: "#C2410C" },
-  { id: 3, name: "Normal Sezon", bas: "2026-09-01", bit: "2026-10-31", dot: TEAL,   badge: "Planlandı",  badgeBg: "#F0FFFE", badgeColor: TEAL },
-  { id: 4, name: "Kapalı Dönem", bas: "2026-11-01", bit: "2027-02-28", dot: GRAY300,badge: "Kapalı",     badgeBg: GRAY100,   badgeColor: GRAY600, opacity: 0.6 },
-];
-
-const INIT_FIYAT: FiyatRow[] = [
-  { id: "gold",   name: "⭐ Gold",   sub: "10 şezlong • Denize sıfır",    color: "#8B5CF6", erken: 2000, yuksek: 2800, normal: 1600, minGun: 1, anlikColor: PURPLE },
-  { id: "vip",    name: "🔥 VIP",    sub: "40 şezlong • Birinci sıra",    color: ORANGE,    erken: 1500, yuksek: 2200, normal: 1200, minGun: 1, anlikColor: ORANGE },
-  { id: "iskele", name: "⚓ İskele", sub: "20 şezlong • Ahşap platform",  color: YELLOW,    erken: 1250, yuksek: 1800, normal: 950,  minGun: 1, anlikColor: YELLOW },
-  { id: "silver", name: "🌊 Silver", sub: "55 şezlong • Standart bölge", color: TEAL,      erken: 1000, yuksek: 1400, normal: 750,  minGun: 1, anlikColor: TEAL },
-];
+// ── Helpers for mapping from DB ───────────────────────────────────────────────
+const SEZON_RENK_PALETI = [BLUE, ORANGE, TEAL, PURPLE, GREEN, GRAY300];
+function sezonBadge(bas: string, bit: string, aktif: boolean): { badge: string; badgeBg: string; badgeColor: string; borderColor?: string; rowBg?: string; opacity?: number } {
+  const now = new Date();
+  const nowStr = now.toISOString().slice(0, 10);
+  const bitDate = new Date(bit + "T00:00:00");
+  const basDate = new Date(bas + "T00:00:00");
+  if (aktif && nowStr >= bas && nowStr <= bit) return { badge: "Şu an aktif", badgeBg: "#DBEAFE", badgeColor: "#1E40AF", borderColor: BLUE, rowBg: "#EFF6FF" };
+  if (bitDate > now && basDate > now) return { badge: "Yaklaşıyor", badgeBg: "#FFEDD5", badgeColor: "#C2410C" };
+  if (basDate > now) return { badge: "Planlandı", badgeBg: "#F0FFFE", badgeColor: TEAL };
+  return { badge: "Kapalı", badgeBg: GRAY100, badgeColor: GRAY600, opacity: 0.6 };
+}
+const GRUP_AD_IKON: Record<string, string> = { Gold: "⭐", VIP: "🔥", İskele: "⚓", Silver: "🌊" };
+function grupDisplayName(ad: string): string {
+  const icon = GRUP_AD_IKON[ad] || "🏖️";
+  return `${icon} ${ad}`;
+}
 
 const INIT_KAMPANYALAR: Kampanya[] = [
   { id: 1, name: "🌸 Bahar Kampanyası", bas: "2026-03-01", bit: "2026-05-31", tip: "oran", indirimOran: 20, sabitFiyatlar: {}, gruplar: ["🌊 Silver", "🔥 VIP"],                        musteriGoster: true,  headerBg: `linear-gradient(135deg,${ORANGE},#C2410C)`, durum: "aktif"       },
@@ -90,6 +95,7 @@ const GRUP_COLORS: Record<string, { bg: string; text: string }> = {
 };
 const GRUPLAR_LIST = ["⭐ Gold", "🔥 VIP", "⚓ İskele", "🌊 Silver"];
 const SEZON_RENKLERI = [BLUE, ORANGE, TEAL, PURPLE, GREEN, GRAY300];
+const DEFAULT_FIYAT = 1000;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const MONTHS_TR = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
@@ -110,8 +116,12 @@ const emptyKampForm  = { name: "", bas: "2026-03-11", bit: "2026-03-31", tip: "o
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function IsletmeSezonPage() {
-  const [sezonlar, setSezonlar]     = useState<SezonItem[]>(INIT_SEZONLAR);
-  const [fiyatlar, setFiyatlar]     = useState<FiyatRow[]>(INIT_FIYAT);
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
+  const [loading, setLoading] = useState(true);
+  const [sezonlar, setSezonlar]     = useState<SezonItem[]>([]);
+  const [fiyatlar, setFiyatlar]     = useState<FiyatRow[]>([]);
   const [kampanyalar, setKampanyalar] = useState<Kampanya[]>(INIT_KAMPANYALAR);
   const [seciliSezon, setSeciliSezon] = useState("erken");
 
@@ -138,6 +148,55 @@ export default function IsletmeSezonPage() {
   const [toast, setToast] = useState<string | null>(null);
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
+  // Load sezonlar + sezlong_gruplari from Supabase
+  useEffect(() => {
+    if (!tesisId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      supabase.from("sezonlar").select("id, ad, baslangic, bitis, aktif").eq("tesis_id", tesisId).order("baslangic", { ascending: true }),
+      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat").eq("tesis_id", tesisId),
+    ]).then(([sezonRes, grupRes]) => {
+      if (cancelled) return;
+      const sezonRows = (sezonRes.data ?? []) as { id: string; ad: string; baslangic: string; bitis: string; aktif: boolean }[];
+      const grupRows = (grupRes.data ?? []) as { id: string; ad: string; renk: string; kapasite: number; fiyat: number | null }[];
+      const today = new Date().toISOString().slice(0, 10);
+      setSezonlar(sezonRows.map((r, i) => {
+        const bas = r.baslangic || "";
+        const bit = r.bitis || "";
+        const b = sezonBadge(bas, bit, r.aktif ?? true);
+        return {
+          id: r.id,
+          name: r.ad,
+          bas,
+          bit,
+          dot: SEZON_RENK_PALETI[i % SEZON_RENK_PALETI.length],
+          ...b,
+        };
+      }));
+      setFiyatlar(grupRows.map((r) => {
+        const f = Number(r.fiyat) || DEFAULT_FIYAT;
+        const color = r.renk || TEAL;
+        return {
+          id: r.id,
+          name: grupDisplayName(r.ad),
+          sub: `${r.kapasite ?? 0} şezlong`,
+          color,
+          erken: f,
+          yuksek: f,
+          normal: f,
+          minGun: 1,
+          anlikColor: color,
+        };
+      }));
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [tesisId]);
+
   // ESC
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -152,14 +211,20 @@ export default function IsletmeSezonPage() {
   // ── Sezon actions ──────────────────────────────────────────────────────────
   function openSezonEkle() { setEditSezon(null); setSezonForm(emptySezonForm); setSezonModal(true); }
   function openSezonDuzenle(s: SezonItem) { setEditSezon(s); setSezonForm({ name: s.name, bas: s.bas, bit: s.bit, renk: s.dot }); setSezonModal(true); }
-  function saveSezon() {
+  async function saveSezon() {
     const { name, bas, bit, renk } = sezonForm;
-    if (!name || !bas || !bit) return;
+    if (!name || !bas || !bit || !tesisId) return;
     if (editSezon) {
+      const { error } = await supabase.from("sezonlar").update({ ad: name, baslangic: bas, bitis: bit }).eq("id", editSezon.id);
+      if (error) { showToast("❌ Sezon güncellenemedi"); return; }
       setSezonlar(p => p.map(s => s.id === editSezon.id ? { ...s, name, bas, bit, dot: renk } : s));
       showToast(`✅ "${name}" sezonu güncellendi`);
     } else {
-      setSezonlar(p => [...p, { id: Date.now(), name, bas, bit, dot: renk, badge: "Planlandı", badgeBg: "#DBEAFE", badgeColor: "#1E40AF" }]);
+      const { data, error } = await supabase.from("sezonlar").insert({ tesis_id: tesisId, ad: name, baslangic: bas, bitis: bit, aktif: true }).select("id, ad, baslangic, bitis, aktif").single();
+      if (error || !data) { showToast("❌ Sezon eklenemedi"); return; }
+      const r = data as { id: string; ad: string; baslangic: string; bitis: string; aktif: boolean };
+      const b = sezonBadge(r.baslangic, r.bitis, r.aktif);
+      setSezonlar(p => [...p, { id: r.id, name: r.ad, bas: r.baslangic, bit: r.bitis, dot: renk, ...b }]);
       showToast(`✅ "${name}" sezonu eklendi`);
     }
     setSezonModal(false);
@@ -173,7 +238,13 @@ export default function IsletmeSezonPage() {
     const v = seciliSezon === "yuksek" ? f.yuksek : seciliSezon === "normal" ? f.normal : f.erken;
     return `₺${v.toLocaleString("tr")}`;
   }
-  function kaydetDegisiklikler() { showToast("✅ Değişiklikler kaydedildi!"); }
+  async function kaydetDegisiklikler() {
+    for (const f of fiyatlar) {
+      const val = seciliSezon === "yuksek" ? f.yuksek : seciliSezon === "normal" ? f.normal : f.erken;
+      await supabase.from("sezlong_gruplari").update({ fiyat: val }).eq("id", f.id);
+    }
+    showToast("✅ Değişiklikler kaydedildi!");
+  }
 
   // ── Kampanya actions ───────────────────────────────────────────────────────
   function openKampEkle() { setEditKamp(null); setKampForm(emptyKampForm); setKampModal(true); }
