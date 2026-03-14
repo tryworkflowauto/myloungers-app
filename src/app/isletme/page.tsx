@@ -3,6 +3,8 @@
 import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 // HTML :root ile birebir
 const NAVY = "#0A1628";
@@ -25,16 +27,62 @@ const GOLD_PURPLE = "#8B5CF6";
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const GUNLER = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
 
-// TODO: API'den çekilecek
-const MOCK_SEZON = {
-  ad: "Erken Sezon Aktif",
-  tesis: "Zuzuu Beach Hotel",
-  baslangic: "1 Mart",
-  bitis: "31 Mayıs 2026",
-  kalanGun: 82,
-  doluluk: 68,
-  haftalikGelir: "₺148K",
-  hava: { derece: 24, durum: "Açık", ruzgar: "12 km/s", deniz: "Sakin" },
+type SezonData = {
+  ad: string;
+  tesis: string;
+  baslangic: string;
+  bitis: string;
+  kalanGun: number;
+  doluluk: number;
+  haftalikGelir: string;
+  hava: { derece: number; durum: string; ruzgar: string; deniz: string };
+};
+
+type StatItem = {
+  etiket: string;
+  ikon: string;
+  deger: string;
+  ek?: string;
+  sub: string;
+  change: string;
+  changeClass: "up" | "neutral" | "down";
+  renk: string;
+};
+
+type DolulukGrubu = {
+  ad: string;
+  ikon: string;
+  sayi: number;
+  dolu: number;
+  bos: number;
+  yuzde: number;
+  renk: string;
+};
+
+type RezervasyonItem = {
+  baslik: string;
+  detay: string;
+  saat: string;
+  bg: string;
+  initials: string;
+};
+
+type YorumItem = {
+  puan: number;
+  isim: string;
+  tarih: string;
+  text: string;
+  pozitif: boolean;
+};
+
+type SiparisItem = {
+  no: string;
+  urunler: string;
+  musteri: string;
+  sure: string;
+  sureTip: string;
+  durum: string;
+  durumTip: string;
 };
 
 const MOCK_UYARILAR = [
@@ -44,45 +92,20 @@ const MOCK_UYARILAR = [
   { ikon: "📋", baslik: "Yarın 8 Rezervasyon", detay: "İlk giriş saat 09:00", renk: "mavi", href: "/isletme/rezervasyonlar" },
 ];
 
-const MOCK_STAT = [
-  { etiket: "Günlük Gelir", ikon: "💰", deger: "₺18.400", sub: "Bugün · Saat 14:32 itibarıyla", change: "↑ %12 dünden fazla", changeClass: "up", renk: "teal" },
-  { etiket: "Aktif Şezlonglar", ikon: "🏖️", deger: "68", ek: "/100", sub: "32 boş şezlong mevcut", change: "= Dünle aynı", changeClass: "neutral", renk: "orange" },
-  { etiket: "Tamamlanan Sipariş", ikon: "🍽️", deger: "89", sub: "Bugün · Ort. 9dk teslimat", change: "↑ %21 dünden fazla", changeClass: "up", renk: "green" },
-  { etiket: "Aktif Müşteri", ikon: "👥", deger: "124", sub: "Tesiste şu an", change: "↑ 18 kişi dünden fazla", changeClass: "up", renk: "purple" },
-];
-
-const MOCK_DOLULUK_GRUPLARI = [
-  { ad: "Gold", ikon: "⭐", sayi: 10, dolu: 9, bos: 1, yuzde: 90, renk: GOLD_PURPLE },
-  { ad: "VIP", ikon: "🔥", sayi: 40, dolu: 30, bos: 10, yuzde: 75, renk: ORANGE },
-  { ad: "İskele", ikon: "⚓", sayi: 20, dolu: 13, bos: 7, yuzde: 65, renk: YELLOW },
-  { ad: "Silver", ikon: "🌊", sayi: 30, dolu: 22, bos: 8, yuzde: 73, renk: TEAL },
-];
-
-const MOCK_SIPARISLER = [
+const MOCK_SIPARISLER: SiparisItem[] = [
   { no: "S-22", urunler: "Mojito × 2 · Nachos", musteri: "Ayşe Y. · Silver", sure: "18dk", sureTip: "danger", durum: "Yeni", durumTip: "yeni" },
   { no: "V-3", urunler: "Izgara Levrek · Rosé", musteri: "Fatma D. · VIP", sure: "12dk", sureTip: "warn", durum: "Hazırlanıyor", durumTip: "hazir" },
   { no: "İ-5", urunler: "Limonata × 3", musteri: "Mehmet K. · İskele", sure: "4dk", sureTip: "ok", durum: "Hazırlanıyor", durumTip: "hazir" },
   { no: "G-1", urunler: "Kahvaltı Tabağı × 2", musteri: "Banu K. · Gold", sure: "2dk", sureTip: "ok", durum: "Yeni", durumTip: "yeni" },
 ];
 
-const MOCK_REZERVASYONLAR = [
-  { baslik: "Ayşe Yıldız", detay: "Silver · S-22 · 2 Kişi", saat: "09:00", bg: "#6366F1", initials: "AY" },
-  { baslik: "Fatma Demir", detay: "VIP · V-3,4 · 4 Kişi", saat: "10:00", bg: ORANGE, initials: "FD" },
-  { baslik: "Zeynep Arslan", detay: "Gold · G-1,2 · 2 Kişi", saat: "10:30", bg: PURPLE, initials: "ZA" },
-  { baslik: "Mehmet Kaya", detay: "İskele · İ-5 · 2 Kişi", saat: "11:00", bg: GREEN, initials: "MK" },
-  { baslik: "Banu Koç", detay: "Silver · S-14 · 3 Kişi", saat: "13:00", bg: YELLOW, initials: "BK" },
-];
-
-const MOCK_YORUMLAR = [
-  { puan: 9.8, isim: "Ayşe Yıldız", tarih: "10 Mar", text: "Muhteşem deneyim! Şezlonglar çok rahat...", pozitif: true },
-  { puan: 9.5, isim: "Mehmet Kaya", tarih: "9 Mar", text: "İskele şezlongları harika, denize çok yakın...", pozitif: true },
-  { puan: 5.2, isim: "Selin Arslan", tarih: "8 Mar", text: "VIP bölge beklentimi karşılamadı...", pozitif: false },
-];
-
 const MOCK_BAKIYE = [
   { initials: "BK", isim: "Banu Koç", detay: "₺120 kalan · S-22", gun: 5 },
   { initials: "SE", isim: "Selin Erdoğan", detay: "₺3.200 kalan · V-8,9,10", gun: 3 },
 ];
+
+const GRUP_IKONLAR: Record<string, string> = { Gold: "⭐", VIP: "🔥", İskele: "⚓", Silver: "🌊" };
+const RENK_PALETI = [GOLD_PURPLE, ORANGE, YELLOW, TEAL, BLUE, PURPLE];
 
 // TODO: API'den çekilecek
 const HIZLI_EYLEMLER = [
@@ -92,12 +115,42 @@ const HIZLI_EYLEMLER = [
   { ikon: "💬", label: "Yorumları Cevapla", href: "/isletme/yorumlar" },
 ];
 
+function formatTarihShort(d: Date): string {
+  return `${d.getDate()} ${AYLAR[d.getMonth()].slice(0, 3)}`;
+}
+
+function formatSezonTarih(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((s) => s[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "??";
+}
+
 export default function IsletmeDashboardPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
+  const [loading, setLoading] = useState(true);
+  const [sezonData, setSezonData] = useState<SezonData | null>(null);
+  const [statData, setStatData] = useState<StatItem[]>([]);
+  const [dolulukGruplari, setDolulukGruplari] = useState<DolulukGrubu[]>([]);
+  const [dolulukLegend, setDolulukLegend] = useState({ dolu: 0, rezerve: 0, bos: 0, bakim: 0 });
+  const [rezervasyonlar, setRezervasyonlar] = useState<RezervasyonItem[]>([]);
+  const [yorumlar, setYorumlar] = useState<YorumItem[]>([]);
+
   const [tarih, setTarih] = useState("");
   const [saat, setSaat] = useState("--:--");
   const [rezervasyonModalOpen, setRezervasyonModalOpen] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", sezlongGrubu: "Gold", sezlongNo: "", tarih: "", kisiSayisi: "" });
-  const [siparisDetayModal, setSiparisDetayModal] = useState<typeof MOCK_SIPARISLER[0] | null>(null);
+  const [siparisDetayModal, setSiparisDetayModal] = useState<SiparisItem | null>(null);
 
   useEffect(() => {
     const now = new Date();
@@ -121,6 +174,166 @@ export default function IsletmeDashboardPage() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  useEffect(() => {
+    if (sessionStatus === "loading") return;
+    if (!tesisId) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      const today = new Date().toISOString().slice(0, 10);
+
+      const [tesisRes, sezonRes, gruplarRes, sezlonglarRes, rezRes, yorumRes, siparisRes] = await Promise.all([
+        supabase.from("tesisler").select("id, ad").eq("id", tesisId).maybeSingle(),
+        supabase.from("sezonlar").select("id, ad, baslangic, bitis").eq("tesis_id", tesisId).eq("aktif", true).order("bitis", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("sezlong_gruplari").select("id, ad, renk").eq("tesis_id", tesisId),
+        supabase.from("sezlonglar").select("id, grup_id, durum").eq("tesis_id", tesisId),
+        supabase.from("rezervasyonlar").select("id, baslangic_tarih, bitis_tarih, kisi_sayisi, kullanici_id, kullanicilar(ad)").eq("tesis_id", tesisId).gte("bitis_tarih", today).order("baslangic_tarih", { ascending: true }).limit(10),
+        supabase.from("yorumlar").select("id, puan, yorum, created_at, kullanici_id, kullanicilar(ad)").eq("tesis_id", tesisId).eq("durum", "aktif").order("created_at", { ascending: false }).limit(5),
+        supabase.from("siparisler").select("id, durum, created_at").eq("tesis_id", tesisId).gte("created_at", `${today}T00:00:00Z`),
+      ]);
+
+      if (cancelled) return;
+
+      const tesis = (tesisRes.data as { id: string; ad: string } | null) ?? null;
+      const tesisAdi = tesis?.ad ?? "Tesis";
+      const sezon = sezonRes.data as { ad: string; baslangic: string; bitis: string } | null;
+      const gruplar = (gruplarRes.data ?? []) as { id: string; ad: string; renk: string }[];
+      const sezlonglar = (sezlonglarRes.data ?? []) as { id: string; grup_id: string; durum: string }[];
+      const doluN = sezlonglar.filter((s) => s.durum === "dolu").length;
+      const rezerveN = sezlonglar.filter((s) => s.durum === "rezerve").length;
+      const bosN = sezlonglar.filter((s) => s.durum === "bos").length;
+      const bakimN = sezlonglar.filter((s) => s.durum === "bakim").length;
+      setDolulukLegend({ dolu: doluN, rezerve: rezerveN, bos: bosN, bakim: bakimN });
+      const rezList = (rezRes.data ?? []) as { baslangic_tarih: string; bitis_tarih: string; kisi_sayisi: number; kullanicilar: { ad: string } | null }[];
+      const yorumList = (yorumRes.data ?? []) as { puan: number; yorum: string | null; created_at: string; kullanicilar: { ad: string } | null }[];
+      const siparisBugun = (siparisRes.data ?? []) as { durum: string }[];
+
+      const now = new Date();
+      let kalanGun = 0;
+      let baslangicStr = "";
+      let bitisStr = "";
+      if (sezon?.baslangic && sezon?.bitis) {
+        const bitisDate = new Date(sezon.bitis);
+        kalanGun = Math.max(0, Math.ceil((bitisDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+        baslangicStr = formatSezonTarih(sezon.baslangic);
+        bitisStr = formatSezonTarih(sezon.bitis);
+      }
+
+      const grupMap = new Map<string, { toplam: number; dolu: number }>();
+      for (const g of gruplar) {
+        grupMap.set(g.id, { toplam: 0, dolu: 0 });
+      }
+      for (const s of sezlonglar) {
+        const g = grupMap.get(s.grup_id);
+        if (g) {
+          g.toplam += 1;
+          if (s.durum === "dolu" || s.durum === "rezerve") g.dolu += 1;
+        }
+      }
+
+      const toplamSezlong = sezlonglar.length;
+      const doluSezlong = sezlonglar.filter((s) => s.durum === "dolu" || s.durum === "rezerve").length;
+      const dolulukYuzde = toplamSezlong > 0 ? Math.round((doluSezlong / toplamSezlong) * 100) : 0;
+
+      setSezonData({
+        ad: sezon?.ad ?? "Sezon",
+        tesis: tesisAdi,
+        baslangic: baslangicStr || "—",
+        bitis: bitisStr || "—",
+        kalanGun,
+        doluluk: dolulukYuzde,
+        haftalikGelir: "₺—",
+        hava: { derece: 24, durum: "Açık", ruzgar: "12 km/s", deniz: "Sakin" },
+      });
+
+      setStatData([
+        { etiket: "Günlük Gelir", ikon: "💰", deger: "₺—", sub: "Bugün", change: "—", changeClass: "neutral", renk: "teal" },
+        { etiket: "Aktif Şezlonglar", ikon: "🏖️", deger: String(doluSezlong), ek: `/${toplamSezlong}`, sub: `${toplamSezlong - doluSezlong} boş şezlong`, change: "= Veri", changeClass: "neutral", renk: "orange" },
+        { etiket: "Tamamlanan Sipariş", ikon: "🍽️", deger: String(siparisBugun.filter((s) => s.durum === "teslim").length), sub: "Bugün", change: "—", changeClass: "neutral", renk: "green" },
+        { etiket: "Aktif Müşteri", ikon: "👥", deger: "—", sub: "Tesiste", change: "—", changeClass: "neutral", renk: "purple" },
+      ]);
+
+      const dolulukList: DolulukGrubu[] = gruplar.map((g, i) => {
+        const st = grupMap.get(g.id) ?? { toplam: 0, dolu: 0 };
+        const bos = st.toplam - st.dolu;
+        const yuzde = st.toplam > 0 ? Math.round((st.dolu / st.toplam) * 100) : 0;
+        return {
+          ad: g.ad,
+          ikon: GRUP_IKONLAR[g.ad] ?? "🏖️",
+          sayi: st.toplam,
+          dolu: st.dolu,
+          bos,
+          yuzde,
+          renk: g.renk || RENK_PALETI[i % RENK_PALETI.length],
+        };
+      });
+      setDolulukGruplari(dolulukList);
+
+      const rezItems: RezervasyonItem[] = rezList.map((r, i) => {
+        const ad = (r as any).kullanicilar?.ad ?? "Misafir";
+        const saatStr = r.baslangic_tarih?.includes("T") ? new Date(r.baslangic_tarih).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "—";
+        return {
+          baslik: ad,
+          detay: `${r.kisi_sayisi ?? 0} Kişi`,
+          saat: saatStr,
+          bg: RENK_PALETI[i % RENK_PALETI.length],
+          initials: getInitials(ad),
+        };
+      });
+      setRezervasyonlar(rezItems);
+
+      const yorumItems: YorumItem[] = yorumList.map((y) => {
+        const isim = (y as any).kullanicilar?.ad ?? "Anonim";
+        const tarihStr = y.created_at ? formatTarihShort(new Date(y.created_at)) : "—";
+        return {
+          puan: Number(y.puan),
+          isim,
+          tarih: tarihStr,
+          text: y.yorum ?? "",
+          pozitif: Number(y.puan) >= 7,
+        };
+      });
+      setYorumlar(yorumItems);
+
+      setLoading(false);
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [tesisId, sessionStatus]);
+
+  if (sessionStatus === "loading" || loading) {
+    return (
+      <div className="flex flex-col min-h-full items-center justify-center" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
+        <div style={{ fontSize: 14, color: GRAY600 }}>Yükleniyor...</div>
+      </div>
+    );
+  }
+
+  if (!tesisId) {
+    return (
+      <div className="flex flex-col min-h-full items-center justify-center" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
+        <div style={{ fontSize: 14, color: GRAY600 }}>Bu sayfa için tesis atanmamış. Lütfen personel hesabınızla giriş yapın.</div>
+      </div>
+    );
+  }
+
+  const sezon = sezonData ?? {
+    ad: "Sezon",
+    tesis: "Tesis",
+    baslangic: "—",
+    bitis: "—",
+    kalanGun: 0,
+    doluluk: 0,
+    haftalikGelir: "₺—",
+    hava: { derece: 24, durum: "Açık", ruzgar: "12 km/s", deniz: "Sakin" },
+  };
 
   return (
     <div className="flex flex-col min-h-full" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
@@ -163,13 +376,13 @@ export default function IsletmeDashboardPage() {
           }}
         >
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: "white", marginBottom: 3 }}>🌸 {MOCK_SEZON.ad}</h2>
-            <span style={{ fontSize: 12, color: GRAY400 }}>{MOCK_SEZON.tesis} · {MOCK_SEZON.baslangic} — {MOCK_SEZON.bitis}</span>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: "white", marginBottom: 3 }}>🌸 {sezon.ad}</h2>
+            <span style={{ fontSize: 12, color: GRAY400 }}>{sezon.tesis} · {sezon.baslangic} — {sezon.bitis}</span>
           </div>
           <div className="flex gap-7">
-            <div><div style={{ fontSize: 24, fontWeight: 900, color: TEAL }}>{MOCK_SEZON.kalanGun}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Kalan Gün</div></div>
-            <div><div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>%{MOCK_SEZON.doluluk}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Doluluk</div></div>
-            <div><div style={{ fontSize: 24, fontWeight: 900, color: GREEN }}>{MOCK_SEZON.haftalikGelir}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Haftalık Gelir</div></div>
+            <div><div style={{ fontSize: 24, fontWeight: 900, color: TEAL }}>{sezon.kalanGun}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Kalan Gün</div></div>
+            <div><div style={{ fontSize: 24, fontWeight: 900, color: ORANGE }}>%{sezon.doluluk}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Doluluk</div></div>
+            <div><div style={{ fontSize: 24, fontWeight: 900, color: GREEN }}>{sezon.haftalikGelir}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Haftalık Gelir</div></div>
           </div>
           <div
             style={{
@@ -181,9 +394,9 @@ export default function IsletmeDashboardPage() {
             }}
           >
             <div style={{ fontSize: 22 }}>☀️</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: "white" }}>{MOCK_SEZON.hava.derece}°</div>
-            <div style={{ fontSize: 11, color: GRAY400, marginTop: 2 }}>Bodrum · {MOCK_SEZON.hava.durum}</div>
-            <div style={{ fontSize: 9, color: GRAY400, marginTop: 3 }}>💨 {MOCK_SEZON.hava.ruzgar} · 🌊 {MOCK_SEZON.hava.deniz}</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: "white" }}>{sezon.hava.derece}°</div>
+            <div style={{ fontSize: 11, color: GRAY400, marginTop: 2 }}>Bodrum · {sezon.hava.durum}</div>
+            <div style={{ fontSize: 9, color: GRAY400, marginTop: 3 }}>💨 {sezon.hava.ruzgar} · 🌊 {sezon.hava.deniz}</div>
           </div>
         </div>
 
@@ -216,7 +429,7 @@ export default function IsletmeDashboardPage() {
 
         {/* STAT KARTLARI — .stat-grid, .stat-kart teal/orange/green/purple */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
-          {MOCK_STAT.map((s, i) => (
+          {(statData.length ? statData : [{ etiket: "—", ikon: "💰", deger: "—", sub: "—", change: "—", changeClass: "neutral" as const, renk: "teal" }]).map((s, i) => (
             <div
               key={i}
               className="bg-white rounded-[14px] relative overflow-hidden"
@@ -253,13 +466,13 @@ export default function IsletmeDashboardPage() {
           style={{ background: "white", border: `1px solid ${GRAY200}`, padding: "18px 20px" }}
         >
           <div className="flex gap-4 flex-wrap mb-3.5">
-            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: ORANGE }} />Dolu (44)</div>
-            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: BLUE }} />Rezerve (24)</div>
-            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: GREEN }} />Boş (28)</div>
-            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: GRAY300 }} />Bakım (4)</div>
+            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: ORANGE }} />Dolu ({dolulukLegend.dolu})</div>
+            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: BLUE }} />Rezerve ({dolulukLegend.rezerve})</div>
+            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: GREEN }} />Boş ({dolulukLegend.bos})</div>
+            <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: GRAY600 }}><div className="w-2.5 h-2.5 rounded-sm" style={{ background: GRAY300 }} />Bakım ({dolulukLegend.bakim})</div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {MOCK_DOLULUK_GRUPLARI.map((g, i) => (
+            {dolulukGruplari.map((g, i) => (
               <div
                 key={i}
                 className="rounded-[10px] p-3"
@@ -377,10 +590,10 @@ export default function IsletmeDashboardPage() {
           {/* YARIN REZERVASYONLAR */}
           <div className="bg-white rounded-[14px] overflow-hidden" style={{ border: `1px solid ${GRAY200}` }}>
             <div className="flex items-center justify-between" style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}` }}>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>📅 Yarınki Rezervasyonlar</h3>
-              <span style={{ fontSize: 10, fontWeight: 700, color: BLUE, background: "#EFF6FF", padding: "2px 8px", borderRadius: 20 }}>8 Rezervasyon</span>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>📅 Yaklaşan Rezervasyonlar</h3>
+              <span style={{ fontSize: 10, fontWeight: 700, color: BLUE, background: "#EFF6FF", padding: "2px 8px", borderRadius: 20 }}>{rezervasyonlar.length} Rezervasyon</span>
             </div>
-            {MOCK_REZERVASYONLAR.map((r, i) => (
+            {rezervasyonlar.map((r, i) => (
               <div
                 key={i}
                 className="flex items-center gap-3 cursor-pointer last:border-b-0"
@@ -412,10 +625,10 @@ export default function IsletmeDashboardPage() {
           <div className="flex flex-col gap-4">
             <div className="bg-white rounded-[14px] overflow-hidden" style={{ border: `1px solid ${GRAY200}` }}>
               <div className="flex items-center justify-between" style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}` }}>
-                <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>⭐ Bekleyen Yorumlar</h3>
-                <span style={{ fontSize: 10, fontWeight: 700, color: RED, background: "#FEF2F2", padding: "2px 8px", borderRadius: 20 }}>3 Yorum</span>
+                <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>⭐ Son Yorumlar</h3>
+                <span style={{ fontSize: 10, fontWeight: 700, color: RED, background: "#FEF2F2", padding: "2px 8px", borderRadius: 20 }}>{yorumlar.length} Yorum</span>
               </div>
-              {MOCK_YORUMLAR.map((y, i) => (
+              {yorumlar.map((y, i) => (
                 <div
                   key={i}
                   className="flex items-start gap-2.5 cursor-pointer last:border-b-0"

@@ -29,7 +29,7 @@ export default {
 
         const { data, error } = await supabase
           .from("kullanicilar")
-          .select("id, ad, email, rol, password_hash")
+          .select("id, ad, email, rol, password_hash, tesis_id")
           .eq("email", email)
           .maybeSingle();
 
@@ -78,11 +78,27 @@ export default {
 
         if (!ok) return null;
 
+        const userId = (data as any).id;
+        let tesisId: string | null = null;
+        if ((data as any).tesis_id) {
+          tesisId = String((data as any).tesis_id);
+        } else {
+          const { data: personelRow } = await supabase
+            .from("personel")
+            .select("tesis_id")
+            .eq("kullanici_id", userId)
+            .maybeSingle();
+          if ((personelRow as any)?.tesis_id) {
+            tesisId = String((personelRow as any).tesis_id);
+          }
+        }
+
         const user = {
-          id: String((data as any).id),
+          id: String(userId),
           name: (data as any).ad ?? null,
           email: (data as any).email ?? null,
           role: (data as any).rol ?? "müşteri",
+          tesis_id: tesisId,
         };
 
         console.log("Auth.js v5 credentials authorize user object:", user);
@@ -99,6 +115,7 @@ export default {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
+        token.tesis_id = (user as any).tesis_id ?? null;
       }
       return token;
     },
@@ -106,6 +123,7 @@ export default {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).tesis_id = token.tesis_id ?? null;
       }
       return session;
     },
