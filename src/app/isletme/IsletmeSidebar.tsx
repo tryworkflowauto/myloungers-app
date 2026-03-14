@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
+import { supabase } from '@/lib/supabase';
 
 const menuItems = [
   { section: 'ANA MENÜ' },
@@ -22,10 +24,36 @@ const menuItems = [
 
 export default function IsletmeSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const [tesisAdi, setTesisAdi] = useState<string | null>(null);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [cikisModal,    setCikisModal]    = useState(false);
   const [toast,         setToast]         = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const userName = (session?.user as { name?: string | null } | undefined)?.name ?? null;
+
+  useEffect(() => {
+    if (!tesisId) {
+      setTesisAdi(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('tesisler')
+      .select('ad')
+      .eq('id', tesisId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data && typeof (data as { ad?: string }).ad === 'string') {
+          setTesisAdi((data as { ad: string }).ad);
+        } else if (!cancelled) {
+          setTesisAdi(null);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [tesisId]);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
@@ -62,7 +90,7 @@ export default function IsletmeSidebar() {
       {/* Tesis Seçici */}
       <div style={{ margin: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
         <div style={{ width: '8px', height: '8px', background: '#10B981', borderRadius: '50%' }}></div>
-        <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, flex: 1 }}>Zuzuu Beach Hotel</span>
+        <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, flex: 1 }}>{tesisAdi ?? '—'}</span>
         <span style={{ color: '#94A3B8', fontSize: '12px' }}>▾</span>
       </div>
       {/* Nav */}
@@ -141,7 +169,7 @@ export default function IsletmeSidebar() {
         >
           <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg,#0ABAB5,#F5821F)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0 }}>ZB</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Zafer Bakır</span>
+            <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName ?? 'Kullanıcı'}</span>
             <span style={{ display: 'block', fontSize: '10px', color: '#94A3B8' }}>İşletme Yöneticisi</span>
           </div>
           <span style={{ color: '#94A3B8', fontSize: '11px', transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }}>▲</span>
