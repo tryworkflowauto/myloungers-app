@@ -79,6 +79,7 @@ export async function POST(req: Request) {
         ad: b.ad_soyad,
         email: b.email,
         rol: "isletme",
+        tesis_id: (tesis as { id: string }).id,
       });
       if (userInsErr) {
         console.error("kullanicilar insert error", userInsErr);
