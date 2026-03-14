@@ -148,10 +148,13 @@ export default function AdminTesislerPage() {
         .from("tesisler")
         .insert({
           ad: b.isletme_adi,
+          kategori: b.tesis_tipi,
           sehir: b.sehir,
           ilce: b.ilce,
-          kategori: b.tesis_tipi,
-          durum: "aktif",
+          adres: b.tam_adres,
+          telefon: b.telefon,
+          email: b.email,
+          aktif: true,
         })
         .select("*")
         .single();
