@@ -26,7 +26,7 @@ function AuthConfirmContent() {
     }
 
     async function setSessionFromHash() {
-      const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+      const { data, error } = await supabase.auth.setSession({ access_token: access_token ?? '', refresh_token: refresh_token ?? '' });
       if (error) {
         console.error("setSession error", error);
         setStatus("error");
