@@ -210,8 +210,8 @@ export default function IsletmeDashboardPage() {
       const bosN = sezlonglar.filter((s) => s.durum === "bos").length;
       const bakimN = sezlonglar.filter((s) => s.durum === "bakim").length;
       setDolulukLegend({ dolu: doluN, rezerve: rezerveN, bos: bosN, bakim: bakimN });
-      const rezList = (rezRes.data ?? []) as { baslangic_tarih: string; bitis_tarih: string; kisi_sayisi: number; kullanicilar: { ad: string } | null }[];
-      const yorumList = (yorumRes.data ?? []) as { puan: number; yorum: string | null; created_at: string; kullanicilar: { ad: string } | null }[];
+      const rezList = (rezRes.data ?? []) as any[];
+      const yorumList = (yorumRes.data ?? []) as any[];
       const siparisBugun = (siparisRes.data ?? []) as { durum: string }[];
 
       const now = new Date();
