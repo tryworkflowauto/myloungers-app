@@ -134,6 +134,59 @@ export default function AdminTesislerPage() {
   function askiyaAl(id: number) { setTesisler(p => p.map(x => x.id === id ? { ...x, durum: "askida" as TesisDurum } : x)); showToast("⏸ Tesis askıya alındı"); }
   function aktifYap(id: number) { setTesisler(p => p.map(x => x.id === id ? { ...x, durum: "aktif" as TesisDurum } : x)); showToast("✅ Tesis aktifleştirildi", GREEN); }
 
+  async function onaylaBasvuru(b: Basvuru) {
+    try {
+      setBasvuruSavingId(b.id);
+      // 1) Başvuru durumunu güncelle
+      const { error: updErr } = await supabase
+        .from("basvurular")
+        .update({ durum: "onaylandi" })
+        .eq("id", b.id);
+      if (updErr) throw updErr;
+      // 2) Tesisler tablosuna yeni kayıt ekle
+      const { data: inserted, error: insErr } = await supabase
+        .from("tesisler")
+        .insert({
+          ad: b.isletme_adi,
+          sehir: b.sehir,
+          ilce: b.ilce,
+          kategori: b.tesis_tipi,
+          durum: "aktif",
+        })
+        .select("*")
+        .single();
+      if (insErr) throw insErr;
+      // 3) Local state'leri güncelle
+      setBasvurular(prev => prev.filter(x => x.id !== b.id));
+      if (inserted) {
+        const t = inserted as any;
+        const sezlong = typeof t.kapasite === "number" ? t.kapasite : Number(t.kapasite || 0);
+        const puan = typeof t.puan === "number" ? t.puan : t.puan ? Number(t.puan) : undefined;
+        const yeni: Tesis = {
+          id: Number(t.id),
+          ad: (t.ad as string) || "İsimsiz Tesis",
+          sehir: (t.sehir as string) || "-",
+          emoji: "🏖️",
+          emojiBg: "#E0F2FE",
+          durum: "aktif",
+          sezlong,
+          ciro: (t.ciro as string) ?? undefined,
+          komisyon: (t.komisyon as string) ?? undefined,
+          puan,
+          puanYuzde: puan ? puan * 10 : undefined,
+          sonAktivite: (t.son_aktivite as string) || "-",
+        };
+        setTesisler(prev => [...prev, yeni]);
+      }
+      showToast("✅ Başvuru onaylandı ve tesis eklendi: " + b.isletme_adi, GREEN);
+    } catch (err) {
+      console.error(err);
+      showToast("Onay sırasında hata oluştu", RED);
+    } finally {
+      setBasvuruSavingId(null);
+    }
+  }
+
   const counts = { tumu: tesisler.length, aktif: tesisler.filter(t => t.durum === "aktif").length, onay: tesisler.filter(t => t.durum === "onay").length, askida: tesisler.filter(t => t.durum === "askida").length };
   const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" };
 
@@ -180,23 +233,7 @@ export default function AdminTesislerPage() {
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
                     disabled={basvuruSavingId === b.id}
-                    onClick={async () => {
-                      try {
-                        setBasvuruSavingId(b.id);
-                        const { error } = await supabase
-                          .from("basvurular")
-                          .update({ durum: "onaylandi" })
-                          .eq("id", b.id);
-                        if (error) throw error;
-                        setBasvurular(prev => prev.filter(x => x.id !== b.id));
-                        showToast("✅ Başvuru onaylandı: " + b.isletme_adi, GREEN);
-                      } catch (err) {
-                        console.error(err);
-                        showToast("Onay sırasında hata oluştu", RED);
-                      } finally {
-                        setBasvuruSavingId(null);
-                      }
-                    }}
+                    onClick={() => onaylaBasvuru(b)}
                     style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: "none", background: TEAL, color: "white", cursor: "pointer", opacity: basvuruSavingId === b.id ? 0.7 : 1 }}
                   >
                     ✓ Onayla
