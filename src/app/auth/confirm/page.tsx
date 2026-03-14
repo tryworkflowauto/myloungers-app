@@ -1,12 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function AuthConfirmContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [status, setStatus] = useState<"checking" | "error" | "ready">("checking");
   const [message, setMessage] = useState<string>("");
@@ -15,21 +14,23 @@ function AuthConfirmContent() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const token_hash = searchParams.get("token_hash") || searchParams.get("token") || "";
-    const type = (searchParams.get("type") as "invite" | "signup" | "recovery" | "email_change") || "invite";
+    const hash = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
+    const params = new URLSearchParams(hash);
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
 
-    if (!token_hash) {
+    if (!access_token || !refresh_token) {
       setStatus("error");
-      setMessage("Geçersiz veya eksik doğrulama bağlantısı.");
+      setMessage("Geçersiz veya eksik doğrulama bağlantısı. Davet linkindeki # sonrası access_token ve refresh_token bulunamadı.");
       return;
     }
 
-    async function verify() {
-      const { data, error } = await supabase.auth.verifyOtp({ token_hash, type });
+    async function setSessionFromHash() {
+      const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (error) {
-        console.error("verifyOtp error", error);
+        console.error("setSession error", error);
         setStatus("error");
-        setMessage(error.message || "Davet bağlantısı doğrulanamadı.");
+        setMessage(error.message || "Oturum başlatılamadı.");
         return;
       }
       if (!data.session) {
@@ -40,8 +41,8 @@ function AuthConfirmContent() {
       setStatus("ready");
     }
 
-    verify();
-  }, [searchParams]);
+    setSessionFromHash();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
