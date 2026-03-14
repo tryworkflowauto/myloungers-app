@@ -4,7 +4,7 @@ import Link from "next/link";
 import "./giris.css";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect, useRef } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 
 const COUNTRY_CODES = [
   { code: "TR", flag: "🇹🇷", dial: "+90" },
@@ -65,7 +65,11 @@ function GirisContent() {
       return;
     }
     setSuccessMsg("Giriş başarılı, yönlendiriliyorsunuz…");
-    router.push("/");
+    const session = await getSession();
+    const role = (session?.user as { role?: string } | undefined)?.role;
+    if (role === "isletme") router.push("/isletme");
+    else if (role === "admin") router.push("/admin");
+    else router.push("/");
   }
 
   async function handleRegister() {
@@ -96,7 +100,11 @@ function GirisContent() {
         router.push("/giris?tab=login");
         return;
       }
-      router.push("/");
+      const session = await getSession();
+      const role = (session?.user as { role?: string } | undefined)?.role;
+      if (role === "isletme") router.push("/isletme");
+      else if (role === "admin") router.push("/admin");
+      else router.push("/");
     } catch (e) {
       console.error("Register error:", e);
       setErrorMsg("Sunucu hatası. Lütfen tekrar deneyin.");
