@@ -8,16 +8,15 @@ export default function AuthConfirmPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"checking" | "error" | "ready">("checking");
   const [message, setMessage] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const hash = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
-    const query = typeof window !== "undefined" ? window.location.search.slice(1) : "";
     const hashParams = new URLSearchParams(hash);
-    const queryParams = new URLSearchParams(query);
-    const access_token = hashParams.get("access_token") ?? queryParams.get("access_token") ?? "";
+    const access_token = hashParams.get("access_token") ?? "";
 
     if (!access_token) {
       setStatus("error");
@@ -26,21 +25,19 @@ export default function AuthConfirmPage() {
     }
 
     (async () => {
-      const { data, error } = await supabase.auth.setSession({
-        access_token,
-        refresh_token: access_token,
-      });
+      const { data, error } = await supabase.auth.getUser(access_token);
       if (error) {
-        console.error("setSession error", error);
+        console.error("getUser error", error);
         setStatus("error");
-        setMessage(error.message || "Oturum başlatılamadı.");
+        setMessage(error.message || "Token doğrulanamadı.");
         return;
       }
-      if (data?.session) {
+      if (data?.user?.id) {
+        setUserId(data.user.id);
         setStatus("ready");
       } else {
         setStatus("error");
-        setMessage("Oturum başlatılamadı.");
+        setMessage("Kullanıcı bilgisi alınamadı.");
       }
     })();
   }, []);
@@ -48,6 +45,10 @@ export default function AuthConfirmPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
+    if (!userId) {
+      setMessage("Oturum bilgisi eksik. Sayfayı yenileyin.");
+      return;
+    }
     if (!password || !password2) {
       setMessage("Lütfen şifre alanlarını doldurun.");
       return;
@@ -61,10 +62,14 @@ export default function AuthConfirmPage() {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) {
-      console.error("updateUser error", error);
-      setMessage(error.message || "Şifre güncellenemedi.");
+    const res = await fetch("/api/auth/set-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, password }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setMessage(json?.error || "Şifre güncellenemedi.");
       setSubmitting(false);
       return;
     }
