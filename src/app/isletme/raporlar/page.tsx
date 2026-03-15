@@ -134,6 +134,9 @@ export default function IsletmeRaporlarPage() {
   // Gelir stat verileri (Supabase)
   const [sumRez, setSumRez] = useState(0);
   const [sumSip, setSumSip] = useState(0);
+  const [bakiyeRows, setBakiyeRows] = useState<any[]>([]);
+  const [bakiyeSearch, setBakiyeSearch] = useState("");
+  const [bakiyeDurum, setBakiyeDurum] = useState("");
 
   // ESC closes modals
   useEffect(() => {
@@ -192,6 +195,12 @@ export default function IsletmeRaporlarPage() {
     sonaEren: "₺0",
     change: "",
   };
+
+  const filteredBakiye = bakiyeRows.filter((r) => {
+    if (bakiyeSearch && !r.name.toLowerCase().includes(bakiyeSearch.toLowerCase())) return false;
+    if (bakiyeDurum && r.durum !== bakiyeDurum) return false;
+    return true;
+  });
 
   const sortedGarsonlar = [...GARSON_ROWS].sort((a, b) => {
     const dir = garsonSortDir === "desc" ? -1 : 1;
