@@ -41,6 +41,8 @@ type Rezervasyon = {
   status: string;
   statusLabel: string;
   disabled: boolean;
+  sezlongId?: string | null;
+  toplamTutarRaw?: number;
   drawerData: {
     email: string;
     sezlong: string;
@@ -143,6 +145,8 @@ function mapRowToRezervasyon(
     status,
     statusLabel,
     disabled,
+    sezlongId: r.sezlong_id != null ? String(r.sezlong_id) : null,
+    toplamTutarRaw: tutarNum,
     drawerData: {
       email: "",
       sezlong: drawerSezlong,
@@ -191,6 +195,12 @@ export default function IsletmeRezervasyonlarPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editModal, setEditModal] = useState<Rezervasyon | null>(null);
   const [iptalModal, setIptalModal] = useState<Rezervasyon | null>(null);
+  const [bakiyeYukleModal, setBakiyeYukleModal] = useState(false);
+  const [bakiyeYukleAmount, setBakiyeYukleAmount] = useState("");
+  const [sezlongDegistirModal, setSezlongDegistirModal] = useState(false);
+  const [sezlongList, setSezlongList] = useState<{ id: string; numara: number; grupAd: string }[]>([]);
+  const [selectedSezlongId, setSelectedSezlongId] = useState("");
+  const [cikisYaptirModal, setCikisYaptirModal] = useState(false);
 
   // Forms
   const [yeniForm, setYeniForm] = useState(emptyYeniForm);
@@ -215,6 +225,9 @@ export default function IsletmeRezervasyonlarPage() {
         setModalOpen(false);
         setEditModal(null);
         setIptalModal(null);
+        setBakiyeYukleModal(false);
+        setSezlongDegistirModal(false);
+        setCikisYaptirModal(false);
       }
     };
     window.addEventListener("keydown", handler);
@@ -369,6 +382,92 @@ export default function IsletmeRezervasyonlarPage() {
       )
     );
     setIptalModal(null);
+  }
+
+  async function bakiyeYukle() {
+    if (!drawerRez) return;
+    const amount = Number(bakiyeYukleAmount.replace(/\s/g, "").replace(",", ".")) || 0;
+    if (amount <= 0) return;
+    const mevcut = drawerRez.toplamTutarRaw ?? 0;
+    const yeniToplam = mevcut + amount;
+    const { error } = await supabase.from("rezervasyonlar").update({ toplam_tutar: yeniToplam }).eq("id", drawerRez.id);
+    if (error) {
+      console.error("Bakiye yükle error:", error);
+      return;
+    }
+    const yeniTutar = `₺${yeniToplam.toLocaleString("tr-TR")}`;
+    setRezervasyonlar((prev) =>
+      prev.map((r) =>
+        r.id === drawerRez.id
+          ? { ...r, toplamTutarRaw: yeniToplam, tutar: yeniTutar, tutarSub: `Bakiye: ${yeniTutar}`, drawerData: { ...r.drawerData, yuklenen: yeniTutar, kalan: yeniTutar } }
+          : r
+      )
+    );
+    if (drawerRez) setDrawerRez((prev) => prev ? { ...prev, toplamTutarRaw: yeniToplam, tutar: yeniTutar, tutarSub: `Bakiye: ${yeniTutar}`, drawerData: { ...prev.drawerData, yuklenen: yeniTutar, kalan: yeniTutar } } : null);
+    setBakiyeYukleAmount("");
+    setBakiyeYukleModal(false);
+  }
+
+  async function sezlongDegistirAc() {
+    if (!tesisId || !drawerRez) return;
+    const { data, error } = await supabase.from("sezlonglar").select("id, numara, sezlong_gruplari(ad)").eq("tesis_id", tesisId).order("numara", { ascending: true });
+    if (error) {
+      console.error("Sezlonglar fetch error:", error);
+      return;
+    }
+    const list = (data ?? []).map((s: any) => ({
+      id: String(s.id),
+      numara: Number(s.numara ?? 0),
+      grupAd: s.sezlong_gruplari?.ad?.trim() ?? "",
+    }));
+    setSezlongList(list);
+    setSelectedSezlongId(drawerRez.sezlongId ?? "");
+    setSezlongDegistirModal(true);
+  }
+
+  async function sezlongDegistirKaydet() {
+    if (!drawerRez || !selectedSezlongId) return;
+    const { error } = await supabase.from("rezervasyonlar").update({ sezlong_id: selectedSezlongId }).eq("id", drawerRez.id);
+    if (error) {
+      console.error("Şezlong güncelleme error:", error);
+      return;
+    }
+    const sel = sezlongList.find((s) => s.id === selectedSezlongId);
+    const sezlongStr = sel ? (sel.grupAd && sel.numara ? `${sel.grupAd.charAt(0)}-${sel.numara}` : String(sel.numara)) : "—";
+    const sezlongSubStr = sel ? `${sel.grupAd || "—"} • ${drawerRez.sezlongSub.split(" • ")[1] || "Kişi"}` : drawerRez.sezlongSub;
+    const drawerSezlongStr = sel && sel.grupAd && sel.numara ? `${sel.grupAd}-${sel.numara} (${sel.grupAd})` : sezlongStr;
+    setRezervasyonlar((prev) =>
+      prev.map((r) =>
+        r.id === drawerRez.id
+          ? { ...r, sezlongId: selectedSezlongId, sezlong: sezlongStr, sezlongSub: sezlongSubStr, drawerData: { ...r.drawerData, sezlong: drawerSezlongStr } }
+          : r
+      )
+    );
+    setDrawerRez((prev) => prev ? { ...prev, sezlongId: selectedSezlongId, sezlong: sezlongStr, sezlongSub: sezlongSubStr, drawerData: { ...prev.drawerData, sezlong: drawerSezlongStr } } : null);
+    setSezlongDegistirModal(false);
+  }
+
+  async function cikisYaptir() {
+    if (!drawerRez) return;
+    const rezId = drawerRez.id;
+    const szId = drawerRez.sezlongId;
+    const { error: rezErr } = await supabase.from("rezervasyonlar").update({ durum: "tamamlandi" }).eq("id", rezId);
+    if (rezErr) {
+      console.error("Çıkış rezervasyon update error:", rezErr);
+      return;
+    }
+    if (szId) {
+      await supabase.from("sezlonglar").update({ durum: "bos" }).eq("id", szId);
+    }
+    setRezervasyonlar((prev) =>
+      prev.map((r) =>
+        r.id === rezId
+          ? { ...r, status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false, tutarSub: "Tamamlandı" }
+          : r
+      )
+    );
+    setDrawerRez((prev) => prev && prev.id === rezId ? { ...prev, status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false, tutarSub: "Tamamlandı" } : prev);
+    setCikisYaptirModal(false);
   }
 
   async function saveYeni() {
@@ -781,11 +880,18 @@ export default function IsletmeRezervasyonlarPage() {
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>İşlemler</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {["💰 Bakiye Yükle", "🏖️ Şezlong Değiştir", "📤 Çıkış Yaptır", "🧾 Fiş Yazdır"].map((label) => (
-                        <button key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
-                          {label}
-                        </button>
-                      ))}
+                      <button onClick={() => setBakiyeYukleModal(true)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
+                        💰 Bakiye Yükle
+                      </button>
+                      <button onClick={sezlongDegistirAc} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
+                        🏖️ Şezlong Değiştir
+                      </button>
+                      <button onClick={() => setCikisYaptirModal(true)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
+                        📤 Çıkış Yaptır
+                      </button>
+                      <button style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
+                        🧾 Fiş Yazdır
+                      </button>
                       <button
                         onClick={() => { closeDrawer(); setIptalModal(drawerRez); }}
                         style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: "1px solid #FEE2E2", background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: RED, textAlign: "left" }}
@@ -984,6 +1090,61 @@ export default function IsletmeRezervasyonlarPage() {
               <button onClick={iptalEt} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>
                 ✖ Evet, İptal Et
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bakiye Yükle Modal */}
+      {bakiyeYukleModal && drawerRez && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setBakiyeYukleModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 24, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>💰 Bakiye Yükle</h3>
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Tutar (₺)</label>
+              <input type="number" min={1} step={1} value={bakiyeYukleAmount} onChange={(e) => setBakiyeYukleAmount(e.target.value)} placeholder="0" style={inputStyle} />
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => { setBakiyeYukleModal(false); setBakiyeYukleAmount(""); }} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={bakiyeYukle} disabled={!bakiyeYukleAmount || Number(bakiyeYukleAmount.replace(/\s/g, "").replace(",", ".")) <= 0} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>Yükle</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Şezlong Değiştir Modal */}
+      {sezlongDegistirModal && drawerRez && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setSezlongDegistirModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 24, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>🏖️ Şezlong Değiştir</h3>
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Şezlong</label>
+              <select value={selectedSezlongId} onChange={(e) => setSelectedSezlongId(e.target.value)} style={inputStyle}>
+                <option value="">Seçiniz</option>
+                {sezlongList.map((s) => (
+                  <option key={s.id} value={s.id}>{s.grupAd ? `${s.grupAd} - ${s.numara}` : String(s.numara)}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setSezlongDegistirModal(false)} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={sezlongDegistirKaydet} disabled={!selectedSezlongId} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Çıkış Yaptır Modal */}
+      {cikisYaptirModal && drawerRez && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setCikisYaptirModal(false)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 400, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>📤</div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Çıkış Yaptır</h3>
+            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 6 }}>Rezervasyon tamamlanacak ve şezlong boşaltılacak.</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 24 }}>{drawerRez.no} — {drawerRez.musteri}</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setCikisYaptirModal(false)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={cikisYaptir} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>Çıkış Yaptır</button>
             </div>
           </div>
         </div>
