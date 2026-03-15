@@ -1449,9 +1449,33 @@ export default function IsletmeSezlongPage() {
             <div style={{ padding: "12px 20px", borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setRezModal(false)} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  if (!tesisId) {
+                    showToast("Oturum bulunamadı.");
+                    return;
+                  }
+                  const tarih = rezForm.tarih || new Date().toISOString().slice(0, 10);
+                  const baslangicStr = `${tarih}T09:00:00`;
+                  const bitisStr = `${tarih}T23:59:59`;
+                  const kisi = parseInt(rezForm.kisiSayisi, 10) || 2;
+                  const { error } = await supabase.from("rezervasyonlar").insert({
+                    tesis_id: tesisId,
+                    musteri_adi: rezForm.musteriAdi.trim() || null,
+                    telefon: rezForm.telefon.trim() || null,
+                    sezlong_id: seciliSezlongId || null,
+                    baslangic_tarih: baslangicStr,
+                    bitis_tarih: bitisStr,
+                    kisi_sayisi: kisi,
+                    toplam_tutar: 0,
+                    durum: "bekliyor",
+                  });
                   setRezModal(false);
                   setRezForm({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
+                  if (error) {
+                    console.error("Rezervasyon insert error:", error);
+                    showToast("Rezervasyon kaydedilemedi.");
+                    return;
+                  }
                   showToast("✅ Rezervasyon oluşturuldu!");
                 }}
                 style={{ padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}
