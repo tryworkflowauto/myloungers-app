@@ -97,6 +97,17 @@ const URUN_ROWS = [
 ];
 const URUN_KATEGORILER = ["Tüm Kategoriler", "Alkollü İçecek", "Soğuk İçecek", "Ana Yemek", "Atıştırmalık", "Tatlılar"];
 
+type GunlukItem = {
+  gun: string;
+  teal: number;
+  orange: number;
+  tealVal: string;
+  sipVal: number | string;
+  sezVal: number;
+  isToday: boolean;
+  label?: string;
+};
+
 type TabKey = "gelir" | "bakiye" | "garson" | "urun";
 type GarsonSort = "teslimat" | "sure" | "tip" | "puan";
 
@@ -178,10 +189,9 @@ export default function IsletmeRaporlarPage() {
   }, [tesisId]);
 
   // ── Derived data ─────────────────────────────────────────────────────────
-  // Bar chart data: Supabase ile gerçek veri bağlanana kadar
-  // mock GUNLUK_* fallback'leri kaldırıldı; veri yoksa boş gösterilir.
-  function getGunlukData() {
-    return [];
+  // Bar chart data: tip GunlukItem[] olarak tanımlı; şu an boş.
+  function getGunlukData(): GunlukItem[] {
+    return [] as GunlukItem[];
   }
 
   const donemStat = {
