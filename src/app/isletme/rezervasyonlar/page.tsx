@@ -173,7 +173,7 @@ const TABS = [
 ];
 
 const emptyYeniForm = {
-  musteriAdi: "", telefon: "", grup: "Silver", sezlongNo: "",
+  musteriAdi: "", telefon: "", grup: "Silver", sezlongId: "",
   tarih: "2026-03-11", saat: "09:00", kisiSayisi: "2", odeme: "on",
 };
 
@@ -204,6 +204,7 @@ export default function IsletmeRezervasyonlarPage() {
   const [selectedSezlongId, setSelectedSezlongId] = useState("");
   const [cikisYaptirModal, setCikisYaptirModal] = useState(false);
   const [printReceipt, setPrintReceipt] = useState<{ rez: Rezervasyon; tesisAd: string } | null>(null);
+  const [sezlonglarForForm, setSezlonglarForForm] = useState<{ id: string; numara: number; grupAd: string }[]>([]);
 
   // Forms
   const [yeniForm, setYeniForm] = useState(emptyYeniForm);
@@ -278,6 +279,32 @@ export default function IsletmeRezervasyonlarPage() {
         setLoading(false);
       });
     return () => { cancelled = true; };
+  }, [tesisId]);
+
+  // Şezlonglar listesi (Yeni Rezervasyon formu dropdown)
+  useEffect(() => {
+    if (!tesisId) {
+      setSezlonglarForForm([]);
+      return;
+    }
+    supabase
+      .from("sezlonglar")
+      .select("id, numara, sezlong_gruplari(ad)")
+      .eq("tesis_id", tesisId)
+      .order("numara", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Sezlonglar form fetch error:", error);
+          setSezlonglarForForm([]);
+          return;
+        }
+        const list = (data ?? []).map((s: any) => ({
+          id: String(s.id),
+          numara: Number(s.numara ?? 0),
+          grupAd: s.sezlong_gruplari?.ad?.trim() ?? "",
+        }));
+        setSezlonglarForForm(list);
+      });
   }, [tesisId]);
 
   // ── FILTERING ──────────────────────────────────────────────────────────────
@@ -504,7 +531,7 @@ export default function IsletmeRezervasyonlarPage() {
       durum: "bekliyor",
       musteri_adi: yeniForm.musteriAdi.trim() || null,
       telefon: yeniForm.telefon.trim() || null,
-      sezlong_id: null,
+      sezlong_id: yeniForm.sezlongId || null,
     };
     const { data: row, error } = await supabase
       .from("rezervasyonlar")
@@ -515,8 +542,15 @@ export default function IsletmeRezervasyonlarPage() {
       console.error("Rezervasyon insert error:", error);
       return;
     }
+    const selectedSezlong = yeniForm.sezlongId ? sezlonglarForForm.find((s) => s.id === yeniForm.sezlongId) : null;
     const newRez = mapRowToRezervasyon(
-      { ...row, musteri_adi: yeniForm.musteriAdi.trim() || null, telefon: yeniForm.telefon.trim() || null },
+      {
+        ...row,
+        musteri_adi: yeniForm.musteriAdi.trim() || null,
+        telefon: yeniForm.telefon.trim() || null,
+        sezlong_id: yeniForm.sezlongId || null,
+        sezlonglar: selectedSezlong ? { numara: selectedSezlong.numara, sezlong_gruplari: { ad: selectedSezlong.grupAd } } : null,
+      },
       rezervasyonlar.length
     );
     setRezervasyonlar((prev) => [newRez, ...prev]);
@@ -967,8 +1001,13 @@ export default function IsletmeRezervasyonlarPage() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Şezlong No</label>
-                <input type="text" value={yeniForm.sezlongNo} onChange={(e) => setYeniForm((f) => ({ ...f, sezlongNo: e.target.value }))} placeholder="örn: S-14" style={inputStyle} />
+                <label style={labelStyle}>Şezlong</label>
+                <select value={yeniForm.sezlongId} onChange={(e) => setYeniForm((f) => ({ ...f, sezlongId: e.target.value }))} style={inputStyle}>
+                  <option value="">Seçiniz</option>
+                  {sezlonglarForForm.map((s) => (
+                    <option key={s.id} value={s.id}>{s.grupAd ? `${s.grupAd} - ${s.numara}` : String(s.numara)}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
