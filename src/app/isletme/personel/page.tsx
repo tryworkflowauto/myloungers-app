@@ -61,6 +61,8 @@ type Personel = {
   photo?: string;
 };
 
+type SezlongOption = { id: string; label: string };
+
 const PERSONEL_PHOTO_KEY = "personel_photo_";
 function getPhotoFromStorage(id: string): string | undefined {
   if (typeof window === "undefined") return undefined;
@@ -195,10 +197,27 @@ function PersonelKart({ p, onEdit, onYetki, onToggle, onSil }: {
 
       <div style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>Yetkiler</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {p.yetkiler.map((y, i) => <span key={i} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(10,186,181,0.1)", color: TEAL, fontWeight: 600 }}>{y}</span>)}
-          {p.yetkiKilitli.map((y, i) => <span key={i} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 6, background: GRAY100, color: GRAY400, fontWeight: 600 }}>{y}</span>)}
-        </div>
+        {p.yetkiler.length === 0 ? (
+          <div style={{ fontSize: 11, color: GRAY400, fontStyle: "italic" }}>Henüz yetki verilmedi</div>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {p.yetkiler.map((y, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: 10,
+                  padding: "3px 8px",
+                  borderRadius: 6,
+                  background: "rgba(10,186,181,0.1)",
+                  color: TEAL,
+                  fontWeight: 600,
+                }}
+              >
+                {y}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{ padding: "12px 14px", display: "flex", gap: 8, alignItems: "center" }}>
@@ -238,6 +257,10 @@ export default function IsletmePersonelPage() {
   // Stat filter
   const [statFiltre, setStatFiltre] = useState<"tumu" | "aktif" | "teslimat" | "sure">("tumu");
 
+  // Sezlong list for checkbox selection (Personel Ekle)
+  const [sezlongOptions, setSezlongOptions] = useState<SezlongOption[]>([]);
+  const [sezlongLoading, setSezlongLoading] = useState(false);
+
   // Toast
   const [toast, setToast] = useState<string | null>(null);
 
@@ -257,6 +280,36 @@ export default function IsletmePersonelPage() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  // Sezlong list (for Atanan Şezlonglar checkbox list)
+  useEffect(() => {
+    if (!tesisId) {
+      setSezlongOptions([]);
+      setSezlongLoading(false);
+      return;
+    }
+    setSezlongLoading(true);
+    supabase
+      .from("sezlonglar")
+      .select("id, numara, sezlong_gruplari(ad)")
+      .eq("tesis_id", tesisId)
+      .order("numara", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          setSezlongOptions([]);
+          setSezlongLoading(false);
+          return;
+        }
+        const list: SezlongOption[] = (data ?? []).map((s: any) => {
+          const num = Number(s.numara ?? 0);
+          const grupAd = s.sezlong_gruplari?.ad?.trim() ?? "";
+          const label = grupAd && num ? `${grupAd.charAt(0)}-${num}` : String(num || "");
+          return { id: String(s.id), label };
+        });
+        setSezlongOptions(list);
+        setSezlongLoading(false);
+      });
+  }, [tesisId]);
 
   // Supabase: personel listesi (tesis_id)
   useEffect(() => {
@@ -535,7 +588,16 @@ export default function IsletmePersonelPage() {
               <button onClick={() => setAddModalOpen(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
             <div style={{ padding: "20px 24px" }}>
-              <PersonelForm form={yeniForm} setForm={setYeniForm} photo={yeniPhoto} setPhoto={setYeniPhoto} inputStyle={inputStyle} labelStyle={labelStyle} />
+              <PersonelForm
+                form={yeniForm}
+                setForm={setYeniForm}
+                photo={yeniPhoto}
+                setPhoto={setYeniPhoto}
+                inputStyle={inputStyle}
+                labelStyle={labelStyle}
+                sezlongOptions={sezlongOptions}
+                sezlongLoading={sezlongLoading}
+              />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
               <button onClick={() => { setAddModalOpen(false); setYeniPhoto(""); }} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -662,13 +724,15 @@ export default function IsletmePersonelPage() {
 }
 
 // ── Shared PersonelForm ───────────────────────────────────────────────────
-function PersonelForm({ form, setForm, photo, setPhoto, inputStyle, labelStyle }: {
+function PersonelForm({ form, setForm, photo, setPhoto, inputStyle, labelStyle, sezlongOptions, sezlongLoading }: {
   form: typeof emptyForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyForm>>;
   photo: string;
   setPhoto: React.Dispatch<React.SetStateAction<string>>;
   inputStyle: React.CSSProperties;
   labelStyle: React.CSSProperties;
+  sezlongOptions?: SezlongOption[];
+  sezlongLoading?: boolean;
 }) {
   const f = form;
   const set = (key: keyof typeof emptyForm, val: string | boolean) =>
@@ -753,8 +817,72 @@ function PersonelForm({ form, setForm, photo, setPhoto, inputStyle, labelStyle }
 
       {(f.rol === "garson" || f.rol === "ozel") && (
         <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Atanan Şezlonglar <span style={{ color: GRAY400, fontWeight: 400 }}>(virgülle ayırın — örn: S-1, S-2, V-3)</span></label>
-          <input type="text" value={f.sezlonglar} onChange={(e) => set("sezlonglar", e.target.value)} placeholder="S-1, S-2, S-3..." style={inputStyle} />
+          <label style={labelStyle}>Atanan Şezlonglar</label>
+          {sezlongOptions ? (
+            sezlongLoading ? (
+              <div style={{ fontSize: 11, color: GRAY400 }}>Yükleniyor...</div>
+            ) : sezlongOptions.length === 0 ? (
+              <div style={{ fontSize: 11, color: GRAY400 }}>Tanımlı şezlong bulunamadı.</div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {(f.sezlonglar
+                  ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
+                  : []
+                ).length === 0 && null}
+                {sezlongOptions.map((opt) => {
+                  const selectedValues = f.sezlonglar
+                    ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
+                    : [];
+                  const checked = selectedValues.includes(opt.label);
+                  return (
+                    <label
+                      key={opt.id}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontSize: 11,
+                        padding: "4px 8px",
+                        borderRadius: 8,
+                        border: `1px solid ${checked ? TEAL : GRAY200}`,
+                        background: checked ? "rgba(10,186,181,0.06)" : "white",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const current = f.sezlonglar
+                            ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
+                            : [];
+                          const next = e.target.checked
+                            ? [...current, opt.label]
+                            : current.filter((v) => v !== opt.label);
+                          set("sezlonglar", next.join(", "));
+                        }}
+                        style={{ position: "absolute", opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )
+          ) : (
+            <>
+              <span style={{ display: "block", fontSize: 11, color: GRAY400, marginBottom: 4 }}>
+                (virgülle ayırın — örn: S-1, S-2, V-3)
+              </span>
+              <input
+                type="text"
+                value={f.sezlonglar}
+                onChange={(e) => set("sezlonglar", e.target.value)}
+                placeholder="S-1, S-2, S-3..."
+                style={inputStyle}
+              />
+            </>
+          )}
         </div>
       )}
 
