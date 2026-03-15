@@ -43,6 +43,7 @@ type Rezervasyon = {
   disabled: boolean;
   sezlongId?: string | null;
   toplamTutarRaw?: number;
+  kisiSayisi?: number;
   drawerData: {
     email: string;
     sezlong: string;
@@ -147,6 +148,7 @@ function mapRowToRezervasyon(
     disabled,
     sezlongId: r.sezlong_id != null ? String(r.sezlong_id) : null,
     toplamTutarRaw: tutarNum,
+    kisiSayisi: kisi,
     drawerData: {
       email: "",
       sezlong: drawerSezlong,
@@ -201,6 +203,7 @@ export default function IsletmeRezervasyonlarPage() {
   const [sezlongList, setSezlongList] = useState<{ id: string; numara: number; grupAd: string }[]>([]);
   const [selectedSezlongId, setSelectedSezlongId] = useState("");
   const [cikisYaptirModal, setCikisYaptirModal] = useState(false);
+  const [printReceipt, setPrintReceipt] = useState<{ rez: Rezervasyon; tesisAd: string } | null>(null);
 
   // Forms
   const [yeniForm, setYeniForm] = useState(emptyYeniForm);
@@ -236,6 +239,18 @@ export default function IsletmeRezervasyonlarPage() {
 
   // Reset page when filters change
   useEffect(() => { setSayfa(1); }, [aramaMetni, filtreTarih, filtreGrup, filtreTip, filtreDurum, activeTab]);
+
+  // Print receipt: trigger window.print() when printReceipt is set, clear after print
+  useEffect(() => {
+    if (!printReceipt) return;
+    const onAfterPrint = () => setPrintReceipt(null);
+    window.addEventListener("afterprint", onAfterPrint);
+    const t = setTimeout(() => { window.print(); }, 100);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, [printReceipt]);
 
   // Supabase: tesis_id ile rezervasyonları çek
   useEffect(() => {
@@ -468,6 +483,12 @@ export default function IsletmeRezervasyonlarPage() {
     );
     setDrawerRez((prev) => prev && prev.id === rezId ? { ...prev, status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false, tutarSub: "Tamamlandı" } : prev);
     setCikisYaptirModal(false);
+  }
+
+  async function fisYazdir() {
+    if (!drawerRez || !tesisId) return;
+    const { data } = await supabase.from("tesisler").select("ad").eq("id", tesisId).single();
+    setPrintReceipt({ rez: drawerRez, tesisAd: (data as { ad?: string } | null)?.ad?.trim() || "Tesis" });
   }
 
   async function saveYeni() {
@@ -889,7 +910,7 @@ export default function IsletmeRezervasyonlarPage() {
                       <button onClick={() => setCikisYaptirModal(true)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
                         📤 Çıkış Yaptır
                       </button>
-                      <button style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
+                      <button onClick={fisYazdir} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
                         🧾 Fiş Yazdır
                       </button>
                       <button
@@ -1150,10 +1171,39 @@ export default function IsletmeRezervasyonlarPage() {
         </div>
       )}
 
+      {/* Yazdır için fiş içeriği - sadece print ile görünür */}
+      {printReceipt && (
+        <div className="print-receipt" style={{ position: "absolute", left: "-9999px", top: 0 }}>
+          <div className="print-receipt-inner">
+            <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{printReceipt.tesisAd}</h1>
+            <p style={{ fontSize: 11, color: "#64748b", marginBottom: 16 }}>Rezervasyon Fişi</p>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <tbody>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600, width: "40%" }}>Rezervasyon No</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.no}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Müşteri Adı</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.musteri}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Telefon</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.telefon}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Şezlong</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.drawerData.sezlong}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Tarih</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.tarih}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Kişi Sayısı</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.kisiSayisi ?? "—"}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Toplam Tutar</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 700 }}>{printReceipt.rez.tutar}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Ödeme Tipi</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.tipLabel}</td></tr>
+              </tbody>
+            </table>
+            <p style={{ fontSize: 10, color: "#94a3b8", marginTop: 20 }}>Yazdırma: {new Date().toLocaleString("tr-TR")}</p>
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{
         __html: `
           .rez-table-row:hover { background: #F8FAFC !important; }
           .rez-action-btn:hover { background: #0A1628 !important; border-color: #0A1628 !important; color: white !important; }
+          @media print {
+            body * { visibility: hidden; }
+            .print-receipt, .print-receipt * { visibility: visible; }
+            .print-receipt { position: fixed !important; left: 0 !important; top: 0 !important; width: 100% !important; max-width: 400px !important; padding: 24px !important; background: white !important; }
+            .print-receipt-inner { font-family: 'Segoe UI', system-ui, sans-serif; color: #0f172a; }
+          }
         `,
       }} />
     </div>
