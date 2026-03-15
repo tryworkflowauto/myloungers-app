@@ -267,7 +267,7 @@ export default function IsletmePersonelPage() {
     }
     let cancelled = false;
     setLoading(true);
-    supabase.from("personel").select("id, ad, telefon, rol, aktif, sezlonglar, yetkiler").eq("tesis_id", tesisId).order("ad", { ascending: true }).then((res) => {
+    supabase.from("personel").select("id, ad, telefon, rol, aktif, atanan_sezlonglar, yetkiler").eq("tesis_id", tesisId).order("ad", { ascending: true }).then((res) => {
       if (cancelled) return;
       if (res.error) {
         console.error("personel fetch error:", res.error);
@@ -309,7 +309,7 @@ export default function IsletmePersonelPage() {
       telefon: editForm.phone || null,
       rol: editForm.rol,
       aktif: editForm.aktif,
-      sezlonglar: sezlonglarArr,
+      atanan_sezlonglar: sezlonglarArr,
     }).eq("id", editModal.id);
     if (error) {
       console.error("saveEdit error:", error);
@@ -348,9 +348,9 @@ export default function IsletmePersonelPage() {
       telefon: yeniForm.phone || null,
       rol: yeniForm.rol,
       aktif: yeniForm.aktif,
-      sezlonglar: sezlonglarArr,
+      atanan_sezlonglar: sezlonglarArr,
       yetkiler: defaultYetkiler,
-    }).select("id, ad, telefon, rol, aktif, sezlonglar, yetkiler").single();
+    }).select("id, ad, telefon, rol, aktif, atanan_sezlonglar, yetkiler").single();
     if (error) {
       console.error("saveYeni error:", error);
       return;
