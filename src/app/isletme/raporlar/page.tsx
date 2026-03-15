@@ -130,7 +130,7 @@ export default function IsletmeRaporlarPage() {
   // ESC closes modals
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setGrupDetay(null); setOdemeDetay(null); setStatDetay(null); }
+      if (e.key === "Escape") { setStatDetay(null); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
