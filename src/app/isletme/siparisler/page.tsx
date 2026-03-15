@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -16,7 +18,7 @@ const RED = "#EF4444";
 const YELLOW = "#F59E0B";
 const BLUE = "#3B82F6";
 
-type Garson = { name: string; inits: string; color: string };
+type Garson = { id?: string; name: string; inits: string; color: string };
 
 type SiparisItem = {
   id: string;
@@ -47,36 +49,93 @@ type GecmisItem = {
   tutarColor?: string;
 };
 
-const GARSONLAR: Garson[] = [
-  { inits: "MG", name: "Mehmet G.", color: TEAL },
-  { inits: "AT", name: "Ayşe T.", color: ORANGE },
-  { inits: "CK", name: "Can K.", color: "#7C3AED" },
-  { inits: "AR", name: "Ali R.", color: BLUE },
-];
+const GARSON_COLORS = [TEAL, ORANGE, "#7C3AED", BLUE, GREEN, YELLOW];
 
-const INIT_YENI: SiparisItem[] = [
-  { id: "Y1", sezlong: "V3", grup: "VIP", kisi: 2, musteri: "Fatma D.", timer: "2 dk", timerClass: "late", saat: "13:48", bg: "#F5821F", urunler: [{ adet: 2, ad: "Mojito", fiyat: "₺120" }, { adet: 1, ad: "Tavuk Şiş", fiyat: "₺85" }, { adet: 1, ad: "Salata", fiyat: "₺45" }], garson: null, tutar: "₺250", isYeni: true },
-  { id: "Y2", sezlong: "G2", grup: "Gold", kisi: 1, musteri: "Mehmet K.", timer: "5 dk", timerClass: "warn", saat: "13:45", bg: "#8B5CF6", urunler: [{ adet: 1, ad: "Soğuk Kahve", fiyat: "₺45" }, { adet: 2, ad: "Su (0.5L)", fiyat: "₺20" }], garson: null, tutar: "₺65", isYeni: true },
-  { id: "Y3", sezlong: "S22", grup: "Silver", kisi: 3, musteri: "Ahmet Y.", timer: "1 dk", timerClass: "ok", saat: "13:49", bg: "#0ABAB5", urunler: [{ adet: 3, ad: "Limonata", fiyat: "₺90" }, { adet: 1, ad: "Balık & Patates", fiyat: "₺120" }], garson: null, tutar: "₺210", isYeni: true },
-];
+function garsonInits(ad: string): string {
+  const parts = (ad || "").trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "—";
+}
 
-const INIT_HAZIR: SiparisItem[] = [
-  { id: "H1", sezlong: "İ5", grup: "İskele", kisi: 2, musteri: "Zeynep A.", timer: "8 dk", timerClass: "warn", saat: "13:42", bg: "#F59E0B", urunler: [{ adet: 2, ad: "Piña Colada", fiyat: "₺160" }, { adet: 1, ad: "Nachos", fiyat: "₺65" }], garson: { inits: "MG", name: "Mehmet G.", color: TEAL }, tutar: "₺225", isYeni: false },
-  { id: "H2", sezlong: "V9", grup: "VIP", kisi: 3, musteri: "Selin E.", timer: "14 dk", timerClass: "late", saat: "13:36", bg: "#F5821F", urunler: [{ adet: 3, ad: "Izgara Levrek", fiyat: "₺450" }, { adet: 2, ad: "Beyaz Şarap", fiyat: "₺280" }, { adet: 1, ad: "Meze Tabağı", fiyat: "₺95" }], garson: { inits: "AT", name: "Ayşe T.", color: ORANGE }, tutar: "₺825", isYeni: false },
-  { id: "H3", sezlong: "S14", grup: "Silver", kisi: 1, musteri: "Burak T.", timer: "4 dk", timerClass: "ok", saat: "13:46", bg: "#0ABAB5", urunler: [{ adet: 1, ad: "Burger", fiyat: "₺95" }, { adet: 1, ad: "Ayran", fiyat: "₺15" }], garson: { inits: "CK", name: "Can K.", color: "#7C3AED" }, tutar: "₺110", isYeni: false },
-];
+function mapSiparisToItem(
+  s: any,
+  garsonMap: Map<string, Garson>,
+  index: number
+): SiparisItem {
+  const id = String(s.id);
+  const created = s.created_at ? new Date(s.created_at) : new Date();
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffM = Math.floor(diffMs / 60000);
+  let timer = `${diffM} dk`;
+  let timerClass: "ok" | "warn" | "late" = "ok";
+  if (diffM > 10) timerClass = "late";
+  else if (diffM > 5) timerClass = "warn";
+  const saat = created.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const grupAd = s.sezlonglar?.sezlong_gruplari?.ad?.trim() ?? "";
+  const numara = s.sezlonglar?.numara;
+  const sezlongStr = grupAd && numara != null ? `${grupAd.charAt(0)}${numara}` : numara != null ? String(numara) : "—";
+  const bg = s.sezlonglar?.sezlong_gruplari?.renk?.trim() || TEAL;
+  const kalemler = (s.siparis_kalemleri ?? []) as { ad?: string; fiyat?: number; adet?: number }[];
+  const urunler = kalemler.map((k) => ({
+    adet: Number(k.adet ?? 1),
+    ad: (k.ad ?? "").trim() || "—",
+    fiyat: `₺${Number(k.fiyat ?? 0).toLocaleString("tr-TR")}`,
+  }));
+  const toplam = Number(s.toplam ?? 0);
+  const tutar = `₺${toplam.toLocaleString("tr-TR")}`;
+  const garsonId = s.garson_id ? String(s.garson_id) : null;
+  const garson = garsonId ? garsonMap.get(garsonId) ?? null : null;
+  const durum = (s.durum ?? "bekliyor") as string;
+  const isYeni = durum === "bekliyor";
+  const musteri = s.rezervasyonlar?.musteri_adi?.trim() || "Misafir";
+  const kisi = 1;
 
-const INIT_TESLIM: SiparisItem[] = [
-  { id: "T1", sezlong: "S8", grup: "Silver", kisi: 1, musteri: "Ali K.", timer: "✓ 9 dk", timerClass: "ok", saat: "13:38", bg: "#10B981", urunler: [{ adet: 2, ad: "Soğuk Kahve", fiyat: "₺90" }], garson: { inits: "MG", name: "Mehmet G. • 13:29→13:38", color: TEAL }, tutar: "₺90", opacity: 0.75, isYeni: false },
-  { id: "T2", sezlong: "G1", grup: "Gold", kisi: 1, musteri: "Mehmet K.", timer: "✓ 7 dk", timerClass: "ok", saat: "13:22", bg: "#8B5CF6", urunler: [{ adet: 1, ad: "Izgara Levrek", fiyat: "₺150" }, { adet: 1, ad: "Rosé Şarap", fiyat: "₺180" }], garson: { inits: "AT", name: "Ayşe T. • 13:15→13:22", color: ORANGE }, tutar: "₺330", opacity: 0.75, isYeni: false },
-];
+  return {
+    id,
+    sezlong: sezlongStr,
+    grup: grupAd || "—",
+    kisi,
+    musteri,
+    timer: durum === "teslim" ? `✓ ${diffM} dk` : timer,
+    timerClass: durum === "teslim" ? "ok" : timerClass,
+    saat,
+    bg,
+    urunler: urunler.length ? urunler : [{ adet: 1, ad: "—", fiyat: "₺0" }],
+    garson: garson ? { ...garson, name: garson.name } : null,
+    tutar,
+    isYeni,
+    opacity: durum === "teslim" ? 0.75 : 1,
+  };
+}
 
-const INIT_GECMIS: GecmisItem[] = [
-  { id: "G1", no: "#089", urunler: "2x Soğuk Kahve", sezlong: "S-8 (Silver)", saat: "13:29 → 13:38", garson: { inits: "MG", name: "Mehmet G.", color: TEAL }, tutar: "₺90", durum: "teslim" },
-  { id: "G2", no: "#088", urunler: "1x Levrek, 1x Rosé", sezlong: "G-1 (Gold)", saat: "13:15 → 13:22", garson: { inits: "AT", name: "Ayşe T.", color: ORANGE }, tutar: "₺330", durum: "teslim" },
-  { id: "G3", no: "#087", urunler: "3x Limonata, 1x Salata", sezlong: "V-12 (VIP)", saat: "13:05 → 13:18", garson: { inits: "CK", name: "Can K.", color: "#7C3AED" }, tutar: "₺165", durum: "teslim" },
-  { id: "G4", no: "#086", urunler: "2x Mojito", sezlong: "İ-3 (İskele)", saat: "12:50 → İptal", garson: { inits: "MG", name: "Mehmet G.", color: TEAL }, tutar: "₺120", durum: "iptal", tutarColor: RED },
-];
+function mapSiparisToGecmis(s: any, garsonMap: Map<string, Garson>, no: string): GecmisItem {
+  const created = s.created_at ? new Date(s.created_at) : new Date();
+  const grupAd = s.sezlonglar?.sezlong_gruplari?.ad?.trim() ?? "";
+  const numara = s.sezlonglar?.numara;
+  const sezlongStr = grupAd && numara != null ? `${grupAd}-${numara} (${grupAd})` : numara != null ? String(numara) : "—";
+  const kalemler = (s.siparis_kalemleri ?? []) as { ad?: string; adet?: number }[];
+  const urunlerStr = kalemler.map((k) => `${k.adet ?? 1}x ${k.ad ?? "—"}`).join(", ");
+  const saat = created.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const durum = (s.durum ?? "teslim") as string;
+  const garsonId = s.garson_id ? String(s.garson_id) : null;
+  const garson: Garson = garsonId && garsonMap.get(garsonId)
+    ? garsonMap.get(garsonId)!
+    : { inits: "—", name: "Atanmadı", color: GRAY400 };
+  const toplam = Number(s.toplam ?? 0);
+  const tutar = `₺${toplam.toLocaleString("tr-TR")}`;
+
+  return {
+    id: String(s.id),
+    no,
+    urunler: urunlerStr || "—",
+    sezlong: sezlongStr,
+    saat: durum === "iptal" ? `${saat} → İptal` : `${saat} → Teslim`,
+    garson,
+    tutar,
+    durum: durum === "iptal" ? "iptal" : "teslim",
+    tutarColor: durum === "iptal" ? RED : undefined,
+  };
+}
 
 // ── SiparisKart component ──────────────────────────────────────────────────
 function SiparisKartComp({
@@ -161,10 +220,15 @@ function SiparisKartComp({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function IsletmeSiparislerPage() {
-  const [yeniList, setYeniList] = useState<SiparisItem[]>(INIT_YENI);
-  const [hazirList, setHazirList] = useState<SiparisItem[]>(INIT_HAZIR);
-  const [teslimList, setTeslimList] = useState<SiparisItem[]>(INIT_TESLIM);
-  const [gecmisList, setGecmisList] = useState<GecmisItem[]>(INIT_GECMIS);
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
+  const [yeniList, setYeniList] = useState<SiparisItem[]>([]);
+  const [hazirList, setHazirList] = useState<SiparisItem[]>([]);
+  const [teslimList, setTeslimList] = useState<SiparisItem[]>([]);
+  const [gecmisList, setGecmisList] = useState<GecmisItem[]>([]);
+  const [garsonlarList, setGarsonlarList] = useState<Garson[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<"aktif" | "gecmis">("aktif");
   const [toast, setToast] = useState<string | null>(null);
@@ -180,7 +244,7 @@ export default function IsletmeSiparislerPage() {
 
   // Filters (gecmis tab)
   const [gecmisArama, setGecmisArama] = useState("");
-  const [gecmisTarih, setGecmisTarih] = useState("2026-03-11");
+  const [gecmisTarih, setGecmisTarih] = useState(() => new Date().toISOString().slice(0, 10));
   const [gecmisGarson, setGecmisGarson] = useState("");
   const [gecmisDurum, setGecmisDurum] = useState("");
 
@@ -195,23 +259,128 @@ export default function IsletmeSiparislerPage() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Personel (garsonlar)
+  useEffect(() => {
+    if (!tesisId) {
+      setGarsonlarList([]);
+      return;
+    }
+    supabase
+      .from("personel")
+      .select("id, ad")
+      .eq("tesis_id", tesisId)
+      .eq("rol", "garson")
+      .eq("aktif", true)
+      .then(({ data }) => {
+        const list = (data ?? []).map((p: any, i: number) => ({
+          id: String(p.id),
+          name: (p.ad ?? "").trim() || "Garson",
+          inits: garsonInits(p.ad ?? ""),
+          color: GARSON_COLORS[i % GARSON_COLORS.length],
+        }));
+        setGarsonlarList(list);
+      });
+  }, [tesisId]);
+
+  // Bugünkü siparişler + kalemler
+  useEffect(() => {
+    if (!tesisId) {
+      setYeniList([]);
+      setHazirList([]);
+      setTeslimList([]);
+      setGecmisList([]);
+      setLoading(false);
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    let cancelled = false;
+    setLoading(true);
+    supabase
+      .from("siparisler")
+      .select(`
+        id, tesis_id, garson_id, durum, toplam, created_at,
+        sezlonglar(numara, sezlong_gruplari(ad, renk)),
+        rezervasyonlar(musteri_adi),
+        siparis_kalemleri(ad, fiyat, adet)
+      `)
+      .eq("tesis_id", tesisId)
+      .gte("created_at", `${today}T00:00:00`)
+      .order("created_at", { ascending: false })
+      .then(({ data: siparisData, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("Siparişler fetch error:", error);
+          setYeniList([]);
+          setHazirList([]);
+          setTeslimList([]);
+          setGecmisList([]);
+          setLoading(false);
+          return;
+        }
+        supabase.from("personel").select("id, ad").eq("tesis_id", tesisId).then(({ data: personelData }) => {
+          if (cancelled) return;
+          const garsonMap = new Map<string, Garson>();
+          (personelData ?? []).forEach((p: any, i: number) => {
+            garsonMap.set(String(p.id), {
+              id: String(p.id),
+              name: (p.ad ?? "").trim() || "Garson",
+              inits: garsonInits(p.ad ?? ""),
+              color: GARSON_COLORS[i % GARSON_COLORS.length],
+            });
+          });
+          const rows = (siparisData ?? []) as any[];
+          const yeni: SiparisItem[] = [];
+          const hazir: SiparisItem[] = [];
+          const teslim: SiparisItem[] = [];
+          const gecmis: GecmisItem[] = [];
+          let gecmisNo = rows.filter((r: any) => r.durum === "teslim" || r.durum === "iptal").length + 80;
+          rows.forEach((s, i) => {
+            const item = mapSiparisToItem(s, garsonMap, i);
+            if (s.durum === "bekliyor") yeni.push(item);
+            else if (s.durum === "hazirlaniyor") hazir.push(item);
+            else if (s.durum === "teslim") {
+              teslim.push(item);
+              gecmis.push(mapSiparisToGecmis(s, garsonMap, "#" + String(gecmisNo--).padStart(3, "0")));
+            } else if (s.durum === "iptal") {
+              gecmis.push(mapSiparisToGecmis(s, garsonMap, "#" + String(gecmisNo--).padStart(3, "0")));
+            }
+          });
+          setYeniList(yeni);
+          setHazirList(hazir);
+          setTeslimList(teslim);
+          setGecmisList(gecmis);
+          setLoading(false);
+        });
+      });
+    return () => { cancelled = true; };
+  }, [tesisId]);
+
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   }
 
   // ── Actions ──────────────────────────────────────────────────────────────
-  function hazirlamaAl(order: SiparisItem) {
+  async function hazirlamaAl(order: SiparisItem) {
+    const { error } = await supabase.from("siparisler").update({ durum: "hazirlaniyor" }).eq("id", order.id);
+    if (error) {
+      console.error("hazirlamaAl error:", error);
+      return;
+    }
     setYeniList((p) => p.filter((x) => x.id !== order.id));
     setHazirList((p) => [{ ...order, isYeni: false, timer: "0 dk", timerClass: "ok" }, ...p]);
     showToast("🍳 Sipariş hazırlamaya alındı!");
   }
 
-  function teslimEt(order: SiparisItem) {
+  async function teslimEt(order: SiparisItem) {
+    const { error } = await supabase.from("siparisler").update({ durum: "teslim" }).eq("id", order.id);
+    if (error) {
+      console.error("teslimEt error:", error);
+      return;
+    }
     setHazirList((p) => p.filter((x) => x.id !== order.id));
     const teslimItem: SiparisItem = { ...order, opacity: 0.75, timer: "✓ " + order.timer, timerClass: "ok" };
     setTeslimList((p) => [teslimItem, ...p]);
-    // Add to gecmis
     const nextNo = "#" + String(gecmisList.length + 90).padStart(3, "0");
     const newGecmis: GecmisItem = {
       id: "NEW_" + Date.now(),
@@ -227,9 +396,14 @@ export default function IsletmeSiparislerPage() {
     showToast("✅ Sipariş teslim edildi!");
   }
 
-  function iptalOnayla() {
+  async function iptalOnayla() {
     if (!iptalModal) return;
     const { order, from } = iptalModal;
+    const { error } = await supabase.from("siparisler").update({ durum: "iptal" }).eq("id", order.id);
+    if (error) {
+      console.error("iptalOnayla error:", error);
+      return;
+    }
     if (from === "yeni") setYeniList((p) => p.filter((x) => x.id !== order.id));
     if (from === "hazir") setHazirList((p) => p.filter((x) => x.id !== order.id));
     const nextNo = "#" + String(gecmisList.length + 90).padStart(3, "0");
@@ -249,9 +423,14 @@ export default function IsletmeSiparislerPage() {
     showToast("❌ Sipariş iptal edildi.");
   }
 
-  function garsonAta(garson: Garson) {
-    if (!garsonModal) return;
+  async function garsonAta(garson: Garson) {
+    if (!garsonModal || !garson.id) return;
     const { order, from } = garsonModal;
+    const { error } = await supabase.from("siparisler").update({ garson_id: garson.id }).eq("id", order.id);
+    if (error) {
+      console.error("garsonAta error:", error);
+      return;
+    }
     const updater = (p: SiparisItem[]) => p.map((x) => x.id === order.id ? { ...x, garson } : x);
     if (from === "yeni") setYeniList(updater);
     if (from === "hazir") setHazirList(updater);
@@ -312,7 +491,7 @@ export default function IsletmeSiparislerPage() {
       <header style={{ background: "white", borderBottom: `1px solid ${GRAY200}`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Siparişler</h1>
-          <span style={{ fontSize: 11, color: GRAY400 }}>11 Mart 2026 • <span style={{ color: GREEN, fontWeight: 700 }}>● Canlı</span></span>
+          <span style={{ fontSize: 11, color: GRAY400 }}>{new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} • <span style={{ color: GREEN, fontWeight: 700 }}>● Canlı</span></span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={csvIndir} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>
@@ -335,7 +514,7 @@ export default function IsletmeSiparislerPage() {
             style={{ ...inputStyle, border: `1px solid ${filtreGarson ? TEAL : GRAY200}` }}
           >
             <option value="">Tüm Garsonlar</option>
-            {GARSONLAR.map((g) => <option key={g.name} value={g.name}>{g.name}</option>)}
+            {garsonlarList.map((g) => <option key={g.name} value={g.name}>{g.name}</option>)}
           </select>
           {(filtreGrup || filtreGarson) && (
             <button onClick={() => { setFiltreGrup(""); setFiltreGarson(""); }} style={{ padding: "7px 10px", borderRadius: 8, fontSize: 12, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY600, cursor: "pointer" }}>
@@ -346,6 +525,10 @@ export default function IsletmeSiparislerPage() {
       </header>
 
       <div style={{ padding: "20px 24px", flex: 1 }}>
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, color: GRAY400, fontSize: 14 }}>Yükleniyor…</div>
+        ) : (
+        <>
         {/* STATS */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 20 }}>
           {[
@@ -474,7 +657,7 @@ export default function IsletmeSiparislerPage() {
                 style={{ padding: "7px 12px", border: `1px solid ${gecmisGarson ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 12 }}
               >
                 <option value="">Tüm Garsonlar</option>
-                {GARSONLAR.map((g) => <option key={g.name} value={g.name}>{g.name}</option>)}
+                {garsonlarList.map((g) => <option key={g.name} value={g.name}>{g.name}</option>)}
               </select>
               <select
                 value={gecmisDurum}
@@ -529,6 +712,8 @@ export default function IsletmeSiparislerPage() {
               <div style={{ fontSize: 12, color: GRAY400 }}>{filteredGecmis.length} sipariş gösteriliyor</div>
             </div>
           </>
+        )}
+        </>
         )}
       </div>
 
@@ -642,7 +827,7 @@ export default function IsletmeSiparislerPage() {
               )}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {GARSONLAR.map((g) => {
+              {garsonlarList.map((g) => {
                 const isCurrent = garsonModal.order.garson?.name === g.name;
                 return (
                   <button
