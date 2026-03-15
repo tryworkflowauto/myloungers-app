@@ -61,7 +61,7 @@ type Personel = {
   photo?: string;
 };
 
-type SezlongOption = { id: string; label: string };
+type SezlongOption = { id: string; label: string; grupId: string; grupAd: string; renk: string | null };
 
 const PERSONEL_PHOTO_KEY = "personel_photo_";
 function getPhotoFromStorage(id: string): string | undefined {
@@ -291,7 +291,7 @@ export default function IsletmePersonelPage() {
     setSezlongLoading(true);
     supabase
       .from("sezlonglar")
-      .select("id, numara, sezlong_gruplari(ad)")
+      .select("id, numara, sezlong_gruplari(id, ad, renk)")
       .eq("tesis_id", tesisId)
       .order("numara", { ascending: true })
       .then(({ data, error }) => {
@@ -302,9 +302,11 @@ export default function IsletmePersonelPage() {
         }
         const list: SezlongOption[] = (data ?? []).map((s: any) => {
           const num = Number(s.numara ?? 0);
+          const grupId = String(s.sezlong_gruplari?.id ?? "");
           const grupAd = s.sezlong_gruplari?.ad?.trim() ?? "";
+          const renk = (s.sezlong_gruplari?.renk as string | undefined)?.trim() || null;
           const label = grupAd && num ? `${grupAd.charAt(0)}-${num}` : String(num || "");
-          return { id: String(s.id), label };
+          return { id: String(s.id), label, grupId, grupAd, renk };
         });
         setSezlongOptions(list);
         setSezlongLoading(false);
@@ -824,47 +826,81 @@ function PersonelForm({ form, setForm, photo, setPhoto, inputStyle, labelStyle, 
             ) : sezlongOptions.length === 0 ? (
               <div style={{ fontSize: 11, color: GRAY400 }}>Tanımlı şezlong bulunamadı.</div>
             ) : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {(f.sezlonglar
-                  ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
-                  : []
-                ).length === 0 && null}
-                {sezlongOptions.map((opt) => {
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {Array.from(
+                  sezlongOptions.reduce((map, opt) => {
+                    if (!opt.grupId) return map;
+                    if (!map.has(opt.grupId)) {
+                      map.set(opt.grupId, {
+                        grupId: opt.grupId,
+                        grupAd: opt.grupAd,
+                        renk: opt.renk,
+                        items: [] as SezlongOption[],
+                      });
+                    }
+                    map.get(opt.grupId)!.items.push(opt);
+                    return map;
+                  }, new Map<string, { grupId: string; grupAd: string; renk: string | null; items: SezlongOption[] }>())
+                ).map(([gid, group]) => {
                   const selectedValues = f.sezlonglar
                     ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
                     : [];
-                  const checked = selectedValues.includes(opt.label);
                   return (
-                    <label
-                      key={opt.id}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        fontSize: 11,
-                        padding: "4px 8px",
-                        borderRadius: 8,
-                        border: `1px solid ${checked ? TEAL : GRAY200}`,
-                        background: checked ? "rgba(10,186,181,0.06)" : "white",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          const current = f.sezlonglar
-                            ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
-                            : [];
-                          const next = e.target.checked
-                            ? [...current, opt.label]
-                            : current.filter((v) => v !== opt.label);
-                          set("sezlonglar", next.join(", "));
-                        }}
-                        style={{ position: "absolute", opacity: 0, width: 0, height: 0 }}
-                      />
-                      <span>{opt.label}</span>
-                    </label>
+                    <div key={gid} style={{ borderRadius: 8, background: GRAY50, padding: "8px 10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                        {group.renk && (
+                          <span
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              background: group.renk,
+                              display: "inline-block",
+                            }}
+                          />
+                        )}
+                        <span style={{ fontSize: 11, fontWeight: 700, color: NAVY }}>
+                          {group.grupAd || "Grup"}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {group.items.map((opt) => {
+                          const checked = selectedValues.includes(opt.label);
+                          return (
+                            <label
+                              key={opt.id}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                fontSize: 11,
+                                padding: "3px 7px",
+                                borderRadius: 8,
+                                border: `1px solid ${checked ? TEAL : GRAY200}`,
+                                background: checked ? "rgba(10,186,181,0.06)" : "white",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const current = f.sezlonglar
+                                    ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
+                                    : [];
+                                  const next = e.target.checked
+                                    ? [...current, opt.label]
+                                    : current.filter((v) => v !== opt.label);
+                                  set("sezlonglar", next.join(", "));
+                                }}
+                                style={{ position: "absolute", opacity: 0, width: 0, height: 0 }}
+                              />
+                              <span>{opt.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
