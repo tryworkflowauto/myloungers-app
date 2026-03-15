@@ -97,9 +97,9 @@ function rowToPersonel(row: { id: string; ad: string; telefon: string | null; ro
   const name = (row.ad ?? "").trim() || "—";
   const rol = (["mudur", "garson", "mutfak", "ozel"].includes(row.rol ?? "") ? row.rol : "garson") as RolType;
   const sezlongArr = Array.isArray(row.sezlonglar) ? row.sezlonglar : (Array.isArray((row.sezlonglar as any)?.value) ? (row.sezlonglar as any).value : []);
-  const sezlonglar = sezlongArr.length ? sezlongArr.filter((x): x is string => typeof x === "string") : null;
+  const sezlonglar = sezlongArr.length ? sezlongArr.filter((x: unknown): x is string => typeof x === "string") : null;
   const yetkilerArr = Array.isArray(row.yetkiler) ? row.yetkiler : (Array.isArray((row.yetkiler as any)?.value) ? (row.yetkiler as any).value : []);
-  const yetkiler = yetkilerArr.filter((x): x is string => typeof x === "string");
+  const yetkiler = yetkilerArr.filter((x: unknown): x is string => typeof x === "string");
   const yetkiKilitli = ALL_YETKI_NAMES.filter((n) => !yetkiler.includes(n)).map((n) => `${n} (Kilitli)`);
   const aktif = row.aktif !== false;
   const avatarBg = AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length];
