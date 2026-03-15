@@ -20,6 +20,15 @@ const YELLOW = "#F59E0B";
 const BLUE = "#3B82F6";
 const PURPLE = "#7C3AED";
 
+const AVATAR_GRADIENTS = [
+  "linear-gradient(135deg,#667eea,#764ba2)",
+  "linear-gradient(135deg,#f093fb,#f5576c)",
+  "linear-gradient(135deg,#4facfe,#00f2fe)",
+  "linear-gradient(135deg,#43e97b,#38f9d7)",
+  "linear-gradient(135deg,#fa709a,#fee140)",
+  "linear-gradient(135deg,#a18cd1,#fbc2eb)",
+];
+
 // ── Mock data ────────────────────────────────────────────────────────────────
 const GUNLUK_HAFTA = [
   { gun: "Pzt", teal: 60, orange: 28, tealVal: "₺18K", sezVal: 18000, sipVal: 8400 },
