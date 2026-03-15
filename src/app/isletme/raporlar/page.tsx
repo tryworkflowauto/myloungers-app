@@ -182,6 +182,35 @@ export default function IsletmeRaporlarPage() {
       });
   }, [tesisId]);
 
+  useEffect(() => {
+    if (!tesisId) { setBakiyeRows([]); return; }
+    supabase
+      .from("rezervasyonlar")
+      .select("id, musteri_adi, telefon, sezlong_id, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, bakiye_son_tarih, durum")
+      .eq("tesis_id", tesisId)
+      .gt("bakiye_yuklenen", 0)
+      .then(({ data, error }) => {
+        if (error || !data) { setBakiyeRows([]); return; }
+        setBakiyeRows(data.map((r) => ({
+          inits: (r.musteri_adi || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
+          name: r.musteri_adi || "",
+          sezlong: "",
+          avatarBg: "#6366f1",
+          yuklenen: r.bakiye_yuklenen ?? 0,
+          harcanan: r.bakiye_harcanan ?? 0,
+          kalan: r.bakiye_kalan ?? 0,
+          kalanColor: (r.bakiye_kalan ?? 0) <= 0 ? "#ef4444" : "#0ab5b5",
+          sonTarih: r.bakiye_son_tarih ?? "",
+          sonTarihWarn: r.bakiye_son_tarih ? new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) : false,
+          sonTarihGray: !r.bakiye_son_tarih,
+          durum: (r.bakiye_kalan ?? 0) <= 0 ? "bitti" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date() ? "suresi_gecti" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) ? "yaklasan" : "aktif")),
+          durumLabel: (r.bakiye_kalan ?? 0) <= 0 ? "Sona Erdi" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date() ? "Süresi Geçti" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) ? "Yaklaşan" : "Aktif")),
+          rowBg: null,
+          opacity: 1,
+        })));
+      });
+  }, [tesisId]);
+
   // ── Derived data ─────────────────────────────────────────────────────────
   // Bar chart data: tip GunlukItem[] olarak tanımlı; şu an boş.
   function getGunlukData(): GunlukItem[] {
