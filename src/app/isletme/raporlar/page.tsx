@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -101,6 +103,8 @@ type GarsonSort = "teslimat" | "sure" | "tip" | "puan";
 // ── Component ────────────────────────────────────────────────────────────────
 export default function IsletmeRaporlarPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
 
   const [activeTab, setActiveTab]     = useState<TabKey>("gelir");
   const [donemGelir, setDonemGelir]   = useState("hafta");
@@ -125,6 +129,10 @@ export default function IsletmeRaporlarPage() {
   // Ürün filter
   const [urunKat, setUrunKat] = useState("Tüm Kategoriler");
 
+  // Gelir stat verileri (Supabase)
+  const [sumRez, setSumRez] = useState(0);
+  const [sumSip, setSumSip] = useState(0);
+
   // ESC closes modals
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -134,6 +142,41 @@ export default function IsletmeRaporlarPage() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
+  // Supabase: rezervasyonlar + siparisler (toplamlar)
+  useEffect(() => {
+    if (!tesisId) {
+      setSumRez(0);
+      setSumSip(0);
+      return;
+    }
+    supabase
+      .from("rezervasyonlar")
+      .select("toplam_tutar")
+      .eq("tesis_id", tesisId)
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("rezervasyonlar sum error:", error);
+          setSumRez(0);
+          return;
+        }
+        const total = (data ?? []).reduce((acc: number, r: any) => acc + Number(r.toplam_tutar ?? 0), 0);
+        setSumRez(total);
+      });
+    supabase
+      .from("siparisler")
+      .select("toplam")
+      .eq("tesis_id", tesisId)
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("siparisler sum error:", error);
+          setSumSip(0);
+          return;
+        }
+        const total = (data ?? []).reduce((acc: number, r: any) => acc + Number(r.toplam ?? 0), 0);
+        setSumSip(total);
+      });
+  }, [tesisId]);
+
   // ── Derived data ─────────────────────────────────────────────────────────
   function getGunlukData() {
     if (donemGelir === "bugun") return GUNLUK_BUGUN;
@@ -142,7 +185,13 @@ export default function IsletmeRaporlarPage() {
     return GUNLUK_HAFTA;
   }
 
-  const donemStat = DONEM_STATS[donemGelir] ?? DONEM_STATS.hafta;
+  const donemStat = {
+    toplam: `₺${(sumRez + sumSip).toLocaleString("tr-TR")}`,
+    sezlong: `₺${sumRez.toLocaleString("tr-TR")}`,
+    siparis: `₺${sumSip.toLocaleString("tr-TR")}`,
+    sonaEren: "₺0",
+    change: "",
+  };
 
   const sortedGarsonlar = [...GARSON_ROWS].sort((a, b) => {
     const dir = garsonSortDir === "desc" ? -1 : 1;
