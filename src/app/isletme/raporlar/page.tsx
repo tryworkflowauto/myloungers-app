@@ -186,7 +186,7 @@ export default function IsletmeRaporlarPage() {
     if (!tesisId) { setBakiyeRows([]); return; }
     supabase
       .from("rezervasyonlar")
-      .select("id, musteri_adi, telefon, sezlong_id, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, bakiye_son_tarih, durum")
+      .select("id, musteri_adi, telefon, sezlong_id, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, bakiye_son_tarih, durum, sezlonglar(numara, sezlong_gruplari(ad))")
       .eq("tesis_id", tesisId)
       .gt("bakiye_yuklenen", 0)
       .then(({ data, error }) => {
@@ -194,7 +194,13 @@ export default function IsletmeRaporlarPage() {
         setBakiyeRows(data.map((r) => ({
           inits: (r.musteri_adi || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
           name: r.musteri_adi || "",
-          sezlong: "",
+          sezlong: (() => {
+            const num = (r as any).sezlonglar?.numara as number | undefined;
+            const grupAd = (r as any).sezlonglar?.sezlong_gruplari?.ad?.trim() as string | undefined;
+            if (num && grupAd) return `${grupAd.charAt(0)}-${num} • ${grupAd}`;
+            if (num) return String(num);
+            return "";
+          })(),
           avatarBg: "#6366f1",
           yuklenen: r.bakiye_yuklenen ?? 0,
           harcanan: r.bakiye_harcanan ?? 0,
@@ -230,6 +236,10 @@ export default function IsletmeRaporlarPage() {
     if (bakiyeDurum && r.durum !== bakiyeDurum) return false;
     return true;
   });
+
+  const riskRows = bakiyeRows.filter((r) => r.durum === "yaklasan" || r.durum === "suresi_gecti");
+  const riskCount = riskRows.length;
+  const riskTotal = riskRows.reduce((sum, r) => sum + Number(r.kalan ?? 0), 0);
 
   const sortedGarsonlar = [...GARSON_ROWS].sort((a, b) => {
     const dir = garsonSortDir === "desc" ? -1 : 1;
@@ -491,8 +501,12 @@ export default function IsletmeRaporlarPage() {
             <div style={{ background: "#FFFBEB", border: "1.5px solid #FCD34D", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ fontSize: 24 }}>⚠️</div>
               <div style={{ flex: 1 }}>
-                <strong style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#92400E" }}>5 müşterinin bakiyesi 5 gün içinde sona eriyor</strong>
-                <span style={{ fontSize: 11, color: "#B45309" }}>Otomatik hatırlatma bildirimi gönderildi • Toplam ₺3.840 işletmeye geçecek</span>
+                <strong style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#92400E" }}>
+                  {riskCount} müşterinin bakiyesi riskli durumda
+                </strong>
+                <span style={{ fontSize: 11, color: "#B45309" }}>
+                  Toplam risk: ₺{riskTotal.toLocaleString("tr-TR")}
+                </span>
               </div>
               <button style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Bildirimleri Gör</button>
             </div>
