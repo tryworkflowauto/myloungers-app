@@ -243,11 +243,48 @@ export default function IsletmeRaporlarPage() {
   // ── Stat card detail builders ─────────────────────────────────────────────
   function openStatDetay(idx: number) {
     const s = donemStat;
+    const sumRezText = `₺${sumRez.toLocaleString("tr-TR")}`;
+    const sumSipText = `₺${sumSip.toLocaleString("tr-TR")}`;
     const items: Record<number, { label: string; val: string; items: { k: string; v: string }[] }> = {
-      0: { label: "Toplam Gelir", val: s.toplam, items: [{ k: "Şezlong", v: s.sezlong }, { k: "Sipariş", v: s.siparis }, { k: "Sona Eren Bakiye", v: s.sonaEren }, { k: "Değişim", v: s.change }] },
-      1: { label: "Şezlong Geliri", val: s.sezlong, items: [{ k: "Gold", v: "₺28.400" }, { k: "VIP", v: "₺52.600" }, { k: "İskele", v: "₺31.200" }, { k: "Silver", v: "₺36.200" }, { k: "Toplam gelirin payı", v: "%60" }] },
-      2: { label: "Sipariş Geliri", val: s.siparis, items: [{ k: "İçecekler", v: "₺31.500" }, { k: "Ana Yemekler", v: "₺14.700" }, { k: "Atıştırmalık", v: "₺6.240" }, { k: "Toplam gelirin payı", v: "%35" }] },
-      3: { label: "Sona Eren Bakiye", val: s.sonaEren, items: [{ k: "Sona eren müşteri", v: "1" }, { k: "Yakın sona erecek (5 gün)", v: "2" }, { k: "Toplam risk", v: "₺3.840" }, { k: "İşletmeye geçen", v: s.sonaEren }] },
+      // Toplam Gelir
+      0: {
+        label: "Toplam Gelir",
+        val: s.toplam,
+        items: [
+          { k: "Şezlong Geliri", v: sumRezText },
+          { k: "Sipariş Geliri", v: sumSipText },
+          { k: "Sona Eren Bakiye", v: "₺0" },
+        ],
+      },
+      // Şezlong Geliri
+      1: {
+        label: "Şezlong Geliri",
+        val: s.sezlong,
+        items: [
+          { k: "Toplam Şezlong Geliri", v: sumRezText },
+          { k: "Grup detayı", v: "Yakında" },
+        ],
+      },
+      // Sipariş Geliri
+      2: {
+        label: "Sipariş Geliri",
+        val: s.siparis,
+        items: [
+          { k: "Toplam Sipariş Geliri", v: sumSipText },
+          { k: "Kategori detayı", v: "Yakında" },
+        ],
+      },
+      // Sona Eren Bakiye (şimdilik mock 0)
+      3: {
+        label: "Sona Eren Bakiye",
+        val: s.sonaEren,
+        items: [
+          { k: "Sona eren müşteri", v: "0" },
+          { k: "Yakın sona erecek (5 gün)", v: "0" },
+          { k: "Toplam risk", v: "₺0" },
+          { k: "İşletmeye geçen", v: s.sonaEren },
+        ],
+      },
     };
     setStatDetay(items[idx]);
   }
