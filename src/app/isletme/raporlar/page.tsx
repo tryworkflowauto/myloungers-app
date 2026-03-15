@@ -541,7 +541,7 @@ export default function IsletmeRaporlarPage() {
                     val: `₺${riskTotal.toLocaleString("tr-TR")}`,
                     items: riskRows.map((r) => ({
                       k: r.name,
-                      v: `Kalan: ₺${Number(r.kalan ?? 0).toLocaleString("tr-TR")} • Son: ${r.sonTarih || "-"}`,
+                      v: `Kalan: ₺${Number(r.kalanSayi ?? 0).toLocaleString("tr-TR")} • Son: ${r.sonTarih || "-"}`,
                     })),
                   });
                 }}
