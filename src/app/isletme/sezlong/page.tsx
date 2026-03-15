@@ -28,6 +28,7 @@ type GrupRow = {
   bos: number;
   fiyat: string;
   doluluk: string;
+  aciklama?: string;
 };
 
 // Harita bloğu + şezlong listesi (key = grup id)
@@ -226,7 +227,7 @@ export default function IsletmeSezlongPage() {
   const [seciliRenk, setSeciliRenk] = useState("#0ABAB5");
   const [grupEkleForm, setGrupEkleForm] = useState({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "" });
   const [duzenleModal, setDuzenleModal] = useState<GrupRow | null>(null);
-  const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "" });
+  const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "", aciklama: "" });
   const [silModal, setSilModal] = useState<GrupRow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [cikisModal, setCikisModal] = useState(false);
@@ -251,11 +252,11 @@ export default function IsletmeSezlongPage() {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat").eq("tesis_id", tesisId),
+      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, aciklama").eq("tesis_id", tesisId),
       supabase.from("sezlonglar").select("id, grup_id, numara, durum").eq("tesis_id", tesisId),
     ]).then(([gRes, sRes]) => {
       if (cancelled) return;
-      const grupRows = (gRes.data ?? []) as { id: string; ad: string; renk: string; kapasite: number; fiyat: number | null }[];
+      const grupRows = (gRes.data ?? []) as { id: string; ad: string; renk: string; kapasite: number; fiyat: number | null; aciklama?: string | null }[];
       const sezRows = (sRes.data ?? []) as { id: string; grup_id: string; numara: number; durum: string }[];
       const byGrup = new Map<string, typeof sezRows>();
       for (const s of sezRows) {
@@ -279,6 +280,7 @@ export default function IsletmeSezlongPage() {
         const dolulukPct = cap > 0 ? Math.round((dolu / cap) * 100) : 0;
         const prefix = g.ad.charAt(0).toUpperCase();
         const fiyatNum = Number(g.fiyat) || 0;
+        const aciklama = (g as { aciklama?: string | null }).aciklama?.trim() || "";
         grList.push({
           id: g.id,
           name: g.ad,
@@ -288,6 +290,7 @@ export default function IsletmeSezlongPage() {
           bos,
           fiyat: fiyatNum ? `₺${fiyatNum.toLocaleString("tr")}` : "—",
           doluluk: `${dolulukPct}%`,
+          aciklama: aciklama || undefined,
         });
         harita[g.id] = {
           id: g.id,
@@ -296,7 +299,7 @@ export default function IsletmeSezlongPage() {
           color: g.renk || TEAL,
           durumlar: list.map((s) => ({ id: s.id, numara: s.numara, durum: s.durum || "bos" })),
           title: g.ad,
-          sub: g.ad,
+          sub: aciklama || g.ad,
           icon: grupIcon(g.ad),
           gradient: grupGradient(g.renk || TEAL),
           dolulukYuzde: `${dolulukPct}% Dolu`,
@@ -335,29 +338,31 @@ export default function IsletmeSezlongPage() {
   const toplamBos = gruplar.reduce((a, g) => a + g.bos, 0);
 
   function openDuzenle(g: GrupRow) {
-    setDuzenleForm({ name: g.name, count: String(g.count), color: g.color, fiyat: g.fiyat });
+    setDuzenleForm({ name: g.name, count: String(g.count), color: g.color, fiyat: g.fiyat, aciklama: g.aciklama ?? "" });
     setDuzenleModal(g);
   }
 
   async function saveDuzenle() {
     if (!duzenleModal) return;
     const fiyatNum = duzenleForm.fiyat.replace(/[^\d]/g, "") || "0";
+    const aciklamaVal = duzenleForm.aciklama?.trim() || null;
     const { error } = await supabase
       .from("sezlong_gruplari")
-      .update({ ad: duzenleForm.name, renk: duzenleForm.color, fiyat: Number(fiyatNum) })
+      .update({ ad: duzenleForm.name, renk: duzenleForm.color, fiyat: Number(fiyatNum), aciklama: aciklamaVal })
       .eq("id", duzenleModal.id);
     if (error) { showToast("❌ Güncellenemedi"); return; }
+    const subDisplay = aciklamaVal || duzenleForm.name;
     setGruplar((prev) =>
       prev.map((g) =>
         g.id === duzenleModal.id
-          ? { ...g, name: duzenleForm.name, color: duzenleForm.color, fiyat: duzenleForm.fiyat }
+          ? { ...g, name: duzenleForm.name, color: duzenleForm.color, fiyat: duzenleForm.fiyat, aciklama: aciklamaVal ?? undefined }
           : g
       )
     );
     setHaritaGruplari((prev) => {
       const h = prev[duzenleModal.id];
       if (!h) return prev;
-      return { ...prev, [duzenleModal.id]: { ...h, title: duzenleForm.name, sub: duzenleForm.name, color: duzenleForm.color, gradient: grupGradient(duzenleForm.color) } };
+      return { ...prev, [duzenleModal.id]: { ...h, title: duzenleForm.name, sub: subDisplay, color: duzenleForm.color, gradient: grupGradient(duzenleForm.color) } };
     });
     showToast("✅ Grup güncellendi");
     setDuzenleModal(null);
@@ -445,9 +450,10 @@ export default function IsletmeSezlongPage() {
   async function handleGrupEkle() {
     if (!tesisId || !grupEkleForm.ad.trim()) return;
     const kapasite = Math.max(1, Math.min(200, Number(grupEkleForm.kapasite) || 10));
+    const aciklamaInsert = grupEkleForm.aciklama?.trim() || null;
     const { data: grup, error: gErr } = await supabase
       .from("sezlong_gruplari")
-      .insert({ tesis_id: tesisId, ad: grupEkleForm.ad.trim(), renk: grupEkleForm.renk || TEAL, kapasite, fiyat: Number(grupEkleForm.fiyat) || 0 })
+      .insert({ tesis_id: tesisId, ad: grupEkleForm.ad.trim(), renk: grupEkleForm.renk || TEAL, kapasite, fiyat: Number(grupEkleForm.fiyat) || 0, aciklama: aciklamaInsert })
       .select("id, ad, renk, kapasite, fiyat")
       .single();
     if (gErr || !grup) {
@@ -473,7 +479,7 @@ export default function IsletmeSezlongPage() {
         color: g.renk || TEAL,
         durumlar,
         title: g.ad,
-        sub: g.ad,
+        sub: aciklamaInsert || g.ad,
         icon: grupIcon(g.ad),
         gradient: grupGradient(g.renk || TEAL),
         dolulukYuzde: "0% Dolu",
@@ -884,7 +890,7 @@ export default function IsletmeSezlongPage() {
                       }}
                     >
                       <strong style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>
-                        {g.icon} {g.title} — {g.sub}
+                        {g.icon} {g.title}{g.sub && g.sub !== g.title ? ` — ${g.sub}` : ""}
                       </strong>
                       <span style={{ fontSize: 11, opacity: 0.8 }}>{g.count} şezlong</span>
                       <span
@@ -1518,6 +1524,16 @@ export default function IsletmeSezlongPage() {
                   value={duzenleForm.fiyat}
                   onChange={(e) => setDuzenleForm((f) => ({ ...f, fiyat: e.target.value }))}
                   placeholder="₺1.000"
+                  style={{ width: "100%", padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Konum / Açıklama</label>
+                <input
+                  type="text"
+                  value={duzenleForm.aciklama}
+                  onChange={(e) => setDuzenleForm((f) => ({ ...f, aciklama: e.target.value }))}
+                  placeholder="örn: Denize sıfır, 1. Sıra..."
                   style={{ width: "100%", padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
                 />
               </div>
