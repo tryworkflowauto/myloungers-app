@@ -136,6 +136,8 @@ export default function IsletmeMenuPage() {
   const [editModal, setEditModal] = useState<Urun | null>(null);
   const [silModal, setSilModal] = useState<Urun | null>(null);
   const [catModalOpen, setCatModalOpen] = useState(false);
+  const [editCatModal, setEditCatModal] = useState<KategoriItem | null>(null);
+  const [hoveredCatId, setHoveredCatId] = useState<string | null>(null);
   const [onizlemeOpen, setOnizlemeOpen] = useState(false);
 
   // Forms
@@ -164,7 +166,7 @@ export default function IsletmeMenuPage() {
       if (e.key === "Escape") {
         if (lightbox) { setLightbox(null); return; }
         setUrunModalOpen(false); setEditModal(null);
-        setSilModal(null); setCatModalOpen(false); setOnizlemeOpen(false);
+        setSilModal(null); setCatModalOpen(false); setEditCatModal(null); setOnizlemeOpen(false);
         return;
       }
       if (lightbox && lightbox.urun.photos) {
@@ -363,6 +365,34 @@ export default function IsletmeMenuPage() {
     showToast(`✅ "${catForm.name}" kategorisi eklendi`);
   }
 
+  async function updateKategori() {
+    if (!editCatModal || !catForm.name) return;
+    const { error } = await supabase.from("menu_kategorileri").update({ ad: catForm.name, icon: catForm.icon }).eq("id", editCatModal.id);
+    if (error) {
+      console.error("updateKategori error:", error);
+      return;
+    }
+    setKategoriler((prev) => prev.map((k) => (k.id === editCatModal.id ? { ...k, name: catForm.name, icon: catForm.icon } : k)));
+    setEditCatModal(null);
+    setCatForm(emptyCatForm);
+    showToast(`✅ "${catForm.name}" kategorisi güncellendi`);
+  }
+
+  async function deleteKategori(kat: KategoriItem) {
+    if (kat.id === "tumu") return;
+    if (!window.confirm(`"${kat.name}" kategorisini silmek istediğinize emin misiniz? İçindeki ürünler kategorisiz kalacaktır.`)) return;
+    const { error } = await supabase.from("menu_kategorileri").delete().eq("id", kat.id);
+    if (error) {
+      console.error("deleteKategori error:", error);
+      showToast("Kategori silinirken hata oluştu.");
+      return;
+    }
+    setKategoriler((prev) => prev.filter((k) => k.id !== kat.id));
+    setUrunler((prev) => prev.map((u) => (u.kategori === kat.id ? { ...u, kategori: "" } : u)));
+    if (seciliKat === kat.id) setSeciliKat("tumu");
+    showToast(`🗑️ "${kat.name}" kategorisi silindi`);
+  }
+
   // ── Filtering & Sorting ────────────────────────────────────────────────
   const filtered = urunler
     .filter((u) => {
@@ -430,15 +460,24 @@ export default function IsletmeMenuPage() {
             {kategoriler.map((k) => (
               <div
                 key={k.id}
+                onMouseEnter={() => setHoveredCatId(k.id)}
+                onMouseLeave={() => setHoveredCatId(null)}
                 onClick={() => setSeciliKat(k.id)}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, cursor: "pointer", transition: "all 0.15s", background: seciliKat === k.id ? "rgba(10,186,181,0.1)" : "transparent", border: seciliKat === k.id ? "1.5px solid rgba(10,186,181,0.3)" : "1.5px solid transparent" }}
               >
                 <div style={{ fontSize: 18, width: 28, textAlign: "center" }}>{k.icon}</div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: NAVY }}>{k.name}</strong>
                   <span style={{ fontSize: 10, color: GRAY400 }}>{katCounts[k.id] ?? 0} ürün</span>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: TEAL }}>{katCounts[k.id] ?? 0}</span>
+                {k.id !== "tumu" && hoveredCatId === k.id ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                    <button type="button" title="Düzenle" onClick={() => { setCatForm({ name: k.name, icon: k.icon }); setEditCatModal(k); }} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: GRAY100, color: GRAY800, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✏️</button>
+                    <button type="button" title="Sil" onClick={() => deleteKategori(k)} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#FEE2E2", color: RED, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: TEAL }}>{katCounts[k.id] ?? 0}</span>
+                )}
               </div>
             ))}
           </div>
@@ -550,6 +589,34 @@ export default function IsletmeMenuPage() {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
               <button onClick={() => setCatModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
               <button onClick={saveKategori} disabled={!catForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !catForm.name ? GRAY200 : TEAL, color: !catForm.name ? GRAY400 : "white", cursor: !catForm.name ? "not-allowed" : "pointer" }}>✅ Ekle</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── KATEGORİ DÜZENLE MODAL ────────────────────────────────────────── */}
+      {editCatModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setEditCatModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, padding: 24, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>✏️ Kategori Düzenle</h3>
+              <button onClick={() => setEditCatModal(null)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Kategori İkonu</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {EMOJI_OPTS_KAT.map((e) => (
+                  <button key={e} type="button" onClick={() => setCatForm((f) => ({ ...f, icon: e }))} style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${catForm.icon === e ? TEAL : GRAY200}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer", background: catForm.icon === e ? "rgba(10,186,181,0.1)" : "transparent" }}>{e}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Kategori Adı *</label>
+              <input type="text" value={catForm.name} onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))} placeholder="örn: Smoothieler" style={inputStyle} />
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
+              <button onClick={() => setEditCatModal(null)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={updateKategori} disabled={!catForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !catForm.name ? GRAY200 : TEAL, color: !catForm.name ? GRAY400 : "white", cursor: !catForm.name ? "not-allowed" : "pointer" }}>💾 Kaydet</button>
             </div>
           </div>
         </div>
