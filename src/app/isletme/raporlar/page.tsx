@@ -102,7 +102,7 @@ type GunlukItem = {
   teal: number;
   orange: number;
   tealVal: string;
-  sipVal: number | string;
+  sipVal: number;
   sezVal: number;
   isToday: boolean;
   label?: string;
@@ -229,7 +229,7 @@ export default function IsletmeRaporlarPage() {
     let rows: string[][] = [];
     let filename = "rapor.csv";
     if (activeTab === "gelir") {
-      rows = [["Gün/Dönem", "Şezlong Geliri", "Sipariş Geliri"], ...getGunlukData().map((g: { gun: string; sezVal: number; sipVal: number }) => [g.gun, `₺${g.sezVal}`, `₺${g.sipVal}`])];
+      rows = [["Gün/Dönem", "Şezlong Geliri", "Sipariş Geliri"], ...getGunlukData().map((g: GunlukItem) => [g.gun, `₺${g.sezVal}`, `₺${String(g.sipVal)}`])];
       filename = "gelir-raporu.csv";
     } else if (activeTab === "bakiye") {
       rows = [["Müşteri", "Şezlong", "Yüklenen", "Harcanan", "Kalan", "Son Tarih", "Durum"], ...BAKIYE_ROWS.map((r) => [r.name, r.sezlong, r.yuklenen, r.harcanan, r.kalan, r.sonTarih, r.durumLabel])];
