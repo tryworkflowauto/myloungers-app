@@ -238,7 +238,7 @@ export default function IsletmeRaporlarPage() {
             rowBg: null,
             opacity: 1,
           };
-        })));
+        }));
       });
   }, [tesisId]);
 
