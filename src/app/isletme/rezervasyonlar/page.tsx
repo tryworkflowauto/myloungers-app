@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -53,78 +55,97 @@ type Rezervasyon = {
   };
 };
 
-const MOCK_REZERVASYONLAR: Rezervasyon[] = [
-  {
-    id: "R001", no: "#001", musteri: "Ahmet Yılmaz", telefon: "0532 111 22 33",
-    avatarColor: "linear-gradient(135deg,#0ABAB5,#0A1628)", avatarInits: "AY",
-    sezlong: "S-12", sezlongSub: "Silver • 1 şezlong",
-    tarih: "11 Mar 2026", tarihISO: "2026-03-11", tarihSub: "09:45 — Aktif",
-    tip: "on", tipLabel: "💰 Ön Ödemeli",
-    tutar: "₺1.000", tutarSub: "Bakiye: ₺640", tutarColor: NAVY,
-    status: "aktif", statusLabel: "● Aktif", disabled: false,
-    drawerData: { email: "ahmet@gmail.com", sezlong: "S-12 (Silver)", giris: "09:45", sure: "3s 42dk", yuklenen: "₺1.000", harcanan: "-₺360", bakiyePct: 64, kalan: "₺640", sonTarih: "10 Nisan 2026", siparisler: [{ no: "S12", urun: "2x Mojito, 1x Limonata", saat: "10:15 • İletildi ✓", tutar: "₺180" }, { no: "S12", urun: "1x Tavuk Şiş, 1x Salata", saat: "12:30 • İletildi ✓", tutar: "₺120" }, { no: "S12", urun: "2x Soğuk Kahve", saat: "13:20 • Hazırlanıyor...", tutar: "₺60" }] },
+const GRUP_COLORS: Record<string, string> = {
+  Silver: "linear-gradient(135deg,#0ABAB5,#0A1628)",
+  VIP: "linear-gradient(135deg,#F5821F,#0A1628)",
+  İskele: "linear-gradient(135deg,#F59E0B,#0A1628)",
+  Gold: "linear-gradient(135deg,#8B5CF6,#0A1628)",
+};
+
+function durumToStatus(durum: string | null): { status: string; statusLabel: string; disabled: boolean } {
+  const d = (durum ?? "").toLowerCase();
+  if (d === "iptal" || d === "cancel" || d === "cancelled")
+    return { status: "iptal", statusLabel: "✖ İptal", disabled: true };
+  if (d === "tamamlandi" || d === "tamamlandı")
+    return { status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false };
+  if (d === "aktif")
+    return { status: "aktif", statusLabel: "● Aktif", disabled: false };
+  if (d === "rezerve")
+    return { status: "rezerve", statusLabel: "◔ Yaklaşan", disabled: false };
+  return { status: "bekliyor", statusLabel: "◷ Bekliyor", disabled: false };
+}
+
+function mapRowToRezervasyon(
+  r: {
+    id: string | number;
+    musteri_adi?: string | null;
+    telefon?: string | null;
+    kullanicilar?: { ad?: string | null } | null;
+    baslangic_tarih: string | null;
+    bitis_tarih: string | null;
+    kisi_sayisi?: number | null;
+    toplam_tutar?: number | null;
+    durum?: string | null;
   },
-  {
-    id: "R002", no: "#002", musteri: "Fatma Demir", telefon: "0533 222 33 44",
-    avatarColor: "linear-gradient(135deg,#F5821F,#0A1628)", avatarInits: "FD",
-    sezlong: "V-3, V-4", sezlongSub: "VIP • 2 şezlong",
-    tarih: "11 Mar 2026", tarihISO: "2026-03-11", tarihSub: "11:15 — Aktif",
-    tip: "on", tipLabel: "💰 Ön Ödemeli",
-    tutar: "₺3.000", tutarSub: "Bakiye: ₺2.150", tutarColor: NAVY,
-    status: "aktif", statusLabel: "● Aktif", disabled: false,
-    drawerData: { email: "fatma@gmail.com", sezlong: "V-3, V-4 (VIP)", giris: "11:15", sure: "2s 10dk", yuklenen: "₺3.000", harcanan: "-₺850", bakiyePct: 72, kalan: "₺2.150", sonTarih: "10 Nisan 2026", siparisler: [] },
-  },
-  {
-    id: "R003", no: "#003", musteri: "Mehmet Kaya", telefon: "0535 333 44 55",
-    avatarColor: "linear-gradient(135deg,#10B981,#0A1628)", avatarInits: "MK",
-    sezlong: "G-1", sezlongSub: "Gold • 1 şezlong",
-    tarih: "11 Mar 2026", tarihISO: "2026-03-11", tarihSub: "09:00 — Çıktı",
-    tip: "sezlong", tipLabel: "🏖️ Sadece Sezlong",
-    tutar: "₺2.000", tutarSub: "Tamamlandı", tutarColor: NAVY,
-    status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false,
-    drawerData: { email: "mehmet@gmail.com", sezlong: "G-1 (Gold)", giris: "09:00", sure: "4s 0dk", yuklenen: "—", harcanan: "—", bakiyePct: 0, kalan: "—", sonTarih: "", siparisler: [] },
-  },
-  {
-    id: "R004", no: "#004", musteri: "Zeynep Arslan", telefon: "0536 444 55 66",
-    avatarColor: "linear-gradient(135deg,#8B5CF6,#0A1628)", avatarInits: "ZA",
-    sezlong: "İ-5, İ-6", sezlongSub: "İskele • 2 şezlong",
-    tarih: "11 Mar 2026", tarihISO: "2026-03-11", tarihSub: "14:00 — Bekleniyor",
-    tip: "on", tipLabel: "💰 Ön Ödemeli",
-    tutar: "₺2.500", tutarSub: "Bakiye: ₺2.500", tutarColor: NAVY,
-    status: "rezerve", statusLabel: "◔ Yaklaşan", disabled: false,
-    drawerData: { email: "zeynep@gmail.com", sezlong: "İ-5, İ-6 (İskele)", giris: "14:00", sure: "—", yuklenen: "₺2.500", harcanan: "₺0", bakiyePct: 100, kalan: "₺2.500", sonTarih: "10 Nisan 2026", siparisler: [] },
-  },
-  {
-    id: "R005", no: "#005", musteri: "Ali Koç", telefon: "0537 555 66 77",
-    avatarColor: "linear-gradient(135deg,#EF4444,#0A1628)", avatarInits: "AK",
-    sezlong: "S-22", sezlongSub: "Silver • 1 şezlong",
-    tarih: "10 Mar 2026", tarihISO: "2026-03-10", tarihSub: "İptal edildi",
-    tip: "sezlong", tipLabel: "🏖️ Sadece Sezlong",
-    tutar: "₺1.000", tutarSub: "İade edildi", tutarColor: RED,
-    status: "iptal", statusLabel: "✖ İptal", disabled: true,
-    drawerData: { email: "ali@gmail.com", sezlong: "S-22 (Silver)", giris: "—", sure: "—", yuklenen: "—", harcanan: "—", bakiyePct: 0, kalan: "—", sonTarih: "", siparisler: [] },
-  },
-  {
-    id: "R006", no: "#006", musteri: "Selin Erdoğan", telefon: "0538 666 77 88",
-    avatarColor: "linear-gradient(135deg,#F59E0B,#0A1628)", avatarInits: "SE",
-    sezlong: "V-8, V-9, V-10", sezlongSub: "VIP • 3 şezlong (Grup)",
-    tarih: "11 Mar 2026", tarihISO: "2026-03-11", tarihSub: "10:30 — Aktif",
-    tip: "on", tipLabel: "💰 Ön Ödemeli",
-    tutar: "₺4.500", tutarSub: "Bakiye: ₺3.200", tutarColor: NAVY,
-    status: "aktif", statusLabel: "● Aktif", disabled: false,
-    drawerData: { email: "selin@gmail.com", sezlong: "V-8, V-9, V-10 (VIP)", giris: "10:30", sure: "2s 15dk", yuklenen: "₺4.500", harcanan: "-₺1.300", bakiyePct: 71, kalan: "₺3.200", sonTarih: "10 Nisan 2026", siparisler: [] },
-  },
-  {
-    id: "R007", no: "#007", musteri: "Burak Taş", telefon: "0539 777 88 99",
-    avatarColor: "linear-gradient(135deg,#3B82F6,#0A1628)", avatarInits: "BT",
-    sezlong: "S-33", sezlongSub: "Silver • 1 şezlong",
-    tarih: "12 Mar 2026", tarihISO: "2026-03-12", tarihSub: "11:00 — Yarın",
-    tip: "on", tipLabel: "💰 Ön Ödemeli",
-    tutar: "₺1.000", tutarSub: "Bakiye: ₺1.000", tutarColor: NAVY,
-    status: "bekliyor", statusLabel: "◷ Bekliyor", disabled: false,
-    drawerData: { email: "burak@gmail.com", sezlong: "S-33 (Silver)", giris: "11:00", sure: "—", yuklenen: "₺1.000", harcanan: "₺0", bakiyePct: 100, kalan: "₺1.000", sonTarih: "10 Nisan 2026", siparisler: [] },
-  },
-];
+  index: number
+): Rezervasyon {
+  const idStr = String(r.id);
+  const musteri = r.musteri_adi?.trim() || (r.kullanicilar as { ad?: string } | null)?.ad?.trim() || "Misafir";
+  const telefon = r.telefon?.trim() || "—";
+  const inits = musteri !== "Misafir" ? musteri.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") : "??";
+  const startStr = r.baslangic_tarih ?? "";
+  const endStr = r.bitis_tarih ?? "";
+  const start = startStr ? new Date(startStr) : null;
+  const tarih = start ? start.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const tarihISO = startStr.slice(0, 10) || "";
+  const saatPart = start ? start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "";
+  const { status, statusLabel, disabled } = durumToStatus(r.durum ?? null);
+  const tutarNum = Number(r.toplam_tutar ?? 0);
+  const tutar = `₺${tutarNum.toLocaleString("tr-TR")}`;
+  let tarihSub = saatPart ? `${saatPart} — ${statusLabel.replace(/^[●◔◷✓✖]\s*/, "")}` : (disabled ? "İptal edildi" : "—");
+  let tutarSub = "Yeni";
+  let tutarColor = NAVY;
+  if (disabled) {
+    tutarSub = "İade edildi";
+    tutarColor = RED;
+  } else if (status === "tamamlandi") tutarSub = "Tamamlandı";
+  else if (status === "aktif" || status === "rezerve" || status === "bekliyor") tutarSub = `Bakiye: ${tutar}`;
+
+  const kisi = r.kisi_sayisi ?? 1;
+  return {
+    id: idStr,
+    no: "#" + String(index + 1).padStart(3, "0"),
+    musteri,
+    telefon,
+    avatarColor: Object.values(GRUP_COLORS)[index % 4] ?? GRUP_COLORS.Silver,
+    avatarInits: inits || "??",
+    sezlong: "—",
+    sezlongSub: `${kisi} Kişi`,
+    tarih,
+    tarihISO,
+    tarihSub,
+    tip: "on",
+    tipLabel: "💰 Ön Ödemeli",
+    tutar,
+    tutarSub,
+    tutarColor,
+    status,
+    statusLabel,
+    disabled,
+    drawerData: {
+      email: "",
+      sezlong: "—",
+      giris: saatPart || "—",
+      sure: "—",
+      yuklenen: tutar,
+      harcanan: "—",
+      bakiyePct: 100,
+      kalan: tutar,
+      sonTarih: endStr ? new Date(endStr).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : "",
+      siparisler: [],
+    },
+  };
+}
 
 const TABS = [
   { key: "tumu", label: "Tümü" },
@@ -145,7 +166,11 @@ const emptyEditForm = {
 };
 
 export default function IsletmeRezervasyonlarPage() {
-  const [rezervasyonlar, setRezervasyonlar] = useState<Rezervasyon[]>(MOCK_REZERVASYONLAR);
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
+  const [rezervasyonlar, setRezervasyonlar] = useState<Rezervasyon[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Drawer (detail view)
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -187,6 +212,34 @@ export default function IsletmeRezervasyonlarPage() {
 
   // Reset page when filters change
   useEffect(() => { setSayfa(1); }, [aramaMetni, filtreTarih, filtreGrup, filtreTip, filtreDurum, activeTab]);
+
+  // Supabase: tesis_id ile rezervasyonları çek
+  useEffect(() => {
+    if (!tesisId) {
+      setRezervasyonlar([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    supabase
+      .from("rezervasyonlar")
+      .select("id, tesis_id, kullanici_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, kullanicilar(ad)")
+      .eq("tesis_id", tesisId)
+      .order("baslangic_tarih", { ascending: false })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("Rezervasyonlar fetch error:", error);
+          setRezervasyonlar([]);
+        } else {
+          const list = (data ?? []).map((r: any, i: number) => mapRowToRezervasyon(r, i));
+          setRezervasyonlar(list);
+        }
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [tesisId]);
 
   // ── FILTERING ──────────────────────────────────────────────────────────────
   const filtrelenmis = rezervasyonlar.filter((r) => {
@@ -252,8 +305,24 @@ export default function IsletmeRezervasyonlarPage() {
     setEditModal(r);
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!editModal) return;
+    const baslangicStr = editForm.tarih && editForm.saat
+      ? `${editForm.tarih}T${editForm.saat.padEnd(5, "0")}:00`
+      : undefined;
+    const bitisStr = editForm.tarih ? `${editForm.tarih}T23:59:59` : undefined;
+    const payload: Record<string, unknown> = {};
+    if (baslangicStr) payload.baslangic_tarih = baslangicStr;
+    if (bitisStr) payload.bitis_tarih = bitisStr;
+    payload.kisi_sayisi = parseInt(editForm.kisiSayisi, 10) || 2;
+    const { error } = await supabase
+      .from("rezervasyonlar")
+      .update(payload as any)
+      .eq("id", editModal.id);
+    if (error) {
+      console.error("Rezervasyon update error:", error);
+      return;
+    }
     setRezervasyonlar((prev) =>
       prev.map((r) =>
         r.id === editModal.id
@@ -271,8 +340,16 @@ export default function IsletmeRezervasyonlarPage() {
     setEditModal(null);
   }
 
-  function iptalEt() {
+  async function iptalEt() {
     if (!iptalModal) return;
+    const { error } = await supabase
+      .from("rezervasyonlar")
+      .update({ durum: "iptal" })
+      .eq("id", iptalModal.id);
+    if (error) {
+      console.error("Rezervasyon iptal error:", error);
+      return;
+    }
     setRezervasyonlar((prev) =>
       prev.map((r) =>
         r.id === iptalModal.id
@@ -283,37 +360,31 @@ export default function IsletmeRezervasyonlarPage() {
     setIptalModal(null);
   }
 
-  function saveYeni() {
-    const newId = "R" + String(rezervasyonlar.length + 1).padStart(3, "0");
-    const grupColors: Record<string, string> = {
-      Silver: "linear-gradient(135deg,#0ABAB5,#0A1628)",
-      VIP: "linear-gradient(135deg,#F5821F,#0A1628)",
-      İskele: "linear-gradient(135deg,#F59E0B,#0A1628)",
-      Gold: "linear-gradient(135deg,#8B5CF6,#0A1628)",
+  async function saveYeni() {
+    if (!tesisId) return;
+    const baslangicStr = `${yeniForm.tarih}T${(yeniForm.saat || "09:00").padEnd(5, "0")}:00`;
+    const bitisStr = `${yeniForm.tarih}T23:59:59`;
+    const payload: Record<string, unknown> = {
+      tesis_id: tesisId,
+      baslangic_tarih: baslangicStr,
+      bitis_tarih: bitisStr,
+      kisi_sayisi: parseInt(yeniForm.kisiSayisi, 10) || 2,
+      toplam_tutar: 0,
+      durum: "bekliyor",
     };
-    const inits = yeniForm.musteriAdi.trim().split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
-    const newRez: Rezervasyon = {
-      id: newId,
-      no: "#" + String(rezervasyonlar.length + 1).padStart(3, "0"),
-      musteri: yeniForm.musteriAdi,
-      telefon: yeniForm.telefon,
-      avatarColor: grupColors[yeniForm.grup] ?? grupColors.Silver,
-      avatarInits: inits || "YM",
-      sezlong: yeniForm.sezlongNo || `${yeniForm.grup[0]}-${rezervasyonlar.length + 1}`,
-      sezlongSub: `${yeniForm.grup} • 1 şezlong`,
-      tarih: new Date(yeniForm.tarih).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }),
-      tarihISO: yeniForm.tarih,
-      tarihSub: `${yeniForm.saat} — Bekleniyor`,
-      tip: yeniForm.odeme,
-      tipLabel: yeniForm.odeme === "on" ? "💰 Ön Ödemeli" : "🏖️ Sadece Sezlong",
-      tutar: "₺0",
-      tutarSub: "Yeni",
-      tutarColor: NAVY,
-      status: "bekliyor",
-      statusLabel: "◷ Bekliyor",
-      disabled: false,
-      drawerData: { email: "", sezlong: `${yeniForm.sezlongNo} (${yeniForm.grup})`, giris: yeniForm.saat, sure: "—", yuklenen: "—", harcanan: "—", bakiyePct: 0, kalan: "—", sonTarih: "", siparisler: [] },
-    };
+    const { data: row, error } = await supabase
+      .from("rezervasyonlar")
+      .insert(payload as any)
+      .select("id, tesis_id, kullanici_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum")
+      .single();
+    if (error) {
+      console.error("Rezervasyon insert error:", error);
+      return;
+    }
+    const newRez = mapRowToRezervasyon(
+      { ...row, musteri_adi: yeniForm.musteriAdi.trim() || null, telefon: yeniForm.telefon.trim() || null },
+      rezervasyonlar.length
+    );
     setRezervasyonlar((prev) => [newRez, ...prev]);
     setYeniForm(emptyYeniForm);
     setModalOpen(false);
@@ -368,7 +439,7 @@ export default function IsletmeRezervasyonlarPage() {
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Rezervasyonlar</h1>
           <span style={{ fontSize: 11, color: GRAY400 }}>
-            11 Mart 2026 • Toplam {rezervasyonlar.length} rezervasyon
+            {new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} • Toplam {rezervasyonlar.length} rezervasyon
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F0FFFE", border: `1px solid ${TEAL}`, borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700, color: TEAL, marginLeft: 10 }}>
             💰 Ön Ödemeli Sistem
@@ -494,7 +565,11 @@ export default function IsletmeRezervasyonlarPage() {
             ))}
           </div>
 
-          {sayfadakiler.length === 0 ? (
+          {loading ? (
+            <div style={{ padding: "40px 24px", textAlign: "center", color: GRAY400, fontSize: 13 }}>
+              Yükleniyor…
+            </div>
+          ) : sayfadakiler.length === 0 ? (
             <div style={{ padding: "40px 24px", textAlign: "center", color: GRAY400, fontSize: 13 }}>
               Sonuç bulunamadı. Filtreleri değiştirin.
             </div>
