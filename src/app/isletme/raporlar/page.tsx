@@ -63,18 +63,7 @@ const DONEM_STATS: Record<string, { toplam: string; sezlong: string; siparis: st
   yil:    { toplam: "₺1.280.000", sezlong: "₺768.000", siparis: "₺441.600", sonaEren: "₺70.400", change: "↑ %31 geçen yıla göre" },
 };
 
-const GRUP_GELIR = [
-  { name: "⭐ Gold", tutar: "₺28.400", pct: 92, detay: { rez: 142, ortGelir: "₺200", enAktif: "Cumartesi", toplam: 28400 } },
-  { name: "🔥 VIP", tutar: "₺52.600", pct: 100, detay: { rez: 88, ortGelir: "₺597", enAktif: "Cuma", toplam: 52600 } },
-  { name: "⚓ İskele", tutar: "₺31.200", pct: 72, detay: { rez: 210, ortGelir: "₺148", enAktif: "Pazar", toplam: 31200 } },
-  { name: "🌊 Silver", tutar: "₺36.200", pct: 78, detay: { rez: 266, ortGelir: "₺136", enAktif: "Cumartesi", toplam: 36200 } },
-];
-
-const ODEME_KANAL = [
-  { name: "📱 Uygulama", pct: 64, tutar: "₺95K", detay: { islem: 312, ort: "₺304", iptal: 4, basari: "%98.7" } },
-  { name: "💳 Kart (Extra)", pct: 28, tutar: "₺41K", detay: { islem: 124, ort: "₺330", iptal: 2, basari: "%98.4" } },
-  { name: "💵 Nakit", pct: 8, tutar: "₺12K", detay: { islem: 48, ort: "₺250", iptal: 0, basari: "%100" } },
-];
+// GRUP_GELIR ve ODEME_KANAL mock verileri kaldırıldı; ilgili bölümler şimdilik "Yakında" gösteriyor.
 
 const BAKIYE_ROWS = [
   { inits: "AY", name: "Ahmet Yılmaz",  sezlong: "S-12 • Silver",    avatarBg: "linear-gradient(135deg,#0ABAB5,#0A1628)", yuklenen: "₺1.000", harcanan: "₺360",   kalan: "₺640",   kalanColor: TEAL,  sonTarih: "10 Nis 2026", durum: "ok",   durumLabel: "✓ Aktif",    rowBg: null },
@@ -127,8 +116,8 @@ export default function IsletmeRaporlarPage() {
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
   // Modals
-  const [grupDetay, setGrupDetay]   = useState<typeof GRUP_GELIR[0] | null>(null);
-  const [odemeDetay, setOdemeDetay] = useState<typeof ODEME_KANAL[0] | null>(null);
+  const [grupDetay]   = useState<null>(null);
+  const [odemeDetay]  = useState<null>(null);
   const [statDetay, setStatDetay]   = useState<{ label: string; val: string; items: { k: string; v: string }[] } | null>(null);
 
   // Garson sort
@@ -361,52 +350,14 @@ export default function IsletmeRaporlarPage() {
               )}
             </div>
 
-            {/* Grup + Ödeme */}
+            {/* Grup + Ödeme (yakında gerçek veriye bağlanacak) */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-              <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20 }}>
-                <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>Grup Bazlı Gelir</h3>
-                  <div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Bara tıkla → detay</div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {GRUP_GELIR.map((g, i) => (
-                    <div key={i} onClick={() => setGrupDetay(g)} style={{ cursor: "pointer" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                        <span style={{ fontWeight: 600 }}>{g.name}</span>
-                        <span style={{ fontWeight: 700 }}>{g.tutar}</span>
-                      </div>
-                      <div style={{ background: GRAY100, borderRadius: 20, height: 10, overflow: "hidden", transition: "height 0.15s" }}
-                        onMouseEnter={(e) => (e.currentTarget.style.height = "14px")}
-                        onMouseLeave={(e) => (e.currentTarget.style.height = "10px")}
-                      >
-                        <div style={{ width: `${g.pct}%`, height: "100%", borderRadius: 20, background: i === 0 ? "linear-gradient(90deg,#7C3AED,#A78BFA)" : i === 1 ? "linear-gradient(90deg,#F5821F,#FCA5A5)" : i === 2 ? "linear-gradient(90deg,#F59E0B,#FCD34D)" : "linear-gradient(90deg,#0ABAB5,#67E8F9)" }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
+                <span style={{ fontSize: 12, color: GRAY400, fontStyle: "italic" }}>Grup Bazlı Gelir raporu yakında burada olacak.</span>
               </div>
 
-              <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20 }}>
-                <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>Ödeme Kanalı</h3>
-                  <div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Bara tıkla → detay</div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {ODEME_KANAL.map((o, i) => (
-                    <div key={i} onClick={() => setOdemeDetay(o)} style={{ cursor: "pointer" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                        <span style={{ fontWeight: 600 }}>{o.name}</span>
-                        <span style={{ fontWeight: 700 }}>%{o.pct} — {o.tutar}</span>
-                      </div>
-                      <div style={{ background: GRAY100, borderRadius: 20, height: 10, overflow: "hidden", transition: "height 0.15s" }}
-                        onMouseEnter={(e) => (e.currentTarget.style.height = "14px")}
-                        onMouseLeave={(e) => (e.currentTarget.style.height = "10px")}
-                      >
-                        <div style={{ width: `${o.pct}%`, height: "100%", borderRadius: 20, background: i === 0 ? `linear-gradient(90deg,${TEAL},${GREEN})` : i === 1 ? "linear-gradient(90deg,#3B82F6,#93C5FD)" : "linear-gradient(90deg,#94A3B8,#CBD5E1)" }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
+                <span style={{ fontSize: 12, color: GRAY400, fontStyle: "italic" }}>Ödeme Kanalı raporu yakında burada olacak.</span>
               </div>
             </div>
           </>
