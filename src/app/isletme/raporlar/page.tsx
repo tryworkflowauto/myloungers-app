@@ -217,18 +217,18 @@ export default function IsletmeRaporlarPage() {
             harcanan: `₺${Number(r.bakiye_harcanan ?? 0).toLocaleString("tr-TR")}`,
             kalan: `₺${kalanSayi.toLocaleString("tr-TR")}`,
             kalanSayi,
-            kalanColor: kalanSayi <= 0 ? "#ef4444" : "#0ab5b5",
+          kalanColor: kalanSayi <= 0 ? "#ef4444" : "#0ab5b5",
             sonTarih: r.bakiye_son_tarih ?? "",
             sonTarihWarn: r.bakiye_son_tarih ? new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) : false,
             sonTarihGray: !r.bakiye_son_tarih,
-            durum: kalanSayi <= 0
+          durum: kalanSayi <= 0
             ? "bitti"
             : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date()
               ? "suresi_gecti"
               : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000)
                 ? "yaklasan"
                 : "aktif")),
-            durumLabel: kalanSayi <= 0
+          durumLabel: kalanSayi <= 0
             ? "✗ Sona Erdi"
             : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date()
               ? "✗ Süresi Geçti"
