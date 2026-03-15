@@ -134,12 +134,13 @@ function rowToPersonel(row: { id: string; ad: string; telefon: string | null; ro
 const emptyForm = { name: "", phone: "", rol: "garson" as RolType, sezlonglar: "", aktif: true };
 
 // ── PersonelKart ────────────────────────────────────────────────────────────
-function PersonelKart({ p, onEdit, onYetki, onToggle, onSil }: {
+function PersonelKart({ p, onEdit, onYetki, onToggle, onSil, sezlongOptions }: {
   p: Personel;
   onEdit: () => void;
   onYetki: () => void;
   onToggle: () => void;
   onSil: () => void;
+  sezlongOptions?: SezlongOption[];
 }) {
   const rolStyle = ROL_STYLES[p.rol];
   return (
@@ -189,7 +190,8 @@ function PersonelKart({ p, onEdit, onYetki, onToggle, onSil }: {
               {p.sezlonglar!.map((s, i) => {
                 const tag = p.sezlongTags ? p.sezlongTags[i] : "default";
                 const st = SEZ_TAG_STYLES[tag] ?? SEZ_TAG_STYLES.default;
-                return <span key={i} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: st.bg, color: st.color }}>{s}</span>;
+                const label = sezlongOptions ? (sezlongOptions.find((opt) => opt.id === s)?.label ?? s) : s;
+                return <span key={s} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: st.bg, color: st.color }}>{label}</span>;
               })}
             </div>
           )}
@@ -569,15 +571,17 @@ export default function IsletmePersonelPage() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-            {goruntulenen.map((p) => (
-              <PersonelKart
-                key={p.id} p={p}
-                onEdit={() => openEdit(p)}
-                onYetki={() => openYetki(p)}
-                onToggle={() => toggleAktif(p.id)}
-                onSil={() => setSilModal(p)}
-              />
-            ))}
+          {goruntulenen.map((p) => (
+            <PersonelKart
+              key={p.id}
+              p={p}
+              onEdit={() => openEdit(p)}
+              onYetki={() => openYetki(p)}
+              onToggle={() => toggleAktif(p.id)}
+              onSil={() => setSilModal(p)}
+              sezlongOptions={sezlongOptions}
+            />
+          ))}
           </div>
         )}
       </div>
@@ -622,7 +626,16 @@ export default function IsletmePersonelPage() {
               <button onClick={() => setEditModal(null)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
             <div style={{ padding: "20px 24px" }}>
-              <PersonelForm form={editForm} setForm={setEditForm} photo={editPhoto} setPhoto={setEditPhoto} inputStyle={inputStyle} labelStyle={labelStyle} />
+              <PersonelForm
+                form={editForm}
+                setForm={setEditForm}
+                photo={editPhoto}
+                setPhoto={setEditPhoto}
+                inputStyle={inputStyle}
+                labelStyle={labelStyle}
+                sezlongOptions={sezlongOptions}
+                sezlongLoading={sezlongLoading}
+              />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
               <button onClick={() => setEditModal(null)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
