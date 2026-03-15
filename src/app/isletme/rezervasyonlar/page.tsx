@@ -81,6 +81,8 @@ function mapRowToRezervasyon(
     musteri_adi?: string | null;
     telefon?: string | null;
     kullanicilar?: { ad?: string | null } | null;
+    sezlong_id?: string | number | null;
+    sezlonglar?: { numara?: number | null; sezlong_gruplari?: { ad?: string | null } | null } | null;
     baslangic_tarih: string | null;
     bitis_tarih: string | null;
     kisi_sayisi?: number | null;
@@ -113,6 +115,14 @@ function mapRowToRezervasyon(
   else if (status === "aktif" || status === "rezerve" || status === "bekliyor") tutarSub = `Bakiye: ${tutar}`;
 
   const kisi = r.kisi_sayisi ?? 1;
+  const szl = r.sezlonglar;
+  const grupAd = szl?.sezlong_gruplari?.ad?.trim() ?? "";
+  const numara = szl?.numara;
+  const sezlongNo = numara != null ? String(numara) : "";
+  const sezlong = grupAd && sezlongNo ? `${grupAd.charAt(0)}-${sezlongNo}` : sezlongNo || "—";
+  const sezlongSub = grupAd ? `${grupAd} • ${kisi} Kişi` : `${kisi} Kişi`;
+  const drawerSezlong = grupAd && sezlongNo ? `${grupAd}-${sezlongNo} (${grupAd})` : sezlongNo ? `${sezlongNo}` : "—";
+
   return {
     id: idStr,
     no: "#" + String(index + 1).padStart(3, "0"),
@@ -120,8 +130,8 @@ function mapRowToRezervasyon(
     telefon,
     avatarColor: Object.values(GRUP_COLORS)[index % 4] ?? GRUP_COLORS.Silver,
     avatarInits: inits || "??",
-    sezlong: "—",
-    sezlongSub: `${kisi} Kişi`,
+    sezlong,
+    sezlongSub,
     tarih,
     tarihISO,
     tarihSub,
@@ -135,7 +145,7 @@ function mapRowToRezervasyon(
     disabled,
     drawerData: {
       email: "",
-      sezlong: "—",
+      sezlong: drawerSezlong,
       giris: saatPart || "—",
       sure: "—",
       yuklenen: tutar,
@@ -225,7 +235,7 @@ export default function IsletmeRezervasyonlarPage() {
     setLoading(true);
     supabase
       .from("rezervasyonlar")
-      .select("id, tesis_id, kullanici_id, musteri_adi, telefon, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, kullanicilar(ad)")
+      .select("id, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, kullanicilar(ad), sezlonglar(numara, sezlong_gruplari(ad))")
       .eq("tesis_id", tesisId)
       .order("baslangic_tarih", { ascending: false })
       .then(({ data, error }) => {
