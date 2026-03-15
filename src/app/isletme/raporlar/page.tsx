@@ -514,9 +514,23 @@ export default function IsletmeRaporlarPage() {
               <div style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Aktif Bakiyeler</h3>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <input type="text" placeholder="🔍 Müşteri ara..." style={{ padding: "6px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 11 }} />
-                  <select style={{ padding: "6px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 11 }}>
-                    <option>Tüm Durumlar</option><option>Sona Yakın (5 gün)</option><option>Aktif</option><option>Sona Erdi</option>
+                  <input
+                    type="text"
+                    placeholder="🔍 Müşteri ara..."
+                    value={bakiyeSearch}
+                    onChange={(e) => setBakiyeSearch(e.target.value)}
+                    style={{ padding: "6px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 11 }}
+                  />
+                  <select
+                    value={bakiyeDurum}
+                    onChange={(e) => setBakiyeDurum(e.target.value)}
+                    style={{ padding: "6px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 11 }}
+                  >
+                    <option value="">Tüm Durumlar</option>
+                    <option value="yaklasan">Sona Yakın (3 gün)</option>
+                    <option value="aktif">Aktif</option>
+                    <option value="suresi_gecti">Süresi Geçti</option>
+                    <option value="bitti">Sona Erdi</option>
                   </select>
                 </div>
               </div>
