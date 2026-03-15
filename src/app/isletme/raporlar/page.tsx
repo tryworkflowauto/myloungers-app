@@ -200,40 +200,44 @@ export default function IsletmeRaporlarPage() {
       .gt("bakiye_yuklenen", 0)
       .then(({ data, error }) => {
         if (error || !data) { setBakiyeRows([]); return; }
-        setBakiyeRows(data.map((r, idx) => ({
-          inits: (r.musteri_adi || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
-          name: r.musteri_adi || "",
-          sezlong: (() => {
-            const num = (r as any).sezlonglar?.numara as number | undefined;
-            const grupAd = (r as any).sezlonglar?.sezlong_gruplari?.ad?.trim() as string | undefined;
-            if (num && grupAd) return `${grupAd.charAt(0)}-${num} • ${grupAd}`;
-            if (num) return String(num);
-            return "";
-          })(),
-          avatarBg: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length],
-          yuklenen: `₺${Number(r.bakiye_yuklenen ?? 0).toLocaleString("tr-TR")}`,
-          harcanan: `₺${Number(r.bakiye_harcanan ?? 0).toLocaleString("tr-TR")}`,
-          kalan: `₺${Number(r.bakiye_kalan ?? 0).toLocaleString("tr-TR")}`,
-          kalanColor: (r.bakiye_kalan ?? 0) <= 0 ? "#ef4444" : "#0ab5b5",
-          sonTarih: r.bakiye_son_tarih ?? "",
-          sonTarihWarn: r.bakiye_son_tarih ? new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) : false,
-          sonTarihGray: !r.bakiye_son_tarih,
-          durum: (r.bakiye_kalan ?? 0) <= 0
+        setBakiyeRows(data.map((r, idx) => {
+          const kalanSayi = Number(r.bakiye_kalan ?? 0);
+          return {
+            inits: (r.musteri_adi || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
+            name: r.musteri_adi || "",
+            sezlong: (() => {
+              const num = (r as any).sezlonglar?.numara as number | undefined;
+              const grupAd = (r as any).sezlonglar?.sezlong_gruplari?.ad?.trim() as string | undefined;
+              if (num && grupAd) return `${grupAd.charAt(0)}-${num} • ${grupAd}`;
+              if (num) return String(num);
+              return "";
+            })(),
+            avatarBg: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length],
+            yuklenen: `₺${Number(r.bakiye_yuklenen ?? 0).toLocaleString("tr-TR")}`,
+            harcanan: `₺${Number(r.bakiye_harcanan ?? 0).toLocaleString("tr-TR")}`,
+            kalan: `₺${kalanSayi.toLocaleString("tr-TR")}`,
+            kalanSayi,
+            kalanColor: kalanSayi <= 0 ? "#ef4444" : "#0ab5b5",
+            sonTarih: r.bakiye_son_tarih ?? "",
+            sonTarihWarn: r.bakiye_son_tarih ? new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) : false,
+            sonTarihGray: !r.bakiye_son_tarih,
+            durum: kalanSayi <= 0
             ? "bitti"
             : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date()
               ? "suresi_gecti"
               : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000)
                 ? "yaklasan"
                 : "aktif")),
-          durumLabel: (r.bakiye_kalan ?? 0) <= 0
+            durumLabel: kalanSayi <= 0
             ? "✗ Sona Erdi"
             : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date()
               ? "✗ Süresi Geçti"
               : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000)
                 ? "⚠ Yaklaşan"
                 : "✓ Aktif")),
-          rowBg: null,
-          opacity: 1,
+            rowBg: null,
+            opacity: 1,
+          };
         })));
       });
   }, [tesisId]);
@@ -260,7 +264,7 @@ export default function IsletmeRaporlarPage() {
 
   const riskRows = bakiyeRows.filter((r) => r.durum === "yaklasan" || r.durum === "suresi_gecti");
   const riskCount = riskRows.length;
-  const riskTotal = riskRows.reduce((sum, r) => sum + Number(r.kalan ?? 0), 0);
+  const riskTotal = riskRows.reduce((sum, r) => sum + Number(r.kalanSayi ?? 0), 0);
 
   const sortedGarsonlar = [...GARSON_ROWS].sort((a, b) => {
     const dir = garsonSortDir === "desc" ? -1 : 1;
