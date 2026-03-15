@@ -993,7 +993,7 @@ export default function IsletmeRezervasyonlarPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={labelStyle}>Şezlong Grubu</label>
-                <select value={yeniForm.grup} onChange={(e) => setYeniForm((f) => ({ ...f, grup: e.target.value }))} style={inputStyle}>
+                <select value={yeniForm.grup} onChange={(e) => setYeniForm((f) => ({ ...f, grup: e.target.value, sezlongId: "" }))} style={inputStyle}>
                   <option>Silver</option>
                   <option>VIP</option>
                   <option>İskele</option>
@@ -1004,7 +1004,7 @@ export default function IsletmeRezervasyonlarPage() {
                 <label style={labelStyle}>Şezlong</label>
                 <select value={yeniForm.sezlongId} onChange={(e) => setYeniForm((f) => ({ ...f, sezlongId: e.target.value }))} style={inputStyle}>
                   <option value="">Seçiniz</option>
-                  {sezlonglarForForm.map((s) => (
+                  {sezlonglarForForm.filter((s) => s.grupAd === yeniForm.grup).map((s) => (
                     <option key={s.id} value={s.id}>{s.grupAd ? `${s.grupAd} - ${s.numara}` : String(s.numara)}</option>
                   ))}
                 </select>
