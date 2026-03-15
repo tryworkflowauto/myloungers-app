@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 // HTML'deki :root değişkenleri
 const NAVY = "#0A1628";
@@ -16,42 +18,31 @@ const GRAY800 = "#1E293B";
 const GREEN = "#10B981";
 const BLUE = "#3B82F6";
 
-// Mock data - HTML'deki gruplar objesiyle birebir
-const GRUPLAR: Record<string, { prefix: string; count: number; color: string; durumlar: string[] }> = {
-  gold: {
-    prefix: "G",
-    count: 10,
-    color: "#8B5CF6",
-    durumlar: ["dolu", "dolu", "dolu", "kilitli", "dolu", "dolu", "dolu", "kilitli", "dolu", "dolu"],
-  },
-  iskele: {
-    prefix: "İ",
-    count: 20,
-    color: "#F59E0B",
-    durumlar: [
-      "dolu", "dolu", "bos", "dolu", "rezerve", "bos", "dolu", "bos", "dolu", "kilitli",
-      "dolu", "bos", "rezerve", "bos", "dolu", "bakim", "bos", "kilitli", "bos", "bos",
-    ],
-  },
-  vip: {
-    prefix: "V",
-    count: 40,
-    color: "#F5821F",
-    durumlar: [
-      "dolu", "dolu", "bos", "dolu", "dolu", "bos", "dolu", "dolu", "rezerve", "bos",
-      "dolu", "kilitli", "dolu", "bos", "dolu", "dolu", "bakim", "dolu", "bos", "dolu",
-      "dolu", "bos", "dolu", "kilitli", "bos", "rezerve", "dolu", "dolu", "bos", "dolu",
-      "bakim", "dolu", "dolu", "bos", "kilitli", "dolu", "bos", "dolu", "rezerve", "bos",
-    ],
-  },
-  silver: {
-    prefix: "S",
-    count: 55,
-    color: "#0ABAB5",
-    durumlar: Array.from({ length: 55 }, (_, i) =>
-      i % 9 === 0 ? "kilitli" : i % 7 === 0 ? "bakim" : i % 5 === 0 ? "rezerve" : i % 3 === 0 ? "bos" : "dolu"
-    ),
-  },
+// Sol panel grup satırı
+type GrupRow = {
+  id: string;
+  name: string;
+  count: number;
+  color: string;
+  dolu: number;
+  bos: number;
+  fiyat: string;
+  doluluk: string;
+};
+
+// Harita bloğu + şezlong listesi (key = grup id)
+type SezlongSlot = { id: string; numara: number; durum: string };
+type HaritaGrup = {
+  id: string;
+  prefix: string;
+  count: number;
+  color: string;
+  durumlar: SezlongSlot[];
+  title: string;
+  sub: string;
+  icon: string;
+  gradient: string;
+  dolulukYuzde: string;
 };
 
 // Şezlong durumuna göre renkler - HTML CSS'inden
@@ -63,28 +54,6 @@ const SEZ_STYLES: Record<string, { bg: string; border: string; borderStyle?: "so
   kilitli: { bg: "#EDE9FE", border: "#7C3AED", borderStyle: "dashed", pillow: "#DDD6FE", legs: "#7C3AED", noColor: "#7C3AED" },
 };
 
-const LEGEND_ITEMS = [
-  { emoji: "🟢", label: "Boş", sub: "Rezervasyon yapılabilir", count: 41, countColor: GREEN },
-  { emoji: "🟠", label: "Dolu", sub: "Aktif müşteri var", count: 74, countColor: ORANGE },
-  { emoji: "🔵", label: "Rezerve", sub: "Gelecek rezervasyon", count: 8, countColor: BLUE },
-  { emoji: "⚪", label: "Bakımda", sub: "Geçici kapalı", count: 10, countColor: GRAY400 },
-  { emoji: "🔒", label: "İşletme Rezervi", sub: "Satın alınamaz", count: 7, countColor: "#7C3AED" },
-];
-
-const MOCK_GRUPLAR = [
-  { name: "Silver", count: 55, color: "#0ABAB5", dolu: 38, bos: 17, fiyat: "₺1.000", doluluk: "69%" },
-  { name: "VIP", count: 40, color: "#F5821F", dolu: 28, bos: 12, fiyat: "₺1.500", doluluk: "70%" },
-  { name: "İskele", count: 20, color: "#F59E0B", dolu: 8, bos: 12, fiyat: "₺1.250", doluluk: "40%" },
-  { name: "Gold", count: 10, color: "#8B5CF6", dolu: 10, bos: 0, fiyat: "₺2.000", doluluk: "100%" },
-];
-
-const MAP_BLOCKS = [
-  { key: "gold", title: "Gold", sub: "Denize Sıfır VIP", icon: "⭐", gradient: "linear-gradient(135deg,#7C3AED,#8B5CF6)", doluluk: "100% Dolu", count: 10 },
-  { key: "iskele", title: "İskele", sub: "Ahşap Platform", icon: "⚓", gradient: "linear-gradient(135deg,#D97706,#F59E0B)", doluluk: "40% Dolu", count: 20 },
-  { key: "vip", title: "VIP", sub: "Birinci Sıra", icon: "🔥", gradient: "linear-gradient(135deg,#EA580C,#F5821F)", doluluk: "70% Dolu", count: 40 },
-  { key: "silver", title: "Silver", sub: "Standart Bölge", icon: "🌊", gradient: "linear-gradient(135deg,#0891B2,#0ABAB5)", doluluk: "69% Dolu", count: 55 },
-];
-
 const DURUM_LABELS: Record<string, string> = {
   bos: "Boş",
   dolu: "Dolu",
@@ -95,7 +64,6 @@ const DURUM_LABELS: Record<string, string> = {
 
 const COLOR_OPTS = ["#0ABAB5", "#F5821F", "#F59E0B", "#8B5CF6", "#EF4444", "#10B981", "#3B82F6", "#EC4899", "#0A1628"];
 
-// Legend label → durum key eşlemesi (module seviyesinde - stable reference)
 const LEGEND_DURUM_MAP: Record<string, string> = {
   "Boş": "bos",
   "Dolu": "dolu",
@@ -104,13 +72,20 @@ const LEGEND_DURUM_MAP: Record<string, string> = {
   "İşletme Rezervi": "kilitli",
 };
 
-const GRUP_BUTTONS = [
-  { label: "Tüm Gruplar", key: null, color: GRAY400 },
-  { label: "Silver", key: "silver", color: "#0ABAB5" },
-  { label: "VIP", key: "vip", color: "#F5821F" },
-  { label: "İskele", key: "iskele", color: "#F59E0B" },
-  { label: "Gold", key: "gold", color: "#8B5CF6" },
+const LEGEND_LABELS: { emoji: string; label: string; sub: string; countColor: string }[] = [
+  { emoji: "🟢", label: "Boş", sub: "Rezervasyon yapılabilir", countColor: GREEN },
+  { emoji: "🟠", label: "Dolu", sub: "Aktif müşteri var", countColor: ORANGE },
+  { emoji: "🔵", label: "Rezerve", sub: "Gelecek rezervasyon", countColor: BLUE },
+  { emoji: "⚪", label: "Bakımda", sub: "Geçici kapalı", countColor: GRAY400 },
+  { emoji: "🔒", label: "İşletme Rezervi", sub: "Satın alınamaz", countColor: "#7C3AED" },
 ];
+
+const GRUP_ICON: Record<string, string> = { Gold: "⭐", İskele: "⚓", VIP: "🔥", Silver: "🌊" };
+function grupIcon(ad: string): string { return GRUP_ICON[ad] ?? "🏖️"; }
+function grupGradient(color: string): string {
+  const c = color.replace("#", "");
+  return `linear-gradient(135deg,${color},${color}CC)`;
+}
 
 function SezlongItem({
   no,
@@ -234,29 +209,105 @@ function SezlongItem({
 
 export default function IsletmeSezlongPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
+  const [loading, setLoading] = useState(true);
+  const [gruplar, setGruplar] = useState<GrupRow[]>([]);
+  const [haritaGruplari, setHaritaGruplari] = useState<Record<string, HaritaGrup>>({});
+  const [legendCounts, setLegendCounts] = useState({ bos: 0, dolu: 0, rezerve: 0, bakim: 0, kilitli: 0 });
+
   const [seciliNo, setSeciliNo] = useState<string | null>(null);
   const [seciliGrup, setSeciliGrup] = useState<string | null>(null);
+  const [seciliSezlongId, setSeciliSezlongId] = useState<string | null>(null);
   const [seciliDurum, setSeciliDurum] = useState<string>("bos");
   const [modalOpen, setModalOpen] = useState(false);
   const [kilitliToastNo, setKilitliToastNo] = useState<string | null>(null);
   const [seciliRenk, setSeciliRenk] = useState("#0ABAB5");
-  const [gruplar, setGruplar] = useState(MOCK_GRUPLAR);
-  const [duzenleModal, setDuzenleModal] = useState<(typeof MOCK_GRUPLAR)[0] | null>(null);
+  const [grupEkleForm, setGrupEkleForm] = useState({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "" });
+  const [duzenleModal, setDuzenleModal] = useState<GrupRow | null>(null);
   const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "" });
-  const [silModal, setSilModal] = useState<(typeof MOCK_GRUPLAR)[0] | null>(null);
+  const [silModal, setSilModal] = useState<GrupRow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [cikisModal, setCikisModal] = useState(false);
   const [rezModal, setRezModal] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
   const [durumFiltresi, setDurumFiltresi] = useState<string | null>(null);
   const [grupFiltresi, setGrupFiltresi] = useState<string | null>(null);
-  const [seciliTarih, setSeciliTarih] = useState("2026-03-11");
+  const [seciliTarih, setSeciliTarih] = useState(() => new Date().toISOString().slice(0, 10));
   const [mod, setMod] = useState<"duzenleme" | "goruntulem" | "musteri">("duzenleme");
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   }
+
+  // Fetch gruplar + sezlonglar
+  useEffect(() => {
+    if (!tesisId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat").eq("tesis_id", tesisId),
+      supabase.from("sezlonglar").select("id, grup_id, numara, durum").eq("tesis_id", tesisId),
+    ]).then(([gRes, sRes]) => {
+      if (cancelled) return;
+      const grupRows = (gRes.data ?? []) as { id: string; ad: string; renk: string; kapasite: number; fiyat: number | null }[];
+      const sezRows = (sRes.data ?? []) as { id: string; grup_id: string; numara: number; durum: string }[];
+      const byGrup = new Map<string, typeof sezRows>();
+      for (const s of sezRows) {
+        if (!byGrup.has(s.grup_id)) byGrup.set(s.grup_id, []);
+        byGrup.get(s.grup_id)!.push(s);
+      }
+      const counts = { bos: 0, dolu: 0, rezerve: 0, bakim: 0, kilitli: 0 };
+      for (const s of sezRows) {
+        const d = (s.durum || "bos") as keyof typeof counts;
+        if (counts[d] !== undefined) counts[d]++;
+      }
+      setLegendCounts(counts);
+
+      const grList: GrupRow[] = [];
+      const harita: Record<string, HaritaGrup> = {};
+      for (const g of grupRows) {
+        const list = (byGrup.get(g.id) ?? []).sort((a, b) => a.numara - b.numara);
+        const dolu = list.filter((s) => s.durum === "dolu").length;
+        const bos = list.filter((s) => s.durum === "bos").length;
+        const cap = list.length || g.kapasite || 0;
+        const dolulukPct = cap > 0 ? Math.round((dolu / cap) * 100) : 0;
+        const prefix = g.ad.charAt(0).toUpperCase();
+        const fiyatNum = Number(g.fiyat) || 0;
+        grList.push({
+          id: g.id,
+          name: g.ad,
+          count: cap,
+          color: g.renk || TEAL,
+          dolu,
+          bos,
+          fiyat: fiyatNum ? `₺${fiyatNum.toLocaleString("tr")}` : "—",
+          doluluk: `${dolulukPct}%`,
+        });
+        harita[g.id] = {
+          id: g.id,
+          prefix,
+          count: cap,
+          color: g.renk || TEAL,
+          durumlar: list.map((s) => ({ id: s.id, numara: s.numara, durum: s.durum || "bos" })),
+          title: g.ad,
+          sub: g.ad,
+          icon: grupIcon(g.ad),
+          gradient: grupGradient(g.renk || TEAL),
+          dolulukYuzde: `${dolulukPct}% Dolu`,
+        };
+      }
+      setGruplar(grList);
+      setHaritaGruplari(harita);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [tesisId]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -271,45 +322,166 @@ export default function IsletmeSezlongPage() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  function openDuzenle(g: (typeof MOCK_GRUPLAR)[0]) {
+  const LEGEND_ITEMS = LEGEND_LABELS.map((item) => ({
+    ...item,
+    count: legendCounts[LEGEND_DURUM_MAP[item.label] as keyof typeof legendCounts] ?? 0,
+  }));
+  const GRUP_BUTTONS = [
+    { label: "Tüm Gruplar", key: null as string | null, color: GRAY400 },
+    ...gruplar.map((g) => ({ label: g.name, key: g.id, color: g.color })),
+  ];
+  const toplamSezlong = gruplar.reduce((a, g) => a + g.count, 0);
+  const toplamDolu = gruplar.reduce((a, g) => a + g.dolu, 0);
+  const toplamBos = gruplar.reduce((a, g) => a + g.bos, 0);
+
+  function openDuzenle(g: GrupRow) {
     setDuzenleForm({ name: g.name, count: String(g.count), color: g.color, fiyat: g.fiyat });
     setDuzenleModal(g);
   }
 
-  function saveDuzenle() {
+  async function saveDuzenle() {
     if (!duzenleModal) return;
+    const fiyatNum = duzenleForm.fiyat.replace(/[^\d]/g, "") || "0";
+    const { error } = await supabase
+      .from("sezlong_gruplari")
+      .update({ ad: duzenleForm.name, renk: duzenleForm.color, fiyat: Number(fiyatNum) })
+      .eq("id", duzenleModal.id);
+    if (error) { showToast("❌ Güncellenemedi"); return; }
     setGruplar((prev) =>
       prev.map((g) =>
-        g.name === duzenleModal.name
-          ? { ...g, name: duzenleForm.name, count: Number(duzenleForm.count), color: duzenleForm.color, fiyat: duzenleForm.fiyat }
+        g.id === duzenleModal.id
+          ? { ...g, name: duzenleForm.name, color: duzenleForm.color, fiyat: duzenleForm.fiyat }
           : g
       )
     );
+    setHaritaGruplari((prev) => {
+      const h = prev[duzenleModal.id];
+      if (!h) return prev;
+      return { ...prev, [duzenleModal.id]: { ...h, title: duzenleForm.name, sub: duzenleForm.name, color: duzenleForm.color, gradient: grupGradient(duzenleForm.color) } };
+    });
+    showToast("✅ Grup güncellendi");
     setDuzenleModal(null);
   }
 
-  function silGrup() {
+  async function silGrup() {
     if (!silModal) return;
-    setGruplar((prev) => prev.filter((g) => g.name !== silModal.name));
+    const { error } = await supabase.from("sezlong_gruplari").delete().eq("id", silModal.id);
+    if (error) { showToast("❌ Silinemedi"); return; }
+    setGruplar((prev) => prev.filter((g) => g.id !== silModal.id));
+    setHaritaGruplari((prev) => {
+      const next = { ...prev };
+      delete next[silModal.id];
+      return next;
+    });
     setSilModal(null);
+    showToast("✅ Grup silindi");
   }
 
-  function handleSezlongClick(no: string, grupKey: string, durum: string) {
+  async function handleKaydetDegisiklikler() {
+    if (seciliSezlongId && seciliDurum && seciliGrup) {
+      const { error } = await supabase.from("sezlonglar").update({ durum: seciliDurum }).eq("id", seciliSezlongId);
+      if (!error) {
+        setHaritaGruplari((prev) => {
+          const gid = seciliGrup;
+          if (!gid || !prev[gid]) return prev;
+          return {
+            ...prev,
+            [gid]: {
+              ...prev[gid],
+              durumlar: prev[gid].durumlar.map((s) => (s.id === seciliSezlongId ? { ...s, durum: seciliDurum } : s)),
+            },
+          };
+        });
+        setGruplar((prev) =>
+          prev.map((g) => {
+            if (g.id !== seciliGrup) return g;
+            const h = haritaGruplari[seciliGrup];
+            if (!h) return g;
+            const updatedDurumlar = h.durumlar.map((d) => (d.id === seciliSezlongId ? seciliDurum : d.durum));
+            const dolu = updatedDurumlar.filter((d) => d === "dolu").length;
+            const bos = updatedDurumlar.filter((d) => d === "bos").length;
+            const dolulukPct = updatedDurumlar.length ? Math.round((dolu / updatedDurumlar.length) * 100) : 0;
+            return { ...g, dolu, bos, doluluk: `${dolulukPct}%` };
+          })
+        );
+        setLegendCounts((prev) => {
+          const next = { ...prev };
+          const h = haritaGruplari[seciliGrup];
+          if (h) {
+            const slot = h.durumlar.find((s) => s.id === seciliSezlongId);
+            if (slot) {
+              const oldD = slot.durum as keyof typeof next;
+              if (next[oldD] !== undefined) next[oldD]--;
+              const newD = seciliDurum as keyof typeof next;
+              if (next[newD] !== undefined) next[newD]++;
+            }
+          }
+          return next;
+        });
+      }
+    }
+    showToast("✅ Değişiklikler kaydedildi!");
+  }
+
+  function handleSezlongClick(no: string, grupKey: string, durum: string, sezlongId: string) {
     if (durum === "kilitli") {
       setKilitliToastNo(no);
       setTimeout(() => setKilitliToastNo(null), 2500);
       return;
     }
     if (mod === "musteri") {
-      // Müşteri görünümü: sadece bilgi göster, state'e yaz ama düzenleme paneli açılmasın
       setSeciliNo(no);
       setSeciliGrup(grupKey);
       setSeciliDurum(durum);
+      setSeciliSezlongId(sezlongId);
       return;
     }
     setSeciliNo(no);
     setSeciliGrup(grupKey);
+    setSeciliSezlongId(sezlongId);
     setSeciliDurum(durum);
+  }
+
+  async function handleGrupEkle() {
+    if (!tesisId || !grupEkleForm.ad.trim()) return;
+    const kapasite = Math.max(1, Math.min(200, Number(grupEkleForm.kapasite) || 10));
+    const { data: grup, error: gErr } = await supabase
+      .from("sezlong_gruplari")
+      .insert({ tesis_id: tesisId, ad: grupEkleForm.ad.trim(), renk: grupEkleForm.renk || TEAL, kapasite, fiyat: Number(grupEkleForm.fiyat) || 0 })
+      .select("id, ad, renk, kapasite, fiyat")
+      .single();
+    if (gErr || !grup) {
+      showToast("❌ Grup eklenemedi");
+      return;
+    }
+    const g = grup as { id: string; ad: string; renk: string; kapasite: number; fiyat: number };
+    const sezlongInserts = Array.from({ length: kapasite }, (_, i) => ({ grup_id: g.id, tesis_id: tesisId, numara: i + 1, durum: "bos" }));
+    const { error: sErr } = await supabase.from("sezlonglar").insert(sezlongInserts);
+    if (sErr) {
+      showToast("❌ Şezlonglar eklenemedi");
+      return;
+    }
+    const { data: newSez } = await supabase.from("sezlonglar").select("id, numara, durum").eq("grup_id", g.id).order("numara", { ascending: true });
+    const durumlar: SezlongSlot[] = (newSez ?? []).map((s: { id: string; numara: number; durum: string }) => ({ id: s.id, numara: s.numara, durum: s.durum || "bos" }));
+    setGruplar((prev) => [...prev, { id: g.id, name: g.ad, count: kapasite, color: g.renk || TEAL, dolu: 0, bos: kapasite, fiyat: g.fiyat ? `₺${g.fiyat.toLocaleString("tr")}` : "—", doluluk: "0%" }]);
+    setHaritaGruplari((prev) => ({
+      ...prev,
+      [g.id]: {
+        id: g.id,
+        prefix: g.ad.charAt(0).toUpperCase(),
+        count: kapasite,
+        color: g.renk || TEAL,
+        durumlar,
+        title: g.ad,
+        sub: g.ad,
+        icon: grupIcon(g.ad),
+        gradient: grupGradient(g.renk || TEAL),
+        dolulukYuzde: "0% Dolu",
+      },
+    }));
+    setModalOpen(false);
+    setGrupEkleForm({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "" });
+    showToast("✅ Grup eklendi");
   }
 
   return (
@@ -340,7 +512,7 @@ export default function IsletmeSezlongPage() {
       >
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Şezlong Haritası</h1>
-          <span style={{ fontSize: 11, color: GRAY400 }}>125 şezlong • 74 dolu • 41 boş • 10 bakımda</span>
+          <span style={{ fontSize: 11, color: GRAY400 }}>{toplamSezlong} şezlong • {toplamDolu} dolu • {toplamBos} boş • {legendCounts.bakim} bakımda</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
@@ -363,7 +535,7 @@ export default function IsletmeSezlongPage() {
             ➕ Grup Ekle
           </button>
           <button
-            onClick={() => showToast("✅ Değişiklikler kaydedildi!")}
+            onClick={handleKaydetDegisiklikler}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -681,83 +853,83 @@ export default function IsletmeSezlongPage() {
 
           {/* Harita canvas */}
           <div style={{ flex: 1, padding: 24, position: "relative", minHeight: 500 }}>
-            {MAP_BLOCKS.map((mb) => {
-              const g = GRUPLAR[mb.key];
-              if (!g) return null;
+            {loading ? (
+              <div style={{ padding: 40, textAlign: "center", color: GRAY400, fontSize: 13 }}>Yükleniyor...</div>
+            ) : (
+              Object.entries(haritaGruplari).map(([key, mb]) => {
+                const g = mb;
+                const grupGizli = grupFiltresi !== null && grupFiltresi !== key;
 
-              // Grup filtresi: başka grup varsa soluk göster
-              const grupGizli = grupFiltresi !== null && grupFiltresi !== mb.key;
-
-              return (
-                <div
-                  key={mb.key}
-                  className="grup-block-hover"
-                  style={{
-                    marginBottom: 20,
-                    borderRadius: 14,
-                    overflow: "hidden",
-                    border: grupFiltresi === mb.key ? `2px solid ${TEAL}` : "2px solid transparent",
-                    transition: "all 0.2s",
-                    opacity: grupGizli ? 0.3 : 1,
-                  }}
-                >
+                return (
                   <div
+                    key={key}
+                    className="grup-block-hover"
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "10px 16px",
-                      color: "white",
-                      background: mb.gradient,
+                      marginBottom: 20,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: grupFiltresi === key ? `2px solid ${TEAL}` : "2px solid transparent",
+                      transition: "all 0.2s",
+                      opacity: grupGizli ? 0.3 : 1,
                     }}
                   >
-                    <strong style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>
-                      {mb.icon} {mb.title} — {mb.sub}
-                    </strong>
-                    <span style={{ fontSize: 11, opacity: 0.8 }}>{mb.count} şezlong</span>
-                    <span
+                    <div
                       style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        background: "rgba(255,255,255,0.2)",
-                        padding: "3px 10px",
-                        borderRadius: 20,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 16px",
+                        color: "white",
+                        background: g.gradient,
                       }}
                     >
-                      {mb.doluluk}
-                    </span>
-                  </div>
-                  <div style={{ background: "white", padding: 16 }}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {g.durumlar.map((durum, i) => {
-                        const no = g.prefix + (i + 1);
-                        const isSecili = seciliNo === no && seciliGrup === mb.key;
-                        // Durum filtresi: farklı durumdakiler soluk
-                        const durumSoluk = durumFiltresi !== null && durum !== durumFiltresi;
-                        return (
-                          <div
-                            key={no}
-                            style={{
-                              opacity: durumSoluk ? 0.3 : 1,
-                              transition: "opacity 0.2s",
-                              pointerEvents: (durumSoluk || grupGizli) ? "none" : "auto",
-                            }}
-                          >
-                            <SezlongItem
-                              no={no}
-                              durum={durum}
-                              grupKey={mb.key}
-                              isSecili={isSecili}
-                              onClick={() => handleSezlongClick(no, mb.key, durum)}
-                            />
-                          </div>
-                        );
-                      })}
+                      <strong style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>
+                        {g.icon} {g.title} — {g.sub}
+                      </strong>
+                      <span style={{ fontSize: 11, opacity: 0.8 }}>{g.count} şezlong</span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          background: "rgba(255,255,255,0.2)",
+                          padding: "3px 10px",
+                          borderRadius: 20,
+                        }}
+                      >
+                        {g.dolulukYuzde}
+                      </span>
+                    </div>
+                    <div style={{ background: "white", padding: 16 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {g.durumlar.map((slot) => {
+                          const no = g.prefix + slot.numara;
+                          const isSecili = seciliNo === no && seciliGrup === key;
+                          const durumSoluk = durumFiltresi !== null && slot.durum !== durumFiltresi;
+                          return (
+                            <div
+                              key={slot.id || no}
+                              style={{
+                                opacity: durumSoluk ? 0.3 : 1,
+                                transition: "opacity 0.2s",
+                                pointerEvents: (durumSoluk || grupGizli) ? "none" : "auto",
+                              }}
+                            >
+                              <SezlongItem
+                                no={no}
+                                durum={slot.durum}
+                                grupKey={key}
+                                isSecili={isSecili}
+                                onClick={() => handleSezlongClick(no, key, slot.durum, slot.id)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -799,11 +971,11 @@ export default function IsletmeSezlongPage() {
                     width: 8,
                     height: 8,
                     borderRadius: 3,
-                    background: seciliGrup ? GRUPLAR[seciliGrup]?.color ?? "#ccc" : "#ccc",
+                    background: seciliGrup ? haritaGruplari[seciliGrup]?.color ?? "#ccc" : "#ccc",
                   }}
                 />
                 <span style={{ fontSize: 11, fontWeight: 600, color: NAVY }}>
-                  {seciliGrup ? seciliGrup.charAt(0).toUpperCase() + seciliGrup.slice(1) : "Seçilmedi"}
+                  {seciliGrup ? (haritaGruplari[seciliGrup]?.title ?? "Grup") : "Seçilmedi"}
                 </span>
               </div>
               {mod === "musteri" ? (
@@ -821,7 +993,33 @@ export default function IsletmeSezlongPage() {
                 <>
                   <select
                     value={seciliDurum}
-                    onChange={(e) => mod === "duzenleme" && setSeciliDurum(e.target.value)}
+                    onChange={(e) => {
+                      if (mod !== "duzenleme") return;
+                      const newDurum = e.target.value;
+                      setSeciliDurum(newDurum);
+                      if (seciliGrup && seciliSezlongId) {
+                        setHaritaGruplari((prev) => {
+                          const h = prev[seciliGrup];
+                          if (!h) return prev;
+                          return {
+                            ...prev,
+                            [seciliGrup]: {
+                              ...h,
+                              durumlar: h.durumlar.map((s) => (s.id === seciliSezlongId ? { ...s, durum: newDurum } : s)),
+                            },
+                          };
+                        });
+                        setGruplar((prev) => prev.map((g) => {
+                          if (g.id !== seciliGrup) return g;
+                          const h = haritaGruplari[seciliGrup];
+                          if (!h) return g;
+                          const durumlar = h.durumlar.map((d) => d.id === seciliSezlongId ? newDurum : d.durum);
+                          const dolu = durumlar.filter((d) => d === "dolu").length;
+                          const bos = durumlar.filter((d) => d === "bos").length;
+                          return { ...g, dolu, bos, doluluk: h.durumlar.length ? `${Math.round((dolu / h.durumlar.length) * 100)}%` : g.doluluk };
+                        }));
+                      }
+                    }}
                     disabled={mod !== "duzenleme"}
                     style={{
                       width: "100%",
@@ -842,7 +1040,7 @@ export default function IsletmeSezlongPage() {
                   </select>
                   {mod === "duzenleme" && (
                     <button
-                      onClick={() => showToast("✅ Değişiklikler kaydedildi!")}
+                      onClick={handleKaydetDegisiklikler}
                       style={{
                         width: "100%",
                         padding: "8px 14px",
@@ -971,11 +1169,11 @@ export default function IsletmeSezlongPage() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: ORANGE }}>74</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: ORANGE }}>{toplamDolu}</div>
                 <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Dolu</div>
               </div>
               <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>41</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>{toplamBos}</div>
                 <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Boş</div>
               </div>
               <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
@@ -1046,59 +1244,43 @@ export default function IsletmeSezlongPage() {
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Grup Adı</label>
               <input
                 type="text"
+                value={grupEkleForm.ad}
+                onChange={(e) => setGrupEkleForm((f) => ({ ...f, ad: e.target.value }))}
                 placeholder="örn: Platin, Sahil, İskele..."
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: `1.5px solid ${GRAY200}`,
-                  borderRadius: 8,
-                  fontSize: 13,
-                }}
+                style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
               />
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Şezlong Sayısı</label>
               <input
                 type="number"
+                value={grupEkleForm.kapasite}
+                onChange={(e) => setGrupEkleForm((f) => ({ ...f, kapasite: e.target.value }))}
                 placeholder="örn: 20"
                 min={1}
                 max={200}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: `1.5px solid ${GRAY200}`,
-                  borderRadius: 8,
-                  fontSize: 13,
-                }}
+                style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
               />
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Günlük Fiyat (₺)</label>
               <input
                 type="number"
+                value={grupEkleForm.fiyat}
+                onChange={(e) => setGrupEkleForm((f) => ({ ...f, fiyat: e.target.value }))}
                 placeholder="örn: 1500"
                 min={0}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: `1.5px solid ${GRAY200}`,
-                  borderRadius: 8,
-                  fontSize: 13,
-                }}
+                style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
               />
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Konum / Açıklama</label>
               <input
                 type="text"
+                value={grupEkleForm.aciklama}
+                onChange={(e) => setGrupEkleForm((f) => ({ ...f, aciklama: e.target.value }))}
                 placeholder="örn: Denize sıfır, Gölgelik alan..."
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: `1.5px solid ${GRAY200}`,
-                  borderRadius: 8,
-                  fontSize: 13,
-                }}
+                style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
               />
             </div>
             <div style={{ marginBottom: 12 }}>
@@ -1108,15 +1290,15 @@ export default function IsletmeSezlongPage() {
                   <button
                     key={c}
                     type="button"
-                    onClick={() => setSeciliRenk(c)}
+                    onClick={() => setGrupEkleForm((f) => ({ ...f, renk: c }))}
                     style={{
                       width: 22,
                       height: 22,
                       borderRadius: 6,
                       background: c,
-                      border: seciliRenk === c ? `2px solid ${NAVY}` : "2px solid transparent",
+                      border: grupEkleForm.renk === c ? `2px solid ${NAVY}` : "2px solid transparent",
                       cursor: "pointer",
-                      transform: seciliRenk === c ? "scale(1.2)" : "scale(1)",
+                      transform: grupEkleForm.renk === c ? "scale(1.2)" : "scale(1)",
                       transition: "all 0.15s",
                     }}
                   />
@@ -1125,15 +1307,7 @@ export default function IsletmeSezlongPage() {
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Ön Ödeme Tipi</label>
-              <select
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: `1.5px solid ${GRAY200}`,
-                  borderRadius: 8,
-                  fontSize: 13,
-                }}
-              >
+              <select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}>
                 <option>Ön Ödemeli (Bakiye yüklenir)</option>
                 <option>Sadece Sezlong Kiralama</option>
               </select>
@@ -1141,30 +1315,22 @@ export default function IsletmeSezlongPage() {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button
                 onClick={() => setModalOpen(false)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  border: `1px solid ${GRAY200}`,
-                  background: GRAY100,
-                  color: GRAY800,
-                  cursor: "pointer",
-                }}
+                style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}
               >
                 İptal
               </button>
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={handleGrupEkle}
+                disabled={!grupEkleForm.ad.trim()}
                 style={{
                   padding: "8px 14px",
                   borderRadius: 8,
                   fontSize: 12,
                   fontWeight: 600,
                   border: "none",
-                  background: TEAL,
+                  background: !grupEkleForm.ad.trim() ? GRAY200 : TEAL,
                   color: "white",
-                  cursor: "pointer",
+                  cursor: !grupEkleForm.ad.trim() ? "not-allowed" : "pointer",
                 }}
               >
                 ✅ Grubu Ekle
@@ -1201,8 +1367,30 @@ export default function IsletmeSezlongPage() {
             <div style={{ padding: "12px 20px 20px", display: "flex", gap: 8, justifyContent: "center" }}>
               <button onClick={() => setCikisModal(false)} style={{ padding: "8px 20px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setCikisModal(false);
+                  if (seciliSezlongId) {
+                    await supabase.from("sezlonglar").update({ durum: "bos" }).eq("id", seciliSezlongId);
+                    if (seciliGrup) {
+                      setHaritaGruplari((prev) => {
+                        const h = prev[seciliGrup];
+                        if (!h) return prev;
+                        return { ...prev, [seciliGrup]: { ...h, durumlar: h.durumlar.map((s) => (s.id === seciliSezlongId ? { ...s, durum: "bos" } : s)) } };
+                      });
+                      setGruplar((prev) =>
+                        prev.map((g) => {
+                          if (g.id !== seciliGrup) return g;
+                          const h = haritaGruplari[seciliGrup];
+                          if (!h) return g;
+                          const updated = h.durumlar.map((d) => (d.id === seciliSezlongId ? "bos" : d.durum));
+                          const dolu = updated.filter((d) => d === "dolu").length;
+                          const bos = updated.filter((d) => d === "bos").length;
+                          return { ...g, dolu, bos, doluluk: updated.length ? `${Math.round((dolu / updated.length) * 100)}%` : g.doluluk };
+                        })
+                      );
+                      setLegendCounts((c) => ({ ...c, dolu: c.dolu - 1, bos: c.bos + 1 }));
+                    }
+                  }
                   setSeciliDurum("bos");
                   showToast(`✅ ${seciliNo} şezlongu boşaltıldı`);
                 }}

@@ -220,8 +220,16 @@ export default function IsletmeSezonPage() {
       setSezonlar(p => p.map(s => s.id === editSezon.id ? { ...s, name, bas, bit, dot: renk } : s));
       showToast(`✅ "${name}" sezonu güncellendi`);
     } else {
-      const { data, error } = await supabase.from("sezonlar").insert({ tesis_id: tesisId, ad: name, baslangic: bas, bitis: bit, aktif: true }).select("id, ad, baslangic, bitis, aktif").single();
-      if (error || !data) { showToast("❌ Sezon eklenemedi"); return; }
+      const tesisIdStr = typeof tesisId === "string" ? tesisId.trim() : String(tesisId);
+      const payload = { tesis_id: tesisIdStr, ad: name, baslangic: bas, bitis: bit, aktif: true };
+      console.log("[saveSezon] insert payload:", { tesis_id: tesisIdStr, tesis_id_length: tesisIdStr.length, ad: name, baslangic: bas, bitis: bit });
+      const { data, error } = await supabase.from("sezonlar").insert(payload).select("id, ad, baslangic, bitis, aktif").single();
+      if (error) {
+        console.error("[saveSezon] Supabase insert error:", error);
+        showToast(`❌ Sezon eklenemedi: ${error.message ?? JSON.stringify(error)}`);
+        return;
+      }
+      if (!data) { showToast("❌ Sezon eklenemedi"); return; }
       const r = data as { id: string; ad: string; baslangic: string; bitis: string; aktif: boolean };
       const b = sezonBadge(r.baslangic, r.bitis, r.aktif);
       setSezonlar(p => [...p, { id: r.id, name: r.ad, bas: r.baslangic, bit: r.bitis, dot: renk, ...b }]);
