@@ -178,11 +178,10 @@ export default function IsletmeRaporlarPage() {
   }, [tesisId]);
 
   // ── Derived data ─────────────────────────────────────────────────────────
+  // Bar chart data: Supabase ile gerçek veri bağlanana kadar
+  // mock GUNLUK_* fallback'leri kaldırıldı; veri yoksa boş gösterilir.
   function getGunlukData() {
-    if (donemGelir === "bugun") return GUNLUK_BUGUN;
-    if (donemGelir === "ay")    return GUNLUK_AY;
-    if (donemGelir === "yil")   return GUNLUK_YIL;
-    return GUNLUK_HAFTA;
+    return [];
   }
 
   const donemStat = {
