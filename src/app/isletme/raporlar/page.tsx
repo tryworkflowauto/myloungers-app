@@ -116,8 +116,6 @@ export default function IsletmeRaporlarPage() {
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
   // Modals
-  const [grupDetay]   = useState<null>(null);
-  const [odemeDetay]  = useState<null>(null);
   const [statDetay, setStatDetay]   = useState<{ label: string; val: string; items: { k: string; v: string }[] } | null>(null);
 
   // Garson sort
@@ -536,62 +534,6 @@ export default function IsletmeRaporlarPage() {
           </>
         )}
       </div>
-
-      {/* ── MODAL: Grup Detay ─────────────────────────────────────────────── */}
-      {grupDetay && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setGrupDetay(null)}>
-          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{grupDetay.name}</h3>
-              <button onClick={() => setGrupDetay(null)} style={{ width: 28, height: 28, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-              {[
-                { label: "Toplam Gelir", val: grupDetay.tutar },
-                { label: "Rezervasyon Sayısı", val: String(grupDetay.detay.rez) },
-                { label: "Ortalama Gelir/Rez.", val: grupDetay.detay.ortGelir },
-                { label: "En Aktif Gün", val: grupDetay.detay.enAktif },
-              ].map((item, i) => (
-                <div key={i} style={{ background: GRAY50, borderRadius: 10, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 10, color: GRAY400, fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>{item.val}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ background: GRAY100, borderRadius: 10, height: 8, overflow: "hidden" }}>
-              <div style={{ width: `${grupDetay.pct}%`, height: "100%", borderRadius: 10, background: `linear-gradient(90deg,${TEAL},${GREEN})` }} />
-            </div>
-            <div style={{ fontSize: 11, color: GRAY400, marginTop: 6, textAlign: "right" }}>Toplam gelirin %{grupDetay.pct}'i</div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL: Ödeme Detay ─────────────────────────────────────────────── */}
-      {odemeDetay && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setOdemeDetay(null)}>
-          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 360, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{odemeDetay.name}</h3>
-              <button onClick={() => setOdemeDetay(null)} style={{ width: 28, height: 28, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-              {[
-                { label: "Toplam Tutar", val: odemeDetay.tutar },
-                { label: "İşlem Sayısı", val: String(odemeDetay.detay.islem) },
-                { label: "Ortalama İşlem", val: odemeDetay.detay.ort },
-                { label: "İptal Sayısı", val: String(odemeDetay.detay.iptal) },
-                { label: "Başarı Oranı", val: odemeDetay.detay.basari },
-                { label: "Gelir Payı", val: `%${odemeDetay.pct}` },
-              ].map((item, i) => (
-                <div key={i} style={{ background: GRAY50, borderRadius: 10, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 10, color: GRAY400, fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>{item.val}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── MODAL: Stat Detay ──────────────────────────────────────────────── */}
       {statDetay && (
