@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -39,7 +41,7 @@ const SEZ_TAG_STYLES: Record<string, { bg: string; color: string }> = {
 type PersonelStat = { v: string; l: string; vColor?: string };
 
 type Personel = {
-  id: number;
+  id: string;
   inits: string;
   name: string;
   phone: string;
@@ -59,14 +61,20 @@ type Personel = {
   photo?: string;
 };
 
-const INIT_PERSONELLER: Personel[] = [
-  { id: 1, inits: "ES", name: "Emre Şahin", phone: "0532 100 11 22", rol: "mudur", rolLabel: "👑 Müdür", avatarBg: "linear-gradient(135deg,#7C3AED,#4C1D95)", online: true, stats: [{ v: "—", l: "Teslimat" }, { v: "—", l: "Ort. Süre" }, { v: "Tam", l: "Yetki", vColor: TEAL }], sezlonglar: null, sezlongTitle: null, yetkiler: ["Şezlong Haritası", "Rezervasyonlar", "Siparişler", "Menü Yönetimi", "Sezon & Fiyatlar", "Bakiye & Raporlar"], yetkiKilitli: [], aktif: true },
-  { id: 2, inits: "MG", name: "Mehmet Güneş", phone: "0533 200 22 33", rol: "garson", rolLabel: "🛵 Garson", avatarBg: "linear-gradient(135deg,#0ABAB5,#065F46)", online: true, stats: [{ v: "34", l: "Teslimat", vColor: GREEN }, { v: "9dk", l: "Ort. Süre" }, { v: "₺280", l: "Tip", vColor: ORANGE }], sezlonglar: ["S-1","S-2","S-3","S-4","S-5","S-6","S-7","S-8","S-9","S-10"], sezlongTitle: "Atanan Şezlonglar", yetkiler: ["Siparişler", "Atanan Şezlonglar"], yetkiKilitli: ["Menü (Kilitli)", "Fiyatlar (Kilitli)"], aktif: true },
-  { id: 3, inits: "AT", name: "Ayşe Toprak", phone: "0534 300 33 44", rol: "garson", rolLabel: "🛵 Garson", avatarBg: "linear-gradient(135deg,#F5821F,#92400E)", online: true, stats: [{ v: "28", l: "Teslimat", vColor: GREEN }, { v: "12dk", l: "Ort. Süre" }, { v: "₺350", l: "Tip", vColor: ORANGE }], sezlonglar: ["V-1","V-2","V-3","V-4","V-5","G-1","G-2"], sezlongTitle: "Atanan Şezlonglar", sezlongTags: ["vip","vip","vip","vip","vip","gold","gold"], yetkiler: ["Siparişler", "Atanan Şezlonglar", "Rezervasyonlar (Görüntüle)"], yetkiKilitli: ["Fiyatlar (Kilitli)"], aktif: true },
-  { id: 4, inits: "CK", name: "Can Kılıç", phone: "0535 400 44 55", rol: "ozel", rolLabel: "⚙️ Özel Yetki", avatarBg: "linear-gradient(135deg,#10B981,#065F46)", online: true, stats: [{ v: "27", l: "Teslimat", vColor: GREEN }, { v: "11dk", l: "Ort. Süre" }, { v: "₺190", l: "Tip", vColor: ORANGE }], sezlonglar: ["İ-1","İ-2","İ-3","İ-4","İ-5","S-11","S-12","S-13"], sezlongTitle: "Atanan Şezlonglar", sezlongTags: ["iskele","iskele","iskele","iskele","iskele","default","default","default"], yetkiler: ["Siparişler", "Atanan Şezlonglar", "Menü (Görüntüle)"], yetkiKilitli: ["Fiyatlar (Kilitli)", "Personel (Kilitli)"], aktif: true },
-  { id: 5, inits: "HA", name: "Hüseyin Avcı", phone: "0536 500 55 66", rol: "mutfak", rolLabel: "👨‍🍳 Mutfak", avatarBg: "linear-gradient(135deg,#F59E0B,#92400E)", online: true, stats: [{ v: "89", l: "Hazırlanan", vColor: GREEN }, { v: "8dk", l: "Ort. Hazırlama" }, { v: "Mutfak", l: "Erişim", vColor: TEAL }], sezlonglar: null, sezlongTitle: "Erişim Alanı", sezlongOzel: ["Mutfak Ekranı", "Sipariş Listesi"], yetkiler: ["Mutfak Paneli", "Sipariş Durumu Güncelle"], yetkiKilitli: ["Rezervasyonlar (Kilitli)", "Fiyatlar (Kilitli)"], aktif: true },
-  { id: 6, inits: "BD", name: "Berk Doğan", phone: "0537 600 66 77", rol: "garson", rolLabel: "🛵 Garson", avatarBg: "linear-gradient(135deg,#94A3B8,#475569)", online: false, stats: [{ v: "0", l: "Bugün" }, { v: "—", l: "Ort. Süre" }, { v: "Pasif", l: "Durum", vColor: GRAY400 }], sezlonglar: null, sezlongTitle: "Atanan Şezlonglar", noSezlong: true, yetkiler: [], yetkiKilitli: ["Erişim Kapalı"], aktif: false },
-];
+const PERSONEL_PHOTO_KEY = "personel_photo_";
+function getPhotoFromStorage(id: string): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const v = localStorage.getItem(PERSONEL_PHOTO_KEY + id);
+  return v || undefined;
+}
+function setPhotoInStorage(id: string, dataUrl: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(PERSONEL_PHOTO_KEY + id, dataUrl);
+}
+function removePhotoFromStorage(id: string) {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(PERSONEL_PHOTO_KEY + id);
+}
 
 const YETKI_SECTIONS = [
   { section: "🏖️ Şezlong Haritası", items: [{ name: "Haritayı Görüntüle", desc: "Şezlong durumlarını görebilir" }, { name: "Şezlong Durumu Değiştir", desc: "Dolu/boş/bakımda yapabilir" }, { name: "İşletme Rezervi Ayarla", desc: "Şezlong kilitleme/açma" }] },
@@ -82,6 +90,43 @@ const AVATAR_GRADIENTS = [
   "linear-gradient(135deg,#7C3AED,#4C1D95)", "linear-gradient(135deg,#10B981,#065F46)",
   "linear-gradient(135deg,#F59E0B,#92400E)", "linear-gradient(135deg,#3B82F6,#1E3A8A)",
 ];
+
+const ALL_YETKI_NAMES = YETKI_SECTIONS.flatMap((s) => s.items.map((i) => i.name));
+
+function rowToPersonel(row: { id: string; ad: string; telefon: string | null; rol: string | null; aktif: boolean | null; sezlonglar: unknown; yetkiler: unknown }, index: number): Personel {
+  const name = (row.ad ?? "").trim() || "—";
+  const rol = (["mudur", "garson", "mutfak", "ozel"].includes(row.rol ?? "") ? row.rol : "garson") as RolType;
+  const sezlongArr = Array.isArray(row.sezlonglar) ? row.sezlonglar : (Array.isArray((row.sezlonglar as any)?.value) ? (row.sezlonglar as any).value : []);
+  const sezlonglar = sezlongArr.length ? sezlongArr.filter((x): x is string => typeof x === "string") : null;
+  const yetkilerArr = Array.isArray(row.yetkiler) ? row.yetkiler : (Array.isArray((row.yetkiler as any)?.value) ? (row.yetkiler as any).value : []);
+  const yetkiler = yetkilerArr.filter((x): x is string => typeof x === "string");
+  const yetkiKilitli = ALL_YETKI_NAMES.filter((n) => !yetkiler.includes(n)).map((n) => `${n} (Kilitli)`);
+  const aktif = row.aktif !== false;
+  const avatarBg = AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length];
+  const inits = name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("") || "?";
+  const photo = getPhotoFromStorage(row.id);
+  const stats: PersonelStat[] = [{ v: "—", l: "Teslimat" }, { v: "—", l: "Ort. Süre" }, { v: "Yetki", l: "Durum", vColor: TEAL }];
+  if (rol === "mutfak") (stats[0] as PersonelStat).l = "Hazırlanan";
+  return {
+    id: String(row.id),
+    inits,
+    name,
+    phone: (row.telefon ?? "").trim() || "",
+    rol,
+    rolLabel: ROL_LABELS[rol],
+    avatarBg,
+    online: false,
+    stats,
+    sezlonglar,
+    sezlongTitle: sezlonglar?.length ? "Atanan Şezlonglar" : (rol === "mutfak" ? "Erişim Alanı" : null),
+    noSezlong: (rol === "garson" || rol === "ozel") && (!sezlonglar || sezlonglar.length === 0),
+    sezlongOzel: rol === "mutfak" ? ["Mutfak Ekranı", "Sipariş Listesi"] : undefined,
+    yetkiler,
+    yetkiKilitli,
+    aktif,
+    photo,
+  };
+}
 
 const emptyForm = { name: "", phone: "", rol: "garson" as RolType, sezlonglar: "", aktif: true };
 
@@ -167,7 +212,11 @@ function PersonelKart({ p, onEdit, onYetki, onToggle, onSil }: {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function IsletmePersonelPage() {
-  const [personeller, setPersoneller] = useState<Personel[]>(INIT_PERSONELLER);
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
+  const [personeller, setPersoneller] = useState<Personel[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Modal states
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -209,16 +258,41 @@ export default function IsletmePersonelPage() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Supabase: personel listesi (tesis_id)
+  useEffect(() => {
+    if (!tesisId) {
+      setPersoneller([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    supabase.from("personel").select("id, ad, telefon, rol, aktif, sezlonglar, yetkiler").eq("tesis_id", tesisId).order("ad", { ascending: true }).then((res) => {
+      if (cancelled) return;
+      if (res.error) {
+        console.error("personel fetch error:", res.error);
+        setPersoneller([]);
+      } else {
+        const rows = (res.data ?? []) as any[];
+        setPersoneller(rows.map((r, i) => rowToPersonel(r, i)));
+      }
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [tesisId]);
+
   // ── Actions ────────────────────────────────────────────────────────────
-  function toggleAktif(id: number) {
-    setPersoneller((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p;
-        const next = !p.aktif;
-        showToast(next ? `✅ ${p.name} aktif yapıldı` : `⏸️ ${p.name} pasif yapıldı`);
-        return { ...p, aktif: next };
-      })
-    );
+  async function toggleAktif(id: string) {
+    const p = personeller.find((x) => x.id === id);
+    if (!p) return;
+    const next = !p.aktif;
+    const { error } = await supabase.from("personel").update({ aktif: next }).eq("id", id);
+    if (error) {
+      console.error("toggleAktif error:", error);
+      return;
+    }
+    setPersoneller((prev) => prev.map((x) => (x.id !== id ? x : { ...x, aktif: next })));
+    showToast(next ? `✅ ${p.name} aktif yapıldı` : `⏸️ ${p.name} pasif yapıldı`);
   }
 
   function openEdit(p: Personel) {
@@ -227,8 +301,21 @@ export default function IsletmePersonelPage() {
     setEditModal(p);
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!editModal) return;
+    const sezlonglarArr = editForm.sezlonglar ? editForm.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const { error } = await supabase.from("personel").update({
+      ad: editForm.name,
+      telefon: editForm.phone || null,
+      rol: editForm.rol,
+      aktif: editForm.aktif,
+      sezlonglar: sezlonglarArr,
+    }).eq("id", editModal.id);
+    if (error) {
+      console.error("saveEdit error:", error);
+      return;
+    }
+    if (editPhoto) setPhotoInStorage(editModal.id, editPhoto);
     setPersoneller((prev) =>
       prev.map((p) =>
         p.id === editModal.id
@@ -239,9 +326,10 @@ export default function IsletmePersonelPage() {
               rol: editForm.rol,
               rolLabel: ROL_LABELS[editForm.rol],
               aktif: editForm.aktif,
-              sezlonglar: editForm.sezlonglar ? editForm.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean) : p.sezlonglar,
+              sezlonglar: sezlonglarArr.length ? sezlonglarArr : null,
               inits: editForm.name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join(""),
               photo: editPhoto || undefined,
+              noSezlong: (editForm.rol === "garson" || editForm.rol === "ozel") && sezlonglarArr.length === 0,
             }
           : p
       )
@@ -250,24 +338,30 @@ export default function IsletmePersonelPage() {
     setEditModal(null);
   }
 
-  function saveYeni() {
-    if (!yeniForm.name) return;
-    const inits = yeniForm.name.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
-    const gradient = AVATAR_GRADIENTS[personeller.length % AVATAR_GRADIENTS.length];
-    const sezlonglar = yeniForm.sezlonglar ? yeniForm.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean) : null;
-    const newP: Personel = {
-      id: Date.now(),
-      inits, name: yeniForm.name, phone: yeniForm.phone,
-      rol: yeniForm.rol, rolLabel: ROL_LABELS[yeniForm.rol],
-      avatarBg: gradient, online: false,
-      stats: [{ v: "0", l: "Teslimat" }, { v: "—", l: "Ort. Süre" }, { v: "Yeni", l: "Durum", vColor: TEAL }],
-      sezlonglar, sezlongTitle: sezlonglar ? "Atanan Şezlonglar" : null,
-      noSezlong: !sezlonglar || sezlonglar.length === 0,
-      yetkiler: yeniForm.rol === "mudur" ? ["Tüm Yetkiler"] : ["Siparişler"],
-      yetkiKilitli: yeniForm.rol !== "mudur" ? ["Fiyatlar (Kilitli)"] : [],
+  async function saveYeni() {
+    if (!yeniForm.name || !tesisId) return;
+    const sezlonglarArr = yeniForm.sezlonglar ? yeniForm.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const defaultYetkiler = yeniForm.rol === "mudur" ? ["Tüm Yetkiler"] : ["Siparişler"];
+    const { data: row, error } = await supabase.from("personel").insert({
+      tesis_id: tesisId,
+      ad: yeniForm.name,
+      telefon: yeniForm.phone || null,
+      rol: yeniForm.rol,
       aktif: yeniForm.aktif,
-      photo: yeniPhoto || undefined,
-    };
+      sezlonglar: sezlonglarArr,
+      yetkiler: defaultYetkiler,
+    }).select("id, ad, telefon, rol, aktif, sezlonglar, yetkiler").single();
+    if (error) {
+      console.error("saveYeni error:", error);
+      return;
+    }
+    const id = String((row as any).id);
+    if (yeniPhoto) setPhotoInStorage(id, yeniPhoto);
+    const newP = rowToPersonel(row as any, personeller.length);
+    newP.id = id;
+    newP.photo = yeniPhoto || undefined;
+    newP.yetkiler = defaultYetkiler;
+    newP.yetkiKilitli = ALL_YETKI_NAMES.filter((n) => !defaultYetkiler.includes(n)).map((n) => `${n} (Kilitli)`);
     setPersoneller((prev) => [newP, ...prev]);
     setYeniForm(emptyForm);
     setYeniPhoto("");
@@ -275,8 +369,14 @@ export default function IsletmePersonelPage() {
     showToast(`✅ ${yeniForm.name} personel olarak eklendi`);
   }
 
-  function silPersonel() {
+  async function silPersonel() {
     if (!silModal) return;
+    const { error } = await supabase.from("personel").delete().eq("id", silModal.id);
+    if (error) {
+      console.error("silPersonel error:", error);
+      return;
+    }
+    removePhotoFromStorage(silModal.id);
     setPersoneller((prev) => prev.filter((p) => p.id !== silModal.id));
     showToast(`🗑️ ${silModal.name} silindi`);
     setSilModal(null);
@@ -294,12 +394,16 @@ export default function IsletmePersonelPage() {
     setYetkiModal(p);
   }
 
-  function saveYetkiler() {
+  async function saveYetkiler() {
     if (!yetkiModal) return;
     const newYetkiler = Object.entries(yetkiChecks).filter(([, v]) => v).map(([k]) => k);
-    setPersoneller((prev) =>
-      prev.map((p) => p.id === yetkiModal.id ? { ...p, yetkiler: newYetkiler, yetkiKilitli: [] } : p)
-    );
+    const { error } = await supabase.from("personel").update({ yetkiler: newYetkiler }).eq("id", yetkiModal.id);
+    if (error) {
+      console.error("saveYetkiler error:", error);
+      return;
+    }
+    const yetkiKilitli = ALL_YETKI_NAMES.filter((n) => !newYetkiler.includes(n)).map((n) => `${n} (Kilitli)`);
+    setPersoneller((prev) => prev.map((p) => (p.id === yetkiModal.id ? { ...p, yetkiler: newYetkiler, yetkiKilitli } : p)));
     showToast(`🔑 ${yetkiModal.name} yetkileri güncellendi`);
     setYetkiModal(null);
   }
@@ -398,7 +502,11 @@ export default function IsletmePersonelPage() {
         </div>
 
         {/* PERSONEL GRID */}
-        {goruntulenen.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "60px 20px", color: GRAY400 }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Yükleniyor…</div>
+          </div>
+        ) : goruntulenen.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: GRAY400 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
             <div style={{ fontSize: 14, fontWeight: 600 }}>Bu filtre için personel bulunamadı</div>
