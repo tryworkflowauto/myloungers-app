@@ -191,7 +191,7 @@ export default function IsletmeRaporlarPage() {
       .gt("bakiye_yuklenen", 0)
       .then(({ data, error }) => {
         if (error || !data) { setBakiyeRows([]); return; }
-        setBakiyeRows(data.map((r) => ({
+        setBakiyeRows(data.map((r, idx) => ({
           inits: (r.musteri_adi || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
           name: r.musteri_adi || "",
           sezlong: (() => {
@@ -201,16 +201,28 @@ export default function IsletmeRaporlarPage() {
             if (num) return String(num);
             return "";
           })(),
-          avatarBg: "#6366f1",
-          yuklenen: r.bakiye_yuklenen ?? 0,
-          harcanan: r.bakiye_harcanan ?? 0,
-          kalan: r.bakiye_kalan ?? 0,
+          avatarBg: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length],
+          yuklenen: `₺${Number(r.bakiye_yuklenen ?? 0).toLocaleString("tr-TR")}`,
+          harcanan: `₺${Number(r.bakiye_harcanan ?? 0).toLocaleString("tr-TR")}`,
+          kalan: `₺${Number(r.bakiye_kalan ?? 0).toLocaleString("tr-TR")}`,
           kalanColor: (r.bakiye_kalan ?? 0) <= 0 ? "#ef4444" : "#0ab5b5",
           sonTarih: r.bakiye_son_tarih ?? "",
           sonTarihWarn: r.bakiye_son_tarih ? new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) : false,
           sonTarihGray: !r.bakiye_son_tarih,
-          durum: (r.bakiye_kalan ?? 0) <= 0 ? "bitti" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date() ? "suresi_gecti" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) ? "yaklasan" : "aktif")),
-          durumLabel: (r.bakiye_kalan ?? 0) <= 0 ? "Sona Erdi" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date() ? "Süresi Geçti" : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000) ? "Yaklaşan" : "Aktif")),
+          durum: (r.bakiye_kalan ?? 0) <= 0
+            ? "bitti"
+            : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date()
+              ? "suresi_gecti"
+              : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000)
+                ? "yaklasan"
+                : "aktif")),
+          durumLabel: (r.bakiye_kalan ?? 0) <= 0
+            ? "✗ Sona Erdi"
+            : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) < new Date()
+              ? "✗ Süresi Geçti"
+              : (r.bakiye_son_tarih && new Date(r.bakiye_son_tarih) <= new Date(Date.now() + 3 * 86400000)
+                ? "⚠ Yaklaşan"
+                : "✓ Aktif")),
           rowBg: null,
           opacity: 1,
         })));
@@ -508,7 +520,22 @@ export default function IsletmeRaporlarPage() {
                   Toplam risk: ₺{riskTotal.toLocaleString("tr-TR")}
                 </span>
               </div>
-              <button style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Bildirimleri Gör</button>
+              <button
+                onClick={() => {
+                  if (riskRows.length === 0) return;
+                  setStatDetay({
+                    label: "Riskli Bakiyeler",
+                    val: `₺${riskTotal.toLocaleString("tr-TR")}`,
+                    items: riskRows.map((r) => ({
+                      k: r.name,
+                      v: `Kalan: ₺${Number(r.kalan ?? 0).toLocaleString("tr-TR")} • Son: ${r.sonTarih || "-"}`,
+                    })),
+                  });
+                }}
+                style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}
+              >
+                Bildirimleri Gör
+              </button>
             </div>
             <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden", marginBottom: 16 }}>
               <div style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
