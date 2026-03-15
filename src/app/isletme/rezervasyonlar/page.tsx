@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
@@ -173,7 +173,7 @@ const TABS = [
 ];
 
 const emptyYeniForm = {
-  musteriAdi: "", telefon: "", grup: "Silver", sezlongId: "",
+  musteriAdi: "", telefon: "", grup: "", sezlongId: "",
   tarih: "2026-03-11", saat: "09:00", kisiSayisi: "2", odeme: "on",
 };
 
@@ -205,6 +205,7 @@ export default function IsletmeRezervasyonlarPage() {
   const [cikisYaptirModal, setCikisYaptirModal] = useState(false);
   const [printReceipt, setPrintReceipt] = useState<{ rez: Rezervasyon; tesisAd: string } | null>(null);
   const [sezlonglarForForm, setSezlonglarForForm] = useState<{ id: string; numara: number; grupAd: string }[]>([]);
+  const gruplarForForm = useMemo(() => [...new Set(sezlonglarForForm.map((s) => s.grupAd).filter((ad) => ad !== ""))], [sezlonglarForForm]);
 
   // Forms
   const [yeniForm, setYeniForm] = useState(emptyYeniForm);
@@ -994,10 +995,10 @@ export default function IsletmeRezervasyonlarPage() {
               <div>
                 <label style={labelStyle}>Şezlong Grubu</label>
                 <select value={yeniForm.grup} onChange={(e) => setYeniForm((f) => ({ ...f, grup: e.target.value, sezlongId: "" }))} style={inputStyle}>
-                  <option>Silver</option>
-                  <option>VIP</option>
-                  <option>İskele</option>
-                  <option>Gold</option>
+                  <option value="">Seçiniz</option>
+                  {gruplarForForm.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
                 </select>
               </div>
               <div>
