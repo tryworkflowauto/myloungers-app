@@ -564,7 +564,7 @@ export default function IsletmeMenuPage() {
               <button onClick={() => setUrunModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
 
-            <UrunForm form={yeniForm} setForm={setYeniForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} photos={yeniPhotos} setPhotos={setYeniPhotos} />
+            <UrunForm form={yeniForm} setForm={setYeniForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} photos={yeniPhotos} setPhotos={setYeniPhotos} tesisId={tesisId} showToast={showToast} />
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setUrunModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -583,7 +583,7 @@ export default function IsletmeMenuPage() {
               <button onClick={() => setEditModal(null)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
 
-            <UrunForm form={editForm} setForm={setEditForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} photos={editPhotos} setPhotos={setEditPhotos} />
+            <UrunForm form={editForm} setForm={setEditForm} kategoriler={kategoriler} inputStyle={inputStyle} labelStyle={labelStyle} photos={editPhotos} setPhotos={setEditPhotos} tesisId={tesisId} showToast={showToast} />
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditModal(null)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -773,8 +773,11 @@ export default function IsletmeMenuPage() {
 }
 
 // ── Shared form component (used in both add + edit modal) ─────────────────
+const STORAGE_BUCKET = "menu-gorseller";
+const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2MB
+
 function UrunForm({
-  form, setForm, kategoriler, inputStyle, labelStyle, photos, setPhotos,
+  form, setForm, kategoriler, inputStyle, labelStyle, photos, setPhotos, tesisId, showToast,
 }: {
   form: typeof emptyUrunForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyUrunForm>>;
@@ -783,24 +786,40 @@ function UrunForm({
   labelStyle: React.CSSProperties;
   photos: string[];
   setPhotos: React.Dispatch<React.SetStateAction<string[]>>;
+  tesisId: string | null;
+  showToast?: (msg: string) => void;
 }) {
   const f = form;
   const set = (key: string, val: string | boolean) => setForm((prev) => ({ ...prev, [key]: val }));
   const [dragOver, setDragOver] = useState(false);
 
-  function handleFiles(files: FileList | null) {
-    if (!files) return;
+  async function handleFiles(files: FileList | null) {
+    if (!files || !tesisId) return;
     const remaining = 3 - photos.length;
     if (remaining <= 0) return;
-    Array.from(files).slice(0, remaining).forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setPhotos((prev) => prev.length < 3 ? [...prev, result] : prev);
-      };
-      reader.readAsDataURL(file);
-    });
+    const list = Array.from(files).filter((file) => file.type.startsWith("image/"));
+    for (const file of list) {
+      if (file.size > MAX_FILE_BYTES && showToast) {
+        showToast(`Dosya 2MB'dan büyük olamaz: ${file.name}`);
+      }
+    }
+    const toUpload = list.filter((file) => file.size <= MAX_FILE_BYTES).slice(0, remaining);
+    if (toUpload.length === 0) return;
+    const basePath = `${tesisId}/${Date.now()}`;
+    const newUrls: string[] = [];
+    for (let i = 0; i < toUpload.length; i++) {
+      const file = toUpload[i];
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${basePath}-${i}.${ext}`;
+      const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, { contentType: file.type || "image/jpeg", upsert: true });
+      if (error) {
+        console.error("Storage upload error:", error);
+        continue;
+      }
+      const { data: urlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      newUrls.push(urlData.publicUrl);
+    }
+    setPhotos((prev) => [...prev, ...newUrls].slice(0, 3));
   }
 
   return (
@@ -851,7 +870,7 @@ function UrunForm({
                 <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
               </label>
             </p>
-            <p style={{ fontSize: 11, color: GRAY400, margin: "4px 0 0" }}>PNG, JPG — max 3 fotoğraf, 5MB/adet</p>
+            <p style={{ fontSize: 11, color: GRAY400, margin: "4px 0 0" }}>Maks. 2MB • PNG, JPG — max 3 fotoğraf • Maks. 2MB/adet</p>
           </div>
         )}
 
