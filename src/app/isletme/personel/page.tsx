@@ -95,11 +95,12 @@ const AVATAR_GRADIENTS = [
 
 const ALL_YETKI_NAMES = YETKI_SECTIONS.flatMap((s) => s.items.map((i) => i.name));
 
-function rowToPersonel(row: { id: string; ad: string; telefon: string | null; rol: string | null; aktif: boolean | null; sezlonglar: unknown; yetkiler: unknown }, index: number): Personel {
+function rowToPersonel(row: { id: string; ad: string; telefon: string | null; rol: string | null; aktif: boolean | null; atanan_sezlonglar?: unknown; yetkiler: unknown }, index: number): Personel {
   const name = (row.ad ?? "").trim() || "—";
   const rol = (["mudur", "garson", "mutfak", "ozel"].includes(row.rol ?? "") ? row.rol : "garson") as RolType;
-  const sezlongArr = Array.isArray(row.sezlonglar) ? row.sezlonglar : (Array.isArray((row.sezlonglar as any)?.value) ? (row.sezlonglar as any).value : []);
-  const sezlonglar = sezlongArr.length ? sezlongArr.filter((x: unknown): x is string => typeof x === "string") : null;
+  const rawSez = row.atanan_sezlonglar;
+  const sezArr = Array.isArray(rawSez) ? rawSez : (Array.isArray((rawSez as any)?.value) ? (rawSez as any).value : []);
+  const sezlonglar = sezArr.length ? sezArr.filter((x: unknown): x is string => typeof x === "string") : null;
   const yetkilerArr = Array.isArray(row.yetkiler) ? row.yetkiler : (Array.isArray((row.yetkiler as any)?.value) ? (row.yetkiler as any).value : []);
   const yetkiler = yetkilerArr.filter((x: unknown): x is string => typeof x === "string");
   const yetkiKilitli = ALL_YETKI_NAMES.filter((n) => !yetkiler.includes(n)).map((n) => `${n} (Kilitli)`);
@@ -865,7 +866,7 @@ function PersonelForm({ form, setForm, photo, setPhoto, inputStyle, labelStyle, 
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {group.items.map((opt) => {
-                          const checked = selectedValues.includes(opt.label);
+                          const checked = selectedValues.includes(opt.id);
                           return (
                             <label
                               key={opt.id}
@@ -889,8 +890,8 @@ function PersonelForm({ form, setForm, photo, setPhoto, inputStyle, labelStyle, 
                                     ? f.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean)
                                     : [];
                                   const next = e.target.checked
-                                    ? [...current, opt.label]
-                                    : current.filter((v) => v !== opt.label);
+                                    ? [...current, opt.id]
+                                    : current.filter((v) => v !== opt.id);
                                   set("sezlonglar", next.join(", "));
                                 }}
                                 style={{ position: "absolute", opacity: 0, width: 0, height: 0 }}
