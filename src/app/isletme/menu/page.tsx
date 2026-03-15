@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -39,36 +41,13 @@ type KategoriItem = {
   name: string;
 };
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
-const INIT_KATEGORILER: KategoriItem[] = [
-  { id: "tumu", icon: "📋", name: "Tümü" },
-  { id: "soguk", icon: "🥤", name: "Soğuk İçecekler" },
-  { id: "sicak", icon: "☕", name: "Sıcak İçecekler" },
-  { id: "alkol", icon: "🍹", name: "Alkollü İçecekler" },
-  { id: "ana", icon: "🍽️", name: "Ana Yemekler" },
-  { id: "atistirma", icon: "🍟", name: "Atıştırmalık" },
-  { id: "tatli", icon: "🍦", name: "Tatlılar" },
-];
-
-const INIT_URUNLER: Urun[] = [
-  { id: "U1", icon: "🍹", badges: ["populer"], stok: true, name: "Mojito", desc: "Nane, limon, soda ve beyaz rom ile hazırlanır", price: "₺120", priceNum: 120, birim: "/ adet", aktif: true, kategori: "alkol" },
-  { id: "U2", icon: "🍋", badges: ["yeni"], stok: true, name: "Limonata", desc: "Taze sıkılmış limon, şeker, nane", price: "₺45", priceNum: 45, birim: "/ adet", aktif: true, kategori: "soguk" },
-  { id: "U3", icon: "🐟", badges: ["populer"], stok: true, name: "Izgara Levrek", desc: "Taze levrek, yanında salata ve limon", price: "₺150", priceNum: 150, birim: "/ adet", aktif: true, kategori: "ana" },
-  { id: "U4", icon: "🍷", badges: ["alkol"], stok: true, name: "Rosé Şarap", desc: "Yerli rosé şarap, bardak veya şişe", price: "₺180", priceNum: 180, birim: "/ bardak", aktif: true, kategori: "alkol" },
-  { id: "U5", icon: "🍟", badges: [], stok: true, name: "Nachos", desc: "Cips, salsa sos, guacamole ile", price: "₺65", priceNum: 65, birim: "/ porsiyon", aktif: true, kategori: "atistirma" },
-  { id: "U6", icon: "☕", badges: [], stok: false, name: "Türk Kahvesi", desc: "⚠️ Stok Yok", descStyle: { color: RED, fontWeight: 600 }, imgBg: "#F1F5F9", price: "₺35", priceNum: 35, birim: "/ fincan", aktif: false, kategori: "sicak" },
-  { id: "U7", icon: "🍦", badges: [], stok: true, name: "Dondurma", desc: "3 top dondurma, seçimli tat", price: "₺55", priceNum: 55, birim: "/ porsiyon", aktif: true, kategori: "tatli" },
-  { id: "U8", icon: "🥗", badges: [], stok: true, name: "Mevsim Salatası", desc: "Taze mevsim sebzeleri, zeytinyağı", price: "₺70", priceNum: 70, birim: "/ porsiyon", aktif: true, kategori: "ana" },
-  { id: "U9", icon: "🍺", badges: ["alkol"], stok: true, name: "Bira", desc: "Efes, Tuborg — soğuk şişe", price: "₺85", priceNum: 85, birim: "/ şişe", aktif: true, kategori: "alkol" },
-];
-
 const EMOJI_OPTS_KAT = ["🥤", "☕", "🍹", "🍺", "🍽️", "🐟", "🥗", "🍟", "🍦", "🍕", "🍰", "🧃"];
 const EMOJI_OPTS_URUN = ["🍹", "🥤", "☕", "🍺", "🍷", "🍽️", "🐟", "🥗", "🍟", "🍦", "🍕", "🍔", "🥙", "🍰", "🥐", "🧃", "🍋", "🧉", "🥂"];
 
 const BIRIM_OPTS = ["adet", "porsiyon", "bardak", "şişe", "fincan", "dilim"];
 const BADGE_OPTS = [{ val: "", label: "Etiket Yok" }, { val: "populer", label: "⭐ Popüler" }, { val: "yeni", label: "🆕 Yeni" }, { val: "alkol", label: "🔞 Alkollü" }];
 
-const emptyUrunForm = { name: "", desc: "", icon: "🍹", kategori: "soguk", price: "", birim: "adet", badge: "", aktif: true };
+const emptyUrunForm = { name: "", desc: "", icon: "🍹", kategori: "", price: "", birim: "adet", badge: "", aktif: true };
 const emptyCatForm = { name: "", icon: "🥤" };
 
 // ── ProductCard ────────────────────────────────────────────────────────────
@@ -140,8 +119,12 @@ function ProductCard({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function IsletmeMenuPage() {
-  const [urunler, setUrunler] = useState<Urun[]>(INIT_URUNLER);
-  const [kategoriler, setKategoriler] = useState<KategoriItem[]>(INIT_KATEGORILER);
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
+  const [urunler, setUrunler] = useState<Urun[]>([]);
+  const [kategoriler, setKategoriler] = useState<KategoriItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [seciliKat, setSeciliKat] = useState("tumu");
   const [aramaMetni, setAramaMetni] = useState("");
@@ -194,16 +177,73 @@ export default function IsletmeMenuPage() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Supabase: kategoriler + urunler (tesis_id)
+  useEffect(() => {
+    if (!tesisId) {
+      setKategoriler([]);
+      setUrunler([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      supabase.from("menu_kategorileri").select("id, ad, icon, sira").eq("tesis_id", tesisId).eq("aktif", true).order("sira", { ascending: true }),
+      supabase.from("menu_urunleri").select("id, kategori_id, ad, aciklama, fiyat, gorsel_url, aktif, icon, birim, badges, stok").eq("tesis_id", tesisId),
+    ]).then(([katRes, urunRes]) => {
+      if (cancelled) return;
+      if (katRes.error) {
+        console.error("menu_kategorileri fetch error:", katRes.error);
+      }
+      const katRows = (katRes.data ?? []) as any[];
+      const kats: KategoriItem[] = [{ id: "tumu", icon: "📋", name: "Tümü" }, ...katRows.map((k) => ({ id: String(k.id), icon: (k.icon ?? "📋").trim() || "📋", name: (k.ad ?? "").trim() || "Kategori" }))];
+      setKategoriler(kats);
+
+      if (urunRes.error) {
+        console.error("menu_urunleri fetch error:", urunRes.error);
+      }
+      const urunRows = (urunRes.data ?? []) as any[];
+      const uruns: Urun[] = urunRows.map((u) => {
+        const priceNum = Number(u.fiyat ?? 0);
+        const badgesStr = (u.badges ?? "").trim();
+        const badgesArr = badgesStr ? badgesStr.split(",").map((b: string) => b.trim()).filter(Boolean) : [];
+        const birimRaw = (u.birim ?? "adet").trim() || "adet";
+        const photos = u.gorsel_url ? [u.gorsel_url] : [];
+        return {
+          id: String(u.id),
+          icon: (u.icon ?? "🍽️").trim() || "🍽️",
+          badges: badgesArr,
+          stok: Boolean(u.stok !== false),
+          name: (u.ad ?? "").trim() || "—",
+          desc: (u.aciklama ?? "").trim() || "",
+          price: `₺${priceNum.toLocaleString("tr-TR")}`,
+          priceNum,
+          birim: `/ ${birimRaw}`,
+          aktif: Boolean(u.aktif !== false),
+          kategori: u.kategori_id ? String(u.kategori_id) : "",
+          photos: photos.length ? photos : undefined,
+        };
+      });
+      setUrunler(uruns);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [tesisId]);
+
   // ── Actions ────────────────────────────────────────────────────────────
-  function toggleAktif(id: string) {
+  async function toggleAktif(id: string) {
+    const u = urunler.find((x) => x.id === id);
+    if (!u) return;
+    const next = !u.aktif;
+    const { error } = await supabase.from("menu_urunleri").update({ aktif: next }).eq("id", id);
+    if (error) {
+      console.error("toggleAktif error:", error);
+      return;
+    }
     setUrunler((prev) =>
-      prev.map((u) => {
-        if (u.id !== id) return u;
-        const next = !u.aktif;
-        showToast(next ? `✅ ${u.name} aktif yapıldı` : `⏸️ ${u.name} pasif yapıldı`);
-        return { ...u, aktif: next };
-      })
+      prev.map((x) => (x.id !== id ? x : { ...x, aktif: next }))
     );
+    showToast(next ? `✅ ${u.name} aktif yapıldı` : `⏸️ ${u.name} pasif yapıldı`);
   }
 
   function openEdit(u: Urun) {
@@ -212,13 +252,33 @@ export default function IsletmeMenuPage() {
     setEditModal(u);
   }
 
-  function saveEdit() {
-    if (!editModal) return;
+  async function saveEdit() {
+    if (!editModal || !tesisId) return;
     const priceNum = Number(editForm.price) || 0;
+    const gorselUrl = editPhotos.length > 0 ? editPhotos[0] : null;
+    const badgesStr = editForm.badge ? editForm.badge : "";
+    const { error } = await supabase
+      .from("menu_urunleri")
+      .update({
+        ad: editForm.name,
+        aciklama: editForm.desc || null,
+        fiyat: priceNum,
+        gorsel_url: gorselUrl,
+        icon: editForm.icon,
+        birim: editForm.birim,
+        badges: badgesStr,
+        aktif: editForm.aktif,
+        kategori_id: editForm.kategori || null,
+      })
+      .eq("id", editModal.id);
+    if (error) {
+      console.error("saveEdit error:", error);
+      return;
+    }
     setUrunler((prev) =>
       prev.map((u) =>
         u.id === editModal.id
-          ? { ...u, name: editForm.name, desc: editForm.desc, icon: editForm.icon, kategori: editForm.kategori, price: `₺${editForm.price}`, priceNum, birim: `/ ${editForm.birim}`, badges: editForm.badge ? [editForm.badge] : [], aktif: editForm.aktif, photos: editPhotos }
+          ? { ...u, name: editForm.name, desc: editForm.desc, icon: editForm.icon, kategori: editForm.kategori, price: `₺${priceNum.toLocaleString("tr-TR")}`, priceNum, birim: `/ ${editForm.birim}`, badges: editForm.badge ? [editForm.badge] : [], aktif: editForm.aktif, photos: editPhotos }
           : u
       )
     );
@@ -226,22 +286,45 @@ export default function IsletmeMenuPage() {
     showToast(`✅ ${editForm.name} güncellendi`);
   }
 
-  function saveUrun() {
-    if (!yeniForm.name) return;
+  async function saveUrun() {
+    if (!yeniForm.name || !tesisId) return;
     const priceNum = Number(yeniForm.price) || 0;
+    const gorselUrl = yeniPhotos.length > 0 ? yeniPhotos[0] : null;
+    const kategoriId = yeniForm.kategori && yeniForm.kategori !== "tumu" ? yeniForm.kategori : null;
+    const { data: row, error } = await supabase
+      .from("menu_urunleri")
+      .insert({
+        tesis_id: tesisId,
+        kategori_id: kategoriId,
+        ad: yeniForm.name,
+        aciklama: yeniForm.desc || null,
+        fiyat: priceNum,
+        gorsel_url: gorselUrl,
+        icon: yeniForm.icon,
+        birim: yeniForm.birim,
+        badges: yeniForm.badge || "",
+        stok: true,
+        aktif: yeniForm.aktif,
+      })
+      .select("id, kategori_id, ad, aciklama, fiyat, gorsel_url, aktif, icon, birim, badges, stok")
+      .single();
+    if (error) {
+      console.error("saveUrun error:", error);
+      return;
+    }
     const newUrun: Urun = {
-      id: "U" + Date.now(),
-      icon: yeniForm.icon,
-      badges: yeniForm.badge ? [yeniForm.badge] : [],
+      id: String(row.id),
+      icon: (row as any).icon ?? yeniForm.icon,
+      badges: (row as any).badges ? String((row as any).badges).split(",").filter(Boolean) : (yeniForm.badge ? [yeniForm.badge] : []),
       stok: true,
-      name: yeniForm.name,
-      desc: yeniForm.desc,
-      price: `₺${yeniForm.price}`,
+      name: (row as any).ad ?? yeniForm.name,
+      desc: (row as any).aciklama ?? yeniForm.desc,
+      price: `₺${priceNum.toLocaleString("tr-TR")}`,
       priceNum,
-      birim: `/ ${yeniForm.birim}`,
+      birim: `/ ${(row as any).birim ?? yeniForm.birim}`,
       aktif: yeniForm.aktif,
-      kategori: yeniForm.kategori,
-      photos: yeniPhotos,
+      kategori: (row as any).kategori_id ? String((row as any).kategori_id) : yeniForm.kategori,
+      photos: yeniPhotos.length ? yeniPhotos : undefined,
     };
     setUrunler((prev) => [newUrun, ...prev]);
     setYeniForm(emptyUrunForm);
@@ -250,17 +333,31 @@ export default function IsletmeMenuPage() {
     showToast(`✅ ${yeniForm.name} menüye eklendi`);
   }
 
-  function silUrun() {
+  async function silUrun() {
     if (!silModal) return;
+    const { error } = await supabase.from("menu_urunleri").delete().eq("id", silModal.id);
+    if (error) {
+      console.error("silUrun error:", error);
+      return;
+    }
     setUrunler((prev) => prev.filter((u) => u.id !== silModal.id));
     showToast(`🗑️ ${silModal.name} silindi`);
     setSilModal(null);
   }
 
-  function saveKategori() {
-    if (!catForm.name) return;
-    const newKat: KategoriItem = { id: "kat_" + Date.now(), icon: catForm.icon, name: catForm.name };
-    setKategoriler((prev) => [...prev, newKat]);
+  async function saveKategori() {
+    if (!catForm.name || !tesisId) return;
+    const { data: row, error } = await supabase
+      .from("menu_kategorileri")
+      .insert({ tesis_id: tesisId, ad: catForm.name, icon: catForm.icon, sira: 0 })
+      .select("id, ad, icon")
+      .single();
+    if (error) {
+      console.error("saveKategori error:", error);
+      return;
+    }
+    const newKat: KategoriItem = { id: String(row.id), icon: (row as any).icon ?? catForm.icon, name: (row as any).ad ?? catForm.name };
+    setKategoriler((prev) => prev.filter((k) => k.id !== "tumu").length ? [prev[0], ...prev.slice(1), newKat] : [{ id: "tumu", icon: "📋", name: "Tümü" }, newKat]);
     setCatForm(emptyCatForm);
     setCatModalOpen(false);
     showToast(`✅ "${catForm.name}" kategorisi eklendi`);
@@ -405,7 +502,11 @@ export default function IsletmeMenuPage() {
             />
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: GRAY400 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Yükleniyor…</div>
+            </div>
+          ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: GRAY400 }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Ürün bulunamadı</div>
@@ -775,6 +876,7 @@ function UrunForm({
         <div>
           <label style={labelStyle}>Kategori</label>
           <select value={f.kategori} onChange={(e) => set("kategori", e.target.value)} style={inputStyle}>
+            <option value="">Seçiniz</option>
             {kategoriler.filter((k) => k.id !== "tumu").map((k) => (
               <option key={k.id} value={k.id}>{k.icon} {k.name}</option>
             ))}
