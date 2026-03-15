@@ -67,15 +67,6 @@ const DONEM_STATS: Record<string, { toplam: string; sezlong: string; siparis: st
 
 // GRUP_GELIR ve ODEME_KANAL mock verileri kaldırıldı; ilgili bölümler şimdilik "Yakında" gösteriyor.
 
-const BAKIYE_ROWS = [
-  { inits: "AY", name: "Ahmet Yılmaz",  sezlong: "S-12 • Silver",    avatarBg: "linear-gradient(135deg,#0ABAB5,#0A1628)", yuklenen: "₺1.000", harcanan: "₺360",   kalan: "₺640",   kalanColor: TEAL,  sonTarih: "10 Nis 2026", durum: "ok",   durumLabel: "✓ Aktif",    rowBg: null },
-  { inits: "FD", name: "Fatma Demir",   sezlong: "V-3, V-4 • VIP",   avatarBg: "linear-gradient(135deg,#F5821F,#0A1628)", yuklenen: "₺3.000", harcanan: "₺850",   kalan: "₺2.150", kalanColor: TEAL,  sonTarih: "10 Nis 2026", durum: "ok",   durumLabel: "✓ Aktif",    rowBg: null },
-  { inits: "ZA", name: "Zeynep Arslan", sezlong: "İ-5, İ-6 • İskele",avatarBg: "linear-gradient(135deg,#F59E0B,#92400E)", yuklenen: "₺2.500", harcanan: "₺0",     kalan: "₺2.500", kalanColor: TEAL,  sonTarih: "10 Nis 2026", durum: "ok",   durumLabel: "✓ Aktif",    rowBg: null },
-  { inits: "BK", name: "Banu Koç",      sezlong: "S-22 • Silver",    avatarBg: "linear-gradient(135deg,#EF4444,#7F1D1D)", yuklenen: "₺1.000", harcanan: "₺880",   kalan: "₺120",   kalanColor: YELLOW,sonTarih: "16 Mar 2026", sonTarihWarn: true, durum: "soon", durumLabel: "⏰ 5 Gün",  rowBg: "#FFFBEB" },
-  { inits: "SE", name: "Selin Erdoğan", sezlong: "V-8,9,10 • VIP",  avatarBg: "linear-gradient(135deg,#7C3AED,#4C1D95)", yuklenen: "₺4.500", harcanan: "₺1.300", kalan: "₺3.200", kalanColor: YELLOW,sonTarih: "14 Mar 2026", sonTarihWarn: true, durum: "soon", durumLabel: "⏰ 3 Gün",  rowBg: "#FFFBEB" },
-  { inits: "AK", name: "Ali Koç",       sezlong: "S-22 • Silver",    avatarBg: GRAY400,                                   yuklenen: "₺1.000", harcanan: "₺1.000", kalan: "₺0",     kalanColor: GRAY400,sonTarih: "10 Mar 2026", sonTarihGray: true,durum: "exp",  durumLabel: "✖ Sona Erdi",rowBg: null, opacity: 0.6 },
-];
-
 const GARSON_ROWS = [
   { inits: "MG", name: "Mehmet G.", rol: "🛵 Garson", avatarBg: "linear-gradient(135deg,#0ABAB5,#065F46)", teslimat: 34, musteri: 18, sureMin: 9,  sure: "9dk",  perf: 90, puan: "4.9", puanNum: 4.9, tip: "₺280", tipNum: 280 },
   { inits: "AT", name: "Ayşe T.",   rol: "🛵 Garson", avatarBg: "linear-gradient(135deg,#F5821F,#92400E)", teslimat: 28, musteri: 14, sureMin: 12, sure: "12dk", perf: 72, puan: "4.6", puanNum: 4.6, tip: "₺350", tipNum: 350 },
@@ -232,7 +223,7 @@ export default function IsletmeRaporlarPage() {
       rows = [["Gün/Dönem", "Şezlong Geliri", "Sipariş Geliri"], ...getGunlukData().map((g: GunlukItem) => [g.gun, `₺${g.sezVal}`, `₺${String(g.sipVal)}`])];
       filename = "gelir-raporu.csv";
     } else if (activeTab === "bakiye") {
-      rows = [["Müşteri", "Şezlong", "Yüklenen", "Harcanan", "Kalan", "Son Tarih", "Durum"], ...BAKIYE_ROWS.map((r) => [r.name, r.sezlong, r.yuklenen, r.harcanan, r.kalan, r.sonTarih, r.durumLabel])];
+      rows = [["Müşteri", "Şezlong", "Yüklenen", "Harcanan", "Kalan", "Son Tarih", "Durum"]];
       filename = "bakiye-raporu.csv";
     } else if (activeTab === "garson") {
       rows = [["Garson", "Teslimat", "Müşteri", "Ort. Süre", "Tip"], ...GARSON_ROWS.map((g) => [g.name, String(g.teslimat), String(g.musteri), g.sure, g.tip])];
