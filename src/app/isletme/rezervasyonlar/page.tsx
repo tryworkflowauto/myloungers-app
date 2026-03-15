@@ -371,6 +371,9 @@ export default function IsletmeRezervasyonlarPage() {
       kisi_sayisi: parseInt(yeniForm.kisiSayisi, 10) || 2,
       toplam_tutar: 0,
       durum: "bekliyor",
+      musteri_adi: yeniForm.musteriAdi.trim() || null,
+      telefon: yeniForm.telefon.trim() || null,
+      sezlong_id: null,
     };
     const { data: row, error } = await supabase
       .from("rezervasyonlar")
