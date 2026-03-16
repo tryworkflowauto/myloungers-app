@@ -654,9 +654,9 @@ export default function IsletmeSezonPage() {
                       {kalan && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan Süre</span><span style={{ fontWeight: 700, color: PURPLE }}>{kalan}</span></div>}
                       {k.durum === "durduruldu" && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Durum</span><span style={{ fontWeight: 700, color: GRAY400 }}>Durduruldu</span></div>}
                       {k.tip === "oran" && k.gruplar.length > 0 && (
-                        <div style={{ borderTop: `1px solid ${GRAY100}`, paddingTop: 8, marginTop: 4 }}>
+                        <div style={{ borderTop: "1px solid " + GRAY100, paddingTop: 8, marginTop: 4 }}>
                           {k.gruplar.slice(0, 2).map((gr) => {
-                            const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
+                            const base = fiyatlar.find(function (f) { return f.name === gr; })?.erken ?? 0;
                             const disc = Math.round(base * (1 - k.indirimOran / 100));
                             const label = gr.split(" ").slice(1).join(" ") || gr;
                             return base > 0 ? (
@@ -673,16 +673,16 @@ export default function IsletmeSezonPage() {
                         </div>
                       )}
                     </div>
-                    <div style={{ padding: "10px 16px", background: GRAY50, borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                    <div style={{ padding: "10px 16px", background: GRAY50, borderTop: "1px solid " + GRAY100, display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       {/* Düzenle */}
-                      <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>✏️ Düzenle</button>
+                      <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>✏️ Düzenle</button>
                       {/* Durdur / Başlat */}
-                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>⏸ Durdur</button>}
-                      {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>▶ Şimdi Başlat</button>}
+                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>⏸ Durdur</button>}
+                      {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GREEN, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>▶ Şimdi Başlat</button>}
                       {/* Kopyala */}
-                      {isTamamlandi && <button onClick={() => kopyala(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🔄 Kopyala</button>}
+                      {isTamamlandi && <button onClick={() => kopyala(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🔄 Kopyala</button>}
                       {/* Sil */}
-                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>🗑️</button>
+                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>🗑️</button>
                     </div>
                   </div>
                 );
