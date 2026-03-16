@@ -190,10 +190,22 @@ export default function IsletmeTesisPage() {
           if (Array.isArray(kategoriRaw)) {
             parsed = kategoriRaw;
           } else if (typeof kategoriRaw === "string") {
-            parsed = kategoriRaw
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
+            try {
+              const maybeArr = JSON.parse(kategoriRaw);
+              if (Array.isArray(maybeArr)) {
+                parsed = maybeArr.map((v) => String(v));
+              } else {
+                parsed = String(kategoriRaw)
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+              }
+            } catch {
+              parsed = kategoriRaw
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+            }
           }
           const normalized = parsed.map((k) => k.toUpperCase());
           if (normalized.length > 0) setKategoriler(normalized);
