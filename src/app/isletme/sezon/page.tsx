@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -617,58 +617,8 @@ export default function IsletmeSezonPage() {
             ) : kampanyalar.length === 0 ? (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>HenÃ¼z kampanya oluÅŸturulmadÄ±</div>
             ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
-              {kampanyalar.map((k) => {
-                const chip = chipOf(k.durum);
-                const chipOn = k.durum === "aktif";
-                const isTamamlandi = k.durum === "tamamlandi";
-                const kalan = k.durum === "planli" ? kalanGun(k.bit) : null;
-                return (
-                  <div key={k.id} style={{ borderRadius: 14, overflow: "hidden", border: `1.5px solid ${GRAY200}`, opacity: isTamamlandi ? 0.65 : 1 }}>
-                    <div style={{ padding: "14px 16px", color: "white", position: "relative", background: k.headerBg }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 20, position: "absolute", top: 12, left: 14, background: chipOn ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.15)", color: chipOn ? "white" : "rgba(255,255,255,0.7)" }}>{chip}</span>
-                      <div style={{ marginTop: 18 }}>
-                        <h4 style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>{k.name}</h4>
-                        <span style={{ fontSize: 11, opacity: 0.85 }}>{fmtTarih(k.bas, k.bit)}</span>
-                      </div>
-                      <div style={{ position: "absolute", top: 12, right: 12, background: "white", borderRadius: 10, padding: "6px 12px", fontSize: 16, fontWeight: 900, color: k.tip === "oran" ? ORANGE : GRAY600 }}>
-                        {k.tip === "oran" ? `%${k.indirimOran}` : "Sabit"}
-                      </div>
-                    </div>
-                    <div style={{ padding: "14px 16px", background: "white" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, fontSize: 12 }}>
-                        <span style={{ color: GRAY400 }}>Ä°ndirim Tipi</span>
-                        <span style={{ fontWeight: 700, color: NAVY }}>{k.tip === "oran" ? "Oran Ä°ndirimi" : "Sabit Fiyat"}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, fontSize: 12 }}>
-                        <span style={{ color: GRAY400 }}>Uygulanan Gruplar</span>
-                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                          {k.gruplar.map((gr) => {
-                            const gc = GRUP_COLORS[gr] ?? { bg: GRAY100, text: GRAY600 };
-                            const label = gr.split(" ").slice(1).join(" ") || gr;
-                            return <span key={gr} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: gc.bg, color: gc.text }}>{label}</span>;
-                          })}
-                        </div>
-                      </div>
-                      {k.musteriGoster && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>MÃ¼ÅŸteri GÃ¶rÃ¼nÃ¼mÃ¼</span><span style={{ fontWeight: 700, color: GREEN }}>âœ“ GÃ¶steriliyor</span></div>}
-                      {kalan && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan SÃ¼re</span><span style={{ fontWeight: 700, color: PURPLE }}>{kalan}</span></div>}
-                      {k.durum === "durduruldu" && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Durum</span><span style={{ fontWeight: 700, color: GRAY400 }}>Durduruldu</span></div>}
-                    </div>
-                    <div style={{ padding: "10px 16px", background: GRAY50, borderTop: "1px solid " + GRAY100, display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                      {/* DÃ¼zenle */}
-                      <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>âœï¸ DÃ¼zenle</button>
-                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Durdur</button>}
-
-                      {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GREEN, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>â–¶ Åžimdi BaÅŸlat</button>}
-                      {/* Kopyala */}
-                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>Sil</button>
-
-
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              <div style={{ padding: 20, textAlign: "center", color: "#94A3B8" }}>Kampanyalar yakÄ±nda aktif olacak.</div>
+            )}
           </div>
         </div>
       </div>
