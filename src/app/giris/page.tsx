@@ -4,7 +4,8 @@ import Link from "next/link";
 import "./giris.css";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect, useRef } from "react";
-import { signIn, getSession, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
+import { createClient } from "@supabase/supabase-js";
 
 const COUNTRY_CODES = [
   { code: "TR", flag: "🇹🇷", dial: "+90" },
@@ -17,7 +18,10 @@ const COUNTRY_CODES = [
 function GirisContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { update: updateSession } = useSession();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const tabParam = searchParams.get("tab");
   const [pane, setPane] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [tab, setTab] = useState<"login" | "register">("login");
@@ -67,16 +71,29 @@ function GirisContent() {
     }
     if (result?.ok) {
       setSuccessMsg("Giriş başarılı, yönlendiriliyorsunuz…");
-      let session = await getSession();
-      let role = (session?.user as { role?: string } | undefined)?.role;
-      if (role === undefined) {
-        await updateSession();
-        session = await getSession();
-        role = (session?.user as { role?: string } | undefined)?.role;
+
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        router.push("/");
+        return;
       }
-      if (role === "isletme") router.push("/isletme");
-      else if (role === "admin") router.push("/admin");
-      else router.push("/");
+
+      const userId = authData.user.id;
+      const { data: kullanici, error: kullaniciError } = await supabase
+        .from("kullanicilar")
+        .select("rol")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const rol = (!kullaniciError && kullanici && (kullanici as any).rol) ? String((kullanici as any).rol) : null;
+
+      if (rol === "isletme" || rol === "garson" || rol === "mutfak") {
+        router.push("/isletme");
+      } else if (rol === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/profil");
+      }
     }
   }
 
@@ -108,16 +125,28 @@ function GirisContent() {
         return;
       }
       if (loginResult?.ok) {
-        let session = await getSession();
-        let role = (session?.user as { role?: string } | undefined)?.role;
-        if (role === undefined) {
-          await updateSession();
-          session = await getSession();
-          role = (session?.user as { role?: string } | undefined)?.role;
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError || !authData?.user) {
+          router.push("/");
+          return;
         }
-        if (role === "isletme") router.push("/isletme");
-        else if (role === "admin") router.push("/admin");
-        else router.push("/");
+
+        const userId = authData.user.id;
+        const { data: kullanici, error: kullaniciError } = await supabase
+          .from("kullanicilar")
+          .select("rol")
+          .eq("id", userId)
+          .maybeSingle();
+
+        const rol = (!kullaniciError && kullanici && (kullanici as any).rol) ? String((kullanici as any).rol) : null;
+
+        if (rol === "isletme" || rol === "garson" || rol === "mutfak") {
+          router.push("/isletme");
+        } else if (rol === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/profil");
+        }
       }
     } catch (e) {
       console.error("Register error:", e);
