@@ -657,7 +657,7 @@ export default function IsletmeSezonPage() {
                         <div style={{ borderTop: "1px solid " + GRAY100, paddingTop: 8, marginTop: 4 }}>
                           {k.gruplar.slice(0, 2).map((gr) => {
                             const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
-                            const disc = Math.round(base * (1 - k.indirimOran / 100));
+                            const disc = Math.round(base * (1 - k.indirimOran * 0.01));
                             const label = gr.split(" ").slice(1).join(" ") || gr;
                             return base > 0 ? (
                               <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
@@ -902,5 +902,6 @@ export default function IsletmeSezonPage() {
     </div>
   );
 }
+
 
 
