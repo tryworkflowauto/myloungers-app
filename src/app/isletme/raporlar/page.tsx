@@ -376,7 +376,7 @@ export default function IsletmeRaporlarPage() {
       rows = [["Müşteri", "Şezlong", "Yüklenen", "Harcanan", "Kalan", "Son Tarih", "Durum"]];
       filename = "bakiye-raporu.csv";
     } else if (activeTab === "garson") {
-      rows = [["Garson", "Teslimat", "Müşteri", "Ort. Süre", "Tip"], ...GARSON_ROWS.map((g) => [g.name, String(g.teslimat), String(g.musteri), g.sure, g.tip])];
+      rows = [["Garson", "Teslimat", "Müşteri", "Ort. Süre", "Tip"], ...garsonRows.map((g) => [g.name, String(g.teslimat), String(g.musteri), g.sure, g.tip])];
       filename = "garson-performans.csv";
     } else if (activeTab === "urun") {
       rows = [["Sıra", "Ürün", "Kategori", "Satış Adedi", "Birim Fiyat", "Toplam Gelir", "Trend"], ...filteredUrunler.map((u) => [u.rank, u.name, u.cat, String(u.satis), u.fiyat, u.toplam, u.trend])];
