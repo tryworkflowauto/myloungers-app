@@ -653,35 +653,6 @@ export default function IsletmeSezonPage() {
                       {k.musteriGoster && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Müşteri Görünümü</span><span style={{ fontWeight: 700, color: GREEN }}>✓ Gösteriliyor</span></div>}
                       {kalan && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan Süre</span><span style={{ fontWeight: 700, color: PURPLE }}>{kalan}</span></div>}
                       {k.durum === "durduruldu" && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Durum</span><span style={{ fontWeight: 700, color: GRAY400 }}>Durduruldu</span></div>}
-                      {k.tip === "oran" && k.gruplar.length > 0 && (
-                        <div style={{ borderTop: "1px solid " + GRAY100, paddingTop: 8, marginTop: 4 }}>
-                          {k.gruplar.slice(0, 2).map((gr) => {
-                            const fObj = fiyatlar.find(function(f) { return f.name === gr; }); const base = fObj ? (fObj.erken ?? 0) : 0;
-                            const disc = Math.round(base * (1 - k.indirimOran * 0.01));
-                            const label = gr.split(" ").slice(1).join(" ") || gr;
-                            return base > 0 ? (
-                              <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                                <span style={{ color: GRAY400 }}>{label}:</span>
-                                <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr-TR")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr-TR")}</strong></span>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ padding: "10px 16px", background: GRAY50, borderTop: "1px solid " + GRAY100, display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                      {/* Düzenle */}
-                      <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>✏️ Düzenle</button>
-                      {/* Durdur / Başlat */}
-                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>⏸ Durdur</button>}
-                      {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GREEN, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>▶ Şimdi Başlat</button>}
-                      {/* Kopyala */}
-                      {isTamamlandi && <button onClick={() => kopyala(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🔄 Kopyala</button>}
-                      {/* Sil */}
-                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>🗑️</button>
-                    </div>
-                  </div>
-                );
               })}
             </div>
           </div>
@@ -902,6 +873,7 @@ export default function IsletmeSezonPage() {
     </div>
   );
 }
+
 
 
 
