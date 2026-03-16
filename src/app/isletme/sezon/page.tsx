@@ -440,10 +440,10 @@ export default function IsletmeSezonPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
 
           {/* SEZON TANIMLARI */}
-          <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
+          <div style={{ background: "white", borderRadius: 14, border: "1px solid " + GRAY200, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>📅 Sezon Tanımları</h3>
-              <button onClick={openSezonEkle} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>➕ Sezon Ekle</button>
+              <button onClick={openSezonEkle} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "1px solid " + GRAY200, background: GRAY100, color: GRAY800, cursor: "pointer" }}>➕ Sezon Ekle</button>
             </div>
             <div style={{ padding: 20 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>2026 Yıl Görünümü</div>
@@ -466,7 +466,7 @@ export default function IsletmeSezonPage() {
                       <span style={{ fontSize: 11, color: GRAY400 }}>{fmtTarih(s.bas, s.bit)}</span>
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: s.badgeBg, color: s.badgeColor }}>{s.badge}</span>
-                    <button onClick={() => openSezonDuzenle(s)} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
+                    <button onClick={() => openSezonDuzenle(s)} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "1px solid " + GRAY200, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
                   </div>
                 ))}
               </div>
@@ -474,7 +474,7 @@ export default function IsletmeSezonPage() {
           </div>
 
           {/* GENEL AYARLAR */}
-          <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
+          <div style={{ background: "white", borderRadius: 14, border: "1px solid " + GRAY200, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}` }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>⚙️ Genel Ayarlar</h3>
             </div>
@@ -521,7 +521,7 @@ export default function IsletmeSezonPage() {
               <div style={{ padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>İptal Politikası</div><div style={{ fontSize: 11, color: GRAY400 }}>Rezervasyon iptalinde iade süresi</div></div>
-                  <select value={genelAyarlar.iptalPolitika} onChange={(e) => setGAf("iptalPolitika", e.target.value)} style={{ padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
+                  <select value={genelAyarlar.iptalPolitika} onChange={(e) => setGAf("iptalPolitika", e.target.value)} style={{ padding: "7px 10px", border: "1px solid " + GRAY200, borderRadius: 8, fontSize: 12 }}>
                     <option>24 saat öncesine kadar tam iade</option>
                     <option>48 saat öncesine kadar tam iade</option>
                     <option>İade yok</option>
@@ -550,12 +550,12 @@ export default function IsletmeSezonPage() {
         </div>
 
         {/* FİYAT TABLOSU */}
-        <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ background: "white", borderRadius: 14, border: "1px solid " + GRAY200, overflow: "hidden", marginBottom: 16 }}>
           <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>💰 Grup Fiyatları</h3>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: GRAY400 }}>Sezon seç:</span>
-              <select value={seciliSezon} onChange={(e) => setSeciliSezon(e.target.value)} style={{ padding: "6px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 12 }}>
+              <select value={seciliSezon} onChange={(e) => setSeciliSezon(e.target.value)} style={{ padding: "6px 10px", border: "1px solid " + GRAY200, borderRadius: 8, fontSize: 12 }}>
                 <option value="erken">🔵 Erken Sezon</option>
                 <option value="yuksek">🟠 Yüksek Sezon</option>
                 <option value="normal">🟢 Normal Sezon</option>
@@ -606,7 +606,7 @@ export default function IsletmeSezonPage() {
         </div>
 
         {/* KAMPANYALAR */}
-        <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
+        <div style={{ background: "white", borderRadius: 14, border: "1px solid " + GRAY200, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>🎯 Kampanyalar</h3>
             <button onClick={openKampEkle} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>➕ Kampanya Oluştur</button>
@@ -669,14 +669,14 @@ export default function IsletmeSezonPage() {
                         </div>
                       )}
                     </div>
-                    <div style={{ padding: "10px 16px", background: GRAY50, borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                    <div style={{ padding: "10px 16px", background: GRAY50, borderTop: "1px solid " + GRAY100, display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       {/* Düzenle */}
-                      <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>✏️ Düzenle</button>
+                      <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>✏️ Düzenle</button>
                       {/* Durdur / Başlat */}
-                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>⏸ Durdur</button>}
-                      {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>▶ Şimdi Başlat</button>}
+                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>⏸ Durdur</button>}
+                      {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GREEN, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>▶ Şimdi Başlat</button>}
                       {/* Kopyala */}
-                      {isTamamlandi && <button onClick={() => kopyala(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🔄 Kopyala</button>}
+                      {isTamamlandi && <button onClick={() => kopyala(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🔄 Kopyala</button>}
                       {/* Sil */}
                       <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>🗑️</button>
                     </div>
@@ -725,7 +725,7 @@ export default function IsletmeSezonPage() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
-              <button onClick={() => setSezonModal(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={() => setSezonModal(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "1px solid " + GRAY200, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
               <button onClick={saveSezon} disabled={!sezonForm.name || !sezonForm.bas || !sezonForm.bit} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !sezonForm.name || !sezonForm.bas || !sezonForm.bit ? GRAY200 : TEAL, color: !sezonForm.name || !sezonForm.bas || !sezonForm.bit ? GRAY400 : "white", cursor: !sezonForm.name || !sezonForm.bas || !sezonForm.bit ? "not-allowed" : "pointer" }}>✅ {editSezon ? "Güncelle" : "Sezon Ekle"}</button>
             </div>
           </div>
@@ -827,7 +827,7 @@ export default function IsletmeSezonPage() {
               </div>
               {/* Önizleme */}
               {kampForm.tip === "oran" && kampForm.indirimOran > 0 && kampForm.gruplar.length > 0 && (
-                <div style={{ background: GRAY50, borderRadius: 10, padding: 14, border: `1px solid ${GRAY200}` }}>
+                  <div style={{ background: GRAY50, borderRadius: 10, padding: 14, border: "1px solid " + GRAY200 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Fiyat Önizleme (%{kampForm.indirimOran} indirim)</div>
                   {kampForm.gruplar.slice(0, 3).map((gr) => {
                     const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
@@ -843,7 +843,7 @@ export default function IsletmeSezonPage() {
               )}
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
-              <button onClick={() => setKampModal(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={() => setKampModal(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "1px solid " + GRAY200, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
               <button onClick={() => { saveKampanya(); }} disabled={!kampForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !kampForm.name ? GRAY200 : ORANGE, color: !kampForm.name ? GRAY400 : "white", cursor: !kampForm.name ? "not-allowed" : "pointer" }}>
                 {editKamp ? "💾 Güncelle" : "🚀 Kampanyayı Kaydet"}
               </button>
@@ -861,7 +861,7 @@ export default function IsletmeSezonPage() {
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu kampanya durdurulacak:</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{durdurModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button onClick={() => setDurdurModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={() => setDurdurModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "1px solid " + GRAY200, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
               <button onClick={() => { setKampanyalar(p => p.map(k => k.id === durdurModal.id ? { ...k, durum: "durduruldu" } : k)); showToast(`⏸ "${durdurModal.name}" durduruldu`); setDurdurModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: YELLOW, color: "white", cursor: "pointer" }}>⏸ Durdur</button>
             </div>
           </div>
@@ -877,7 +877,7 @@ export default function IsletmeSezonPage() {
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu kampanya hemen aktif olacak:</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{baslatModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button onClick={() => setBaslatModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={() => setBaslatModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "1px solid " + GRAY200, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
               <button onClick={() => { setKampanyalar(p => p.map(k => k.id === baslatModal.id ? { ...k, durum: "aktif" } : k)); showToast(`▶ "${baslatModal.name}" başlatıldı`); setBaslatModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: GREEN, color: "white", cursor: "pointer" }}>▶ Şimdi Başlat</button>
             </div>
           </div>
@@ -893,7 +893,7 @@ export default function IsletmeSezonPage() {
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu işlem geri alınamaz.</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{silModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button onClick={() => setSilModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
+              <button onClick={() => setSilModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "1px solid " + GRAY200, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
               <button onClick={() => { setKampanyalar(p => p.filter(k => k.id !== silModal.id)); showToast(`🗑️ "${silModal.name}" silindi`); setSilModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️ Evet, Sil</button>
             </div>
           </div>
