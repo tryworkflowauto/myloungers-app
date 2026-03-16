@@ -190,9 +190,13 @@ export default function IsletmeTesisPage() {
           if (Array.isArray(kategoriRaw)) {
             parsed = kategoriRaw;
           } else if (typeof kategoriRaw === "string") {
-            parsed = kategoriRaw.split(",").map((s) => s.trim()).filter(Boolean);
+            parsed = kategoriRaw
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
           }
-          if (parsed.length > 0) setKategoriler(parsed);
+          const normalized = parsed.map((k) => k.toUpperCase());
+          if (normalized.length > 0) setKategoriler(normalized);
         }
 
         if (row.sehir) setSehir(row.sehir);
@@ -384,7 +388,7 @@ export default function IsletmeTesisPage() {
     }
     const payload: any = {
       ad: tesisAdi,
-      kategori: kategoriler,
+      kategori: kategoriler.map((k) => k.toUpperCase()),
       sehir,
       ilce,
       adres,
