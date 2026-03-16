@@ -124,6 +124,17 @@ export default function IsletmeTesisPage() {
   const [kategoriler, setKategoriler]   = useState<string[]>(["BEACH CLUB", "OTEL"]);
   const [tesisId, setTesisId]           = useState<string | null>(null);
 
+  // Ulaşım Rehberi
+  const [taksiMerkeze, setTaksiMerkeze]       = useState("Bodrum merkeze 7 dk");
+  const [taksiHavalimanı, setTaksiHavalimanı] = useState("Milas-Bodrum Havalimanı 45 dk");
+  const [taksiTel1, setTaksiTel1]             = useState("+90 252 316 XX XX");
+  const [taksiTel2, setTaksiTel2]             = useState("");
+  const [dolmusHat, setDolmusHat]             = useState("Bodrum - Turgutreis hattı");
+  const [dolmusDurak, setDolmusDurak]         = useState("Zuzuu Beach durağı");
+  const [dolmusSaatBas, setDolmusSaatBas]     = useState("07:00");
+  const [dolmusSaatBit, setDolmusSaatBit]     = useState("22:00");
+  const [dolmusNot, setDolmusNot]             = useState("");
+
   // Form inputs
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [selectedEmoji, setSelectedEmoji]     = useState("😊");
@@ -160,7 +171,7 @@ export default function IsletmeTesisPage() {
     let cancelled = false;
     supabase
       .from("tesisler")
-      .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, aktif, fotograflar")
+      .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar")
       .eq("aktif", true)
       .limit(1)
       .single()
@@ -210,16 +221,42 @@ export default function IsletmeTesisPage() {
         const gunlerDb = (row.calisma_saatleri as GunItem[] | null | undefined) || [];
         setGunler(gunlerDb.length ? gunlerDb : INIT_GUNLER);
 
-        const kurallarDb = (row.kurallar as ListItem[] | null | undefined) || [];
-        setKurallar(kurallarDb.length ? kurallarDb : INIT_KURALLAR);
+        const kurallarDb = row.kurallar as ListItem[] | null | undefined;
+        setKurallar(kurallarDb ?? []);
 
-        const kampanyaDb = (row.kampanya_notlari as ListItem[] | null | undefined) || [];
-        setKampanyaNotlari(kampanyaDb.length ? kampanyaDb : INIT_KAMPANYA_NOTLARI);
+        const kampanyaDb = row.kampanya_notlari as ListItem[] | null | undefined;
+        setKampanyaNotlari(kampanyaDb ?? []);
 
         if (typeof row.aktif === "boolean") setTesisAktif(row.aktif);
 
         const fotosDb = (row.fotograflar as Photo[] | null | undefined) || [];
         setPhotos(fotosDb.length ? fotosDb : INIT_PHOTOS);
+
+        const ulasim = row.ulasim as
+          | {
+              merkeze?: string;
+              havalimanı?: string;
+              tel1?: string;
+              tel2?: string;
+              hat?: string;
+              durak?: string;
+              saatBas?: string;
+              saatBit?: string;
+              not?: string;
+            }
+          | null
+          | undefined;
+        if (ulasim) {
+          if (ulasim.merkeze) setTaksiMerkeze(ulasim.merkeze);
+          if (ulasim.havalimanı) setTaksiHavalimanı(ulasim.havalimanı);
+          if (ulasim.tel1) setTaksiTel1(ulasim.tel1);
+          if (ulasim.tel2) setTaksiTel2(ulasim.tel2);
+          if (ulasim.hat) setDolmusHat(ulasim.hat);
+          if (ulasim.durak) setDolmusDurak(ulasim.durak);
+          if (ulasim.saatBas) setDolmusSaatBas(ulasim.saatBas);
+          if (ulasim.saatBit) setDolmusSaatBit(ulasim.saatBit);
+          if (ulasim.not) setDolmusNot(ulasim.not);
+        }
       });
     return () => {
       cancelled = true;
@@ -366,6 +403,17 @@ export default function IsletmeTesisPage() {
       calisma_saatleri: gunler,
       kurallar,
       kampanya_notlari: kampanyaNotlari,
+      ulasim: {
+        merkeze: taksiMerkeze,
+        havalimanı: taksiHavalimanı,
+        tel1: taksiTel1,
+        tel2: taksiTel2,
+        hat: dolmusHat,
+        durak: dolmusDurak,
+        saatBas: dolmusSaatBas,
+        saatBit: dolmusSaatBit,
+        not: dolmusNot,
+      },
       aktif: tesisAktif,
       fotograflar: photos,
     };
@@ -672,34 +720,93 @@ export default function IsletmeTesisPage() {
             <div style={{ border: `1.5px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden" }}>
               <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 13, background: "#FFF9F5", borderBottom: `1px solid ${GRAY100}` }}>🚕 Taksi Bilgileri</div>
               <div style={{ padding: 14 }}>
-                {[{ label: "Merkeze Uzaklık", value: "Bodrum merkeze 7 dk" }, { label: "Havalimanına Uzaklık", value: "Milas-Bodrum Havalimanı 45 dk" }, { label: "Taksi Telefon 1", value: "+90 252 316 XX XX" }, { label: "Taksi Telefon 2", value: "", placeholder: "+90 ..." }].map((f, i) => (
-                  <div key={i} style={{ marginBottom: i < 3 ? 16 : 0 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>{f.label}</label>
-                    <input type="text" defaultValue={f.value} placeholder={f.placeholder} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-                  </div>
-                ))}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Merkeze Uzaklık</label>
+                  <input
+                    type="text"
+                    value={taksiMerkeze}
+                    onChange={(e) => setTaksiMerkeze(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Havalimanına Uzaklık</label>
+                  <input
+                    type="text"
+                    value={taksiHavalimanı}
+                    onChange={(e) => setTaksiHavalimanı(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Taksi Telefon 1</label>
+                  <input
+                    type="text"
+                    value={taksiTel1}
+                    onChange={(e) => setTaksiTel1(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Taksi Telefon 2</label>
+                  <input
+                    type="text"
+                    value={taksiTel2}
+                    onChange={(e) => setTaksiTel2(e.target.value)}
+                    placeholder="+90 ..."
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
+                </div>
               </div>
             </div>
             <div style={{ border: `1.5px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden" }}>
               <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 13, background: "#EFF6FF", borderBottom: `1px solid ${GRAY100}` }}>🚐 Dolmuş Bilgileri</div>
               <div style={{ padding: 14 }}>
-                {[{ label: "Hat / Güzergah", val: "Bodrum - Turgutreis hattı" }, { label: "İnilecek Durak", val: "Zuzuu Beach durağı" }].map((f, i) => (
-                  <div key={i} style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>{f.label}</label>
-                    <input type="text" defaultValue={f.val} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-                  </div>
-                ))}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Hat / Güzergah</label>
+                  <input
+                    type="text"
+                    value={dolmusHat}
+                    onChange={(e) => setDolmusHat(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>İnilecek Durak</label>
+                  <input
+                    type="text"
+                    value={dolmusDurak}
+                    onChange={(e) => setDolmusDurak(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
+                </div>
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Sefer Saatleri</label>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <input type="time" defaultValue="07:00" style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                    <input
+                      type="time"
+                      value={dolmusSaatBas}
+                      onChange={(e) => setDolmusSaatBas(e.target.value)}
+                      style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                    />
                     <span style={{ lineHeight: "42px", color: GRAY400 }}>—</span>
-                    <input type="time" defaultValue="22:00" style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                    <input
+                      type="time"
+                      value={dolmusSaatBit}
+                      onChange={(e) => setDolmusSaatBit(e.target.value)}
+                      style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                    />
                   </div>
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Ek Not</label>
-                  <input type="text" placeholder="örn: Şoföre 'Zuzuu' deyin..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  <input
+                    type="text"
+                    value={dolmusNot}
+                    onChange={(e) => setDolmusNot(e.target.value)}
+                    placeholder="örn: Şoföre 'Zuzuu' deyin..."
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
                 </div>
               </div>
             </div>
