@@ -692,7 +692,7 @@ export default function IsletmeSezonPage() {
       {sezonModal && (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setSezonModal(false)}>
           <div style={modalBox(440)} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: "20px 24px", borderBottom: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid " + GRAY200, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{editSezon ? "✏️ Sezonu Düzenle" : "📅 Sezon Ekle"}</h3>
               <button onClick={() => setSezonModal(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
