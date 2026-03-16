@@ -197,6 +197,39 @@ export default function IsletmeSezonPage() {
     return () => { cancelled = true; };
   }, [tesisId]);
 
+  // Genel Ayarlar: tesisler tablosundan yükle
+  useEffect(() => {
+    if (!tesisId) return;
+    supabase
+      .from("tesisler")
+      .select("min_rezervasyon_suresi, erken_rezervasyon_indirimi, grup_rezervasyon_bonusu, son_dakika_indirimi, son_dakika_aktif, iptal_politikasi")
+      .eq("id", tesisId)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          console.error("Genel ayarlar yüklenemedi:", error);
+          return;
+        }
+        const iptal = (data as any).iptal_politikasi as string | null;
+        const isOzel = iptal && !["24 saat öncesine kadar tam iade", "48 saat öncesine kadar tam iade", "İade yok", "%50 iade"].includes(iptal);
+        let ozelSaat = genelAyarlar.ozelSaat;
+        if (isOzel) {
+          const match = iptal.match(/(\d+)\s*saat/i);
+          if (match) ozelSaat = Math.min(168, Math.max(1, Number(match[1]) || ozelSaat));
+        }
+        setGA({
+          minRezSure: Number((data as any).min_rezervasyon_suresi ?? genelAyarlar.minRezSure),
+          erkenIndirim: Number((data as any).erken_rezervasyon_indirimi ?? genelAyarlar.erkenIndirim),
+          grupBonus: Number((data as any).grup_rezervasyon_bonusu ?? genelAyarlar.grupBonus),
+          sonDakikaToggle: Boolean((data as any).son_dakika_aktif ?? genelAyarlar.sonDakikaToggle),
+          sonDakikaPct: Number((data as any).son_dakika_indirimi ?? genelAyarlar.sonDakikaPct),
+          iptalPolitika: isOzel ? "ozel" : (iptal || genelAyarlar.iptalPolitika),
+          ozelSaat,
+        });
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tesisId]);
+
   // ESC
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -252,6 +285,34 @@ export default function IsletmeSezonPage() {
       await supabase.from("sezlong_gruplari").update({ fiyat: val }).eq("id", f.id);
     }
     showToast("✅ Değişiklikler kaydedildi!");
+  }
+
+  async function kaydetGenelAyarlar() {
+    if (!tesisId) {
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    const iptal_politikasi =
+      genelAyarlar.iptalPolitika === "ozel"
+        ? `${genelAyarlar.ozelSaat} saat öncesine kadar tam iade`
+        : genelAyarlar.iptalPolitika;
+    const { error } = await supabase
+      .from("tesisler")
+      .update({
+        min_rezervasyon_suresi: genelAyarlar.minRezSure,
+        erken_rezervasyon_indirimi: genelAyarlar.erkenIndirim,
+        grup_rezervasyon_bonusu: genelAyarlar.grupBonus,
+        son_dakika_indirimi: genelAyarlar.sonDakikaPct,
+        son_dakika_aktif: genelAyarlar.sonDakikaToggle,
+        iptal_politikasi,
+      })
+      .eq("id", tesisId);
+    if (error) {
+      console.error("Genel ayarlar kaydedilemedi:", error);
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    showToast("✅ Kaydedildi!");
   }
 
   // ── Kampanya actions ───────────────────────────────────────────────────────
@@ -418,7 +479,7 @@ export default function IsletmeSezonPage() {
                   </div>
                 )}
               </div>
-              <button onClick={kaydetDegisiklikler} style={{ padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer", alignSelf: "flex-end" }}>💾 Kaydet</button>
+              <button onClick={kaydetGenelAyarlar} style={{ padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer", alignSelf: "flex-end" }}>💾 Kaydet</button>
             </div>
           </div>
         </div>
