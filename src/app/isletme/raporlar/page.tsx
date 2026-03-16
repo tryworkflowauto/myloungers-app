@@ -76,17 +76,7 @@ const DONEM_STATS: Record<string, { toplam: string; sezlong: string; siparis: st
 
 // GRUP_GELIR ve ODEME_KANAL mock verileri kaldırıldı; ilgili bölümler şimdilik "Yakında" gösteriyor.
 
-const GARSON_ROWS = [
-  { inits: "MG", name: "Mehmet G.", rol: "🛵 Garson", avatarBg: "linear-gradient(135deg,#0ABAB5,#065F46)", teslimat: 34, musteri: 18, sureMin: 9,  sure: "9dk",  perf: 90, puan: "4.9", puanNum: 4.9, tip: "₺280", tipNum: 280 },
-  { inits: "AT", name: "Ayşe T.",   rol: "🛵 Garson", avatarBg: "linear-gradient(135deg,#F5821F,#92400E)", teslimat: 28, musteri: 14, sureMin: 12, sure: "12dk", perf: 72, puan: "4.6", puanNum: 4.6, tip: "₺350", tipNum: 350 },
-  { inits: "CK", name: "Can K.",    rol: "🛵 Garson", avatarBg: "linear-gradient(135deg,#7C3AED,#4C1D95)", teslimat: 27, musteri: 16, sureMin: 11, sure: "11dk", perf: 80, puan: "4.7", puanNum: 4.7, tip: "₺190", tipNum: 190 },
-];
-
-const SAATLIK_TESLIMAT = [
-  { saat: "09", val: 4, pct: 20 }, { saat: "10", val: 7, pct: 35 }, { saat: "11", val: 11, pct: 55 },
-  { saat: "12", val: 16, pct: 80, isOrange: true }, { saat: "13", val: 20, pct: 100, isOrange: true },
-  { saat: "14", val: 15, pct: 75 }, { saat: "15", val: 12, pct: 60 }, { saat: "16", val: 4, pct: 40 },
-];
+// GARSON_ROWS ve SAATLIK_TESLIMAT mock verileri kaldırıldı; Garson sekmesi Supabase'e bağlı.
 
 const URUN_ROWS = [
   { rank: "🥇", icon: "🍹", name: "Mojito",       cat: "Alkollü İçecek", satis: 142, fiyat: "₺120", toplam: "₺17.040", trendUp: true,  trend: "↑ %18" },
@@ -110,6 +100,22 @@ type GunlukItem = {
 
 type TabKey = "gelir" | "bakiye" | "garson" | "urun";
 type GarsonSort = "teslimat" | "sure" | "tip" | "puan";
+
+type GarsonRow = {
+  inits: string;
+  name: string;
+  rol: string;
+  avatarBg: string;
+  teslimat: number;
+  musteri: number;
+  sureMin: number;
+  sure: string;
+  perf: number;
+  puan: string;
+  puanNum: number;
+  tip: string;
+  tipNum: number;
+};
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function IsletmeRaporlarPage() {
@@ -136,6 +142,7 @@ export default function IsletmeRaporlarPage() {
   // Garson sort
   const [garsonSort, setGarsonSort]   = useState<GarsonSort>("teslimat");
   const [garsonSortDir, setGarsonSortDir] = useState<"desc" | "asc">("desc");
+  const [garsonRows, setGarsonRows] = useState<GarsonRow[]>([]);
 
   // Ürün filter
   const [urunKat, setUrunKat] = useState("Tüm Kategoriler");
@@ -189,6 +196,76 @@ export default function IsletmeRaporlarPage() {
         const total = (data ?? []).reduce((acc: number, r: any) => acc + Number(r.toplam ?? 0), 0);
         setSumSip(total);
       });
+  }, [tesisId]);
+
+  // Garson performansı: personel + siparisler
+  useEffect(() => {
+    if (!tesisId) {
+      setGarsonRows([]);
+      return;
+    }
+    Promise.all([
+      supabase
+        .from("personel")
+        .select("id, ad, rol")
+        .eq("tesis_id", tesisId)
+        .eq("rol", "garson"),
+      supabase
+        .from("siparisler")
+        .select("garson_id, teslim_suresi, memnuniyet, toplam, created_at")
+        .eq("tesis_id", tesisId),
+    ]).then(([garsonRes, sipRes]) => {
+      if (garsonRes.error) {
+        console.error("garson fetch error:", garsonRes.error);
+        setGarsonRows([]);
+        return;
+      }
+      if (sipRes.error) {
+        console.error("garson siparis fetch error:", sipRes.error);
+        setGarsonRows([]);
+        return;
+      }
+      const garsons = (garsonRes.data ?? []) as any[];
+      const sips = (sipRes.data ?? []) as any[];
+      const rows: GarsonRow[] = garsons.map((g, idx) => {
+        const gid = String(g.id);
+        const mySips = sips.filter((s) => String(s.garson_id) === gid);
+        const teslimat = mySips.length;
+        const musteri = teslimat; // şu an müşteri sayısı için ayrı alan yok, teslimat ile eşitleniyor
+        const sureAvg =
+          teslimat === 0
+            ? 0
+            : mySips.reduce((sum, s) => sum + Number(s.teslim_suresi ?? 0), 0) / teslimat;
+        const puanAvg =
+          teslimat === 0
+            ? 0
+            : mySips.reduce((sum, s) => sum + Number(s.memnuniyet ?? 0), 0) / teslimat;
+        const tipToplam = mySips.reduce((sum, s) => sum + Number(s.toplam ?? 0), 0);
+        const perf = teslimat === 0 ? 0 : Math.min(100, Math.round((teslimat / 50) * 100));
+        const inits =
+          (g.ad ?? "")
+            .split(" ")
+            .map((w: string) => w[0]?.toUpperCase() ?? "")
+            .slice(0, 2)
+            .join("") || "?";
+        return {
+          inits,
+          name: g.ad ?? "Garson",
+          rol: "🛵 Garson",
+          avatarBg: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length],
+          teslimat,
+          musteri,
+          sureMin: Math.round(sureAvg),
+          sure: teslimat === 0 ? "—" : `${Math.round(sureAvg)}dk`,
+          perf,
+          puanNum: Number(puanAvg.toFixed(1)),
+          puan: puanAvg === 0 ? "0.0" : puanAvg.toFixed(1),
+          tipNum: tipToplam,
+          tip: `₺${tipToplam.toLocaleString("tr-TR")}`,
+        };
+      });
+      setGarsonRows(rows);
+    });
   }, [tesisId]);
 
   useEffect(() => {
@@ -266,7 +343,7 @@ export default function IsletmeRaporlarPage() {
   const riskCount = riskRows.length;
   const riskTotal = riskRows.reduce((sum, r) => sum + Number(r.kalanSayi ?? 0), 0);
 
-  const sortedGarsonlar = [...GARSON_ROWS].sort((a, b) => {
+  const sortedGarsonlar = [...garsonRows].sort((a, b) => {
     const dir = garsonSortDir === "desc" ? -1 : 1;
     if (garsonSort === "teslimat") return (a.teslimat - b.teslimat) * dir;
     if (garsonSort === "sure")     return (a.sureMin - b.sureMin) * dir;
@@ -612,58 +689,44 @@ export default function IsletmeRaporlarPage() {
                   <span style={{ fontSize: 10, display: "inline-flex", alignItems: "center", gap: 6, background: "#F0FFFE", border: `1px solid ${TEAL}`, borderRadius: 20, padding: "4px 12px", fontWeight: 600, color: TEAL }}>💡 Tip: Garsona Direkt</span>
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "180px 80px 80px 80px 80px 90px 80px", padding: "12px 18px", background: GRAY50, borderBottom: `1px solid ${GRAY100}`, gap: 8, fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                <div>Garson</div>
-                {([
-                  { key: "teslimat" as GarsonSort, label: "Teslimat" },
-                  { key: "teslimat" as GarsonSort, label: "Müşteri" },
-                  { key: "sure" as GarsonSort, label: "Ort. Süre" },
-                ]).map((h, i) => (
-                  <div key={i} onClick={() => toggleSort(i === 0 ? "teslimat" : i === 2 ? "sure" : "teslimat")} style={{ cursor: "pointer", userSelect: "none" }}>{h.label}{sortIcon(i === 0 ? "teslimat" : i === 2 ? "sure" : "teslimat")}</div>
-                ))}
-                <div>Performans</div>
-                <div>Memnuniyet</div>
-                <div onClick={() => toggleSort("tip")} style={{ cursor: "pointer", userSelect: "none" }}>Tip{sortIcon("tip")}</div>
-              </div>
-              {sortedGarsonlar.map((g, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "180px 80px 80px 80px 80px 90px 80px", padding: "12px 18px", borderBottom: `1px solid ${GRAY100}`, gap: 8, alignItems: "center", fontSize: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white", background: g.avatarBg }}>{g.inits}</div>
-                    <div><div style={{ fontWeight: 600, color: NAVY }}>{g.name}</div><div style={{ fontSize: 10, color: GRAY400 }}>{g.rol}</div></div>
-                  </div>
-                  <div style={{ fontWeight: 800, color: GREEN, fontSize: 14 }}>{g.teslimat}</div>
-                  <div style={{ fontWeight: 700 }}>{g.musteri}</div>
-                  <div style={{ fontWeight: 700 }}>{g.sure}</div>
-                  <div><div style={{ background: GRAY100, borderRadius: 20, height: 6, width: 60, overflow: "hidden" }}><div style={{ width: `${g.perf}%`, height: "100%", borderRadius: 20, background: `linear-gradient(90deg,${TEAL},${GREEN})` }} /></div></div>
-                  <div style={{ color: YELLOW, fontSize: 11 }}>{"★".repeat(Math.floor(g.puanNum))}{"☆".repeat(5 - Math.floor(g.puanNum))} <span style={{ color: GRAY400, fontSize: 10 }}>{g.puan}</span></div>
-                  <div style={{ fontWeight: 800, color: ORANGE }}>{g.tip}</div>
+              {sortedGarsonlar.length === 0 ? (
+                <div style={{ padding: "24px 18px", textAlign: "center", fontSize: 12, color: GRAY400 }}>
+                  Henüz garson verisi yok.
                 </div>
-              ))}
-              <div style={{ display: "grid", gridTemplateColumns: "180px 80px 80px 80px 80px 90px 80px", padding: "12px 18px", background: GRAY50, borderTop: `2px solid ${GRAY200}`, gap: 8, alignItems: "center", fontSize: 12 }}>
-                <div style={{ fontWeight: 700, color: NAVY }}>Toplam / Ort.</div>
-                <div style={{ fontWeight: 900, color: TEAL, fontSize: 15 }}>89</div>
-                <div style={{ fontWeight: 700 }}>48</div>
-                <div style={{ fontWeight: 700 }}>11dk</div>
-                <div>—</div>
-                <div style={{ color: YELLOW, fontSize: 11 }}>★★★★★ <span style={{ color: GRAY400, fontSize: 10 }}>4.7</span></div>
-                <div style={{ fontWeight: 900, color: ORANGE, fontSize: 14 }}>₺820</div>
-              </div>
-            </div>
-            <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>Saatlik Teslimat Dağılımı</h3>
-                <span style={{ fontSize: 11, color: GRAY400 }}>Bugün</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 100, paddingBottom: 24, borderBottom: `1px solid ${GRAY200}` }}>
-                {SAATLIK_TESLIMAT.map((s, i) => (
-                  <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end" }}>
-                    <div style={{ width: "100%", height: `${s.pct}%`, background: s.isOrange ? ORANGE : TEAL, borderRadius: "6px 6px 0 0", position: "relative", minHeight: 20 }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: GRAY600, position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)" }}>{s.val}</span>
-                    </div>
-                    <span style={{ fontSize: 9, color: GRAY400, marginTop: 4 }}>{s.saat}</span>
+              ) : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "180px 80px 80px 80px 80px 90px 80px", padding: "12px 18px", background: GRAY50, borderBottom: `1px solid ${GRAY100}`, gap: 8, fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    <div>Garson</div>
+                    {([
+                      { key: "teslimat" as GarsonSort, label: "Teslimat" },
+                      { key: "teslimat" as GarsonSort, label: "Müşteri" },
+                      { key: "sure" as GarsonSort, label: "Ort. Süre" },
+                    ]).map((h, i) => (
+                      <div key={i} onClick={() => toggleSort(i === 0 ? "teslimat" : i === 2 ? "sure" : "teslimat")} style={{ cursor: "pointer", userSelect: "none" }}>{h.label}{sortIcon(i === 0 ? "teslimat" : i === 2 ? "sure" : "teslimat")}</div>
+                    ))}
+                    <div>Performans</div>
+                    <div>Memnuniyet</div>
+                    <div onClick={() => toggleSort("tip")} style={{ cursor: "pointer", userSelect: "none" }}>Tip{sortIcon("tip")}</div>
                   </div>
-                ))}
-              </div>
+                  {sortedGarsonlar.map((g, i) => (
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "180px 80px 80px 80px 80px 90px 80px", padding: "12px 18px", borderBottom: `1px solid ${GRAY100}`, gap: 8, alignItems: "center", fontSize: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white", background: g.avatarBg }}>{g.inits}</div>
+                        <div><div style={{ fontWeight: 600, color: NAVY }}>{g.name}</div><div style={{ fontSize: 10, color: GRAY400 }}>{g.rol}</div></div>
+                      </div>
+                      <div style={{ fontWeight: 800, color: GREEN, fontSize: 14 }}>{g.teslimat}</div>
+                      <div style={{ fontWeight: 700 }}>{g.musteri}</div>
+                      <div style={{ fontWeight: 700 }}>{g.sure}</div>
+                      <div><div style={{ background: GRAY100, borderRadius: 20, height: 6, width: 60, overflow: "hidden" }}><div style={{ width: `${g.perf}%`, height: "100%", borderRadius: 20, background: `linear-gradient(90deg,${TEAL},${GREEN})` }} /></div></div>
+                      <div style={{ color: YELLOW, fontSize: 11 }}>{"★".repeat(Math.floor(g.puanNum))}{"☆".repeat(5 - Math.floor(g.puanNum))} <span style={{ color: GRAY400, fontSize: 10 }}>{g.puan}</span></div>
+                      <div style={{ fontWeight: 800, color: ORANGE }}>{g.tip}</div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+            <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 100 }}>
+              <span style={{ fontSize: 12, color: GRAY400, fontStyle: "italic" }}>Saatlik Teslimat Dağılımı yakında burada olacak.</span>
             </div>
           </>
         )}

@@ -76,7 +76,7 @@ export default function IsletmeSidebar() {
   }, []);
 
   return (
-    <aside style={{ width: '240px', background: '#0A1628', minHeight: '100vh', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', zIndex: 100 }}>
+    <aside style={{ width: '240px', background: '#0A1628', minHeight: '100vh', height: '100vh', overflowY: 'auto', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', zIndex: 100 }}>
       {/* Logo */}
       <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
