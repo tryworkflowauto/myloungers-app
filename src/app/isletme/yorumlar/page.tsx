@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY   = "#0A1628";
 const TEAL   = "#0ABAB5";
@@ -111,6 +113,9 @@ const INIT_YORUMLAR: Yorum[] = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function IsletmeYorumlarPage() {
+  const { data: session } = useSession();
+  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+
   const [yorumlar,      setYorumlar]      = useState<Yorum[]>(INIT_YORUMLAR);
   const [activeTab,     setActiveTab]     = useState("tum");
   const [siralama,      setSiralama]      = useState("en_yeni");
@@ -131,6 +136,137 @@ export default function IsletmeYorumlarPage() {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
+
+  // Supabase'ten yorumları çek
+  useEffect(() => {
+    async function fetchYorumlar() {
+      if (!tesisId) {
+        setYorumlar([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("yorumlar")
+        .select("*")
+        .eq("tesis_id", tesisId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Yorumlar çekilemedi:", error);
+        setYorumlar([]);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        // Boş geldiğinde mock'u kullanma, boş liste kullan
+        setYorumlar([]);
+        return;
+      }
+
+      const mapped: Yorum[] = (data as any[]).map((r) => {
+        const musteriAdi: string = r.musteri_adi ?? "Misafir";
+        const initialParts = musteriAdi.split(" ").filter(Boolean);
+        const avatar =
+          initialParts.length === 1
+            ? (initialParts[0][0] ?? "?").toUpperCase()
+            : ((initialParts[0][0] ?? "") + (initialParts[initialParts.length - 1][0] ?? "")).toUpperCase();
+
+        const avatarBg = "linear-gradient(135deg,#0ABAB5,#0A1628)";
+
+        const puan: number = Number(r.puan ?? 0);
+        const yildizSayi: number =
+          typeof r.yildiz === "number"
+            ? r.yildiz
+            : Math.min(5, Math.max(1, Math.round(puan / 2) || 5));
+        const yildiz = "★★★★★"
+          .split("")
+          .map((_, i) => (i < yildizSayi ? "★" : "☆"))
+          .join("");
+
+        const konumP = r.konum_puan as number | null | undefined;
+        const temizlikP = r.temizlik_puan as number | null | undefined;
+        const hizmetP = r.hizmet_puan as number | null | undefined;
+        const fiyatP = r.fiyat_puan as number | null | undefined;
+        const altPuanlar: Array<{ label: string; deger: number }> = [];
+        if (konumP != null) altPuanlar.push({ label: "Konum", deger: Number(konumP) });
+        if (temizlikP != null) altPuanlar.push({ label: "Temizlik", deger: Number(temizlikP) });
+        if (hizmetP != null) altPuanlar.push({ label: "Hizmet", deger: Number(hizmetP) });
+        if (fiyatP != null) altPuanlar.push({ label: "Fiyat", deger: Number(fiyatP) });
+
+        const createdAt = r.created_at ? new Date(r.created_at) : new Date();
+        const tarih = createdAt.toLocaleDateString("tr-TR", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        const tarihSira = createdAt.getTime();
+
+        const durum: string = r.durum ?? "yeni";
+        let tip: YorumTip = "yeni";
+        if (durum === "sikayet") tip = "sikayet";
+        else if (durum === "cevaplandi") tip = "cevaplanmis";
+
+        const isSikayet = tip === "sikayet";
+        let badge = "🔔 Yeni";
+        let badgeBg = "#FFF7ED";
+        let badgeColor = ORANGE;
+        if (isSikayet) {
+          badge = "⚠️ Şikayet";
+          badgeBg = "#FEF2F2";
+          badgeColor = RED;
+        } else if (tip === "cevaplanmis") {
+          badge = "✓ Cevaplandı";
+          badgeBg = "#DCFCE7";
+          badgeColor = GREEN;
+        }
+
+        const puanBg = isSikayet || puan <= 6 ? RED : TEAL;
+
+        const dogrulanmis: boolean = Boolean(r.dogrulanmis ?? true);
+
+        let cevap: Cevap | undefined;
+        if (r.isletme_cevabi) {
+          const cevapTarihi = r.cevap_tarihi ? new Date(r.cevap_tarihi) : null;
+          const cevapTarihStr = cevapTarihi
+            ? cevapTarihi.toLocaleDateString("tr-TR", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+            : "Şimdi";
+          cevap = {
+            label: `🏖️ İşletme Yanıtı · ${cevapTarihStr}`,
+            metin: String(r.isletme_cevabi),
+          };
+        }
+
+        return {
+          id: r.id as number,
+          tip,
+          avatar,
+          avatarBg,
+          ad: musteriAdi,
+          tarih,
+          tarihSira,
+          dogrulandi: dogrulanmis,
+          rezervasyon: r.rezervasyon_bilgi ?? "Rezervasyon",
+          badge,
+          badgeBg,
+          badgeColor,
+          puan,
+          puanBg,
+          yildiz,
+          yildizSayi,
+          altPuanlar: altPuanlar.length ? altPuanlar : undefined,
+          metin: r.yorum ?? "",
+          cevap,
+        };
+      });
+
+      setYorumlar(mapped);
+    }
+
+    fetchYorumlar();
+  }, [tesisId]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   function getMevcutCevap(y: Yorum): Cevap | undefined { return y.cevap; }
@@ -184,11 +320,47 @@ export default function IsletmeYorumlarPage() {
     }
   }
   function sablonEkle(id: number, metin: string) { setCevapMetin(m => ({ ...m, [id]: metin })); }
-  function cevapGonder(id: number) {
+  async function cevapGonder(id: number) {
     const metin = cevapMetin[id]?.trim();
     if (!metin) return;
     const isDuzenle = duzenleModu[id];
-    setYorumlar(ys => ys.map(y => y.id === id ? { ...y, cevap: { label: "🏖️ İşletme Yanıtı · Şimdi", metin }, tip: "cevaplanmis" as YorumTip, badge: "✓ Cevaplandı", badgeBg: "#DCFCE7", badgeColor: GREEN } : y));
+
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from("yorumlar")
+      .update({
+        isletme_cevabi: metin,
+        cevap_tarihi: nowIso,
+        durum: "cevaplandi",
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Cevap kaydedilemedi:", error);
+      showToast("❌ Cevap kaydedilemedi");
+      return;
+    }
+
+    const nowLabelDate = new Date(nowIso).toLocaleDateString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    setYorumlar(ys =>
+      ys.map(y =>
+        y.id === id
+          ? {
+              ...y,
+              cevap: { label: `🏖️ İşletme Yanıtı · ${nowLabelDate}`, metin },
+              tip: "cevaplanmis" as YorumTip,
+              badge: "✓ Cevaplandı",
+              badgeBg: "#DCFCE7",
+              badgeColor: GREEN,
+            }
+          : y,
+      ),
+    );
     setCevapFormOpen(o => ({ ...o, [id]: false }));
     setCevapMetin(m => ({ ...m, [id]: "" }));
     setDuzenleModu(d => ({ ...d, [id]: false }));
@@ -196,12 +368,49 @@ export default function IsletmeYorumlarPage() {
   }
 
   // ── Detail modal cevap ────────────────────────────────────────────────────
-  function detayGonder() {
+  async function detayGonder() {
     if (!detayModal || !detayCevap.trim()) return;
     const id = detayModal.id;
-    const updatedCevap: Cevap = { label: "🏖️ İşletme Yanıtı · Şimdi", metin: detayCevap.trim() };
-    setYorumlar(ys => ys.map(y => y.id === id ? { ...y, cevap: updatedCevap, tip: "cevaplanmis" as YorumTip, badge: "✓ Cevaplandı", badgeBg: "#DCFCE7", badgeColor: GREEN } : y));
-    setDetayModal(prev => prev ? { ...prev, cevap: updatedCevap } : prev);
+    const metin = detayCevap.trim();
+
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from("yorumlar")
+      .update({
+        isletme_cevabi: metin,
+        cevap_tarihi: nowIso,
+        durum: "cevaplandi",
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Detay cevabı kaydedilemedi:", error);
+      showToast("❌ Cevap kaydedilemedi");
+      return;
+    }
+
+    const nowLabelDate = new Date(nowIso).toLocaleDateString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    const updatedCevap: Cevap = { label: `🏖️ İşletme Yanıtı · ${nowLabelDate}`, metin };
+
+    setYorumlar(ys =>
+      ys.map(y =>
+        y.id === id
+          ? {
+              ...y,
+              cevap: updatedCevap,
+              tip: "cevaplanmis" as YorumTip,
+              badge: "✓ Cevaplandı",
+              badgeBg: "#DCFCE7",
+              badgeColor: GREEN,
+            }
+          : y,
+      ),
+    );
+    setDetayModal(prev => (prev ? { ...prev, cevap: updatedCevap } : prev));
     setDetayCevap("");
     setDetayFormOpen(false);
     showToast("📤 Cevap gönderildi!");
@@ -228,6 +437,76 @@ export default function IsletmeYorumlarPage() {
 
   // ── Render helpers ────────────────────────────────────────────────────────
   const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 };
+
+  // Puan kartı için gerçek veriden hesaplanan değerler
+  const toplamYorum = yorumlar.length;
+  const genelPuan =
+    toplamYorum > 0 ? yorumlar.reduce((sum, y) => sum + (y.puan || 0), 0) / toplamYorum : 0;
+
+  const ortalamaYildiz =
+    toplamYorum > 0 ? yorumlar.reduce((sum, y) => sum + (y.yildizSayi || 0), 0) / toplamYorum : 0;
+  const yuvarlanmisYildiz = Math.round(ortalamaYildiz) || 0;
+  const ortalamaYildizStr =
+    yuvarlanmisYildiz > 0
+      ? "★★★★★"
+          .split("")
+          .map((_, i) => (i < yuvarlanmisYildiz ? "★" : "☆"))
+          .join("")
+      : "☆☆☆☆☆";
+
+  const dagilimGercek = [1, 2, 3, 4, 5].map(stars => {
+    const adet = yorumlar.filter(y => y.yildizSayi === stars).length;
+    const width =
+      toplamYorum > 0 ? Math.round((adet / toplamYorum) * 100) : 0;
+    const yildizStr =
+      "★★★★★"
+        .split("")
+        .map((_, i) => (i < stars ? "★" : "☆"))
+        .join("");
+    return { yildiz: yildizStr, width, adet, stars };
+  });
+
+  const metriklerGercek = (() => {
+    if (toplamYorum === 0) {
+      return [
+        { label: "Konum", deger: 0, width: 0 },
+        { label: "Temizlik", deger: 0, width: 0 },
+        { label: "Hizmet", deger: 0, width: 0 },
+        { label: "Fiyat/Değer", deger: 0, width: 0 },
+      ];
+    }
+    const konumlar: number[] = [];
+    const temizlikler: number[] = [];
+    const hizmetler: number[] = [];
+    const fiyatlar: number[] = [];
+
+    yorumlar.forEach(y => {
+      y.altPuanlar?.forEach(ap => {
+        if (ap.label === "Konum") konumlar.push(ap.deger);
+        if (ap.label === "Temizlik") temizlikler.push(ap.deger);
+        if (ap.label === "Hizmet") hizmetler.push(ap.deger);
+        if (ap.label === "Fiyat") fiyatlar.push(ap.deger);
+      });
+    });
+
+    const avg = (arr: number[]) =>
+      arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+
+    const konumDeger = avg(konumlar);
+    const temizlikDeger = avg(temizlikler);
+    const hizmetDeger = avg(hizmetler);
+    const fiyatDeger = avg(fiyatlar);
+
+    const maxPuan = 10;
+    const toWidth = (v: number) => Math.round((v / maxPuan) * 100);
+
+    return [
+      { label: "Konum", deger: konumDeger, width: toWidth(konumDeger) },
+      { label: "Temizlik", deger: temizlikDeger, width: toWidth(temizlikDeger) },
+      { label: "Hizmet", deger: hizmetDeger, width: toWidth(hizmetDeger) },
+      { label: "Fiyat/Değer", deger: fiyatDeger, width: toWidth(fiyatDeger) },
+    ];
+  })();
 
   function CevapBlok({ y, compact }: { y: Yorum; compact?: boolean }) {
     const isSikayet = y.tip === "sikayet";
@@ -292,12 +571,18 @@ export default function IsletmeYorumlarPage() {
         {/* PUAN KARTI */}
         <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 24, marginBottom: 16, display: "grid", gridTemplateColumns: "180px 1fr auto", gap: 32, alignItems: "center" }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 56, fontWeight: 900, color: TEAL, lineHeight: 1 }}>9.6</div>
-            <div style={{ fontSize: 20, color: YELLOW, letterSpacing: 3, marginTop: 6 }}>★★★★★</div>
-            <div style={{ fontSize: 12, color: GRAY400, marginTop: 4 }}>128 doğrulanmış yorum</div>
+            <div style={{ fontSize: 56, fontWeight: 900, color: TEAL, lineHeight: 1 }}>
+              {genelPuan > 0 ? genelPuan.toFixed(1) : "–"}
+            </div>
+            <div style={{ fontSize: 20, color: YELLOW, letterSpacing: 3, marginTop: 6 }}>
+              {toplamYorum > 0 ? ortalamaYildizStr : "☆☆☆☆☆"}
+            </div>
+            <div style={{ fontSize: 12, color: GRAY400, marginTop: 4 }}>
+              {toplamYorum > 0 ? `${toplamYorum} doğrulanmış yorum` : "Henüz yorum yok"}
+            </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {PUAN_BARLARI.map((b, i) => (
+            {metriklerGercek.map((b, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
                 <span style={{ width: 80, color: GRAY600, fontWeight: 600 }}>{b.label}</span>
                 <div style={{ flex: 1, height: 8, background: GRAY100, borderRadius: 20, overflow: "hidden" }}>
@@ -310,7 +595,7 @@ export default function IsletmeYorumlarPage() {
           {/* Puan dağılımı — clickable */}
           <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 180 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, marginBottom: 8 }}>Puan Dağılımı <span style={{ color: TEAL, fontStyle: "italic" }}>(filtrele)</span></div>
-            {PUAN_DAGILIM.map((d, i) => {
+            {dagilimGercek.map((d, i) => {
               const isActive = puanFiltresi === String(d.stars);
               return (
                 <div
