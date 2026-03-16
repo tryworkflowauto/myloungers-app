@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -110,6 +111,19 @@ export default function IsletmeTesisPage() {
   const [enlem, setEnlem]               = useState("37.032048");
   const [boylam, setBoylam]             = useState("27.430012");
 
+  const [tesisAdi, setTesisAdi]         = useState("Zuzuu Beach Hotel");
+  const [sehir, setSehir]               = useState("Bodrum");
+  const [ilce, setIlce]                 = useState("Muğla");
+  const [sehirIlce, setSehirIlce]       = useState("Bodrum, Muğla");
+  const [adres, setAdres]               = useState("Kumbahçe Mah. Neyzen Tevfik Cad. No:12, Bodrum");
+  const [telefon, setTelefon]           = useState("+90 252 316 XX XX");
+  const [email, setEmail]               = useState("info@zuzuubeach.com");
+  const [webSitesi, setWebSitesi]       = useState("https://zuzuubeach.com");
+  const [mapsLink, setMapsLink]         = useState("https://maps.google.com/?q=Zuzuu+Beach+Hotel+Bodrum");
+  const [aciklama, setAciklama]         = useState("");
+  const [kategoriler, setKategoriler]   = useState<string[]>(["BEACH CLUB", "OTEL"]);
+  const [tesisId, setTesisId]           = useState<string | null>(null);
+
   // Form inputs
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [selectedEmoji, setSelectedEmoji]     = useState("😊");
@@ -139,6 +153,77 @@ export default function IsletmeTesisPage() {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") { setTesisAktifModal(false); setOnizlemeModal(false); } };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  // Load active tesis from Supabase
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("tesisler")
+      .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, aktif, fotograflar")
+      .eq("aktif", true)
+      .limit(1)
+      .single()
+      .then(({ data, error }) => {
+        if (cancelled || !data) {
+          if (error) console.error("Tesis yüklenemedi:", error);
+          return;
+        }
+        const row: any = data;
+        setTesisId(String(row.id));
+
+        if (row.ad) setTesisAdi(row.ad);
+
+        const kategoriRaw = row.kategori as string | string[] | null | undefined;
+        if (kategoriRaw) {
+          let parsed: string[] = [];
+          if (Array.isArray(kategoriRaw)) {
+            parsed = kategoriRaw;
+          } else if (typeof kategoriRaw === "string") {
+            parsed = kategoriRaw.split(",").map((s) => s.trim()).filter(Boolean);
+          }
+          if (parsed.length > 0) setKategoriler(parsed);
+        }
+
+        if (row.sehir) setSehir(row.sehir);
+        if (row.ilce) setIlce(row.ilce);
+        if (row.sehir || row.ilce) {
+          const parts = [row.sehir, row.ilce].filter(Boolean);
+          if (parts.length) setSehirIlce(parts.join(", "));
+        }
+
+        if (row.adres) setAdres(row.adres);
+        if (row.telefon) setTelefon(row.telefon);
+        if (row.email) setEmail(row.email);
+        if (row.web_sitesi) setWebSitesi(row.web_sitesi);
+        if (row.kisa_aciklama) setKisaAciklama(row.kisa_aciklama);
+        if (row.detayli_aciklama) setDetayAciklama(row.detayli_aciklama);
+        if (row.aciklama) setAciklama(row.aciklama);
+        if (row.video_url) setVideoUrl(row.video_url);
+        if (row.enlem) setEnlem(String(row.enlem));
+        if (row.boylam) setBoylam(String(row.boylam));
+        if (row.maps_link) setMapsLink(row.maps_link);
+
+        const imkanlarDb = (row.imkanlar as ImkanItem[] | null | undefined) || [];
+        setImkanlar(imkanlarDb.length ? imkanlarDb : INIT_IMKANLAR);
+
+        const gunlerDb = (row.calisma_saatleri as GunItem[] | null | undefined) || [];
+        setGunler(gunlerDb.length ? gunlerDb : INIT_GUNLER);
+
+        const kurallarDb = (row.kurallar as ListItem[] | null | undefined) || [];
+        setKurallar(kurallarDb.length ? kurallarDb : INIT_KURALLAR);
+
+        const kampanyaDb = (row.kampanya_notlari as ListItem[] | null | undefined) || [];
+        setKampanyaNotlari(kampanyaDb.length ? kampanyaDb : INIT_KAMPANYA_NOTLARI);
+
+        if (typeof row.aktif === "boolean") setTesisAktif(row.aktif);
+
+        const fotosDb = (row.fotograflar as Photo[] | null | undefined) || [];
+        setPhotos(fotosDb.length ? fotosDb : INIT_PHOTOS);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ── Photo actions ──────────────────────────────────────────────────────────
@@ -210,14 +295,88 @@ export default function IsletmeTesisPage() {
   }
 
   // ── Tesis Aktif toggle ────────────────────────────────────────────────────
-  function handleTesisToggle(checked: boolean) {
-    if (!checked) { setTesisAktifModal(true); }
-    else { setTesisAktif(true); showToast("✅ Tesis yayında!"); }
+  async function handleTesisToggle(checked: boolean) {
+    if (!checked) {
+      setTesisAktifModal(true);
+      return;
+    }
+    if (!tesisId) {
+      setTesisAktif(true);
+      showToast("✅ Tesis yayında!");
+      return;
+    }
+    setTesisAktif(true);
+    const { error } = await supabase.from("tesisler").update({ aktif: true }).eq("id", tesisId);
+    if (error) {
+      console.error("Tesis durumu güncellenemedi:", error);
+      setTesisAktif(false);
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    showToast("✅ Tesis yayında!");
   }
-  function confirmedTesisKapat() { setTesisAktif(false); setTesisAktifModal(false); showToast("⏸ Tesis yayından kaldırıldı"); }
+  async function confirmedTesisKapat() {
+    if (!tesisId) {
+      setTesisAktif(false);
+      setTesisAktifModal(false);
+      showToast("⏸ Tesis yayından kaldırıldı");
+      return;
+    }
+    const { error } = await supabase.from("tesisler").update({ aktif: false }).eq("id", tesisId);
+    if (error) {
+      console.error("Tesis durumu güncellenemedi:", error);
+      showToast("❌ Kayıt başarısız");
+      setTesisAktifModal(false);
+      return;
+    }
+    setTesisAktif(false);
+    setTesisAktifModal(false);
+    showToast("⏸ Tesis yayından kaldırıldı");
+  }
 
   // ── Save all ──────────────────────────────────────────────────────────────
-  function saveAll() { showToast("✅ Tüm değişiklikler kaydedildi!"); }
+  async function saveAll() {
+    if (!tesisId) {
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    // sehir / ilce senkronizasyonu (kullanıcı alanı değiştirdiyse)
+    if (sehirIlce.trim()) {
+      const parts = sehirIlce.split(",").map((p) => p.trim()).filter(Boolean);
+      if (parts[0]) setSehir(parts[0]);
+      if (parts[1]) setIlce(parts[1]);
+    }
+    const payload: any = {
+      ad: tesisAdi,
+      kategori: kategoriler,
+      sehir,
+      ilce,
+      adres,
+      telefon,
+      email,
+      web_sitesi: webSitesi,
+      kisa_aciklama: kisaAciklama,
+      detayli_aciklama: detayAciklama,
+      aciklama,
+      video_url: videoUrl,
+      enlem,
+      boylam,
+      maps_link: mapsLink,
+      imkanlar,
+      calisma_saatleri: gunler,
+      kurallar,
+      kampanya_notlari: kampanyaNotlari,
+      aktif: tesisAktif,
+      fotograflar: photos,
+    };
+    const { error } = await supabase.from("tesisler").update(payload).eq("id", tesisId);
+    if (error) {
+      console.error("Tesis kaydedilemedi:", error);
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    showToast("✅ Değişiklikler kaydedildi");
+  }
 
   // ── Shared styles ──────────────────────────────────────────────────────────
   const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 };
@@ -263,26 +422,73 @@ export default function IsletmeTesisPage() {
         {/* 1. TEMEL BİLGİLER */}
         <SectionCard open={sections.temel} onToggle={() => toggleSection("temel")} icon="📍" iconBg="#EFF6FF" title="Temel Bilgiler" sub="Tesis adı, konum, iletişim">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            {[
-              { label: "Tesis Adı",    value: "Zuzuu Beach Hotel",                              type: "text"  },
-              { label: "Şehir / İlçe", value: "Bodrum, Muğla",                                  type: "text"  },
-              { label: "Tam Adres",    value: "Kumbahçe Mah. Neyzen Tevfik Cad. No:12, Bodrum", type: "text"  },
-              { label: "Telefon",      value: "+90 252 316 XX XX",                              type: "tel"   },
-              { label: "E-posta",      value: "info@zuzuubeach.com",                            type: "email" },
-              { label: "Web Sitesi",   value: "https://zuzuubeach.com",                         type: "url"   },
-            ].map((f, i) => (
-              <div key={i} style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>{f.label}</label>
-                <input type={f.type as "text"} defaultValue={f.value} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-              </div>
-            ))}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tesis Adı</label>
+              <input type="text" value={tesisAdi} onChange={(e) => setTesisAdi(e.target.value)} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Şehir / İlçe</label>
+              <input
+                type="text"
+                value={sehirIlce}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSehirIlce(v);
+                  const parts = v.split(",").map((p) => p.trim()).filter(Boolean);
+                  if (parts[0] !== undefined) setSehir(parts[0]);
+                  if (parts[1] !== undefined) setIlce(parts[1]);
+                }}
+                style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tam Adres</label>
+              <input type="text" value={adres} onChange={(e) => setAdres(e.target.value)} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Telefon</label>
+              <input type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>E-posta</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Web Sitesi</label>
+              <input type="url" value={webSitesi} onChange={(e) => setWebSitesi(e.target.value)} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            </div>
           </div>
           <div style={{ marginTop: 8 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tesis Kategorisi</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {KATEGORILER.map((k, i) => (
-                <label key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: `1.5px solid ${k.checked ? TEAL : GRAY200}`, borderRadius: 20, cursor: "pointer", background: k.checked ? "#F0FFFE" : "transparent", fontSize: 12, fontWeight: 600, color: k.checked ? NAVY : GRAY600 }}>
-                  <input type="checkbox" defaultChecked={k.checked} style={{ accentColor: TEAL }} /> {k.emoji} {k.name}
+                <label
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 14px",
+                    border: `1.5px solid ${kategoriler.includes(k.name) ? TEAL : GRAY200}`,
+                    borderRadius: 20,
+                    cursor: "pointer",
+                    background: kategoriler.includes(k.name) ? "#F0FFFE" : "transparent",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: kategoriler.includes(k.name) ? NAVY : GRAY600,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={kategoriler.includes(k.name)}
+                    onChange={() => {
+                      setKategoriler((prev) =>
+                        prev.includes(k.name) ? prev.filter((x) => x !== k.name) : [...prev, k.name]
+                      );
+                    }}
+                    style={{ accentColor: TEAL }}
+                  />{" "}
+                  {k.emoji} {k.name}
                 </label>
               ))}
             </div>
@@ -456,7 +662,7 @@ export default function IsletmeTesisPage() {
           </div>
           <div style={{ marginTop: 12 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 6 }}>Google Maps Linki</label>
-            <input type="url" defaultValue="https://maps.google.com/?q=Zuzuu+Beach+Hotel+Bodrum" placeholder="https://maps.google.com/..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            <input type="url" value={mapsLink} onChange={(e) => setMapsLink(e.target.value)} placeholder="https://maps.google.com/..." style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
           </div>
         </SectionCard>
 
