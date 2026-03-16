@@ -715,7 +715,7 @@ export default function IsletmeSezonPage() {
                 <label style={labelCls}>Renk</label>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {SEZON_RENKLERI.map((c) => (
-                    <div key={c} onClick={() => setSezonForm(p => ({ ...p, renk: c }))} style={{ width: 32, height: 32, borderRadius: 10, background: c, cursor: "pointer", border: "3px solid " + (sezonForm.renk === c ? NAVY : "transparent"), transition: "border 0.15s", boxShadow: sezonForm.renk === c ? `0 0 0 2px white inset` : "none" }} />
+                    <div key={c} onClick={() => setSezonForm(p => ({ ...p, renk: c }))} style={{ width: 32, height: 32, borderRadius: 10, background: c, cursor: "pointer", border: "3px solid " + (sezonForm.renk === c ? NAVY : "transparent"), transition: "border 0.15s", boxShadow: sezonForm.renk === c ? "0 0 0 2px white inset" : "none" }} />
                   ))}
                 </div>
                 <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: GRAY50, borderRadius: 10 }}>
@@ -765,7 +765,7 @@ export default function IsletmeSezonPage() {
                     { key: "oran", icon: "%", name: "Oran İndirimi", desc: "Mevcut fiyattan % indirim" },
                     { key: "sabit", icon: "₺", name: "Sabit Fiyat", desc: "Her grup için sabit fiyat gir" },
                   ] as const).map((op) => (
-                    <button key={op.key} type="button" onClick={() => setKampForm(p => ({ ...p, tip: op.key }))} style={{ border: `2px solid ${kampForm.tip === op.key ? ORANGE : GRAY200}`, borderRadius: 10, padding: 12, cursor: "pointer", textAlign: "center", background: kampForm.tip === op.key ? "#FFF9F5" : "transparent" }}>
+                    <button key={op.key} type="button" onClick={() => setKampForm(p => ({ ...p, tip: op.key }))} style={{ border: "2px solid " + (kampForm.tip === op.key ? ORANGE : GRAY200), borderRadius: 10, padding: 12, cursor: "pointer", textAlign: "center", background: kampForm.tip === op.key ? "#FFF9F5" : "transparent" }}>
                       <div style={{ fontSize: 22, marginBottom: 4 }}>{op.icon}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>{op.name}</div>
                       <div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>{op.desc}</div>
