@@ -215,7 +215,7 @@ export default function IsletmeSezonPage() {
       const rows = (data as any[]).map((r) => {
         const bas = (r.baslangic_tarihi as string | null) ?? "";
         const bit = (r.bitis_tarihi as string | null) ?? "";
-        const headerBg = `linear-gradient(135deg,${ORANGE},#C2410C)`;
+        const headerBg = "linear-gradient(135deg," + ORANGE + ",#C2410C)";
         const durum: KampanyaDurum =
           r.durum === "planli" || r.durum === "tamamlandi" || r.durum === "durduruldu" ? r.durum : "aktif";
         return {
@@ -902,3 +902,5 @@ export default function IsletmeSezonPage() {
     </div>
   );
 }
+
+
