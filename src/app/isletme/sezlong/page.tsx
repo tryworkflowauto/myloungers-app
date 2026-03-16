@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 // HTML'deki :root değişkenleri
 const NAVY = "#0A1628";
@@ -210,8 +209,12 @@ function SezlongItem({
 
 export default function IsletmeSezlongPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  const [tesisId, setTesisId] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [gruplar, setGruplar] = useState<GrupRow[]>([]);
@@ -243,9 +246,44 @@ export default function IsletmeSezlongPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
+  // Supabase Auth ile tesis_id yükle
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTesisId() {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user || cancelled) {
+        setTesisId(null);
+        setAuthChecked(true);
+        return;
+      }
+
+      const userId = authData.user.id;
+      const { data: kullanici, error: kullaniciError } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (kullaniciError || !kullanici || !kullanici.tesis_id || cancelled) {
+        setTesisId(null);
+        setAuthChecked(true);
+        return;
+      }
+
+      setTesisId(String(kullanici.tesis_id));
+      setAuthChecked(true);
+    }
+
+    loadTesisId();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
   // Fetch gruplar + sezlonglar
   useEffect(() => {
-    if (!tesisId) {
+    if (!authChecked || !tesisId) {
       setLoading(false);
       return;
     }
@@ -310,7 +348,7 @@ export default function IsletmeSezlongPage() {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [tesisId]);
+  }, [tesisId, authChecked, supabase]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
