@@ -331,7 +331,7 @@ export default function IsletmeSezonPage() {
   }
   function anlikFiyat(f: FiyatRow) {
     const v = seciliSezon === "yuksek" ? f.yuksek : seciliSezon === "normal" ? f.normal : f.erken;
-    return `₺${v.toLocaleString("tr")}`;
+    return `₺${v.toLocaleString("tr-TR")}`;
   }
   async function kaydetDegisiklikler() {
     for (const f of fiyatlar) {
@@ -662,7 +662,7 @@ export default function IsletmeSezonPage() {
                             return base > 0 ? (
                               <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                                 <span style={{ color: GRAY400 }}>{label}:</span>
-                                <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong></span>
+                                <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr-TR")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr-TR")}</strong></span>
                               </div>
                             ) : null;
                           })}
@@ -678,7 +678,7 @@ export default function IsletmeSezonPage() {
                       {/* Kopyala */}
                       {isTamamlandi && <button onClick={() => kopyala(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🔄 Kopyala</button>}
                       {/* Sil */}
-                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>🗑️</button>
+                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>🗑️</button>
                     </div>
                   </div>
                 );
@@ -835,7 +835,7 @@ export default function IsletmeSezonPage() {
                     return base > 0 ? (
                       <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
                         <span style={{ color: GRAY600 }}>{gr}</span>
-                        <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong></span>
+                        <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr-TR")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr-TR")}</strong></span>
                       </div>
                     ) : null;
                   })}
