@@ -459,7 +459,7 @@ export default function IsletmeSezonPage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
                 {sezonlar.map((s) => (
-                  <div key={s.id} style={{ border: `1.5px solid ${s.borderColor ?? GRAY200}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, background: s.rowBg ?? "transparent", opacity: s.opacity ?? 1 }}>
+                  <div key={s.id} style={{ border: "1.5px solid " + (s.borderColor ?? GRAY200), borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, background: s.rowBg ?? "transparent", opacity: s.opacity ?? 1 }}>
                     <div style={{ width: 14, height: 14, borderRadius: 4, background: s.dot }} />
                     <div style={{ flex: 1 }}>
                       <strong style={{ display: "block", fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 2 }}>{s.name}</strong>
@@ -483,7 +483,7 @@ export default function IsletmeSezonPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
                 <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Minimum Rezervasyon Süresi</div><div style={{ fontSize: 11, color: GRAY400 }}>Müşteri en az kaç saat önceden rezervasyon yapabilir</div></div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="number" value={genelAyarlar.minRezSure} onChange={(e) => setGAf("minRezSure", Number(e.target.value))} min={0} style={{ width: 70, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                  <input type="number" value={genelAyarlar.minRezSure} onChange={(e) => setGAf("minRezSure", Number(e.target.value))} min={0} style={{ width: 70, padding: "7px 10px", border: "1.5px solid " + GRAY200, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
                   <span style={{ fontSize: 12, color: GRAY600 }}>saat</span>
                 </div>
               </div>
@@ -491,7 +491,7 @@ export default function IsletmeSezonPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
                 <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Erken Rezervasyon İndirimi</div><div style={{ fontSize: 11, color: GRAY400 }}>3+ gün önceden yapılan rezervasyonlara indirim</div></div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="number" value={genelAyarlar.erkenIndirim} onChange={(e) => setGAf("erkenIndirim", Number(e.target.value))} min={0} max={50} style={{ width: 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                  <input type="number" value={genelAyarlar.erkenIndirim} onChange={(e) => setGAf("erkenIndirim", Number(e.target.value))} min={0} max={50} style={{ width: 60, padding: "7px 10px", border: "1.5px solid " + GRAY200, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
                   <span style={{ fontSize: 12, color: GRAY600 }}>%</span>
                 </div>
               </div>
@@ -499,7 +499,7 @@ export default function IsletmeSezonPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: GRAY50, borderRadius: 10 }}>
                 <div><div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Grup Rezervasyon Bonusu</div><div style={{ fontSize: 11, color: GRAY400 }}>4+ şezlong aynı anda rezerve edilirse</div></div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input type="number" value={genelAyarlar.grupBonus} onChange={(e) => setGAf("grupBonus", Number(e.target.value))} min={0} max={50} style={{ width: 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                  <input type="number" value={genelAyarlar.grupBonus} onChange={(e) => setGAf("grupBonus", Number(e.target.value))} min={0} max={50} style={{ width: 60, padding: "7px 10px", border: "1.5px solid " + GRAY200, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
                   <span style={{ fontSize: 12, color: GRAY600 }}>%</span>
                 </div>
               </div>
@@ -513,7 +513,7 @@ export default function IsletmeSezonPage() {
                       <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: genelAyarlar.sonDakikaToggle ? "translateX(16px)" : "translateX(0)" }} />
                     </span>
                   </label>
-                  <input type="number" value={genelAyarlar.sonDakikaPct} onChange={(e) => setGAf("sonDakikaPct", Number(e.target.value))} min={0} max={50} disabled={!genelAyarlar.sonDakikaToggle} style={{ width: 60, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center", opacity: genelAyarlar.sonDakikaToggle ? 1 : 0.4 }} />
+                  <input type="number" value={genelAyarlar.sonDakikaPct} onChange={(e) => setGAf("sonDakikaPct", Number(e.target.value))} min={0} max={50} disabled={!genelAyarlar.sonDakikaToggle} style={{ width: 60, padding: "7px 10px", border: "1.5px solid " + GRAY200, borderRadius: 8, fontSize: 12, textAlign: "center", opacity: genelAyarlar.sonDakikaToggle ? 1 : 0.4 }} />
                   <span style={{ fontSize: 12, color: GRAY600 }}>%</span>
                 </div>
               </div>
@@ -530,14 +530,14 @@ export default function IsletmeSezonPage() {
                   </select>
                 </div>
                 {genelAyarlar.iptalPolitika === "ozel" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${GRAY200}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, paddingTop: 12, borderTop: "1px solid " + GRAY200 }}>
                     <span style={{ fontSize: 12, color: GRAY600, whiteSpace: "nowrap" }}>İade süresi:</span>
                     <input
                       type="number"
                       value={genelAyarlar.ozelSaat}
                       onChange={(e) => setGAf("ozelSaat", Math.min(168, Math.max(1, Number(e.target.value))))}
                       min={1} max={168}
-                      style={{ width: 70, padding: "7px 10px", border: `1.5px solid ${TEAL}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "center" }}
+                      style={{ width: 70, padding: "7px 10px", border: "1.5px solid " + TEAL, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "center" }}
                     />
                     <span style={{ fontSize: 12, color: GRAY600, whiteSpace: "nowrap" }}>saat öncesine kadar tam iade</span>
                     <span style={{ marginLeft: "auto", fontSize: 10, color: GRAY400 }}>1 – 168 saat arası</span>
@@ -568,36 +568,36 @@ export default function IsletmeSezonPage() {
               <thead>
                 <tr>
                   {["Grup","Erken Sezon","Yüksek Sezon","Normal Sezon","Min. Süre","Anlık Fiyat"].map((h) => (
-                    <th key={h} style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>{h}</th>
+                    <th key={h} style={{ fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px", textAlign: "left", background: GRAY50, borderBottom: "1px solid " + GRAY200 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {fiyatlar.map((g) => (
                   <tr key={g.id} style={{ transition: "background 0.15s" }}>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
+                    <td style={{ padding: "12px 14px", borderBottom: "1px solid " + GRAY100 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 10, height: 10, borderRadius: 3, background: g.color }} />
                         <div><div style={{ fontWeight: 700, fontSize: 13 }}>{g.name}</div><div style={{ fontSize: 10, color: GRAY400 }}>{g.sub}</div></div>
                       </div>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
-                      <input type="number" value={g.erken} onChange={(e) => updateFiyat(g.id, "erken", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${seciliSezon === "erken" ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
+                    <td style={{ padding: "12px 14px", borderBottom: "1px solid " + GRAY100 }}>
+                      <input type="number" value={g.erken} onChange={(e) => updateFiyat(g.id, "erken", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: "1.5px solid " + (seciliSezon === "erken" ? TEAL : GRAY200), borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
                       <span style={{ fontSize: 11, color: GRAY400 }}> ₺</span>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
-                      <input type="number" value={g.yuksek} onChange={(e) => updateFiyat(g.id, "yuksek", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${seciliSezon === "yuksek" ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
+                    <td style={{ padding: "12px 14px", borderBottom: "1px solid " + GRAY100 }}>
+                      <input type="number" value={g.yuksek} onChange={(e) => updateFiyat(g.id, "yuksek", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: "1.5px solid " + (seciliSezon === "yuksek" ? TEAL : GRAY200), borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
                       <span style={{ fontSize: 11, color: GRAY400 }}> ₺</span>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
-                      <input type="number" value={g.normal} onChange={(e) => updateFiyat(g.id, "normal", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: `1.5px solid ${seciliSezon === "normal" ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
+                    <td style={{ padding: "12px 14px", borderBottom: "1px solid " + GRAY100 }}>
+                      <input type="number" value={g.normal} onChange={(e) => updateFiyat(g.id, "normal", Number(e.target.value))} style={{ width: 90, padding: "7px 10px", border: "1.5px solid " + (seciliSezon === "normal" ? TEAL : GRAY200), borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "right" }} />
                       <span style={{ fontSize: 11, color: GRAY400 }}> ₺</span>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
-                      <input type="number" value={g.minGun} onChange={(e) => updateFiyat(g.id, "minGun", Number(e.target.value))} style={{ width: 70, padding: "7px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
+                    <td style={{ padding: "12px 14px", borderBottom: "1px solid " + GRAY100 }}>
+                      <input type="number" value={g.minGun} onChange={(e) => updateFiyat(g.id, "minGun", Number(e.target.value))} style={{ width: 70, padding: "7px 10px", border: "1.5px solid " + GRAY200, borderRadius: 8, fontSize: 12, textAlign: "center" }} />
                       <span style={{ fontSize: 11, color: GRAY400 }}> gün</span>
                     </td>
-                    <td style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}`, fontSize: 15, fontWeight: 900, color: g.anlikColor }}>{anlikFiyat(g)}</td>
+                    <td style={{ padding: "12px 14px", borderBottom: "1px solid " + GRAY100, fontSize: 15, fontWeight: 900, color: g.anlikColor }}>{anlikFiyat(g)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -624,7 +624,7 @@ export default function IsletmeSezonPage() {
                 const isTamamlandi = k.durum === "tamamlandi";
                 const kalan = k.durum === "planli" ? kalanGun(k.bit) : null;
                 return (
-                  <div key={k.id} style={{ borderRadius: 14, overflow: "hidden", border: `1.5px solid ${GRAY200}`, opacity: isTamamlandi ? 0.65 : 1 }}>
+                  <div key={k.id} style={{ borderRadius: 14, overflow: "hidden", border: "1.5px solid " + GRAY200, opacity: isTamamlandi ? 0.65 : 1 }}>
                     <div style={{ padding: "14px 16px", color: "white", position: "relative", background: k.headerBg }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 20, position: "absolute", top: 12, left: 14, background: chipOn ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.15)", color: chipOn ? "white" : "rgba(255,255,255,0.7)" }}>{chip}</span>
                       <div style={{ marginTop: 18 }}>
@@ -654,7 +654,7 @@ export default function IsletmeSezonPage() {
                       {kalan && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan Süre</span><span style={{ fontWeight: 700, color: PURPLE }}>{kalan}</span></div>}
                       {k.durum === "durduruldu" && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Durum</span><span style={{ fontWeight: 700, color: GRAY400 }}>Durduruldu</span></div>}
                       {k.tip === "oran" && k.gruplar.length > 0 && (
-                        <div style={{ borderTop: `1px solid ${GRAY100}`, paddingTop: 8, marginTop: 4 }}>
+                        <div style={{ borderTop: "1px solid " + GRAY100, paddingTop: 8, marginTop: 4 }}>
                           {k.gruplar.slice(0, 2).map((gr) => {
                             const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
                             const disc = Math.round(base * (1 - k.indirimOran / 100));
@@ -736,7 +736,7 @@ export default function IsletmeSezonPage() {
       {kampModal && (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setKampModal(false)}>
           <div style={modalBox(540)} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: "20px 24px", borderBottom: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid " + GRAY200, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{editKamp ? "✏️ Kampanya Düzenle" : "🎯 Yeni Kampanya Oluştur"}</h3>
               <button onClick={() => setKampModal(false)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
@@ -778,7 +778,7 @@ export default function IsletmeSezonPage() {
                 <div style={{ marginBottom: 14 }}>
                   <label style={labelCls}>İndirim Oranı</label>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <input type="number" value={kampForm.indirimOran} onChange={(e) => setKampForm(p => ({ ...p, indirimOran: Number(e.target.value) }))} min={1} max={90} style={{ width: 120, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }} />
+                    <input type="number" value={kampForm.indirimOran} onChange={(e) => setKampForm(p => ({ ...p, indirimOran: Number(e.target.value) }))} min={1} max={90} style={{ width: 120, padding: "10px 12px", border: "1.5px solid " + GRAY200, borderRadius: 8, fontSize: 13 }} />
                     <span style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>%</span>
                     <span style={{ fontSize: 11, color: GRAY400 }}>indirim uygulanacak</span>
                   </div>
@@ -803,7 +803,7 @@ export default function IsletmeSezonPage() {
                     const gc = GRUP_COLORS[gr] ?? { bg: GRAY100, text: GRAY600 };
                     const checked = kampForm.gruplar.includes(gr);
                     return (
-                      <label key={gr} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", border: `1.5px solid ${checked ? TEAL : GRAY200}`, borderRadius: 10, cursor: "pointer", background: checked ? "rgba(10,186,181,0.04)" : "white" }}>
+                      <label key={gr} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", border: "1.5px solid " + (checked ? TEAL : GRAY200), borderRadius: 10, cursor: "pointer", background: checked ? "rgba(10,186,181,0.04)" : "white" }}>
                         <input type="checkbox" checked={checked} onChange={() => toggleGrupInForm(gr)} style={{ accentColor: TEAL, width: 16, height: 16 }} />
                         <div style={{ width: 10, height: 10, borderRadius: 3, background: gc.text }} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>{gr}</span>
