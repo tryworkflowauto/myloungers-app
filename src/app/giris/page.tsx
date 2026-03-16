@@ -4,7 +4,6 @@ import Link from "next/link";
 import "./giris.css";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect, useRef } from "react";
-import { signIn } from "next-auth/react";
 import { createClient } from "@supabase/supabase-js";
 
 const COUNTRY_CODES = [
@@ -59,17 +58,16 @@ function GirisContent() {
     setErrorMsg(null);
     setSuccessMsg(null);
     setLoading(true);
-    const result = await signIn("credentials", {
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      redirect: false,
     });
     setLoading(false);
-    if (result?.error) {
+    if (loginError || !loginData?.user) {
       setErrorMsg("E-posta veya şifre hatalı.");
       return;
     }
-    if (result?.ok) {
+    if (loginData.user) {
       setSuccessMsg("Giriş başarılı, yönlendiriliyorsunuz…");
 
       const { data: authData, error: authError } = await supabase.auth.getUser();
