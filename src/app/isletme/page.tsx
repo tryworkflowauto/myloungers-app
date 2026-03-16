@@ -356,14 +356,6 @@ export default function IsletmeDashboardPage() {
     );
   }
 
-  if (authChecked && !tesisId) {
-    return (
-      <div className="flex flex-col min-h-full items-center justify-center" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
-        <div style={{ fontSize: 14, color: GRAY600 }}>Bu sayfa için tesis atanmamış. Lütfen personel hesabınızla giriş yapın.</div>
-      </div>
-    );
-  }
-
   const sezon = sezonData ?? {
     ad: "Sezon",
     tesis: "Tesis",
