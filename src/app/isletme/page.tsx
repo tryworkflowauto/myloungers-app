@@ -3,6 +3,7 @@
 import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 // HTML :root ile birebir
@@ -154,6 +155,7 @@ export default function IsletmeDashboardPage() {
   const [rezervasyonModalOpen, setRezervasyonModalOpen] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", sezlongGrubu: "Gold", sezlongNo: "", tarih: "", kisiSayisi: "" });
   const [siparisDetayModal, setSiparisDetayModal] = useState<SiparisItem | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const now = new Date();
@@ -354,7 +356,7 @@ export default function IsletmeDashboardPage() {
     );
   }
 
-  if (!tesisId) {
+  if (authChecked && !tesisId) {
     return (
       <div className="flex flex-col min-h-full items-center justify-center" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
         <div style={{ fontSize: 14, color: GRAY600 }}>Bu sayfa için tesis atanmamış. Lütfen personel hesabınızla giriş yapın.</div>
