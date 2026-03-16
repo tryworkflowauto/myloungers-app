@@ -657,8 +657,8 @@ export default function IsletmeSezonPage() {
                     <div style={{ padding: "10px 16px", background: GRAY50, borderTop: "1px solid " + GRAY100, display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       {/* DÃ¼zenle */}
                       <button onClick={() => openKampDuzenle(k)} disabled={isTamamlandi} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: isTamamlandi ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 600, opacity: isTamamlandi ? 0.45 : 1 }}>âœï¸ DÃ¼zenle</button>
-                      {/* Durdur / BaÅŸlat */}
-                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>â¸ Durdur</button>}
+                      {k.durum === "aktif" && <button onClick={() => setDurdurModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Durdur</button>}
+
                       {(k.durum === "planli" || k.durum === "durduruldu") && <button onClick={() => setBaslatModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GREEN, background: "#DCFCE7", cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#16A34A" }}>â–¶ Åžimdi BaÅŸlat</button>}
                       {/* Kopyala */}
                       <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid " + GRAY200, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: RED }}>Sil</button>
