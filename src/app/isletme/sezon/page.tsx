@@ -81,11 +81,7 @@ function grupDisplayName(ad: string): string {
   return `${icon} ${ad}`;
 }
 
-const INIT_KAMPANYALAR: Kampanya[] = [
-  { id: 1, name: "🌸 Bahar Kampanyası", bas: "2026-03-01", bit: "2026-05-31", tip: "oran", indirimOran: 20, sabitFiyatlar: {}, gruplar: ["🌊 Silver", "🔥 VIP"],                        musteriGoster: true,  headerBg: `linear-gradient(135deg,${ORANGE},#C2410C)`, durum: "aktif"       },
-  { id: 2, name: "☀️ Yaz Açılış",       bas: "2026-06-01", bit: "2026-06-07", tip: "oran", indirimOran: 30, sabitFiyatlar: {}, gruplar: ["🌊 Silver", "🔥 VIP", "⚓ İskele", "⭐ Gold"], musteriGoster: true,  headerBg: `linear-gradient(135deg,${PURPLE},#4C1D95)`, durum: "planli"      },
-  { id: 3, name: "🎉 Yılbaşı Özel",     bas: "2026-01-01", bit: "2026-01-07", tip: "sabit",indirimOran: 0,  sabitFiyatlar: { "🌊 Silver": 750 }, gruplar: ["🌊 Silver"],             musteriGoster: false, headerBg: `linear-gradient(135deg,${GRAY400},${GRAY600})`, durum: "tamamlandi" },
-];
+const INIT_KAMPANYALAR: Kampanya[] = [];
 
 const GRUP_COLORS: Record<string, { bg: string; text: string }> = {
   "⭐ Gold":    { bg: "#F5F3FF", text: PURPLE   },
@@ -123,6 +119,7 @@ export default function IsletmeSezonPage() {
   const [sezonlar, setSezonlar]     = useState<SezonItem[]>([]);
   const [fiyatlar, setFiyatlar]     = useState<FiyatRow[]>([]);
   const [kampanyalar, setKampanyalar] = useState<Kampanya[]>(INIT_KAMPANYALAR);
+  const [kampanyaLoading, setKampanyaLoading] = useState(false);
   const [seciliSezon, setSeciliSezon] = useState("erken");
 
   // Genel Ayarlar (controlled)
@@ -195,6 +192,54 @@ export default function IsletmeSezonPage() {
       setLoading(false);
     });
     return () => { cancelled = true; };
+  }, [tesisId]);
+
+  // Kampanyalar: Supabase'ten çek
+  async function fetchKampanyalar() {
+    if (!tesisId) {
+      setKampanyalar([]);
+      return;
+    }
+    setKampanyaLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("kampanyalar")
+        .select("id, ad, aciklama, indirim_orani, baslangic_tarihi, bitis_tarihi, durum")
+        .eq("tesis_id", tesisId)
+        .order("created_at", { ascending: false });
+      if (error || !data) {
+        if (error) console.error("Kampanyalar çekilemedi:", error);
+        setKampanyalar([]);
+        return;
+      }
+      const rows = (data as any[]).map((r) => {
+        const bas = (r.baslangic_tarihi as string | null) ?? "";
+        const bit = (r.bitis_tarihi as string | null) ?? "";
+        const headerBg = `linear-gradient(135deg,${ORANGE},#C2410C)`;
+        const durum: KampanyaDurum =
+          r.durum === "planli" || r.durum === "tamamlandi" || r.durum === "durduruldu" ? r.durum : "aktif";
+        return {
+          id: String(r.id),
+          name: r.ad ?? "Kampanya",
+          bas,
+          bit,
+          tip: "oran" as const,
+          indirimOran: Number(r.indirim_orani ?? 0),
+          sabitFiyatlar: {},
+          gruplar: [],
+          musteriGoster: true,
+          headerBg,
+          durum,
+        } as Kampanya;
+      });
+      setKampanyalar(rows);
+    } finally {
+      setKampanyaLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchKampanyalar();
   }, [tesisId]);
 
   // Genel Ayarlar: tesisler tablosundan yükle
@@ -322,18 +367,29 @@ export default function IsletmeSezonPage() {
     setKampForm({ name: k.name, bas: k.bas, bit: k.bit, tip: k.tip, indirimOran: k.indirimOran, sabitFiyatlar: k.sabitFiyatlar, gruplar: k.gruplar, musteriGoster: k.musteriGoster });
     setKampModal(true);
   }
-  function saveKampanya() {
-    if (!kampForm.name) return;
-    const payload = { ...kampForm };
-    if (editKamp) {
-      setKampanyalar(p => p.map(k => k.id === editKamp.id ? { ...k, ...payload } : k));
-      showToast(`✅ "${kampForm.name}" güncellendi`);
-    } else {
-      const newK: Kampanya = { id: Date.now(), ...payload, headerBg: `linear-gradient(135deg,${ORANGE},#C2410C)`, durum: "planli" };
-      setKampanyalar(p => [...p, newK]);
-      showToast(`✅ "${kampForm.name}" kampanyası oluşturuldu`);
+  async function saveKampanya() {
+    if (!kampForm.name || !tesisId) {
+      showToast("❌ Kayıt başarısız");
+      return;
     }
+    const payload = {
+      tesis_id: tesisId,
+      ad: kampForm.name,
+      aciklama: "", // mevcut formda ayrı açıklama alanı yok
+      indirim_orani: kampForm.indirimOran,
+      baslangic_tarihi: kampForm.bas || null,
+      bitis_tarihi: kampForm.bit || null,
+      durum: "aktif",
+    };
+    const { error } = await supabase.from("kampanyalar").insert(payload);
+    if (error) {
+      console.error("Kampanya kaydedilemedi:", error);
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    showToast(`✅ "${kampForm.name}" kampanyası oluşturuldu`);
     setKampModal(false);
+    fetchKampanyalar();
   }
   function toggleGrupInForm(g: string) {
     setKampForm(p => ({ ...p, gruplar: p.gruplar.includes(g) ? p.gruplar.filter(x => x !== g) : [...p.gruplar, g] }));
@@ -547,6 +603,11 @@ export default function IsletmeSezonPage() {
             <button onClick={openKampEkle} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>➕ Kampanya Oluştur</button>
           </div>
           <div style={{ padding: 20 }}>
+            {kampanyaLoading ? (
+              <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>Kampanyalar yükleniyor...</div>
+            ) : kampanyalar.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>Henüz kampanya oluşturulmadı</div>
+            ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
               {kampanyalar.map((k) => {
                 const chip = chipOf(k.durum);
