@@ -74,7 +74,8 @@ function GirisContent() {
 
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData?.user) {
-        router.push("/");
+        console.log("Supabase auth hatası veya kullanıcı yok:", authError);
+        router.push("/profil");
         return;
       }
 
@@ -85,12 +86,14 @@ function GirisContent() {
         .eq("id", userId)
         .maybeSingle();
 
-      const rol = (!kullaniciError && kullanici && (kullanici as any).rol) ? String((kullanici as any).rol) : null;
+      const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
+        ? String((kullanici as any).rol)
+        : null;
 
-      if (rol === "isletme" || rol === "garson" || rol === "mutfak") {
+      console.log("Kullanıcı rolü (giriş):", rol);
+
+      if (rol === "isletme") {
         router.push("/isletme");
-      } else if (rol === "admin") {
-        router.push("/admin");
       } else {
         router.push("/profil");
       }
@@ -127,7 +130,8 @@ function GirisContent() {
       if (loginResult?.ok) {
         const { data: authData, error: authError } = await supabase.auth.getUser();
         if (authError || !authData?.user) {
-          router.push("/");
+          console.log("Supabase auth hatası veya kullanıcı yok (register sonrası):", authError);
+          router.push("/profil");
           return;
         }
 
@@ -138,12 +142,14 @@ function GirisContent() {
           .eq("id", userId)
           .maybeSingle();
 
-        const rol = (!kullaniciError && kullanici && (kullanici as any).rol) ? String((kullanici as any).rol) : null;
+        const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
+          ? String((kullanici as any).rol)
+          : null;
 
-        if (rol === "isletme" || rol === "garson" || rol === "mutfak") {
+        console.log("Kullanıcı rolü (kayıt):", rol);
+
+        if (rol === "isletme") {
           router.push("/isletme");
-        } else if (rol === "admin") {
-          router.push("/admin");
         } else {
           router.push("/profil");
         }
