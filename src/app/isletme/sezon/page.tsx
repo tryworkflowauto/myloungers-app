@@ -653,7 +653,6 @@ export default function IsletmeSezonPage() {
                       {k.musteriGoster && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Müşteri Görünümü</span><span style={{ fontWeight: 700, color: GREEN }}>✓ Gösteriliyor</span></div>}
                       {kalan && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan Süre</span><span style={{ fontWeight: 700, color: PURPLE }}>{kalan}</span></div>}
                       {k.durum === "durduruldu" && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Durum</span><span style={{ fontWeight: 700, color: GRAY400 }}>Durduruldu</span></div>}
-              })}
             </div>
           </div>
         </div>
