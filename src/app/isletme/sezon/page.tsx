@@ -653,25 +653,6 @@ export default function IsletmeSezonPage() {
                       {k.musteriGoster && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Müşteri Görünümü</span><span style={{ fontWeight: 700, color: GREEN }}>✓ Gösteriliyor</span></div>}
                       {kalan && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Kalan Süre</span><span style={{ fontWeight: 700, color: PURPLE }}>{kalan}</span></div>}
                       {k.durum === "durduruldu" && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}><span style={{ color: GRAY400 }}>Durum</span><span style={{ fontWeight: 700, color: GRAY400 }}>Durduruldu</span></div>}
-                      {k.tip === "oran" && k.gruplar.length > 0 && (
-                        <div style={{ borderTop: "1px solid " + GRAY100, paddingTop: 8, marginTop: 4 }}>
-                          {k.gruplar.slice(0, 2).map((gr) => {
-                            const base = fiyatlar.find(function (f) { return f.name === gr; })?.erken ?? 0;
-                            const disc = Math.round(base * (1 - k.indirimOran / 100));
-                            const label = gr.split(" ").slice(1).join(" ") || gr;
-                            return base > 0 ? (
-                              <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                                <span style={{ color: GRAY400 }}>{label}:</span>
-                                <span>
-                                  <s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s>
-                                  {" \u2192 "}
-                                  <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong>
-                                </span>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
                     </div>
                     <div style={{ padding: "10px 16px", background: GRAY50, borderTop: "1px solid " + GRAY100, display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       {/* Düzenle */}
