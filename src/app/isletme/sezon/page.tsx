@@ -75,7 +75,7 @@ function sezonBadge(bas: string, bit: string, aktif: boolean): { badge: string; 
   if (basDate > now) return { badge: "PlanlandÄ±", badgeBg: "#F0FFFE", badgeColor: TEAL };
   return { badge: "KapalÄ±", badgeBg: GRAY100, badgeColor: GRAY600, opacity: 0.6 };
 }
-const GRUP_AD_IKON: Record<string, string> = { Gold: "â­", VIP: "ðŸ”¥", Ä°skele: "âš“", Silver: "ðŸŒŠ" };
+const GRUP_AD_IKON: Record<string, string> = { Gold: "⭐", VIP: "🔥", Iskele: "⚓", Silver: "🌊" };
 function grupDisplayName(ad: string): string {
   const icon = GRUP_AD_IKON[ad] || "ðŸ–ï¸";
   return `${icon} ${ad}`;
