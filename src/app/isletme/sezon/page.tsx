@@ -636,7 +636,8 @@ export default function IsletmeSezonPage() {
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                           {k.gruplar.map((gr) => {
                             const gc = GRUP_COLORS[gr] ?? { bg: GRAY100, text: GRAY600 };
-                            return <span key={gr} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: gc.bg, color: gc.text }}>{gr.replace(/^[^ ]+ /, "")}</span>;
+                            const label = gr.split(" ").slice(1).join(" ") || gr;
+                            return <span key={gr} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: gc.bg, color: gc.text }}>{label}</span>;
                           })}
                         </div>
                       </div>
@@ -648,9 +649,10 @@ export default function IsletmeSezonPage() {
                           {k.gruplar.slice(0, 2).map((gr) => {
                             const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
                             const disc = Math.round(base * (1 - k.indirimOran / 100));
+                            const label = gr.split(" ").slice(1).join(" ") || gr;
                             return base > 0 ? (
                               <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                                <span style={{ color: GRAY400 }}>{gr.replace(/^[^ ]+ /, "")}:</span>
+                                <span style={{ color: GRAY400 }}>{label}:</span>
                                 <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong></span>
                               </div>
                             ) : null;
