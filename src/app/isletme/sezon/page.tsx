@@ -656,7 +656,7 @@ export default function IsletmeSezonPage() {
                       {k.tip === "oran" && k.gruplar.length > 0 && (
                         <div style={{ borderTop: "1px solid " + GRAY100, paddingTop: 8, marginTop: 4 }}>
                           {k.gruplar.slice(0, 2).map((gr) => {
-                            const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
+                            const fObj = fiyatlar.find(function(f) { return f.name === gr; }); const base = fObj ? (fObj.erken ?? 0) : 0;
                             const disc = Math.round(base * (1 - k.indirimOran * 0.01));
                             const label = gr.split(" ").slice(1).join(" ") || gr;
                             return base > 0 ? (
@@ -830,7 +830,7 @@ export default function IsletmeSezonPage() {
                   <div style={{ background: GRAY50, borderRadius: 10, padding: 14, border: "1px solid " + GRAY200 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Fiyat Önizleme (%{kampForm.indirimOran} indirim)</div>
                   {kampForm.gruplar.slice(0, 3).map((gr) => {
-                    const base = fiyatlar.find(f => f.name === gr)?.erken ?? 0;
+                    const fObj = fiyatlar.find(function(f) { return f.name === gr; }); const base = fObj ? (fObj.erken ?? 0) : 0;
                     const disc = Math.round(base * (1 - kampForm.indirimOran / 100));
                     return base > 0 ? (
                       <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
@@ -902,6 +902,7 @@ export default function IsletmeSezonPage() {
     </div>
   );
 }
+
 
 
 
