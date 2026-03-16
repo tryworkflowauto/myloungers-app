@@ -259,8 +259,17 @@ export default function IsletmeSezonPage() {
         const isOzel = iptal && !["24 saat öncesine kadar tam iade", "48 saat öncesine kadar tam iade", "İade yok", "%50 iade"].includes(iptal);
         let ozelSaat = genelAyarlar.ozelSaat;
         if (isOzel) {
-          const match = iptal.match(/(\d+)\s*saat/i);
-          if (match) ozelSaat = Math.min(168, Math.max(1, Number(match[1]) || ozelSaat));
+          const lower = iptal.toLowerCase();
+          const saatIndex = lower.indexOf("saat");
+          if (saatIndex > 0) {
+            const before = lower.slice(0, saatIndex).trim();
+            const parts = before.split(" ");
+            const last = parts[parts.length - 1];
+            const num = Number(last);
+            if (!Number.isNaN(num) && num > 0) {
+              ozelSaat = Math.min(168, Math.max(1, num));
+            }
+          }
         }
         setGA({
           minRezSure: Number((data as any).min_rezervasyon_suresi ?? genelAyarlar.minRezSure),
