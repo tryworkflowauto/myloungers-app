@@ -472,7 +472,7 @@ export default function IsletmeRaporlarPage() {
       rows = [["Garson", "Teslimat", "Müşteri", "Ort. Süre", "Tip"], ...garsonRows.map((g) => [g.name, String(g.teslimat), String(g.musteri), g.sure, g.tip])];
       filename = "garson-performans.csv";
     } else if (activeTab === "urun") {
-      rows = [["Sıra", "Ürün", "Kategori", "Satış Adedi", "Birim Fiyat", "Toplam Gelir", "Trend"], ...filteredUrunler.map((u) => [u.rank, u.name, u.cat, String(u.satis), u.fiyat, u.toplam, u.trend])];
+      rows = [["Sıra", "Ürün", "Kategori", "Satış Adedi", "Birim Fiyat", "Toplam Gelir"], ...filteredUrunler.map((u, i) => [String(i + 1), u.ad, u.kategori, String(u.satis), String(u.fiyat), String(u.toplam)])];
       filename = "urun-satislari.csv";
     }
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
