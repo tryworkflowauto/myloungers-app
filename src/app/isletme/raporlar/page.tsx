@@ -78,14 +78,7 @@ const DONEM_STATS: Record<string, { toplam: string; sezlong: string; siparis: st
 
 // GARSON_ROWS ve SAATLIK_TESLIMAT mock verileri kaldırıldı; Garson sekmesi Supabase'e bağlı.
 
-const URUN_ROWS = [
-  { rank: "🥇", icon: "🍹", name: "Mojito",       cat: "Alkollü İçecek", satis: 142, fiyat: "₺120", toplam: "₺17.040", trendUp: true,  trend: "↑ %18" },
-  { rank: "🥈", icon: "🐟", name: "Izgara Levrek",cat: "Ana Yemek",      satis: 98,  fiyat: "₺150", toplam: "₺14.700", trendUp: true,  trend: "↑ %12" },
-  { rank: "🥉", icon: "🍋", name: "Limonata",     cat: "Soğuk İçecek",   satis: 187, fiyat: "₺45",  toplam: "₺8.415",  trendUp: true,  trend: "↑ %8"  },
-  { rank: "4",  icon: "🍷", name: "Rosé Şarap",   cat: "Alkollü İçecek", satis: 44,  fiyat: "₺180", toplam: "₺7.920",  trendUp: false, trend: "↓ %3"  },
-  { rank: "5",  icon: "🍟", name: "Nachos",        cat: "Atıştırmalık",   satis: 96,  fiyat: "₺65",  toplam: "₺6.240",  trendUp: true,  trend: "↑ %31" },
-];
-const URUN_KATEGORILER = ["Tüm Kategoriler", "Alkollü İçecek", "Soğuk İçecek", "Ana Yemek", "Atıştırmalık", "Tatlılar"];
+// Ürün satışları için Supabase verisi kullanılacak; URUN_ROWS ve URUN_KATEGORILER mock'ları kaldırıldı.
 
 type GunlukItem = {
   gun: string;
@@ -143,6 +136,14 @@ export default function IsletmeRaporlarPage() {
   const [garsonSort, setGarsonSort]   = useState<GarsonSort>("teslimat");
   const [garsonSortDir, setGarsonSortDir] = useState<"desc" | "asc">("desc");
   const [garsonRows, setGarsonRows] = useState<GarsonRow[]>([]);
+  const [urunData, setUrunData] = useState<{ ad: string; kategori: string; satis: number; fiyat: number; toplam: number }[]>([]);
+  const [urunLoading, setUrunLoading] = useState(false);
+  const [urunStats, setUrunStats] = useState<{ toplamSiparis: number; toplamCiro: number; enCokSatan: string; enCokSatanAdet: number }>({
+    toplamSiparis: 0,
+    toplamCiro: 0,
+    enCokSatan: "",
+    enCokSatanAdet: 0,
+  });
 
   // Ürün filter
   const [urunKat, setUrunKat] = useState("Tüm Kategoriler");
@@ -268,6 +269,98 @@ export default function IsletmeRaporlarPage() {
     });
   }, [tesisId]);
 
+  // Ürün satışları: siparisler + siparis_kalemleri
+  async function fetchUrunSatislari() {
+    if (!tesisId) {
+      setUrunData([]);
+      setUrunStats({ toplamSiparis: 0, toplamCiro: 0, enCokSatan: "", enCokSatanAdet: 0 });
+      return;
+    }
+    setUrunLoading(true);
+    try {
+      const now = new Date();
+      let start = new Date();
+      if (donemUrun === "bugun") {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (donemUrun === "hafta") {
+        start = new Date(now.getTime() - 7 * 86400000);
+      } else {
+        start = new Date(now.getTime() - 30 * 86400000);
+      }
+      const startIso = start.toISOString();
+      const endIso = now.toISOString();
+
+      const { data: siparisler, error: sipErr } = await supabase
+        .from("siparisler")
+        .select("id, created_at")
+        .eq("tesis_id", tesisId)
+        .gte("created_at", startIso)
+        .lte("created_at", endIso);
+      if (sipErr) {
+        console.error("urun siparisler error:", sipErr);
+        setUrunData([]);
+        setUrunStats({ toplamSiparis: 0, toplamCiro: 0, enCokSatan: "", enCokSatanAdet: 0 });
+        return;
+      }
+      const sipIds = (siparisler ?? []).map((s: any) => s.id);
+      if (sipIds.length === 0) {
+        setUrunData([]);
+        setUrunStats({ toplamSiparis: 0, toplamCiro: 0, enCokSatan: "", enCokSatanAdet: 0 });
+        return;
+      }
+
+      const { data: kalemler, error: kalemErr } = await supabase
+        .from("siparis_kalemleri")
+        .select("ad, fiyat, adet")
+        .in("siparis_id", sipIds);
+      if (kalemErr) {
+        console.error("urun siparis_kalemleri error:", kalemErr);
+        setUrunData([]);
+        setUrunStats({ toplamSiparis: 0, toplamCiro: 0, enCokSatan: "", enCokSatanAdet: 0 });
+        return;
+      }
+
+      const map = new Map<string, { ad: string; kategori: string; satis: number; fiyat: number; toplam: number }>();
+      for (const k of kalemler ?? []) {
+        const ad = (k as any).ad ?? "Bilinmeyen Ürün";
+        const fiyat = Number((k as any).fiyat ?? 0);
+        const adet = Number((k as any).adet ?? 0);
+        const key = ad;
+        const prev = map.get(key);
+        if (!prev) {
+          map.set(key, { ad, kategori: "Genel", satis: adet, fiyat, toplam: fiyat * adet });
+        } else {
+          prev.satis += adet;
+          prev.toplam += fiyat * adet;
+        }
+      }
+
+      const list = Array.from(map.values()).sort((a, b) => b.satis - a.satis);
+      setUrunData(list);
+
+      if (list.length === 0) {
+        setUrunStats({ toplamSiparis: 0, toplamCiro: 0, enCokSatan: "", enCokSatanAdet: 0 });
+      } else {
+        const toplamSiparis = list.reduce((sum, u) => sum + u.satis, 0);
+        const toplamCiro = list.reduce((sum, u) => sum + u.toplam, 0);
+        setUrunStats({
+          toplamSiparis,
+          toplamCiro,
+          enCokSatan: list[0].ad,
+          enCokSatanAdet: list[0].satis,
+        });
+      }
+    } finally {
+      setUrunLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "urun") {
+      fetchUrunSatislari();
+    }
+  }, [activeTab, donemUrun, tesisId]);
+
   useEffect(() => {
     if (!tesisId) { setBakiyeRows([]); return; }
     supabase
@@ -353,8 +446,8 @@ export default function IsletmeRaporlarPage() {
   });
 
   const filteredUrunler = urunKat === "Tüm Kategoriler"
-    ? URUN_ROWS
-    : URUN_ROWS.filter((u) => u.cat === urunKat);
+    ? urunData
+    : urunData.filter((u) => u.kategori === urunKat);
 
   function toggleSort(key: GarsonSort) {
     if (garsonSort === key) setGarsonSortDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -740,16 +833,36 @@ export default function IsletmeRaporlarPage() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 20 }}>
               {[
-                { label: "Toplam Sipariş", val: donemUrun === "bugun" ? "89" : donemUrun === "ay" ? "2.460" : "623", sub: { bugun:"Bugün", hafta:"Bu hafta", ay:"Bu ay" }[donemUrun]!, change: "↑ %21", color: TEAL },
-                { label: "Sipariş Cirosu", val: donemUrun === "bugun" ? "₺7.200" : donemUrun === "ay" ? "₺210.400" : "₺52.600", sub: { bugun:"Bugün", hafta:"Bu hafta", ay:"Bu ay" }[donemUrun]!, change: "↑ %24", color: ORANGE },
-                { label: "En Çok Satan", val: "Mojito", sub: donemUrun === "bugun" ? "26 adet bugün" : donemUrun === "ay" ? "601 adet bu ay" : "142 adet bu hafta", change: "↑ %18", color: GREEN },
+                {
+                  label: "Toplam Sipariş",
+                  val: urunStats.toplamSiparis.toLocaleString("tr-TR"),
+                  sub: { bugun:"Bugün", hafta:"Bu hafta", ay:"Bu ay" }[donemUrun]!,
+                  change: "",
+                  color: TEAL,
+                },
+                {
+                  label: "Sipariş Cirosu",
+                  val: `₺${urunStats.toplamCiro.toLocaleString("tr-TR")}`,
+                  sub: { bugun:"Bugün", hafta:"Bu hafta", ay:"Bu ay" }[donemUrun]!,
+                  change: "",
+                  color: ORANGE,
+                },
+                {
+                  label: "En Çok Satan",
+                  val: urunStats.enCokSatan || "—",
+                  sub: urunStats.enCokSatanAdet > 0 ? `${urunStats.enCokSatanAdet} adet` : "Veri yok",
+                  change: "",
+                  color: GREEN,
+                },
               ].map((s, i) => (
                 <div key={i} style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: "18px 20px", position: "relative", overflow: "hidden" }}>
                   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: s.color }} />
                   <div style={{ fontSize: 11, color: GRAY400, fontWeight: 600, marginBottom: 8 }}>{s.label}</div>
                   <div style={{ fontSize: 26, fontWeight: 900, color: NAVY, marginBottom: 4, lineHeight: 1 }}>{s.val}</div>
                   <div style={{ fontSize: 11, color: GRAY400 }}>{s.sub}</div>
-                  <div style={{ display: "inline-flex", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, marginTop: 6, background: "#DCFCE7", color: "#16A34A" }}>{s.change}</div>
+                  {s.change && (
+                    <div style={{ display: "inline-flex", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, marginTop: 6, background: "#DCFCE7", color: "#16A34A" }}>{s.change}</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -763,28 +876,36 @@ export default function IsletmeRaporlarPage() {
                     onChange={(e) => setUrunKat(e.target.value)}
                     style={{ padding: "6px 10px", border: `1px solid ${GRAY200}`, borderRadius: 8, fontSize: 11 }}
                   >
-                    {URUN_KATEGORILER.map((k) => <option key={k}>{k}</option>)}
+                    <option key="Tüm Kategoriler">Tüm Kategoriler</option>
+                    {Array.from(new Set(urunData.map((u) => u.kategori)))
+                      .filter((k) => k && k !== "Tüm Kategoriler")
+                      .map((k) => (
+                        <option key={k}>{k}</option>
+                      ))}
                   </select>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "30px 1fr 80px 80px 90px 100px", padding: "10px 18px", background: GRAY50, borderBottom: `1px solid ${GRAY100}`, gap: 8, fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 <div>#</div><div>Ürün</div><div>Satış</div><div>Fiyat</div><div>Toplam</div><div>Trend</div>
               </div>
-              {filteredUrunler.length === 0 ? (
-                <div style={{ padding: "40px 20px", textAlign: "center", color: GRAY400 }}>Bu kategoride ürün bulunamadı</div>
-              ) : filteredUrunler.map((u, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "30px 1fr 80px 80px 90px 100px", padding: "10px 18px", borderBottom: `1px solid ${GRAY100}`, gap: 8, alignItems: "center", fontSize: 12 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: i < 3 ? 10 : 11, fontWeight: 800, background: i === 0 ? "#FEF3C7" : i === 1 ? "#F1F5F9" : i === 2 ? "#FFEDD5" : GRAY100, color: i === 0 ? "#D97706" : i === 1 ? GRAY600 : i === 2 ? ORANGE : GRAY600 }}>{u.rank}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 20 }}>{u.icon}</span>
-                    <div><div style={{ fontWeight: 700, fontSize: 12 }}>{u.name}</div><div style={{ fontSize: 10, color: GRAY400 }}>{u.cat}</div></div>
+              {urunLoading ? (
+                <div style={{ padding: "40px 20px", textAlign: "center", color: GRAY400 }}>Yükleniyor...</div>
+              ) : filteredUrunler.length === 0 ? (
+                <div style={{ padding: "40px 20px", textAlign: "center", color: GRAY400 }}>Bu dönemde satış verisi bulunamadı</div>
+              ) : (
+                filteredUrunler.map((u, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "30px 1fr 80px 80px 90px 100px", padding: "10px 18px", borderBottom: `1px solid ${GRAY100}`, gap: 8, alignItems: "center", fontSize: 12 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: i < 3 ? 10 : 11, fontWeight: 800, background: i === 0 ? "#FEF3C7" : i === 1 ? "#F1F5F9" : i === 2 ? "#FFEDD5" : GRAY100, color: i === 0 ? "#D97706" : i === 1 ? GRAY600 : i === 2 ? ORANGE : GRAY600 }}>{i + 1}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div><div style={{ fontWeight: 700, fontSize: 12 }}>{u.ad}</div><div style={{ fontSize: 10, color: GRAY400 }}>{u.kategori}</div></div>
+                    </div>
+                    <div style={{ fontWeight: 800, color: GREEN }}>{u.satis}</div>
+                    <div>{`₺${u.fiyat.toLocaleString("tr-TR")}`}</div>
+                    <div style={{ fontWeight: 800, color: NAVY }}>{`₺${u.toplam.toLocaleString("tr-TR")}`}</div>
+                    <div>—</div>
                   </div>
-                  <div style={{ fontWeight: 800, color: GREEN }}>{u.satis}</div>
-                  <div>{u.fiyat}</div>
-                  <div style={{ fontWeight: 800, color: NAVY }}>{u.toplam}</div>
-                  <div style={{ color: u.trendUp ? GREEN : RED, fontWeight: 700, fontSize: 11 }}>{u.trend}</div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </>
         )}
