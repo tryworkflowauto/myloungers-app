@@ -115,42 +115,42 @@ function GirisContent() {
         return;
       }
       setSuccessMsg("Kayıt başarılı, otomatik giriş yapılıyor…");
-      const loginResult = await signIn("credentials", {
+
+      const { error: loginError } = await supabase.auth.signInWithPassword({
         email: regEmail,
         password: regPassword,
-        redirect: false,
       });
       setLoading(false);
-      if (loginResult?.error) {
+      if (loginError) {
+        console.log("Supabase login hatası (register sonrası):", loginError);
         router.push("/giris?tab=login");
         return;
       }
-      if (loginResult?.ok) {
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError || !authData?.user) {
-          console.log("Supabase auth hatası veya kullanıcı yok (register sonrası):", authError);
-          router.push("/profil");
-          return;
-        }
 
-        const userId = authData.user.id;
-        const { data: kullanici, error: kullaniciError } = await supabase
-          .from("kullanicilar")
-          .select("rol")
-          .eq("id", userId)
-          .maybeSingle();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        console.log("Supabase auth hatası veya kullanıcı yok (register sonrası):", authError);
+        router.push("/profil");
+        return;
+      }
 
-        const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
-          ? String((kullanici as any).rol)
-          : null;
+      const userId = authData.user.id;
+      const { data: kullanici, error: kullaniciError } = await supabase
+        .from("kullanicilar")
+        .select("rol")
+        .eq("id", userId)
+        .maybeSingle();
 
-        console.log("Kullanıcı rolü (kayıt):", rol);
+      const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
+        ? String((kullanici as any).rol)
+        : null;
 
-        if (rol === "isletme") {
-          router.push("/isletme");
-        } else {
-          router.push("/profil");
-        }
+      console.log("Kullanıcı rolü (kayıt):", rol);
+
+      if (rol === "isletme") {
+        router.push("/isletme");
+      } else {
+        router.push("/profil");
       }
     } catch (e) {
       console.error("Register error:", e);
