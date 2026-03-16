@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 
 const menuItems = [
   { section: 'ANA MENÜ' },
@@ -23,7 +23,10 @@ const menuItems = [
 
 export default function IsletmeSidebar() {
   const pathname = usePathname();
-  const supabase = createClientComponentClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const [tesisAdi, setTesisAdi] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
