@@ -632,7 +632,7 @@ export default function IsletmeSezonPage() {
                         <span style={{ fontSize: 11, opacity: 0.85 }}>{fmtTarih(k.bas, k.bit)}</span>
                       </div>
                       <div style={{ position: "absolute", top: 12, right: 12, background: "white", borderRadius: 10, padding: "6px 12px", fontSize: 16, fontWeight: 900, color: k.tip === "oran" ? ORANGE : GRAY600 }}>
-                        {k.tip === "oran" ? `%${k.indirimOran}` : "Sabit"}
+                        {k.tip === "oran" ? "%" + k.indirimOran : "Sabit"}
                       </div>
                     </div>
                     <div style={{ padding: "14px 16px", background: "white" }}>
