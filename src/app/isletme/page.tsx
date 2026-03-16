@@ -3,8 +3,7 @@
 import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 // HTML :root ile birebir
 const NAVY = "#0A1628";
@@ -135,8 +134,10 @@ function getInitials(name: string): string {
 }
 
 export default function IsletmeDashboardPage() {
-  const { data: session, status: sessionStatus } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const [loading, setLoading] = useState(true);
   const [sezonData, setSezonData] = useState<SezonData | null>(null);
@@ -148,6 +149,8 @@ export default function IsletmeDashboardPage() {
 
   const [tarih, setTarih] = useState("");
   const [saat, setSaat] = useState("--:--");
+  const [tesisId, setTesisId] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [rezervasyonModalOpen, setRezervasyonModalOpen] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", sezlongGrubu: "Gold", sezlongNo: "", tarih: "", kisiSayisi: "" });
   const [siparisDetayModal, setSiparisDetayModal] = useState<SiparisItem | null>(null);
@@ -164,6 +167,41 @@ export default function IsletmeDashboardPage() {
     return () => clearInterval(t);
   }, []);
 
+  // Supabase Auth ile tesis_id yükle
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTesisId() {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user || cancelled) {
+        setTesisId(null);
+        setAuthChecked(true);
+        return;
+      }
+
+      const userId = authData.user.id;
+      const { data: kullanici, error: kullaniciError } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (kullaniciError || !kullanici || !kullanici.tesis_id || cancelled) {
+        setTesisId(null);
+        setAuthChecked(true);
+        return;
+      }
+
+      setTesisId(String(kullanici.tesis_id));
+      setAuthChecked(true);
+    }
+
+    loadTesisId();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -176,7 +214,7 @@ export default function IsletmeDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (sessionStatus === "loading") return;
+    if (!authChecked) return;
     if (!tesisId) {
       setLoading(false);
       return;
@@ -306,9 +344,9 @@ export default function IsletmeDashboardPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [tesisId, sessionStatus]);
+  }, [tesisId, authChecked, supabase]);
 
-  if (sessionStatus === "loading" || loading) {
+  if (!authChecked || loading) {
     return (
       <div className="flex flex-col min-h-full items-center justify-center" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
         <div style={{ fontSize: 14, color: GRAY600 }}>Yükleniyor...</div>
