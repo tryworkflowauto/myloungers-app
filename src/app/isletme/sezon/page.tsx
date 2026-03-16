@@ -219,7 +219,7 @@ export default function IsletmeSezonPage() {
         const durum: KampanyaDurum =
           r.durum === "planli" || r.durum === "tamamlandi" || r.durum === "durduruldu" ? r.durum : "aktif";
         return {
-          id: String(r.id),
+          id: r.id as number,
           name: r.ad ?? "Kampanya",
           bas,
           bit,
