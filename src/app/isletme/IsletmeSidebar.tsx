@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import { supabase } from '@/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 const menuItems = [
   { section: 'ANA MENÜ' },
@@ -24,36 +23,67 @@ const menuItems = [
 
 export default function IsletmeSidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const supabase = createClientComponentClient();
   const [tesisAdi, setTesisAdi] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [cikisModal,    setCikisModal]    = useState(false);
   const [toast,         setToast]         = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
-  const userName = (session?.user as { name?: string | null } | undefined)?.name ?? null;
-
   useEffect(() => {
-    if (!tesisId) {
-      setTesisAdi(null);
-      return;
-    }
     let cancelled = false;
-    supabase
-      .from('tesisler')
-      .select('ad')
-      .eq('id', tesisId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled && data && typeof (data as { ad?: string }).ad === 'string') {
-          setTesisAdi((data as { ad: string }).ad);
-        } else if (!cancelled) {
-          setTesisAdi(null);
-        }
-      });
+
+    async function loadUserAndTesis() {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user || cancelled) {
+        setTesisAdi(null);
+        setUserName(null);
+        return;
+      }
+
+      const userId = authData.user.id;
+
+      const { data: kullanici, error: kullaniciError } = await supabase
+        .from('kullanicilar')
+        .select('tesis_id, rol, ad, soyad')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (kullaniciError || !kullanici || cancelled) {
+        setTesisAdi(null);
+        setUserName(authData.user.email ?? authData.user.user_metadata?.name ?? null);
+        return;
+      }
+
+      const fullName =
+        (kullanici.ad && kullanici.soyad)
+          ? `${kullanici.ad} ${kullanici.soyad}`
+          : (kullanici.ad ?? kullanici.soyad ?? null);
+      setUserName(fullName ?? authData.user.email ?? authData.user.user_metadata?.name ?? null);
+
+      const tesisId = kullanici.tesis_id as string | null | undefined;
+      if (!tesisId) {
+        setTesisAdi(null);
+        return;
+      }
+
+      const { data: tesis, error: tesisError } = await supabase
+        .from('tesisler')
+        .select('ad')
+        .eq('id', tesisId)
+        .maybeSingle();
+
+      if (!cancelled && tesis && typeof (tesis as { ad?: string }).ad === 'string') {
+        setTesisAdi((tesis as { ad: string }).ad);
+      } else if (!cancelled) {
+        setTesisAdi(null);
+      }
+    }
+
+    loadUserAndTesis();
     return () => { cancelled = true; };
-  }, [tesisId]);
+  }, [supabase]);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
