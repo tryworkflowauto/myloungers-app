@@ -154,6 +154,9 @@ export default function IsletmeRaporlarPage() {
   const [bakiyeRows, setBakiyeRows] = useState<any[]>([]);
   const [bakiyeSearch, setBakiyeSearch] = useState("");
   const [bakiyeDurum, setBakiyeDurum] = useState("");
+  const [bakiyeData, setBakiyeData] = useState<{ musteri_adi: string; telefon: string; yuklenen: number; harcanan: number; kalan: number; son_tarih: string | null; durum: string }[]>([]);
+  const [bakiyeLoading, setBakiyeLoading] = useState(false);
+  const [riskliMusteri, setRiskliMusteri] = useState<{ sayi: number; toplam: number }>({ sayi: 0, toplam: 0 });
 
   // ESC closes modals
   useEffect(() => {
@@ -198,6 +201,110 @@ export default function IsletmeRaporlarPage() {
         setSumSip(total);
       });
   }, [tesisId]);
+
+  // Bakiye takibi: rezervasyonlar
+  async function fetchBakiyeler() {
+    if (!tesisId) {
+      setBakiyeRows([]);
+      setBakiyeData([]);
+      setRiskliMusteri({ sayi: 0, toplam: 0 });
+      return;
+    }
+    setBakiyeLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("rezervasyonlar")
+        .select("id, musteri_adi, telefon, sezlong_id, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, bakiye_son_tarih, durum, sezlonglar(numara, sezlong_gruplari(ad))")
+        .eq("tesis_id", tesisId)
+        .gt("bakiye_yuklenen", 0);
+      if (error || !data) {
+        if (error) console.error("bakiye fetch error:", error);
+        setBakiyeRows([]);
+        setBakiyeData([]);
+        setRiskliMusteri({ sayi: 0, toplam: 0 });
+        return;
+      }
+      const now = new Date();
+      let riskToplam = 0;
+      let riskSayi = 0;
+      const yeniData: { musteri_adi: string; telefon: string; yuklenen: number; harcanan: number; kalan: number; son_tarih: string | null; durum: string }[] = [];
+      const rows = data
+        .slice()
+        .sort((a, b) => Number((b as any).bakiye_kalan ?? 0) - Number((a as any).bakiye_kalan ?? 0))
+        .map((r, idx) => {
+          const kalanSayi = Number(r.bakiye_kalan ?? 0);
+          const sonTarihStr = r.bakiye_son_tarih ?? null;
+          const son = sonTarihStr ? new Date(sonTarihStr) : null;
+          let durumKod: "aktif" | "yaklasan" | "suresi_gecti" | "bitti" = "aktif";
+          let durumText = "Aktif";
+          if (kalanSayi <= 0) {
+            durumKod = "bitti";
+            durumText = "Sona Erdi";
+          } else if (son && son < now) {
+            durumKod = "suresi_gecti";
+            durumText = "Süresi Geçti";
+          } else if (son && son <= new Date(now.getTime() + 7 * 86400000)) {
+            durumKod = "yaklasan";
+            durumText = "Yaklaşan";
+          }
+          if (durumKod === "suresi_gecti" || durumKod === "yaklasan") {
+            riskSayi += 1;
+            riskToplam += kalanSayi;
+          }
+          yeniData.push({
+            musteri_adi: r.musteri_adi || "",
+            telefon: r.telefon || "",
+            yuklenen: Number(r.bakiye_yuklenen ?? 0),
+            harcanan: Number(r.bakiye_harcanan ?? 0),
+            kalan: kalanSayi,
+            son_tarih: sonTarihStr,
+            durum: durumText,
+          });
+          return {
+            inits: (r.musteri_adi || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
+            name: r.musteri_adi || "",
+            sezlong: (() => {
+              const num = (r as any).sezlonglar?.numara as number | undefined;
+              const grupAd = (r as any).sezlonglar?.sezlong_gruplari?.ad?.trim() as string | undefined;
+              if (num && grupAd) return `${grupAd.charAt(0)}-${num} • ${grupAd}`;
+              if (num) return String(num);
+              return "";
+            })(),
+            avatarBg: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length],
+            yuklenen: `₺${Number(r.bakiye_yuklenen ?? 0).toLocaleString("tr-TR")}`,
+            harcanan: `₺${Number(r.bakiye_harcanan ?? 0).toLocaleString("tr-TR")}`,
+            kalan: `₺${kalanSayi.toLocaleString("tr-TR")}`,
+            kalanSayi,
+            kalanColor: kalanSayi <= 0 ? "#ef4444" : "#0ab5b5",
+            sonTarih: sonTarihStr ?? "",
+            sonTarihWarn: son ? son <= new Date(now.getTime() + 3 * 86400000) : false,
+            sonTarihGray: !sonTarihStr,
+            durum: durumKod,
+            durumLabel:
+              durumKod === "bitti"
+                ? "✗ Sona Erdi"
+                : durumKod === "suresi_gecti"
+                ? "✗ Süresi Geçti"
+                : durumKod === "yaklasan"
+                ? "⚠ Yaklaşan"
+                : "✓ Aktif",
+            rowBg: null,
+            opacity: 1,
+          };
+        });
+      setBakiyeRows(rows);
+      setBakiyeData(yeniData);
+      setRiskliMusteri({ sayi: riskSayi, toplam: riskToplam });
+    } finally {
+      setBakiyeLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "bakiye") {
+      fetchBakiyeler();
+    }
+  }, [activeTab, tesisId]);
 
   // Garson performansı: personel + siparisler
   useEffect(() => {
@@ -433,8 +540,8 @@ export default function IsletmeRaporlarPage() {
   });
 
   const riskRows = bakiyeRows.filter((r) => r.durum === "yaklasan" || r.durum === "suresi_gecti");
-  const riskCount = riskRows.length;
-  const riskTotal = riskRows.reduce((sum, r) => sum + Number(r.kalanSayi ?? 0), 0);
+  const riskCount = riskliMusteri.sayi;
+  const riskTotal = riskliMusteri.toplam;
 
   const sortedGarsonlar = [...garsonRows].sort((a, b) => {
     const dir = garsonSortDir === "desc" ? -1 : 1;
@@ -693,33 +800,35 @@ export default function IsletmeRaporlarPage() {
         {/* ── BAKİYE TAKİBİ ─────────────────────────────────────────────────── */}
         {activeTab === "bakiye" && (
           <>
-            <div style={{ background: "#FFFBEB", border: "1.5px solid #FCD34D", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 24 }}>⚠️</div>
-              <div style={{ flex: 1 }}>
-                <strong style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#92400E" }}>
-                  {riskCount} müşterinin bakiyesi riskli durumda
-                </strong>
-                <span style={{ fontSize: 11, color: "#B45309" }}>
-                  Toplam risk: ₺{riskTotal.toLocaleString("tr-TR")}
-                </span>
+            {riskliMusteri.sayi > 0 && (
+              <div style={{ background: "#FFFBEB", border: "1.5px solid #FCD34D", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 24 }}>⚠️</div>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#92400E" }}>
+                    {riskCount} müşterinin bakiyesi riskli durumda
+                  </strong>
+                  <span style={{ fontSize: 11, color: "#B45309" }}>
+                    Toplam risk: ₺{riskTotal.toLocaleString("tr-TR")}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (riskRows.length === 0) return;
+                    setStatDetay({
+                      label: "Riskli Bakiyeler",
+                      val: `₺${riskTotal.toLocaleString("tr-TR")}`,
+                      items: riskRows.map((r) => ({
+                        k: r.name,
+                        v: `Kalan: ₺${Number(r.kalanSayi ?? 0).toLocaleString("tr-TR")} • Son: ${r.sonTarih || "-"}`,
+                      })),
+                    });
+                  }}
+                  style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}
+                >
+                  Bildirimleri Gör
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  if (riskRows.length === 0) return;
-                  setStatDetay({
-                    label: "Riskli Bakiyeler",
-                    val: `₺${riskTotal.toLocaleString("tr-TR")}`,
-                    items: riskRows.map((r) => ({
-                      k: r.name,
-                      v: `Kalan: ₺${Number(r.kalanSayi ?? 0).toLocaleString("tr-TR")} • Son: ${r.sonTarih || "-"}`,
-                    })),
-                  });
-                }}
-                style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}
-              >
-                Bildirimleri Gör
-              </button>
-            </div>
+            )}
             <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden", marginBottom: 16 }}>
               <div style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Aktif Bakiyeler</h3>
@@ -747,19 +856,51 @@ export default function IsletmeRaporlarPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px 110px 80px", padding: "12px 18px", background: GRAY50, borderBottom: `1px solid ${GRAY100}`, gap: 8, fontSize: 10, fontWeight: 700, color: GRAY400, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 <div>Müşteri</div><div>Yüklenen</div><div>Harcanan</div><div>Kalan</div><div>Son Kullanım</div><div>Durum</div>
               </div>
-              {filteredBakiye.map((r, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px 110px 80px", padding: "12px 18px", borderBottom: `1px solid ${GRAY100}`, gap: 8, alignItems: "center", fontSize: 12, background: (r as { rowBg?: string | null }).rowBg ?? "transparent", opacity: (r as { opacity?: number }).opacity ?? 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white", background: r.avatarBg }}>{r.inits}</div>
-                    <div><div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>{r.name}</div><div style={{ fontSize: 10, color: GRAY400 }}>{r.sezlong}</div></div>
+              {bakiyeLoading ? (
+                <div style={{ padding: "30px 18px", textAlign: "center", fontSize: 12, color: GRAY400 }}>Yükleniyor...</div>
+              ) : filteredBakiye.length === 0 ? (
+                <div style={{ padding: "30px 18px", textAlign: "center", fontSize: 12, color: GRAY400 }}>Aktif bakiye bulunamadı</div>
+              ) : (
+                filteredBakiye.map((r, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px 110px 80px", padding: "12px 18px", borderBottom: `1px solid ${GRAY100}`, gap: 8, alignItems: "center", fontSize: 12, background: (r as { rowBg?: string | null }).rowBg ?? "transparent", opacity: (r as { opacity?: number }).opacity ?? 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white", background: r.avatarBg }}>{r.inits}</div>
+                      <div><div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>{r.name}</div><div style={{ fontSize: 10, color: GRAY400 }}>{r.sezlong}</div></div>
+                    </div>
+                    <div style={{ fontWeight: 700 }}>{r.yuklenen}</div>
+                    <div style={{ color: RED }}>{r.harcanan}</div>
+                    <div style={{ fontWeight: 800, color: r.kalanColor }}>{r.kalan}</div>
+                    <div style={{ fontSize: 11, color: (r as { sonTarihWarn?: boolean }).sonTarihWarn ? RED : (r as { sonTarihGray?: boolean }).sonTarihGray ? GRAY400 : "inherit", fontWeight: (r as { sonTarihWarn?: boolean }).sonTarihWarn ? 700 : 400 }}>{(r as { sonTarihWarn?: boolean }).sonTarihWarn ? "⚠️ " : ""}{r.sonTarih}</div>
+                    <div>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          padding: "3px 7px",
+                          borderRadius: 20,
+                          background:
+                            r.durum === "aktif"
+                              ? "#DCFCE7"
+                              : r.durum === "yaklasan"
+                              ? "#FEF3C7"
+                              : "#FEE2E2",
+                          color:
+                            r.durum === "aktif"
+                              ? "#16A34A"
+                              : r.durum === "yaklasan"
+                              ? "#D97706"
+                              : RED,
+                        }}
+                      >
+                        {r.durum === "aktif" ? "Aktif" : r.durum === "yaklasan" ? "Yaklaşan" : r.durum === "suresi_gecti" ? "Süresi Geçti" : "Sona Erdi"}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 700 }}>{r.yuklenen}</div>
-                  <div style={{ color: RED }}>{r.harcanan}</div>
-                  <div style={{ fontWeight: 800, color: r.kalanColor }}>{r.kalan}</div>
-                  <div style={{ fontSize: 11, color: (r as { sonTarihWarn?: boolean }).sonTarihWarn ? RED : (r as { sonTarihGray?: boolean }).sonTarihGray ? GRAY400 : "inherit", fontWeight: (r as { sonTarihWarn?: boolean }).sonTarihWarn ? 700 : 400 }}>{(r as { sonTarihWarn?: boolean }).sonTarihWarn ? "⚠️ " : ""}{r.sonTarih}</div>
-                  <div><span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 20, background: r.durum === "ok" ? "#DCFCE7" : r.durum === "soon" ? "#FEF3C7" : "#FEE2E2", color: r.durum === "ok" ? "#16A34A" : r.durum === "soon" ? "#D97706" : RED }}>{r.durumLabel}</span></div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </>
         )}
