@@ -283,10 +283,7 @@ export default function IsletmeSezlongPage() {
 
   // Fetch gruplar + sezlonglar
   useEffect(() => {
-    if (!authChecked || !tesisId) {
-      setLoading(false);
-      return;
-    }
+    if (!authChecked || !tesisId) return;
     let cancelled = false;
     setLoading(true);
     Promise.all([
@@ -526,6 +523,25 @@ export default function IsletmeSezlongPage() {
     setModalOpen(false);
     setGrupEkleForm({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "" });
     showToast("✅ Grup eklendi");
+  }
+
+  if (!authChecked || loading) {
+    return (
+      <div
+        style={{
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          background: GRAY100,
+          color: GRAY800,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ fontSize: 14, color: GRAY600 }}>Yükleniyor...</div>
+      </div>
+    );
   }
 
   return (
