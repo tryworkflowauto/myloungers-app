@@ -662,7 +662,11 @@ export default function IsletmeSezonPage() {
                             return base > 0 ? (
                               <div key={gr} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                                 <span style={{ color: GRAY400 }}>{label}:</span>
-                                <span><s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s> → <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong></span>
+                                <span>
+                                  <s style={{ color: GRAY400 }}>₺{base.toLocaleString("tr")}</s>
+                                  {" \u2192 "}
+                                  <strong style={{ color: ORANGE }}>₺{disc.toLocaleString("tr")}</strong>
+                                </span>
                               </div>
                             ) : null;
                           })}
