@@ -74,8 +74,7 @@ const INIT_KAMPANYA_NOTLARI: ListItem[] = [
 const KATEGORILER = [
   { name: "BEACH CLUB", emoji: "🏖️", checked: true },
   { name: "OTEL",       emoji: "🏨", checked: true  },
-  { name: "RESTORAN",   emoji: "🍽️", checked: false },
-  { name: "SU SPORLARI",emoji: "🌊", checked: false },
+  { name: "AQUA PARK",  emoji: "🌊", checked: false },
 ];
 
 const EMOJI_PICKER = ["🏄","🎯","🎪","🛁","🔒","🌿","🎠","🏋️","🧊","🎭","🌅","🍷"];
