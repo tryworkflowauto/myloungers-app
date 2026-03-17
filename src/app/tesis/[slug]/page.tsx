@@ -14,13 +14,14 @@ type SzlStatus = "avail" | "full" | "rsv" | "maint" | "lock";
 type ZoneDef = {
   key: string;
   prefix: string;
-  label: string;
+  label?: string;
   icon: string;
   pw: number;
   pe: number;
   gradient: string;
   statuses: SzlStatus[];
   color?: string;
+  count?: number;
 };
 
 function isWE(dt: Date) {
