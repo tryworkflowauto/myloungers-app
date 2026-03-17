@@ -483,12 +483,20 @@ export default function IsletmeSezlongPage() {
   }
 
   async function handleGrupEkle() {
-    if (!tesisId || !grupEkleForm.ad.trim()) return;
+    const currentTesisId = tesisId;
+    if (!currentTesisId || !grupEkleForm.ad.trim()) return;
     const kapasite = Math.max(1, Math.min(200, Number(grupEkleForm.kapasite) || 10));
     const aciklamaInsert = grupEkleForm.aciklama?.trim() || null;
     const { data: grup, error: gErr } = await supabase
       .from("sezlong_gruplari")
-      .insert({ tesis_id: tesisId, ad: grupEkleForm.ad.trim(), renk: grupEkleForm.renk || TEAL, kapasite, fiyat: Number(grupEkleForm.fiyat) || 0, aciklama: aciklamaInsert })
+      .insert({
+        tesis_id: currentTesisId,
+        ad: grupEkleForm.ad.trim(),
+        renk: grupEkleForm.renk || TEAL,
+        kapasite,
+        fiyat: Number(grupEkleForm.fiyat) || 0,
+        aciklama: aciklamaInsert,
+      })
       .select("id, ad, renk, kapasite, fiyat")
       .single();
     if (gErr || !grup) {
@@ -496,7 +504,12 @@ export default function IsletmeSezlongPage() {
       return;
     }
     const g = grup as { id: string; ad: string; renk: string; kapasite: number; fiyat: number };
-    const sezlongInserts = Array.from({ length: kapasite }, (_, i) => ({ grup_id: g.id, tesis_id: tesisId, numara: i + 1, durum: "bos" }));
+    const sezlongInserts = Array.from({ length: kapasite }, (_, i) => ({
+      grup_id: g.id,
+      tesis_id: currentTesisId,
+      numara: i + 1,
+      durum: "bos",
+    }));
     const { error: sErr } = await supabase.from("sezlonglar").insert(sezlongInserts);
     if (sErr) {
       showToast("❌ Şezlonglar eklenemedi");
@@ -525,7 +538,7 @@ export default function IsletmeSezlongPage() {
     showToast("✅ Grup eklendi");
   }
 
-  if (!authChecked || loading) {
+  if (!authChecked || !tesisId || loading) {
     return (
       <div
         style={{
