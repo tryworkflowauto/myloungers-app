@@ -163,13 +163,6 @@ const FACILITY_TYPES = [
 
 const TYPE_MAP: Record<string, string> = { "Hotel": "hotel", "Beach Club": "beach", "Aqua Park": "aqua" };
 
-const POPULAR_TESISLER = [
-  { name: "Zuzuu Beach Hotel", loc: "Bodrum (Muğla)", icon: "🏖️" },
-  { name: "Marmaris Aqua Resort", loc: "Marmaris (Muğla)", icon: "🌊" },
-  { name: "Fethiye Paradise Beach", loc: "Fethiye (Muğla)", icon: "🏖️" },
-  { name: "Bodrum Blue Bay Hotel", loc: "Bodrum (Muğla)", icon: "🏨" },
-];
-
 const SORT_OPTS = [
   { icon: "⭐", label: "Popüler" },
   { icon: "💰", label: "Ucuzdan Pahalıya" },
@@ -188,13 +181,6 @@ const FEATURE_OPTS = [
   { icon: "⛱️", label: "Şemsiye" },
   { icon: "🅿️", label: "Otopark" },
   { icon: "✈️", label: "Havalimanı Transfer" },
-];
-
-const TESISLER = [
-  { name: "Zuzuu Beach Hotel", il: "Bodrum (Muğla)", ilce: "Yalıkavak", type: "hotel" },
-  { name: "Marmaris Aqua Resort", il: "Marmaris (Muğla)", ilce: "İçmeler", type: "aqua" },
-  { name: "Fethiye Paradise Beach", il: "Fethiye (Muğla)", ilce: "Ölüdeniz", type: "beach" },
-  { name: "Bodrum Blue Bay Hotel", il: "Bodrum (Muğla)", ilce: "Gümbet", type: "hotel" },
 ];
 
 type TesisSlugInfo = {
@@ -234,6 +220,7 @@ export default function Home() {
   const [locationStatus, setLocationStatus] = useState<null | "loading" | "alındı" | "izin-yok" | "hata">(null);
   const [radius, setRadius] = useState(5);
   const [tesisSlugMap, setTesisSlugMap] = useState<Record<string, TesisSlugInfo>>({});
+  const [popularTesisler, setPopularTesisler] = useState<any[]>([]);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -266,6 +253,27 @@ export default function Home() {
     }
 
     fetchTesisSlugs();
+  }, []);
+
+  // Ana sayfa için en çok tercih edilen tesisleri Supabase'den çek
+  useEffect(() => {
+    async function fetchPopular() {
+      const { data, error } = await supabase
+        .from("tesisler")
+        .select("id, ad, slug, ilce, sehir, puan, images, kapak_gorsel, min_fiyat")
+        .eq("aktif", true)
+        .order("puan", { ascending: false })
+        .limit(4);
+
+      if (error) {
+        console.error("Ana sayfa popüler tesisler sorgu hatası:", error);
+        return;
+      }
+
+      setPopularTesisler(data ?? []);
+    }
+
+    fetchPopular();
   }, []);
 
   useEffect(() => {
@@ -365,13 +373,6 @@ export default function Home() {
   );
 
   const searchTypeKey = srchType ? TYPE_MAP[srchType] : null;
-  let filteredTesis = TESISLER;
-  if (activeCategory !== "all") {
-    filteredTesis = filteredTesis.filter((x) => x.type === activeCategory);
-  }
-  if (searchTypeKey) {
-    filteredTesis = filteredTesis.filter((x) => x.type === searchTypeKey);
-  }
 
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
   const activeLangOpt = LANG_OPTS.find((o) => o.code === currentLang) ?? LANG_OPTS[0];
@@ -709,13 +710,21 @@ export default function Home() {
                   </div>
                   <div className="name-title">POPÜLER TESİSLER</div>
                   <div className="name-list">
-                    {POPULAR_TESISLER.filter((ts) => !srchName || ts.name.toLowerCase().includes(srchName.toLowerCase())).map((ts) => (
-                      <div key={ts.name} className="name-item" onClick={() => { setSrchName(ts.name); closePanels(); }}>
-                        <span>{ts.icon}</span>
-                        <span className="name-item-name">{ts.name}</span>
-                        <span className="name-item-loc">— {ts.loc}</span>
-                      </div>
-                    ))}
+                    {popularTesisler
+                      .filter((ts) => !srchName || String(ts.ad ?? "").toLowerCase().includes(srchName.toLowerCase()))
+                      .map((ts) => (
+                        <div
+                          key={ts.id}
+                          className="name-item"
+                          onClick={() => { setSrchName(ts.ad ?? ""); closePanels(); }}
+                        >
+                          <span>🏖️</span>
+                          <span className="name-item-name">{ts.ad}</span>
+                          <span className="name-item-loc">
+                            — {ts.ilce && ts.sehir ? `${ts.ilce} (${ts.sehir})` : ts.sehir || ts.ilce || ""}
+                          </span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               )}
@@ -866,47 +875,61 @@ export default function Home() {
           <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="pgrid" id="tesisGrid">
-          {filteredTesis.map((tesis) => {
-            const origIdx = TESISLER.indexOf(tesis);
-            const prices = [450, 320, 280, 395];
-            const isZuzuu = tesis.name === "Zuzuu Beach Hotel";
-            const slugInfo = tesisSlugMap[tesis.name];
-            const targetSlug = slugInfo
-              ? (slugInfo.slug && String(slugInfo.slug).trim()) || slugInfo.id
-              : null;
+          {popularTesisler.map((tesis) => {
+            const name = tesis.ad as string;
+            const ilce = (tesis.ilce as string) || "";
+            const sehir = (tesis.sehir as string) || "";
+            const price =
+              (tesis.min_fiyat as number | null) ??
+              0;
+            const puan = typeof tesis.puan === "number" ? tesis.puan : null;
+
+            let imageSrc: string = TESIS_IMGS[0];
+            const imagesVal = (tesis as any).images;
+            if (Array.isArray(imagesVal) && imagesVal.length > 0) {
+              imageSrc = imagesVal[0] as string;
+            } else if (typeof tesis.kapak_gorsel === "string") {
+              imageSrc = tesis.kapak_gorsel as string;
+            }
+
+            const slugValue =
+              (tesis.slug && String(tesis.slug).trim()) ||
+              String(tesis.id);
+
             const cardContent = (
               <>
                 <div className="pw0">
-                  <img src={TESIS_IMGS[origIdx]} alt={tesis.name} />
+                  <img src={imageSrc} alt={name} />
                   <button type="button" className="pfav" onClick={(e) => e.stopPropagation()}>♡</button>
-                  <span className="prat">★ 4.8</span>
-                  <span className={`ptag ${tesis.type === "aqua" ? "co" : "ct"}`}>{t.tag_daily}</span>
+                  {puan !== null && (
+                    <span className="prat">★ {puan.toFixed(1)}</span>
+                  )}
+                  <span className="ptag ct">{t.tag_daily}</span>
                 </div>
-                <div className="pn">{tesis.name}</div>
-                <div className="pl">{tesis.ilce} / {tesis.il}</div>
+                <div className="pn">{name}</div>
+                <div className="pl">
+                  {ilce && sehir ? `${ilce} / ${sehir}` : ilce || sehir || ""}
+                </div>
                 <div className="pf">
                   <span className="pfc">Wi-Fi</span>
                   <span className="pfc">Bar</span>
                 </div>
-                <div className="pp"><b>₺{prices[origIdx] ?? 395}</b><span> {t.card_per_day}</span></div>
+                <div className="pp">
+                  <b>₺{price && price > 0 ? price.toLocaleString("tr-TR") : "—"}</b>
+                  <span> {t.card_per_day}</span>
+                </div>
               </>
             );
-            if (isZuzuu && targetSlug) {
-              return (
-                <Link
-                  key={tesis.name}
-                  href={`/tesis/${encodeURIComponent(targetSlug)}`}
-                  className="pc pc-link"
-                  data-type={tesis.type}
-                >
-                  {cardContent}
-                </Link>
-              );
-            }
+
             return (
-              <div key={tesis.name} className="pc" data-type={tesis.type}>
+              <Link
+                key={tesis.id}
+                href={`/tesis/${encodeURIComponent(slugValue)}`}
+                className="pc pc-link"
+                data-type="hotel"
+              >
                 {cardContent}
-              </div>
+              </Link>
             );
           })}
         </div>
