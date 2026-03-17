@@ -1482,8 +1482,10 @@ export default function TesisDetailPage() {
               <div>
                 <div className="bcard-t">Bölgenin Öne Çıkan Tesislerinden</div>
                 <div className="bcard-s">
-                  {HOTEL.reviews || 0} doğrulanmış rezervasyon ·
-                  {" "}⭐⭐⭐⭐⭐ &nbsp;{HOTEL.score.toFixed(1)} / 10 ortalama
+                  {HOTEL.reviews || 0} doğrulanmış rezervasyon ·{" "}
+                  {HOTEL.reviews && HOTEL.reviews > 0
+                    ? `⭐⭐⭐⭐⭐ \u00A0${HOTEL.score.toFixed(1)} / 10 ortalama`
+                    : "Puanlama henüz yok"}
                 </div>
               </div>
             </div>
