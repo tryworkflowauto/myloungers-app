@@ -63,7 +63,7 @@ export default function TesisDetailPage() {
   const [selEnd, setSelEnd] = useState<Date | null>(null);
   const [paxCount, setPaxCount] = useState(1);
   const [selSzls, setSelSzls] = useState<SelSzl[]>([]);
-  const [videoUrl] = useState<string | null>((row as any)?.video_url ?? null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
   const szlRef = useRef<HTMLDivElement>(null);
@@ -137,6 +137,11 @@ export default function TesisDetailPage() {
       }
 
       setRow(fetched);
+      const video = (fetched as any).video_url;
+      if (video && typeof video === "string" && video.trim()) {
+        setVideoUrl(video);
+        setVideoEmbed(video);
+      }
       setLoading(false);
     }
 
