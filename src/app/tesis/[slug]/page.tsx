@@ -839,6 +839,7 @@ export default function TesisDetailPage() {
           .gp-main{grid-row:1;grid-column:1/3}
           .gp-bl,.gp-br{display:none}
           .review-grid,.rules-grid,.feat-grid{grid-template-columns:1fr}
+          .schema{overflow-x:auto}
         }
         @media(max-width:480px){.wrap{padding:0 12px}.gall{grid-template-rows:140px 140px}}
       `}</style>
