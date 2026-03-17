@@ -471,7 +471,8 @@ export default function TesisDetailPage() {
   }
 
   // TESİS İMKANLARI (Supabase)
-  let imkanlar: { icon: string; label: string }[] = [];
+  type ImkanRow = { name?: string; emoji?: string; active?: boolean };
+  let imkanlar: ImkanRow[] = [];
   if ((row as any)?.imkanlar) {
     try {
       const raw = (row as any).imkanlar;
@@ -480,7 +481,7 @@ export default function TesisDetailPage() {
         typeof raw === "string" ? JSON.parse(raw) :
         [];
       if (Array.isArray(parsed) && parsed.length > 0) {
-        imkanlar = parsed as { icon: string; label: string }[];
+        imkanlar = (parsed as ImkanRow[]).filter((it) => it && it.active);
       }
     } catch {
       imkanlar = [];
@@ -871,9 +872,9 @@ export default function TesisDetailPage() {
                 ) : (
                   <div className="feat-grid">
                     {imkanlar.map((it) => (
-                      <div key={it.label} className="feat-item">
-                        <div className="feat-ic">{it.icon}</div>
-                        {it.label}
+                      <div key={it.name} className="feat-item">
+                        <div className="feat-ic">{it.emoji || "•"}</div>
+                        {it.name}
                       </div>
                     ))}
                   </div>
