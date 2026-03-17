@@ -143,7 +143,7 @@ export default function TesisDetailPage() {
 
   // Supabase'den şezlong grupları ve şezlongları çek
   useEffect(() => {
-    if (!row?.id) return;
+    if (!row) return;
     let cancelled = false;
 
     async function fetchSezlongData() {
