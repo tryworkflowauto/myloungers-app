@@ -1083,7 +1083,7 @@ export default function TesisDetailPage() {
                           <span className="ul-head-ic">🚖</span>
                           <div>
                             <div className="ul-head-t">Taksi</div>
-                            <div className="ul-head-s">{ulasim.not || "En hızlı seçenek"}</div>
+                            <div className="ul-head-s">Taksi Bilgileri</div>
                           </div>
                         </div>
                         <div className="ul-rows">
@@ -1122,6 +1122,7 @@ export default function TesisDetailPage() {
                               </div>
                             </div>
                           )}
+                          <span className="ul-badge badge-or">⏱ 7/24 hizmet</span>
                         </div>
                       </div>
                       <div className="ul-card dolmus-card">
@@ -1129,7 +1130,7 @@ export default function TesisDetailPage() {
                           <span className="ul-head-ic">🚐</span>
                           <div>
                             <div className="ul-head-t">Dolmuş</div>
-                            <div className="ul-head-s">Ekonomik · Yerel</div>
+                            <div className="ul-head-s">Dolmuş Bilgileri</div>
                           </div>
                         </div>
                         <div className="ul-rows">
@@ -1159,6 +1160,15 @@ export default function TesisDetailPage() {
                               <div>
                                 <b>İniş noktası</b>
                                 {ulasim.durak}
+                              </div>
+                            </div>
+                          )}
+                          {ulasim.not && (
+                            <div className="ul-row">
+                              <span className="ul-row-ic">📝</span>
+                              <div>
+                                <b>Not</b>
+                                {ulasim.not}
                               </div>
                             </div>
                           )}
