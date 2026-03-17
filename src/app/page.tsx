@@ -128,13 +128,6 @@ const CAT_IMGS = [
   "/images/tesis_kategorsi-aquapark.png",
 ];
 
-const TESIS_IMGS = [
-  "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=300&fit=crop",
-];
-
 const ILLER: Record<string, string[]> = {
   Muğla: ["Bodrum", "Yalıkavak", "Turgutreis", "Gümbet", "Gündoğan", "Ortakent", "Bitez", "Güvercinlik", "Marmaris", "Fethiye", "Datça", "Milas"],
   Antalya: ["Kemer", "Alanya", "Side", "Manavgat", "Belek", "Kaş", "Kalkan"],
@@ -880,23 +873,11 @@ export default function Home() {
             const sehir = (tesis.sehir as string) || "";
             const puan = typeof tesis.puan === "number" ? tesis.puan : null;
 
-            // Fotoğraf: fotograflar JSON array veya string olabilir
-            let imageSrc: string | null = null;
-            const rawFotos = (tesis as any).fotograflar;
-            if (Array.isArray(rawFotos) && rawFotos.length > 0) {
-              imageSrc = rawFotos[0] as string;
-            } else if (typeof rawFotos === "string") {
-              try {
-                const parsed = JSON.parse(rawFotos);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  imageSrc = parsed[0] as string;
-                }
-              } catch {
-                imageSrc = null;
-              }
-            }
-            if (!imageSrc) {
-              imageSrc = TESIS_IMGS[0];
+            // Fotoğraf: fotograflar kolonunun ilk elemanı, yoksa logo
+            let imageSrc: string = "/logo.png";
+            const fotos = (tesis as any).fotograflar;
+            if (Array.isArray(fotos) && fotos.length > 0 && typeof fotos[0] === "string") {
+              imageSrc = fotos[0] as string;
             }
 
             // Fiyat: tesisler tablosundaki min_fiyat veya fiyat kolonları
