@@ -261,7 +261,6 @@ export default function Home() {
       const { data, error } = await supabase
         .from("tesisler")
         .select("id, ad, slug, ilce, sehir, puan, images, kapak_gorsel, min_fiyat")
-        .eq("aktif", true)
         .order("puan", { ascending: false })
         .limit(4);
 
