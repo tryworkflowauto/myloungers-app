@@ -400,8 +400,12 @@ export default function IsletmeSezlongPage() {
   }
 
   async function silGrup() {
-    if (!silModal) return;
-    const { error } = await supabase.from("sezlong_gruplari").delete().eq("id", silModal.id);
+    if (!silModal || !tesisId) return;
+    const { error } = await supabase
+      .from("sezlong_gruplari")
+      .delete()
+      .eq("id", silModal.id)
+      .eq("tesis_id", tesisId);
     if (error) { showToast("❌ Silinemedi"); return; }
     setGruplar((prev) => prev.filter((g) => g.id !== silModal.id));
     setHaritaGruplari((prev) => {
