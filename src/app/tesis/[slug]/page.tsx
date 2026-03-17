@@ -20,6 +20,7 @@ type ZoneDef = {
   pe: number;
   gradient: string;
   statuses: SzlStatus[];
+  color?: string;
 };
 
 function isWE(dt: Date) {
