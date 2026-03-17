@@ -61,7 +61,7 @@ export default function TesisDetailPage() {
   const [selEnd, setSelEnd] = useState<Date | null>(null);
   const [paxCount, setPaxCount] = useState(1);
   const [selSzls, setSelSzls] = useState<SelSzl[]>([]);
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState(row?.video_url || "");
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
   const szlRef = useRef<HTMLDivElement>(null);
@@ -453,6 +453,80 @@ export default function TesisDetailPage() {
     images,
   };
 
+  // TESİS İMKANLARI (Supabase + fallback)
+  const defaultImkanlar: { icon: string; label: string }[] = [
+    { icon: "🏊", label: "Havuz" },
+    { icon: "☕", label: "Kahvaltı" },
+    { icon: "🍽", label: "Restoran" },
+    { icon: "🚗", label: "Otopark" },
+    { icon: "📶", label: "Wi-Fi" },
+    { icon: "🎶", label: "Canlı Müzik" },
+    { icon: "🚤", label: "Su Sporları" },
+    { icon: "🌍", label: "Çok Dilli Personel" },
+  ];
+
+  let imkanlar: { icon: string; label: string }[] = defaultImkanlar;
+  if (row?.imkanlar) {
+    try {
+      const raw = (row as any).imkanlar;
+      const parsed =
+        Array.isArray(raw) ? raw :
+        typeof raw === "string" ? JSON.parse(raw) :
+        [];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        imkanlar = parsed as { icon: string; label: string }[];
+      }
+    } catch {
+      // fallback defaultImkanlar
+    }
+  }
+
+  // ÇALIŞMA SAATLERİ (Supabase + fallback)
+  const defaultSaat = "09:00 — 19:00";
+  type Saatler = { hafta_ici?: string; hafta_sonu?: string };
+  let saatler: Saatler | null = null;
+  if ((row as any)?.calisma_saatleri) {
+    const raw = (row as any).calisma_saatleri;
+    try {
+      saatler =
+        typeof raw === "string" ? JSON.parse(raw) as Saatler :
+        (raw as Saatler);
+    } catch {
+      saatler = null;
+    }
+  }
+
+  // KURALLAR & KAMPANYALAR (Supabase + fallback)
+  const defaultKurallar: { icon: string; text: string }[] = [
+    { icon: "🚫", text: "Evcil hayvan kabul edilmez" },
+    { icon: "🚫", text: "Dışarıdan yiyecek/içecek getirilmez" },
+    { icon: "🚫", text: "18 yaş altı 21:00'dan sonra tesis içinde bulunamaz" },
+    { icon: "✅", text: "Giriş: 09:00 — Çıkış: 19:00" },
+    { icon: "✅", text: "İptal: 48 saat öncesine kadar ücretsiz" },
+  ];
+  const defaultKampanyalar: { icon: string; text: string }[] = [
+    { icon: "🌟", text: "Erken Rezervasyon: 30 gün öncesi %10 indirim" },
+    { icon: "🌟", text: "Grup (5+): %15 indirim" },
+    { icon: "🌟", text: "Hafta içi 3 gün full: Kahvaltı dahil" },
+    { icon: "🌟", text: "Sadakat: 5. rezervasyonda %20 indirim" },
+  ];
+
+  function parseIconTextArray(raw: any): { icon: string; text: string }[] {
+    try {
+      const parsed =
+        Array.isArray(raw) ? raw :
+        typeof raw === "string" ? JSON.parse(raw) :
+        [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed as { icon: string; text: string }[];
+    } catch {
+      return [];
+    }
+  }
+
+  const parsedKurallar = row ? parseIconTextArray((row as any).kurallar) : [];
+  const parsedKampanyalar = row ? parseIconTextArray((row as any).kampanya_notlari) : [];
+
   const btnDisabled = !selStart || selSzls.length === 0;
   const btnText = !selStart ? "Tarih Seçerek Başlayın"
     : selSzls.length === 0 ? "🛏 Haritadan Şezlong Seç"
@@ -785,17 +859,11 @@ export default function TesisDetailPage() {
               </div>
               {openPanels.feats && <div className="pb" style={{ padding: 20 }}>
                 <div className="feat-grid">
-                  {([
-                    ["🏊","Havuz"],
-                    ["☕","Kahvaltı"],
-                    ["🍽","Restoran"],
-                    ["🚗","Otopark"],
-                    ["📶","Wi-Fi"],
-                    ["🎶","Canlı Müzik"],
-                    ["🚤","Su Sporları"],
-                    ["🌍","Çok Dilli Personel"],
-                  ] as const).map(([ic, txt]) => (
-                    <div key={txt} className="feat-item"><div className="feat-ic">{ic}</div>{txt}</div>
+                  {imkanlar.map((it) => (
+                    <div key={it.label} className="feat-item">
+                      <div className="feat-ic">{it.icon}</div>
+                      {it.label}
+                    </div>
                   ))}
                 </div>
               </div>}
@@ -966,14 +1034,14 @@ export default function TesisDetailPage() {
                 <div className="rules-grid">
                   <div className="rules-col">
                     <h4>🚫 Kurallar</h4>
-                    {[["🚫","Evcil hayvan kabul edilmez"],["🚫","Dışarıdan yiyecek/içecek getirilmez"],["🚫","18 yaş altı 21:00'dan sonra tesis içinde bulunamaz"],["✅","Giriş: 09:00 — Çıkış: 19:00"],["✅","İptal: 48 saat öncesine kadar ücretsiz"]].map(([ic,t]) => (
-                      <div key={t} className="rule-item"><span>{ic}</span>{t}</div>
+                    {(parsedKurallar.length ? parsedKurallar : defaultKurallar).map((item) => (
+                      <div key={item.text} className="rule-item"><span>{item.icon}</span>{item.text}</div>
                     ))}
                   </div>
                   <div className="rules-col">
                     <h4>🎁 Kampanyalar</h4>
-                    {[["🌟","Erken Rezervasyon: 30 gün öncesi %10 indirim"],["🌟","Grup (5+): %15 indirim"],["🌟","Hafta içi 3 gün full: Kahvaltı dahil"],["🌟","Sadakat: 5. rezervasyonda %20 indirim"]].map(([ic,t]) => (
-                      <div key={t} className="rule-item"><span>{ic}</span>{t}</div>
+                    {(parsedKampanyalar.length ? parsedKampanyalar : defaultKampanyalar).map((item) => (
+                      <div key={item.text} className="rule-item"><span>{item.icon}</span>{item.text}</div>
                     ))}
                   </div>
                 </div>
