@@ -409,6 +409,42 @@ export default function IsletmeSezlongPage() {
       return { ...prev, [duzenleModal.id]: { ...h, title: duzenleForm.name, sub: subDisplay, color: duzenleForm.color, gradient: grupGradient(duzenleForm.color) } };
     });
     showToast("✅ Grup güncellendi");
+    // Şezlong sayısını (kapasiteyi) veritabanındaki sezlonglar ile senkronize et
+    const hedefCount = Number(duzenleForm.count) || 0;
+    if (hedefCount > 0 && tesisId) {
+      const { data: mevcutSez, error: sezFetchErr } = await supabase
+        .from("sezlonglar")
+        .select("id, numara")
+        .eq("grup_id", duzenleModal.id)
+        .eq("tesis_id", tesisId)
+        .order("numara", { ascending: true });
+      if (!sezFetchErr && mevcutSez) {
+        const mevcutListe = mevcutSez as { id: string; numara: number }[];
+        const mevcutCount = mevcutListe.length;
+        if (hedefCount > mevcutCount) {
+          // Eksik şezlongları ekle
+          const mevcutMax = mevcutListe.reduce((max, s) => Math.max(max, s.numara), 0);
+          const eklenecek = hedefCount - mevcutCount;
+          const inserts = Array.from({ length: eklenecek }, (_, i) => ({
+            grup_id: duzenleModal.id,
+            tesis_id: tesisId,
+            numara: mevcutMax + i + 1,
+            durum: "bos",
+          }));
+          await supabase.from("sezlonglar").insert(inserts);
+        } else if (hedefCount < mevcutCount) {
+          // Fazla şezlongları sil (en yüksek numaralardan başlayarak)
+          const silinecekAdet = mevcutCount - hedefCount;
+          const silinecekler = [...mevcutListe]
+            .sort((a, b) => b.numara - a.numara)
+            .slice(0, silinecekAdet)
+            .map((s) => s.id);
+          if (silinecekler.length > 0) {
+            await supabase.from("sezlonglar").delete().in("id", silinecekler);
+          }
+        }
+      }
+    }
     if (typeof window !== "undefined") {
       window.location.reload();
     }
