@@ -260,7 +260,7 @@ export default function Home() {
     async function fetchPopular() {
       const { data, error } = await supabase
         .from("tesisler")
-        .select("id, ad, slug, ilce, sehir, puan, fotograflar")
+        .select("id, ad, slug, ilce, sehir, puan, fotograflar, min_fiyat, fiyat")
         .order("puan", { ascending: false })
         .limit(4);
 
@@ -880,11 +880,30 @@ export default function Home() {
             const sehir = (tesis.sehir as string) || "";
             const puan = typeof tesis.puan === "number" ? tesis.puan : null;
 
-            let imageSrc: string = TESIS_IMGS[0];
-            const fotosVal = (tesis as any).fotograflar;
-            if (Array.isArray(fotosVal) && fotosVal.length > 0) {
-              imageSrc = fotosVal[0] as string;
+            // Fotoğraf: fotograflar JSON array veya string olabilir
+            let imageSrc: string | null = null;
+            const rawFotos = (tesis as any).fotograflar;
+            if (Array.isArray(rawFotos) && rawFotos.length > 0) {
+              imageSrc = rawFotos[0] as string;
+            } else if (typeof rawFotos === "string") {
+              try {
+                const parsed = JSON.parse(rawFotos);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  imageSrc = parsed[0] as string;
+                }
+              } catch {
+                imageSrc = null;
+              }
             }
+            if (!imageSrc) {
+              imageSrc = TESIS_IMGS[0];
+            }
+
+            // Fiyat: tesisler tablosundaki min_fiyat veya fiyat kolonları
+            const price =
+              (typeof tesis.min_fiyat === "number" ? tesis.min_fiyat :
+               typeof tesis.fiyat === "number" ? tesis.fiyat :
+               null);
 
             const slugValue =
               (tesis.slug && String(tesis.slug).trim()) ||
@@ -908,10 +927,12 @@ export default function Home() {
                   <span className="pfc">Wi-Fi</span>
                   <span className="pfc">Bar</span>
                 </div>
-                <div className="pp">
-                  <b>₺—</b>
-                  <span> {t.card_per_day}</span>
-                </div>
+                {price !== null && price > 0 && (
+                  <div className="pp">
+                    <b>₺{price.toLocaleString("tr-TR")}</b>
+                    <span> {t.card_per_day}</span>
+                  </div>
+                )}
               </>
             );
 
