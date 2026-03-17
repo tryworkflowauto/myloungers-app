@@ -251,7 +251,7 @@ export default function Home() {
   // Ana sayfa için en çok tercih edilen tesisleri Supabase'den çek
   useEffect(() => {
     async function fetchPopular() {
-      const { data, error } = await supabase
+      const { data: tesisler, error } = await supabase
         .from("tesisler")
         .select("id, ad, slug, ilce, sehir, puan, fotograflar, min_fiyat, fiyat")
         .order("puan", { ascending: false })
@@ -262,7 +262,8 @@ export default function Home() {
         return;
       }
 
-      setPopularTesisler(data ?? []);
+      console.log("Ana sayfa popüler tesisler:", tesisler);
+      setPopularTesisler(tesisler ?? []);
     }
 
     fetchPopular();
@@ -867,28 +868,20 @@ export default function Home() {
           <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="pgrid" id="tesisGrid">
-          {popularTesisler.map((tesis) => {
-            const name = tesis.ad as string;
-            const ilce = (tesis.ilce as string) || "";
-            const sehir = (tesis.sehir as string) || "";
-            const puan = typeof tesis.puan === "number" ? tesis.puan : null;
+          {popularTesisler?.map((t) => {
+            const name = t.ad as string;
+            const ilce = (t.ilce as string) || "";
+            const sehir = (t.sehir as string) || "";
+            const puan = typeof t.puan === "number" ? t.puan : null;
 
-            // Fotoğraf: fotograflar kolonunun ilk elemanı, yoksa logo
-            let imageSrc: string = "/logo.png";
-            const fotos = (tesis as any).fotograflar;
-            if (Array.isArray(fotos) && fotos.length > 0 && typeof fotos[0] === "string") {
-              imageSrc = fotos[0] as string;
-            }
+            // Fotoğraf: fotograflar kolonunun ilk elemanı
+            const fotos = (t as any).fotograflar;
+            const imageSrc =
+              Array.isArray(fotos) && fotos.length > 0 && typeof fotos[0] === "string"
+                ? (fotos[0] as string)
+                : "/logo.png";
 
-            // Fiyat: tesisler tablosundaki min_fiyat veya fiyat kolonları
-            const price =
-              (typeof tesis.min_fiyat === "number" ? tesis.min_fiyat :
-               typeof tesis.fiyat === "number" ? tesis.fiyat :
-               null);
-
-            const slugValue =
-              (tesis.slug && String(tesis.slug).trim()) ||
-              String(tesis.id);
+            const slugValue = (t.slug && String(t.slug).trim()) || String(t.id);
 
             const cardContent = (
               <>
@@ -908,18 +901,12 @@ export default function Home() {
                   <span className="pfc">Wi-Fi</span>
                   <span className="pfc">Bar</span>
                 </div>
-                {price !== null && price > 0 && (
-                  <div className="pp">
-                    <b>₺{price.toLocaleString("tr-TR")}</b>
-                    <span> {t.card_per_day}</span>
-                  </div>
-                )}
               </>
             );
 
             return (
               <Link
-                key={tesis.id}
+                key={t.id}
                 href={`/tesis/${encodeURIComponent(slugValue)}`}
                 className="pc pc-link"
                 data-type="hotel"
