@@ -758,7 +758,7 @@ export default function IsletmeSezlongPage() {
                     <span style={{ fontSize: 11, color: GRAY400 }}>{g.count} şezlong</span>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
-                        onClick={(e) => { e.stopPropagation(); openDuzenle(g); }}
+                        onClick={() => { setDuzenleModal(g); }}
                         style={{
                           width: 24,
                           height: 24,
@@ -775,7 +775,7 @@ export default function IsletmeSezlongPage() {
                         ✏️
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setSilModal(g); }}
+                        onClick={() => { setSilModal(g); }}
                         style={{
                           width: 24,
                           height: 24,
