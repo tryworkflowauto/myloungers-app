@@ -342,7 +342,10 @@ export default function TesisDetailPage() {
       return;
     }
     let embed = raw;
-    if (raw.includes("youtube.com/watch")) {
+    // Eğer URL zaten embed formatındaysa doğrudan kullan
+    if (raw.includes("youtube.com/embed") || raw.includes("player.vimeo.com/video")) {
+      embed = raw;
+    } else if (raw.includes("youtube.com/watch")) {
       const vid = raw.split("v=")[1]?.split("&")[0];
       if (vid) embed = "https://www.youtube.com/embed/" + vid;
     } else if (raw.includes("youtu.be/")) {
