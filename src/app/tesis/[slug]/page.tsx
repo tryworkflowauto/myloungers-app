@@ -419,19 +419,16 @@ export default function TesisDetailPage() {
   }
 
   // Supabase satırından görsel & temel bilgiler
-  const fallbackImages = [
-    "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&fit=crop",
-    "https://images.unsplash.com/photo-1540541338537-71acee2f3f34?w=400&fit=crop",
-    "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400&fit=crop",
-    "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=400&fit=crop",
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
-  ];
-
-  let images: string[] = fallbackImages;
-  if (Array.isArray(row?.images) && row!.images.length > 0) {
-    images = row!.images as string[];
-  } else if (typeof row?.kapak_gorsel === "string") {
-    images = [row.kapak_gorsel as string, ...fallbackImages.slice(1)];
+  // Galeri: row.fotograflar kolonundan { id, src } şeklinde geliyor
+  let images: string[] = [];
+  const rawFotos = (row as any)?.fotograflar;
+  if (Array.isArray(rawFotos)) {
+    images = rawFotos
+      .map((f: any) => (f && typeof f.src === "string" ? f.src : null))
+      .filter(Boolean) as string[];
+  }
+  if (images.length === 0) {
+    images = ["/logo.png"];
   }
 
   const HOTEL = {
