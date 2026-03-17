@@ -717,6 +717,18 @@ export default function TesisDetailPage() {
         .score-big{font-size:3rem;font-weight:900;color:var(--teal);line-height:1}
         .score-label{font-size:.7rem;color:var(--i3);margin-top:4px}
         .score-bars{flex:1}
+        .ul-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
+        .ul-card{background:#FAFAFA;border:1px solid var(--bd);border-radius:var(--r3);padding:16px}
+        .taxi-card{border-left:3px solid #F59E0B}
+        .dolmus-card{border-left:3px solid #3B82F6}
+        .ul-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+        .ul-head-ic{font-size:1.4rem}
+        .ul-head-t{font-size:.85rem;font-weight:800;color:var(--navy)}
+        .ul-head-s{font-size:.7rem;color:var(--i3);margin-top:2px}
+        .ul-row{display:flex;align-items:flex-start;gap:8px;font-size:.8rem;color:var(--i2);margin-bottom:8px}
+        .ul-row-ic{font-size:1rem;flex-shrink:0}
+        .ul-badge{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:4px;display:inline-block}
+        .badge-green{background:#DCFCE7;color:#15803D}
         .score-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:.72rem;color:var(--i3)}
         .score-bar-bg{flex:1;height:6px;background:#F3F4F6;border-radius:3px;overflow:hidden}
         .score-bar-fill{height:100%;background:var(--teal);border-radius:3px}
