@@ -11,44 +11,16 @@ const MN = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos
 
 type SzlStatus = "avail" | "full" | "rsv" | "maint" | "lock";
 
-const ZONES: { key: string; prefix: string; label: string; icon: string; pw: number; pe: number; gradient: string; statuses: SzlStatus[] }[] = [
-  {
-    key: "gold", prefix: "G", label: "Gold Bölge", icon: "⭐",
-    pw: 2000, pe: 2500,
-    gradient: "linear-gradient(135deg,#7C3AED,#8B5CF6)",
-    statuses: ["full","full","full","lock","full","full","full","lock","full","full"],
-  },
-  {
-    key: "isk", prefix: "İ", label: "İskele Bölge", icon: "⚓",
-    pw: 1250, pe: 1500,
-    gradient: "linear-gradient(135deg,#D97706,#F59E0B)",
-    statuses: ["full","full","avail","full","rsv","avail","full","avail","full","lock","full","avail","rsv","avail","full","maint","avail","lock","avail","avail"],
-  },
-  {
-    key: "vip", prefix: "V", label: "VIP Bölge", icon: "🔥",
-    pw: 1500, pe: 2000,
-    gradient: "linear-gradient(135deg,#EA580C,#F5821F)",
-    statuses: Array.from({length:40}, (_, i) =>
-      (i===8||i===25||i===38)?"rsv"
-      :(i===16||i===30)?"maint"
-      :(i===11||i===23||i===35)?"lock"
-      :(i===2||i===5||i===13||i===18||i===22||i===28||i===33||i===37||i===39)?"avail"
-      :"full"
-    ) as SzlStatus[],
-  },
-  {
-    key: "slv", prefix: "S", label: "Silver Bölge", icon: "🌊",
-    pw: 1000, pe: 1250,
-    gradient: "linear-gradient(135deg,#0891B2,#0ABAB5)",
-    statuses: Array.from({length:55}, (_, i) =>
-      (i%9===0)?"lock"
-      :(i%7===0)?"maint"
-      :(i%5===0)?"rsv"
-      :(i%3===0||i===1||i===4||i===10||i===19||i===28||i===37||i===46)?"avail"
-      :"full"
-    ) as SzlStatus[],
-  },
-];
+type ZoneDef = {
+  key: string;
+  prefix: string;
+  label: string;
+  icon: string;
+  pw: number;
+  pe: number;
+  gradient: string;
+  statuses: SzlStatus[];
+};
 
 function isWE(dt: Date) {
   const dow = dt.getDay();
@@ -75,6 +47,7 @@ export default function TesisDetailPage() {
   const [row, setRow] = useState<TesisRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [zones, setZones] = useState<ZoneDef[]>([]);
 
   const [fav, setFav] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
@@ -92,6 +65,24 @@ export default function TesisDetailPage() {
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
   const szlRef = useRef<HTMLDivElement>(null);
+
+  function mapDbDurumToStatus(durum: string | null | undefined): SzlStatus {
+    switch ((durum || "").toLowerCase()) {
+      case "dolu":
+        return "full";
+      case "rezerve":
+        return "rsv";
+      case "bakim":
+      case "bakım":
+        return "maint";
+      case "kilitli":
+        return "lock";
+      case "bos":
+      case "boş":
+      default:
+        return "avail";
+    }
+  }
 
   // Supabase'den tesisi çek
   useEffect(() => {
@@ -149,6 +140,77 @@ export default function TesisDetailPage() {
 
     fetchTesis();
   }, [slug]);
+
+  // Supabase'den şezlong grupları ve şezlongları çek
+  useEffect(() => {
+    if (!row?.id) return;
+    let cancelled = false;
+
+    async function fetchSezlongData() {
+      const tesisId = row.id;
+
+      const { data: grupRows, error: grupErr } = await supabase
+        .from("sezlong_gruplari")
+        .select("id, ad, renk, kapasite, fiyat")
+        .eq("tesis_id", tesisId);
+
+      const { data: sezRows, error: sezErr } = await supabase
+        .from("sezlonglar")
+        .select("id, grup_id, numara, durum")
+        .eq("tesis_id", tesisId);
+
+      if (cancelled || grupErr || !grupRows) return;
+
+      const byGrup = new Map<string, { id: string; numara: number; durum: string | null }[]>();
+      (sezRows ?? []).forEach((s) => {
+        if (!byGrup.has(s.grup_id)) byGrup.set(s.grup_id, []);
+        byGrup.get(s.grup_id)!.push({
+          id: s.id as string,
+          numara: s.numara as number,
+          durum: (s.durum as string) ?? null,
+        });
+      });
+
+      const zoneList: ZoneDef[] = (grupRows as any[]).map((g, index) => {
+        const key = g.id as string;
+        const ad: string = (g.ad as string) || `Grup ${index + 1}`;
+        const kapasite: number = (g.kapasite as number) || 0;
+        const renk: string = (g.renk as string) || "#0ABAB5";
+        const fiyatNum: number = (g.fiyat as number) || 0;
+        const prefix = ad.charAt(0).toUpperCase() || "S";
+        const icon = "🏖️";
+        const gradient = `linear-gradient(135deg,${renk},${renk}CC)`;
+
+        const list = (byGrup.get(key) ?? []).sort((a, b) => a.numara - b.numara);
+        const statuses: SzlStatus[] = [];
+        for (let i = 1; i <= kapasite; i++) {
+          const rec = list.find((s) => s.numara === i);
+          statuses.push(mapDbDurumToStatus(rec?.durum));
+        }
+
+        return {
+          key,
+          prefix,
+          label: ad,
+          icon,
+          pw: fiyatNum,
+          pe: fiyatNum,
+          gradient,
+          statuses,
+        };
+      });
+
+      if (!cancelled) {
+        setZones(zoneList);
+      }
+    }
+
+    fetchSezlongData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [row?.id]);
 
   // Mock müsaitlik üret
   useEffect(() => {
@@ -809,7 +871,7 @@ export default function TesisDetailPage() {
                     <div style={{ color:"rgba(255,255,255,.22)", fontSize:".6rem", fontWeight:900, textTransform:"uppercase", letterSpacing:".2em", marginBottom:4 }}>🌊 🌊 🌊</div>
                     <div style={{ color:"#fff", fontSize:".85rem", fontWeight:900, letterSpacing:".28em", opacity:.85 }}>~ D E N İ Z ~</div>
                   </div>
-                  {ZONES.map((z, zi) => (
+                  {zones.map((z, zi) => (
                     <div key={z.key} style={{ borderTop: zi > 0 ? "1px solid #E5E7EB" : undefined }}>
                       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 18px", background:z.gradient }}>
                         <div style={{ fontWeight:800, fontSize:13, color:"white" }}>{z.icon} {z.label} — {z.prefix}1–{z.prefix}{z.statuses.length}</div>
