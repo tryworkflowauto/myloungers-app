@@ -167,7 +167,7 @@ export default function IsletmeDashboardPage() {
     guncelle();
     const t = setInterval(guncelle, 10000);
     return () => clearInterval(t);
-  }, []);
+  }, [supabase]);
 
   // Supabase Auth ile tesis_id yükle
   useEffect(() => {
