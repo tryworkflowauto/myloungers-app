@@ -202,7 +202,7 @@ export default function IsletmeDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
