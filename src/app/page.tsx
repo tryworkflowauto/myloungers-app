@@ -251,21 +251,13 @@ export default function Home() {
   // Ana sayfa için en çok tercih edilen tesisleri Supabase'den çek
   useEffect(() => {
     async function fetchPopular() {
-      const { data: tesisler, error } = await supabase
+      const { data } = await supabase
         .from("tesisler")
-        .select("id, ad, slug, ilce, sehir, puan, fotograflar, min_fiyat, fiyat")
+        .select("id, ad, slug, ilce, sehir, puan, fotograflar")
         .order("puan", { ascending: false })
         .limit(4);
-
-      if (error) {
-        console.error("Ana sayfa popüler tesisler sorgu hatası:", error);
-        return;
-      }
-
-      console.log("Ana sayfa popüler tesisler:", tesisler);
-      setPopularTesisler(tesisler ?? []);
+      if (data) setPopularTesisler(data);
     }
-
     fetchPopular();
   }, []);
 
