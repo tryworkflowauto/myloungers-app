@@ -384,7 +384,7 @@ export default function IsletmeSezlongPage() {
         renk: duzenleForm.color,
         fiyat: Number(fiyatNum),
         aciklama: aciklamaVal,
-        count: Number(duzenleForm.count),
+        kapasite: Number(duzenleForm.count),
       })
       .eq("id", duzenleModal.id);
     if (error) { showToast("❌ Güncellenemedi"); return; }
