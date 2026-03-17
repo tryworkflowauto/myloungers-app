@@ -379,14 +379,27 @@ export default function IsletmeSezlongPage() {
     const aciklamaVal = duzenleForm.aciklama?.trim() || null;
     const { error } = await supabase
       .from("sezlong_gruplari")
-      .update({ ad: duzenleForm.name, renk: duzenleForm.color, fiyat: Number(fiyatNum), aciklama: aciklamaVal })
+      .update({
+        ad: duzenleForm.name,
+        renk: duzenleForm.color,
+        fiyat: Number(fiyatNum),
+        aciklama: aciklamaVal,
+        count: Number(duzenleForm.count),
+      })
       .eq("id", duzenleModal.id);
     if (error) { showToast("❌ Güncellenemedi"); return; }
     const subDisplay = aciklamaVal || duzenleForm.name;
     setGruplar((prev) =>
       prev.map((g) =>
         g.id === duzenleModal.id
-          ? { ...g, name: duzenleForm.name, color: duzenleForm.color, fiyat: duzenleForm.fiyat, aciklama: aciklamaVal ?? undefined }
+          ? {
+              ...g,
+              name: duzenleForm.name,
+              color: duzenleForm.color,
+              fiyat: duzenleForm.fiyat,
+              aciklama: aciklamaVal ?? undefined,
+              count: Number(duzenleForm.count),
+            }
           : g
       )
     );
