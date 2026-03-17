@@ -901,51 +901,27 @@ export default function TesisDetailPage() {
               </div>
               {openPanels.plan && <div className="pb" style={{ padding: 16 }}>
                 <div style={{ borderRadius: 16, overflow: "hidden", border: "2px solid var(--bd)" }}>
-                  <div className="plan-svg-wrap">
-                    <svg viewBox="0 0 520 320" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto", display: "block" }}>
-                      <defs>
-                        <linearGradient id="seaG" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#0C4A6E"/><stop offset="100%" stopColor="#0EA5E9"/>
-                        </linearGradient>
-                      </defs>
-                      <rect x="0" y="0" width="520" height="85" fill="url(#seaG)" rx="12"/>
-                      <text x="260" y="18" fontSize="8" fontWeight="800" fill="rgba(255,255,255,.3)" textAnchor="middle" letterSpacing="5">🌊  D E N İ Z  🌊</text>
-                      <path d="M0 55 Q130 45 260 55 Q390 65 520 55" stroke="rgba(255,255,255,.15)" strokeWidth="2" fill="none"/>
-                      <g className="plan-zone" onClick={() => szlRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-                        <rect x="155" y="22" width="210" height="50" rx="8" fill="#1D4ED8" stroke="#93C5FD" strokeWidth="2"/>
-                        <text x="260" y="43" fontSize="11" fontWeight="800" fill="#fff" textAnchor="middle">⚓ İSKELE</text>
-                        <text x="260" y="58" fontSize="8.5" fill="rgba(255,255,255,.8)" textAnchor="middle">30 şezlong · ₺1.250–1.500</text>
-                      </g>
-                      <rect x="240" y="72" width="40" height="18" rx="3" fill="#2563EB" opacity=".6"/>
-                      <rect x="0" y="85" width="520" height="145" fill="#E8C97A"/>
-                      <g className="plan-zone" onClick={() => szlRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-                        <rect x="25" y="92" width="470" height="55" rx="10" fill="#7C3AED" stroke="#C4B5FD" strokeWidth="2"/>
-                        <text x="260" y="115" fontSize="12" fontWeight="800" fill="#fff" textAnchor="middle">💎 VIP BÖLGE</text>
-                        <text x="260" y="131" fontSize="8.5" fill="rgba(255,255,255,.85)" textAnchor="middle">20 şezlong (D–E sırası) · ₺1.500–2.000</text>
-                      </g>
-                      <g className="plan-zone" onClick={() => szlRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-                        <rect x="25" y="155" width="470" height="65" rx="10" fill="#059669" stroke="#6EE7B7" strokeWidth="2"/>
-                        <text x="260" y="182" fontSize="12" fontWeight="800" fill="#fff" textAnchor="middle">⭐ SILVER BÖLGE</text>
-                        <text x="260" y="198" fontSize="8.5" fill="rgba(255,255,255,.85)" textAnchor="middle">50 şezlong (F–J sırası) · ₺1.000–1.250</text>
-                      </g>
-                      <rect x="145" y="228" width="230" height="20" rx="6" fill="rgba(0,0,0,.12)"/>
-                      <text x="260" y="242" fontSize="8.5" fontWeight="700" fill="rgba(0,0,0,.45)" textAnchor="middle">👆 Bölgeye tıklayarak şezlong seçin</text>
-                      <rect x="0" y="250" width="520" height="70" fill="#1E293B"/>
-                      <rect x="50" y="258" width="110" height="52" rx="8" fill="#38BDF8" stroke="#7DD3FC" strokeWidth="1.5"/>
-                      <text x="105" y="280" fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">🏊 HAVUZ</text>
-                      <text x="105" y="294" fontSize="7.5" fill="rgba(255,255,255,.65)" textAnchor="middle">Misafirlere açık</text>
-                      <rect x="185" y="258" width="150" height="52" rx="8" fill="#374151" stroke="#6B7280" strokeWidth="1.5"/>
-                      <text x="260" y="280" fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">🍽️ RESTORAN</text>
-                      <text x="260" y="294" fontSize="7.5" fill="rgba(255,255,255,.65)" textAnchor="middle">Beach Bar & Café</text>
-                      <rect x="360" y="258" width="110" height="52" rx="8" fill="#374151" stroke="#6B7280" strokeWidth="1.5"/>
-                      <text x="415" y="280" fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">🏨 TESİS</text>
-                      <text x="415" y="294" fontSize="7.5" fill="rgba(255,255,255,.65)" textAnchor="middle">Resepsiyon</text>
-                      <text x="260" y="316" fontSize="7" fontWeight="900" fill="rgba(255,255,255,.25)" textAnchor="middle" letterSpacing="3">TESİS BİNASI</text>
-                    </svg>
-                  </div>
                   <div className="plan-legend">
-                    {[["#1D4ED8","İskele (30)"],["#7C3AED","VIP (20)"],["#059669","Silver (50)"],["#22C55E","Müsait"],["#EF4444","Dolu"],["#F97316","Bakım"],["#F5821F","Seçili"]].map(([c,l]) => (
-                      <div key={l} className="plan-leg-item"><div className="plan-leg-dot" style={{ background: c }}></div>{l}</div>
+                    {zones.map((z) => (
+                      <div
+                        key={z.key}
+                        className="plan-leg-item plan-zone"
+                        onClick={() => szlRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div
+                          className="plan-leg-dot"
+                          style={{ background: z.color }}
+                        ></div>
+                        <span style={{ fontWeight: 700 }}>
+                          {z.label} ({z.count})
+                        </span>
+                        {typeof z.pw === "number" && z.pw > 0 && (
+                          <span style={{ marginLeft: 6, fontSize: ".7rem", color: "var(--i3)" }}>
+                            · ₺{z.pw.toLocaleString("tr-TR")}
+                          </span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
