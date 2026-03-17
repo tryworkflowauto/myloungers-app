@@ -506,18 +506,27 @@ export default function TesisDetailPage() {
     }
   }
 
-  // ÇALIŞMA SAATLERİ (Supabase + fallback)
-  const defaultSaat = "09:00 — 19:00";
-  type Saatler = { hafta_ici?: string; hafta_sonu?: string };
-  let saatler: Saatler | null = null;
+  // ÇALIŞMA SAATLERİ (Supabase)
+  type CalismaGun = {
+    name?: string;
+    acilis?: string;
+    kapanis?: string;
+    kapali?: boolean;
+    vurgu?: boolean;
+  };
+  let calismaSaatleri: CalismaGun[] = [];
   if ((row as any)?.calisma_saatleri) {
-    const raw = (row as any).calisma_saatleri;
     try {
-      saatler =
-        typeof raw === "string" ? JSON.parse(raw) as Saatler :
-        (raw as Saatler);
+      const raw = (row as any).calisma_saatleri;
+      const parsed =
+        Array.isArray(raw) ? raw :
+        typeof raw === "string" ? JSON.parse(raw) :
+        [];
+      if (Array.isArray(parsed)) {
+        calismaSaatleri = parsed as CalismaGun[];
+      }
     } catch {
-      saatler = null;
+      calismaSaatleri = [];
     }
   }
 
@@ -947,6 +956,59 @@ export default function TesisDetailPage() {
                 )}
               </div>}
             </div>
+
+            {/* ÇALIŞMA SAATLERİ */}
+            {calismaSaatleri.length > 0 && (
+              <div className="panel">
+                <div className="ph" onClick={() => togglePanel("hours")}>
+                  <div className="ph-l">
+                    <span className="ph-ic">⏰</span>
+                    <div>
+                      <div className="ph-title">Çalışma Saatleri</div>
+                      <div className="ph-sub">Haftalık açılış &amp; kapanış</div>
+                    </div>
+                  </div>
+                  <svg
+                    className={`ch${openPanels.hours ? " ch-open" : ""}`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+                {openPanels.hours && (
+                  <div className="pb" style={{ padding: 16 }}>
+                    <div className="feat-grid">
+                      {calismaSaatleri.map((gun, idx) => (
+                        <div
+                          key={gun.name || idx}
+                          className="feat-item"
+                          style={
+                            gun.vurgu
+                              ? {
+                                  background: "#FEF3C7",
+                                  borderColor: "#FBBF24",
+                                }
+                              : undefined
+                          }
+                        >
+                          <div className="feat-ic">{gun.name || "—"}</div>
+                          <div>
+                            {gun.kapali
+                              ? "Kapalı"
+                              : gun.acilis && gun.kapanis
+                              ? `${gun.acilis} – ${gun.kapanis}`
+                              : "Saat bilgisi yakında"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* YERLEŞİM PLANI */}
             <div className="panel">
