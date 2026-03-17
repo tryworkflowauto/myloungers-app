@@ -737,7 +737,7 @@ export default function IsletmeSezlongPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {gruplar.map((g) => (
                 <div
-                  key={g.name}
+                  key={g.id}
                   style={{
                     border: `1.5px solid ${g.color}`,
                     borderRadius: 10,
@@ -758,7 +758,16 @@ export default function IsletmeSezlongPage() {
                     <span style={{ fontSize: 11, color: GRAY400 }}>{g.count} şezlong</span>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
-                        onClick={() => { setDuzenleModal(g); }}
+                        onClick={() => {
+                          setDuzenleForm({
+                            name: g.name,
+                            count: String(g.count),
+                            color: g.color,
+                            fiyat: g.fiyat || "",
+                            aciklama: g.aciklama || "",
+                          });
+                          setDuzenleModal(g);
+                        }}
                         style={{
                           width: 24,
                           height: 24,
