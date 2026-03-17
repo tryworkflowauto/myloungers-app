@@ -401,12 +401,28 @@ export default function IsletmeSezlongPage() {
 
   async function silGrup() {
     if (!silModal || !tesisId) return;
-    const { error } = await supabase
+
+    // Önce bu gruba ait tüm şezlongları sil
+    const { error: sezErr } = await supabase
+      .from("sezlonglar")
+      .delete()
+      .eq("grup_id", silModal.id)
+      .eq("tesis_id", tesisId);
+    if (sezErr) {
+      showToast("❌ Şezlonglar silinemedi");
+      return;
+    }
+
+    // Ardından grubu sil
+    const { error: grpErr } = await supabase
       .from("sezlong_gruplari")
       .delete()
       .eq("id", silModal.id)
       .eq("tesis_id", tesisId);
-    if (error) { showToast("❌ Silinemedi"); return; }
+    if (grpErr) {
+      showToast("❌ Grup silinemedi");
+      return;
+    }
     setGruplar((prev) => prev.filter((g) => g.id !== silModal.id));
     setHaritaGruplari((prev) => {
       const next = { ...prev };
