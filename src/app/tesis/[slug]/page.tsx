@@ -1328,7 +1328,9 @@ export default function TesisDetailPage() {
                   >
                     <div style={{ textAlign: "center" }}>
                       <div className="score-big">
-                        {HOTEL.score.toFixed(1)}
+                        {HOTEL.reviews && HOTEL.reviews > 0
+                          ? HOTEL.score.toFixed(1)
+                          : "—"}
                       </div>
                       <div className="score-label">
                         {HOTEL.reviews || 0} yorum
