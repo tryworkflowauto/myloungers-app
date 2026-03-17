@@ -1264,15 +1264,31 @@ export default function TesisDetailPage() {
                 <div className="rules-grid">
                   <div className="rules-col">
                     <h4>🚫 Kurallar</h4>
-                    {(parsedKurallar.length ? parsedKurallar : defaultKurallar).map((item) => (
-                      <div key={item.text} className="rule-item"><span>{item.icon}</span>{item.text}</div>
-                    ))}
+                    {(parsedKurallar.length ? parsedKurallar : defaultKurallar).map((item) => {
+                      const emoji = (item as any).emoji ?? item.icon;
+                      const text = item.text ?? "";
+                      const startsWithEmoji = emoji && text.startsWith(emoji);
+                      return (
+                        <div key={text} className="rule-item">
+                          {!startsWithEmoji && emoji && <span>{emoji}</span>}
+                          {text}
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="rules-col">
                     <h4>🎁 Kampanyalar</h4>
-                    {(parsedKampanyalar.length ? parsedKampanyalar : defaultKampanyalar).map((item) => (
-                      <div key={item.text} className="rule-item"><span>{item.icon}</span>{item.text}</div>
-                    ))}
+                    {(parsedKampanyalar.length ? parsedKampanyalar : defaultKampanyalar).map((item) => {
+                      const emoji = (item as any).emoji ?? item.icon;
+                      const text = item.text ?? "";
+                      const startsWithEmoji = emoji && text.startsWith(emoji);
+                      return (
+                        <div key={text} className="rule-item">
+                          {!startsWithEmoji && emoji && <span>{emoji}</span>}
+                          {text}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>}
