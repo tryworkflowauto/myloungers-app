@@ -861,7 +861,7 @@ export default function TesisDetailPage() {
                       )}
                       {(row as any)?.detayli_aciklama && (
                         <>
-                          {(row as any)?.kisa_aciklama && <br /><br />}
+                          {(row as any)?.kisa_aciklama && <><br /><br /></>}
                           <span>{(row as any).detayli_aciklama}</span>
                         </>
                       )}
