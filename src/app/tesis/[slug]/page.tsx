@@ -63,7 +63,7 @@ export default function TesisDetailPage() {
   const [selEnd, setSelEnd] = useState<Date | null>(null);
   const [paxCount, setPaxCount] = useState(1);
   const [selSzls, setSelSzls] = useState<SelSzl[]>([]);
-  const [videoUrl, setVideoUrl] = useState(row?.video_url || "");
+  const [videoUrl] = useState<string | null>((row as any)?.video_url ?? null);
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
   const szlRef = useRef<HTMLDivElement>(null);
@@ -330,20 +330,28 @@ export default function TesisDetailPage() {
     router.push("/odeme?" + params.toString());
   }
 
-  function loadVideo() {
-    let raw = videoUrl.trim();
-    if (!raw) return;
+  // Tesis videosu: row.video_url kolonunu otomatik embed et
+  useEffect(() => {
+    if (!videoUrl) {
+      setVideoEmbed(null);
+      return;
+    }
+    const raw = videoUrl.trim();
+    if (!raw) {
+      setVideoEmbed(null);
+      return;
+    }
     let embed = raw;
     if (raw.includes("youtube.com/watch")) {
       const vid = raw.split("v=")[1]?.split("&")[0];
-      if (vid) embed = "https://www.youtube.com/embed/" + vid + "?autoplay=1";
+      if (vid) embed = "https://www.youtube.com/embed/" + vid;
     } else if (raw.includes("youtu.be/")) {
-      embed = "https://www.youtube.com/embed/" + raw.split("youtu.be/")[1].split("?")[0] + "?autoplay=1";
+      embed = "https://www.youtube.com/embed/" + raw.split("youtu.be/")[1].split("?")[0];
     } else if (raw.includes("vimeo.com/")) {
-      embed = "https://player.vimeo.com/video/" + raw.split("vimeo.com/")[1].split("?")[0] + "?autoplay=1";
+      embed = "https://player.vimeo.com/video/" + raw.split("vimeo.com/")[1].split("?")[0];
     }
     setVideoEmbed(embed);
-  }
+  }, [videoUrl]);
 
   const days = selStart && selEnd ? daysBetween(selStart, selEnd) : selStart ? 1 : 0;
   const total = selSzls.reduce((a, s) => a + s.price * Math.max(days, 1), 0);
@@ -970,31 +978,48 @@ export default function TesisDetailPage() {
             </div>
 
             {/* VİDEO */}
-            <div className="panel">
-              <div className="ph" onClick={() => togglePanel("video")}>
-                <div className="ph-l"><span className="ph-ic">🎬</span><div><div className="ph-title">Tesis Videosu</div><div className="ph-sub">YouTube veya Vimeo URL yapıştırın</div></div></div>
-                <svg className={`ch${openPanels.video ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            {(videoUrl || videoEmbed) && (
+              <div className="panel">
+                <div className="ph" onClick={() => togglePanel("video")}>
+                  <div className="ph-l">
+                    <span className="ph-ic">🎬</span>
+                    <div>
+                      <div className="ph-title">Tesis Videosu</div>
+                      <div className="ph-sub">Tanıtım videosunu izleyin</div>
+                    </div>
+                  </div>
+                  <svg
+                    className={`ch${openPanels.video ? " ch-open" : ""}`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+                {openPanels.video && (
+                  <div className="pb" style={{ padding: 0 }}>
+                    <div className="video-wrap">
+                      {videoEmbed ? (
+                        <div className="video-frame">
+                          <iframe src={videoEmbed} allowFullScreen title="video" />
+                        </div>
+                      ) : (
+                        <div className="video-ph">
+                          <div className="video-ph-ic">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                          </div>
+                          <div className="video-ph-t">Video yakında eklenecek.</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              {openPanels.video && <div className="pb" style={{ padding: 0 }}>
-                <div className="video-wrap">
-                  {videoEmbed ? (
-                    <div className="video-frame">
-                      <button className="video-close" onClick={() => setVideoEmbed(null)}>✕</button>
-                      <iframe src={videoEmbed} allowFullScreen title="video" />
-                    </div>
-                  ) : (
-                    <div className="video-ph">
-                      <div className="video-ph-ic"><svg width="40" height="40" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
-                      <div className="video-ph-t">Video URL girin ve Yükle'ye tıklayın</div>
-                    </div>
-                  )}
-                </div>
-                <div className="video-url-bar">
-                  <input type="text" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." />
-                  <button onClick={loadVideo}>Yükle</button>
-                </div>
-              </div>}
-            </div>
+            )}
 
             {/* ULAŞIM */}
             <div className="panel">
