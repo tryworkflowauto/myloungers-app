@@ -452,7 +452,7 @@ export default function TesisDetailPage() {
   const HOTEL = {
     name: (row?.ad as string) || (row?.name as string) || "Tesis adı yakında",
     stars: typeof row?.yildiz === "number" ? row.yildiz : 4,
-    score: typeof row?.puan === "number" ? row.puan : 9.6,
+    score: typeof row?.puan === "number" ? row.puan : 0,
     reviews: typeof row?.yorum_sayisi === "number" ? row.yorum_sayisi : 0,
     address:
       (row?.adres as string) ||
@@ -1294,26 +1294,77 @@ export default function TesisDetailPage() {
               </div>}
             </div>
 
-            {/* YORUMLAR (mock) */}
+            {/* YORUMLAR */}
             <div className="panel">
               <div className="ph" onClick={() => togglePanel("reviews")}>
-                <div className="ph-l"><span className="ph-ic">⭐</span><div><div className="ph-title">Kullanıcı Yorumları</div><div className="ph-sub">{HOTEL.reviews || 0} doğrulanmış yorum</div></div></div>
-                <svg className={`ch${openPanels.reviews ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-              </div>
-              {openPanels.reviews && <div className="pb" style={{ padding: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
-                  <div style={{ textAlign: "center" }}><div className="score-big">{HOTEL.score.toFixed(1)}</div><div className="score-label">{HOTEL.reviews || 0} yorum</div></div>
-                  <div className="score-bars">
-                    {[["Konum",98],["Temizlik",96],["Hizmet",94],["Fiyat/Değer",90]].map(([l,v]) => (
-                      <div key={l as string} className="score-bar-row">
-                        <span style={{ width: 60 }}>{l}</span>
-                        <div className="score-bar-bg"><div className="score-bar-fill" style={{ width: v + "%" }} /></div>
-                        <span>{(v as number / 10).toFixed(1)}</span>
-                      </div>
-                    ))}
+                <div className="ph-l">
+                  <span className="ph-ic">⭐</span>
+                  <div>
+                    <div className="ph-title">Kullanıcı Yorumları</div>
+                    <div className="ph-sub">
+                      {HOTEL.reviews || 0} doğrulanmış yorum
+                    </div>
                   </div>
                 </div>
-              </div>}
+                <svg
+                  className={`ch${openPanels.reviews ? " ch-open" : ""}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              {openPanels.reviews && (
+                <div className="pb" style={{ padding: 20 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 20,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <div style={{ textAlign: "center" }}>
+                      <div className="score-big">
+                        {HOTEL.score.toFixed(1)}
+                      </div>
+                      <div className="score-label">
+                        {HOTEL.reviews || 0} yorum
+                      </div>
+                    </div>
+                    <div className="score-bars">
+                      {["Konum", "Temizlik", "Hizmet", "Fiyat/Değer"].map(
+                        (label) => (
+                          <div
+                            key={label}
+                            className="score-bar-row"
+                          >
+                            <span style={{ width: 60 }}>{label}</span>
+                            <div className="score-bar-bg">
+                              <div
+                                className="score-bar-fill"
+                                style={{ width: "0%" }}
+                              />
+                            </div>
+                            <span>0.0</span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: ".8rem",
+                      color: "var(--i3)",
+                      marginTop: 8,
+                    }}
+                  >
+                    Henüz yorum yok.
+                  </p>
+                </div>
+              )}
             </div>
 
           </div>
