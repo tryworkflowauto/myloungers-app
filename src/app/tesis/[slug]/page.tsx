@@ -852,12 +852,16 @@ export default function TesisDetailPage() {
                 <div className="ph-l"><span className="ph-ic">📍</span><div><div className="ph-title">Tesis Hakkında</div><div className="ph-sub">{HOTEL.name}</div></div></div>
                 <svg className={`ch${openPanels.about ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
-              {openPanels.about && <div className="pb" style={{ padding: 20 }}>
-                <p className="about-p">
-                  {(row?.aciklama as string) ||
-                    "Bu tesis, denize sıfır konumu, özenli servisi ve gün boyu süren beach club atmosferiyle misafirlerine unutulmaz bir deneyim sunar."}
-                </p>
-              </div>}
+              {openPanels.about && (
+                <div className="pb" style={{ padding: 20 }}>
+                  {((row as any)?.detayli_aciklama || (row as any)?.kisa_aciklama) && (
+                    <p className="about-p">
+                      {(row as any)?.detayli_aciklama ||
+                        (row as any)?.kisa_aciklama}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* İMKANLAR */}
