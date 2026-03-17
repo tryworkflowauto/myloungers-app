@@ -854,10 +854,17 @@ export default function TesisDetailPage() {
               </div>
               {openPanels.about && (
                 <div className="pb" style={{ padding: 20 }}>
-                  {((row as any)?.detayli_aciklama || (row as any)?.kisa_aciklama) && (
+                  {(((row as any)?.kisa_aciklama) || ((row as any)?.detayli_aciklama)) && (
                     <p className="about-p">
-                      {(row as any)?.detayli_aciklama ||
-                        (row as any)?.kisa_aciklama}
+                      {(row as any)?.kisa_aciklama && (
+                        <span>{(row as any).kisa_aciklama}</span>
+                      )}
+                      {(row as any)?.detayli_aciklama && (
+                        <>
+                          {(row as any)?.kisa_aciklama && <br /><br />}
+                          <span>{(row as any).detayli_aciklama}</span>
+                        </>
+                      )}
                     </p>
                   )}
                 </div>
