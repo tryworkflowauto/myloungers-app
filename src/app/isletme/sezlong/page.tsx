@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 // HTML'deki :root değişkenleri
 const NAVY = "#0A1628";
@@ -209,10 +209,6 @@ function SezlongItem({
 
 export default function IsletmeSezlongPage() {
   const router = useRouter();
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
   const [tesisId, setTesisId] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
