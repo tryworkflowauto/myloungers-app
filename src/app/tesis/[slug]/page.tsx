@@ -436,7 +436,6 @@ export default function TesisDetailPage() {
     stars: typeof row?.yildiz === "number" ? row.yildiz : 4,
     score: typeof row?.puan === "number" ? row.puan : 9.6,
     reviews: typeof row?.yorum_sayisi === "number" ? row.yorum_sayisi : 0,
-    category: (row?.kategori as string) || "Beach Club",
     address:
       (row?.adres as string) ||
       [row?.ilce, row?.sehir].filter(Boolean).join(", ") ||
@@ -450,20 +449,30 @@ export default function TesisDetailPage() {
     images,
   };
 
-  // TESİS İMKANLARI (Supabase + fallback)
-  const defaultImkanlar: { icon: string; label: string }[] = [
-    { icon: "🏊", label: "Havuz" },
-    { icon: "☕", label: "Kahvaltı" },
-    { icon: "🍽", label: "Restoran" },
-    { icon: "🚗", label: "Otopark" },
-    { icon: "📶", label: "Wi-Fi" },
-    { icon: "🎶", label: "Canlı Müzik" },
-    { icon: "🚤", label: "Su Sporları" },
-    { icon: "🌍", label: "Çok Dilli Personel" },
-  ];
+  // KATEGORİ BADGELERI (row.kategoriler veya row.kategori)
+  let kategoriBadges: string[] = [];
+  const rawKat = (row as any)?.kategoriler ?? (row as any)?.kategori;
+  if (rawKat) {
+    try {
+      const parsed =
+        Array.isArray(rawKat) ? rawKat :
+        typeof rawKat === "string" ? JSON.parse(rawKat) :
+        [];
+      if (Array.isArray(parsed)) {
+        kategoriBadges = parsed.map((k: any) => String(k));
+      }
+    } catch {
+      // JSON parse hatası: stringi virgüle göre böl
+      kategoriBadges = String(rawKat)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
 
-  let imkanlar: { icon: string; label: string }[] = defaultImkanlar;
-  if (row?.imkanlar) {
+  // TESİS İMKANLARI (Supabase)
+  let imkanlar: { icon: string; label: string }[] = [];
+  if ((row as any)?.imkanlar) {
     try {
       const raw = (row as any).imkanlar;
       const parsed =
@@ -474,7 +483,7 @@ export default function TesisDetailPage() {
         imkanlar = parsed as { icon: string; label: string }[];
       }
     } catch {
-      // fallback defaultImkanlar
+      imkanlar = [];
     }
   }
 
@@ -801,7 +810,9 @@ export default function TesisDetailPage() {
             <span className="stars">{"★".repeat(HOTEL.stars)}{"☆".repeat(5 - HOTEL.stars)}</span>
             <span className="score-badge">{HOTEL.score.toFixed(1)} / 10</span>
             <span className="verified">✓ Doğrulandı</span>
-            <span className="cat-tag">🏖 {HOTEL.category}</span>
+            {kategoriBadges.length > 0 && kategoriBadges.map((kat) => (
+              <span key={kat} className="cat-tag">🏖 {kat}</span>
+            ))}
             {HOTEL.reviews > 0 && (
               <span style={{ fontSize: ".75rem", color: "var(--i3)" }}>{HOTEL.reviews} değerlendirme</span>
             )}
@@ -855,14 +866,18 @@ export default function TesisDetailPage() {
                 <svg className={`ch${openPanels.feats ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {openPanels.feats && <div className="pb" style={{ padding: 20 }}>
-                <div className="feat-grid">
-                  {imkanlar.map((it) => (
-                    <div key={it.label} className="feat-item">
-                      <div className="feat-ic">{it.icon}</div>
-                      {it.label}
-                    </div>
-                  ))}
-                </div>
+                {imkanlar.length === 0 ? (
+                  <p style={{ fontSize: ".8rem", color: "var(--i3)" }}>Henüz eklenmedi.</p>
+                ) : (
+                  <div className="feat-grid">
+                    {imkanlar.map((it) => (
+                      <div key={it.label} className="feat-item">
+                        <div className="feat-ic">{it.icon}</div>
+                        {it.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>}
             </div>
 
