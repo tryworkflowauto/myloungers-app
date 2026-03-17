@@ -409,6 +409,9 @@ export default function IsletmeSezlongPage() {
       return { ...prev, [duzenleModal.id]: { ...h, title: duzenleForm.name, sub: subDisplay, color: duzenleForm.color, gradient: grupGradient(duzenleForm.color) } };
     });
     showToast("✅ Grup güncellendi");
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
     setDuzenleModal(null);
   }
 
