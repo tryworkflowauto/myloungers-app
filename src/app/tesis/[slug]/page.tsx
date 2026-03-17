@@ -873,7 +873,9 @@ export default function TesisDetailPage() {
           <div className="th-name">{HOTEL.name}</div>
           <div className="th-meta">
             <span className="stars">{"★".repeat(HOTEL.stars)}{"☆".repeat(5 - HOTEL.stars)}</span>
-            <span className="score-badge">{HOTEL.score.toFixed(1)} / 10</span>
+            {HOTEL.reviews && HOTEL.reviews > 0 && (
+              <span className="score-badge">{HOTEL.score.toFixed(1)} / 10</span>
+            )}
             <span className="verified">✓ Doğrulandı</span>
             {kategoriBadges.length > 0 && kategoriBadges.map((kat) => (
               <span key={kat} className="cat-tag">🏖 {kat}</span>
