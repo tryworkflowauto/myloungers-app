@@ -552,6 +552,31 @@ export default function TesisDetailPage() {
   const parsedKurallar = row ? parseIconTextArray((row as any).kurallar) : [];
   const parsedKampanyalar = row ? parseIconTextArray((row as any).kampanya_notlari) : [];
 
+  // ULAŞIM REHBERİ (Supabase)
+  type Ulasim = {
+    hat?: string;
+    not?: string;
+    tel1?: string;
+    tel2?: string;
+    durak?: string;
+    merkeze?: string;
+    saatBas?: string;
+    saatBit?: string;
+    ["havalimanı"]?: string;
+  };
+  let ulasim: Ulasim | null = null;
+  if ((row as any)?.ulasim) {
+    try {
+      const raw = (row as any).ulasim;
+      ulasim =
+        typeof raw === "string"
+          ? (JSON.parse(raw) as Ulasim)
+          : (raw as Ulasim);
+    } catch {
+      ulasim = null;
+    }
+  }
+
   const btnDisabled = !selStart || selSzls.length === 0;
   const btnText = !selStart ? "Tarih Seçerek Başlayın"
     : selSzls.length === 0 ? "🛏 Haritadan Şezlong Seç"
@@ -1030,34 +1055,120 @@ export default function TesisDetailPage() {
             )}
 
             {/* ULAŞIM */}
-            <div className="panel">
-              <div className="ph" onClick={() => togglePanel("transport")}>
-                <div className="ph-l"><span className="ph-ic">🚌</span><div><div className="ph-title">Ulaşım Rehberi</div><div className="ph-sub">Dolmuş & Taksi</div></div></div>
-                <svg className={`ch${openPanels.transport ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-              </div>
-              {openPanels.transport && <div className="pb" style={{ padding: 20 }}>
-                <div className="ul-grid">
-                  <div className="ul-card taxi-card">
-                    <div className="ul-head"><span className="ul-head-ic">🚖</span><div><div className="ul-head-t">Taksi</div><div className="ul-head-s">En hızlı seçenek</div></div></div>
-                    <div className="ul-rows">
-                      <div className="ul-row"><span className="ul-row-ic">📍</span><div><b>Merkeze Uzaklık</b>{row?.merkez_uzaklik ?? "Bodrum merkeze ~15 dk"}</div></div>
-                      <div className="ul-row"><span className="ul-row-ic">✈️</span><div><b>Havalimanına Uzaklık</b>{row?.havalimani_uzaklik ?? "Milas-Bodrum Havalimanı ~45 dk"}</div></div>
-                      <div className="ul-row"><span className="ul-row-ic">📞</span><div><b>Taksi Telefon</b><a href={`tel:${row?.taksi_tel ?? "+90252316XXXX"}`}>{row?.taksi_tel ?? "0252 316 XX XX"}</a></div></div>
-                      <span className="ul-badge badge-or">⏱ 7/24 hizmet</span>
+            {ulasim && (
+              <div className="panel">
+                <div className="ph" onClick={() => togglePanel("transport")}>
+                  <div className="ph-l">
+                    <span className="ph-ic">🚌</span>
+                    <div>
+                      <div className="ph-title">Ulaşım Rehberi</div>
+                      <div className="ph-sub">Dolmuş &amp; Taksi</div>
                     </div>
                   </div>
-                  <div className="ul-card dolmus-card">
-                    <div className="ul-head"><span className="ul-head-ic">🚐</span><div><div className="ul-head-t">Dolmuş</div><div className="ul-head-s">Ekonomik · Yerel</div></div></div>
-                    <div className="ul-rows">
-                      <div className="ul-row"><span className="ul-row-ic">🔵</span><div><b>Hat / Güzergah</b>{row?.dolmus_hat ?? "Bodrum - Yalıkavak"}</div></div>
-                      <div className="ul-row"><span className="ul-row-ic">🕐</span><div><b>Sefer Saatleri</b>{row?.dolmus_saat ?? "07:00 – 22:00"}</div></div>
-                      <div className="ul-row"><span className="ul-row-ic">📍</span><div><b>İniş noktası</b>{row?.dolmus_durak ?? "Marina durağı · 5 dk yürüyüş"}</div></div>
-                      <span className="ul-badge badge-green">✓ En uygun fiyat</span>
-                    </div>
-                  </div>
+                  <svg
+                    className={`ch${openPanels.transport ? " ch-open" : ""}`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </div>
-              </div>}
-            </div>
+                {openPanels.transport && (
+                  <div className="pb" style={{ padding: 20 }}>
+                    <div className="ul-grid">
+                      <div className="ul-card taxi-card">
+                        <div className="ul-head">
+                          <span className="ul-head-ic">🚖</span>
+                          <div>
+                            <div className="ul-head-t">Taksi</div>
+                            <div className="ul-head-s">{ulasim.not || "En hızlı seçenek"}</div>
+                          </div>
+                        </div>
+                        <div className="ul-rows">
+                          {ulasim.merkeze && (
+                            <div className="ul-row">
+                              <span className="ul-row-ic">📍</span>
+                              <div>
+                                <b>Merkeze Uzaklık</b>
+                                {ulasim.merkeze}
+                              </div>
+                            </div>
+                          )}
+                          {ulasim["havalimanı"] && (
+                            <div className="ul-row">
+                              <span className="ul-row-ic">✈️</span>
+                              <div>
+                                <b>Havalimanına Uzaklık</b>
+                                {ulasim["havalimanı"]}
+                              </div>
+                            </div>
+                          )}
+                          {(ulasim.tel1 || ulasim.tel2) && (
+                            <div className="ul-row">
+                              <span className="ul-row-ic">📞</span>
+                              <div>
+                                <b>Taksi Telefon</b>
+                                {ulasim.tel1 && (
+                                  <a href={`tel:${ulasim.tel1}`}>{ulasim.tel1}</a>
+                                )}
+                                {ulasim.tel2 && (
+                                  <>
+                                    {" · "}
+                                    <a href={`tel:${ulasim.tel2}`}>{ulasim.tel2}</a>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="ul-card dolmus-card">
+                        <div className="ul-head">
+                          <span className="ul-head-ic">🚐</span>
+                          <div>
+                            <div className="ul-head-t">Dolmuş</div>
+                            <div className="ul-head-s">Ekonomik · Yerel</div>
+                          </div>
+                        </div>
+                        <div className="ul-rows">
+                          {ulasim.hat && (
+                            <div className="ul-row">
+                              <span className="ul-row-ic">🔵</span>
+                              <div>
+                                <b>Hat / Güzergah</b>
+                                {ulasim.hat}
+                              </div>
+                            </div>
+                          )}
+                          {(ulasim.saatBas || ulasim.saatBit) && (
+                            <div className="ul-row">
+                              <span className="ul-row-ic">🕐</span>
+                              <div>
+                                <b>Sefer Saatleri</b>
+                                {ulasim.saatBas && ulasim.saatBit
+                                  ? `${ulasim.saatBas} – ${ulasim.saatBit}`
+                                  : ulasim.saatBas || ulasim.saatBit}
+                              </div>
+                            </div>
+                          )}
+                          {ulasim.durak && (
+                            <div className="ul-row">
+                              <span className="ul-row-ic">📍</span>
+                              <div>
+                                <b>İniş noktası</b>
+                                {ulasim.durak}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* KURALLAR */}
             <div className="panel">
