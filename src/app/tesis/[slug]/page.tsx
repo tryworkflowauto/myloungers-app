@@ -147,6 +147,7 @@ export default function TesisDetailPage() {
     let cancelled = false;
 
     async function fetchSezlongData() {
+      if (!row) return;
       const tesisId = row.id;
 
       const { data: grupRows, error: grupErr } = await supabase
