@@ -260,7 +260,7 @@ export default function Home() {
     async function fetchPopular() {
       const { data, error } = await supabase
         .from("tesisler")
-        .select("id, ad, slug, ilce, sehir, puan, images, kapak_gorsel, min_fiyat")
+        .select("id, ad, slug, ilce, sehir, puan, fotograflar")
         .order("puan", { ascending: false })
         .limit(4);
 
@@ -878,17 +878,12 @@ export default function Home() {
             const name = tesis.ad as string;
             const ilce = (tesis.ilce as string) || "";
             const sehir = (tesis.sehir as string) || "";
-            const price =
-              (tesis.min_fiyat as number | null) ??
-              0;
             const puan = typeof tesis.puan === "number" ? tesis.puan : null;
 
             let imageSrc: string = TESIS_IMGS[0];
-            const imagesVal = (tesis as any).images;
-            if (Array.isArray(imagesVal) && imagesVal.length > 0) {
-              imageSrc = imagesVal[0] as string;
-            } else if (typeof tesis.kapak_gorsel === "string") {
-              imageSrc = tesis.kapak_gorsel as string;
+            const fotosVal = (tesis as any).fotograflar;
+            if (Array.isArray(fotosVal) && fotosVal.length > 0) {
+              imageSrc = fotosVal[0] as string;
             }
 
             const slugValue =
@@ -914,7 +909,7 @@ export default function Home() {
                   <span className="pfc">Bar</span>
                 </div>
                 <div className="pp">
-                  <b>₺{price && price > 0 ? price.toLocaleString("tr-TR") : "—"}</b>
+                  <b>₺—</b>
                   <span> {t.card_per_day}</span>
                 </div>
               </>
