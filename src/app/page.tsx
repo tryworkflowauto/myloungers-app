@@ -877,8 +877,8 @@ export default function Home() {
             // Fotoğraf: fotograflar kolonunun ilk elemanı
             const fotos = (t as any).fotograflar;
             const imageSrc =
-              Array.isArray(fotos) && fotos.length > 0 && typeof fotos[0] === "string"
-                ? (fotos[0] as string)
+              Array.isArray(fotos) && fotos.length > 0 && fotos[0]?.src
+                ? (fotos[0].src as string)
                 : "/logo.png";
 
             const slugValue = (t.slug && String(t.slug).trim()) || String(t.id);
