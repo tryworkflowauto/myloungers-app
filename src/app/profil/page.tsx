@@ -295,8 +295,7 @@ export default function ProfilPage() {
 
   const avatarLetter =
     (profile.ad?.trim()?.[0] ||
-      session?.user?.name?.trim()?.[0] ||
-      session?.user?.email?.trim()?.[0] ||
+      user?.email?.trim()?.[0] ||
       "K"
     ).toUpperCase();
 
