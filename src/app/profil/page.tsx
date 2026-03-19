@@ -554,7 +554,6 @@ export default function ProfilPage() {
             className="pnav-logo"
             src="/MyLoungers_Logo-02.png"
             alt="MyLoungers"
-            onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}
             style={{ height: 44 }}
           />
         </Link>
