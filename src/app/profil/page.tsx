@@ -79,6 +79,12 @@ export default function ProfilPage() {
     sehir: "",
   });
   const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -841,7 +847,6 @@ export default function ProfilPage() {
                 {ic:"📱", t:"İki Faktörlü Doğrulama", s:"SMS ile doğrulama aktif", btn:"Yönet", danger:false},
                 {ic:"📧", t:"E-posta Bildirimleri", s:"Rezervasyon ve kampanya bildirimleri açık", btn:"Ayarla", danger:false},
                 {ic:"📋", t:"Veri ve Gizlilik", s:"KVKK kapsamında verilerinizi yönetin", btn:"Görüntüle", danger:false},
-                {ic:"🗑️", t:"Hesabı Sil", s:"Bu işlem geri alınamaz", btn:"Hesabı Sil", danger:true},
               ].map((item, i) => (
                 <div key={i} className="sec-item" style={item.danger ? {borderColor:"#FECACA"} : {}}>
                   <span className="sec-item-ic">{item.ic}</span>
@@ -849,7 +854,21 @@ export default function ProfilPage() {
                     <div className="sec-item-t" style={item.danger ? {color:"#DC2626"} : {}}>{item.t}</div>
                     <div className="sec-item-s">{item.s}</div>
                   </div>
-                  <button className={`sec-item-btn${item.danger?" danger":""}`}>{item.btn}</button>
+                  <button
+                    className={`sec-item-btn${item.danger?" danger":""}`}
+                    onClick={() => {
+                      if (item.t === "Şifre") {
+                        setPasswordError(null);
+                        setPasswordSuccess(null);
+                        setCurrentPassword("");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                        setShowPasswordModal(true);
+                      }
+                    }}
+                  >
+                    {item.btn}
+                  </button>
                 </div>
               ))}
             </div>
@@ -894,6 +913,92 @@ export default function ProfilPage() {
             <div style={{fontSize:".78rem",color:"var(--i3)",marginBottom:16}}>Şezlong üzerindeki kodu girerek rezervasyonunuzu aktif edin.</div>
             <input className="kod-input" value={kodVal} onChange={e=>setKodVal(e.target.value.toUpperCase())} placeholder="MLG - XXXX" maxLength={10} />
             <button className="kod-submit" onClick={submitKod}>Kodu Doğrula →</button>
+          </div>
+        </div>
+      )}
+
+      {/* ŞİFRE DEĞİŞTİR MODAL */}
+      {showPasswordModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowPasswordModal(false); }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <span className="modal-title">🔑 Şifreyi Değiştir</span>
+              <button className="modal-close" onClick={() => setShowPasswordModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="pf-group full">
+                <label className="pf-label">Mevcut Şifre</label>
+                <input
+                  className="pf-input"
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                />
+              </div>
+              <div className="pf-group full">
+                <label className="pf-label">Yeni Şifre</label>
+                <input
+                  className="pf-input"
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="pf-group full">
+                <label className="pf-label">Yeni Şifre Tekrar</label>
+                <input
+                  className="pf-input"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                />
+              </div>
+              {passwordError && (
+                <div style={{ fontSize: ".78rem", color: "#DC2626", marginTop: 6 }}>
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div style={{ fontSize: ".78rem", color: "#16A34A", marginTop: 6 }}>
+                  {passwordSuccess}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="modal-cancel" onClick={() => setShowPasswordModal(false)}>İptal</button>
+              <button
+                className="modal-submit"
+                onClick={async () => {
+                  setPasswordError(null);
+                  setPasswordSuccess(null);
+                  if (!newPassword || newPassword.length < 8) {
+                    setPasswordError("Yeni şifre en az 8 karakter olmalı.");
+                    return;
+                  }
+                  if (newPassword !== confirmPassword) {
+                    setPasswordError("Yeni şifreler eşleşmiyor.");
+                    return;
+                  }
+                  try {
+                    const { error } = await supabase.auth.updateUser({ password: newPassword });
+                    if (error) {
+                      console.error("Şifre güncellenemedi:", error);
+                      setPasswordError(error.message || "Şifre güncellenemedi.");
+                      return;
+                    }
+                    setPasswordSuccess("Şifre güncellendi.");
+                    setTimeout(() => {
+                      setShowPasswordModal(false);
+                    }, 1200);
+                  } catch (e) {
+                    console.error("Şifre güncelleme hatası:", e);
+                    setPasswordError("Şifre güncellenemedi.");
+                  }
+                }}
+              >
+                Kaydet
+              </button>
+            </div>
           </div>
         </div>
       )}
