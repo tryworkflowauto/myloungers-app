@@ -214,6 +214,8 @@ export default function Home() {
   const [radius, setRadius] = useState(5);
   const [tesisSlugMap, setTesisSlugMap] = useState<Record<string, TesisSlugInfo>>({});
   const [popularTesisler, setPopularTesisler] = useState<any[]>([]);
+  const [bizUser, setBizUser] = useState<{ name: string; tesisAd?: string } | null>(null);
+  const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -247,6 +249,73 @@ export default function Home() {
 
     fetchTesisSlugs();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBizUser() {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError || !authData?.user || cancelled) {
+          setBizUser(null);
+          return;
+        }
+
+        const userId = authData.user.id;
+        const { data: kullanici } = await supabase
+          .from("kullanicilar")
+          .select("rol, ad, soyad, email, tesis_id")
+          .eq("id", userId)
+          .maybeSingle();
+
+        const rol = (kullanici as any)?.rol as string | null | undefined;
+        const rolLower = (rol || "").toLowerCase();
+        if (!kullanici || (rolLower !== "işletme" && rolLower !== "işletmeci") || cancelled) {
+          setBizUser(null);
+          return;
+        }
+
+        let tesisAd: string | undefined;
+        const tesisId = (kullanici as any).tesis_id as string | null | undefined;
+        if (tesisId) {
+          const { data: tesis } = await supabase
+            .from("tesisler")
+            .select("ad")
+            .eq("id", tesisId)
+            .maybeSingle();
+          if (tesis && typeof (tesis as any).ad === "string") {
+            tesisAd = (tesis as any).ad as string;
+          }
+        }
+
+        const fullName =
+          (kullanici as any).ad && (kullanici as any).soyad
+            ? `${(kullanici as any).ad} ${(kullanici as any).soyad}`
+            : (kullanici as any).ad || (kullanici as any).soyad || (kullanici as any).email || authData.user.email;
+
+        if (!cancelled) {
+          setBizUser({ name: fullName as string, tesisAd });
+        }
+      } catch {
+        if (!cancelled) setBizUser(null);
+      }
+    }
+
+    loadBizUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleBizLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setBizUser(null);
+      setBizDropdownOpen(false);
+      router.push("/");
+    }
+  };
 
   // Ana sayfa için en çok tercih edilen tesisleri Supabase'den çek
   useEffect(() => {
@@ -437,7 +506,73 @@ export default function Home() {
                 </div>
               )}
             </div>
-            {session ? (
+            {bizUser ? (
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  className="nav-user"
+                  style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}
+                  onClick={() => setBizDropdownOpen((v) => !v)}
+                >
+                  <span>{bizUser.tesisAd || bizUser.name}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {bizDropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      marginTop: 8,
+                      minWidth: 180,
+                      background: "#FFFFFF",
+                      borderRadius: 12,
+                      boxShadow: "0 10px 30px rgba(15,23,42,0.18)",
+                      border: "1px solid #E5E7EB",
+                      padding: 8,
+                      zIndex: 300,
+                    }}
+                  >
+                    <Link
+                      href="/isletme"
+                      className="nav-user"
+                      style={{
+                        display: "block",
+                        fontSize: ".8rem",
+                        fontWeight: 700,
+                        padding: "7px 10px",
+                        borderRadius: 8,
+                        textDecoration: "none",
+                        color: "#0A1628",
+                      }}
+                      onClick={() => setBizDropdownOpen(false)}
+                    >
+                      İşletme Paneli
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleBizLogout}
+                      style={{
+                        marginTop: 4,
+                        width: "100%",
+                        fontSize: ".78rem",
+                        fontWeight: 700,
+                        padding: "7px 10px",
+                        borderRadius: 8,
+                        border: "none",
+                        background: "#F3F4F6",
+                        color: "#374151",
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      Çıkış Yap
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : session ? (
               <>
                 <Link href="/profil" className="nav-user" style={{ textDecoration: "none" }}>
                   {session.user?.name || session.user?.email}
