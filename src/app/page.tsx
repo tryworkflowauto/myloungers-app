@@ -274,7 +274,16 @@ export default function Home() {
 
         const rol = (kullanici as any)?.rol as string | null | undefined;
         const rolLower = (rol || "").toLowerCase();
-        if (!kullanici || (rolLower !== "işletme" && rolLower !== "işletmeci") || cancelled) {
+        if (
+          !kullanici ||
+          (
+            rolLower !== "işletme" &&
+            rolLower !== "işletmeci" &&
+            rolLower !== "isletme" &&
+            rolLower !== "isletmeci"
+          ) ||
+          cancelled
+        ) {
           setBizUser(null);
           return;
         }
