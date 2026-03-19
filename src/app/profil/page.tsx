@@ -104,18 +104,15 @@ export default function ProfilPage() {
       try {
         const { data: kullanici } = await supabase
           .from("kullanicilar")
-          .select("ad, soyad")
+          .select("ad, soyad, telefon")
           .eq("id", user.id)
           .maybeSingle();
 
-        const fullName =
-          kullanici?.ad && kullanici?.soyad
-            ? `${kullanici.ad} ${kullanici.soyad}`
-            : kullanici?.ad || (user as any)?.email || profile.ad || "Misafir";
-
         setProfile((prev) => ({
           ...prev,
-          ad: fullName,
+          ad: kullanici?.ad || prev.ad || "Misafir",
+          soyad: kullanici?.soyad || prev.soyad || "",
+          tel: (kullanici as any)?.telefon || prev.tel || "",
           email: user.email || prev.email || "",
         }));
       } catch {
