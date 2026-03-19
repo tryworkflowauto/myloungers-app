@@ -85,6 +85,7 @@ export default function ProfilPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [avatarDropdown, setAvatarDropdown] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -570,7 +571,74 @@ export default function ProfilPage() {
       {/* HERO */}
       <div className="phero">
         <div className="phero-inner">
-          <div className="pavatar">{avatarLetter}</div>
+          <div style={{ position: "relative" }}>
+            <div
+              className="pavatar"
+              onClick={() => setAvatarDropdown((v) => !v)}
+              style={{ cursor: "pointer" }}
+            >
+              {avatarLetter}
+            </div>
+            {avatarDropdown && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  marginTop: 8,
+                  minWidth: 160,
+                  background: "#FFFFFF",
+                  borderRadius: 12,
+                  boxShadow: "0 10px 30px rgba(15,23,42,0.18)",
+                  border: "1px solid #E5E7EB",
+                  padding: 8,
+                  zIndex: 250,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Link
+                  href="/"
+                  className="nav-user"
+                  style={{
+                    display: "block",
+                    fontSize: ".8rem",
+                    fontWeight: 700,
+                    padding: "7px 10px",
+                    borderRadius: 8,
+                    textDecoration: "none",
+                    color: "#0A1628",
+                  }}
+                  onClick={() => setAvatarDropdown(false)}
+                >
+                  Ana Sayfa
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    supabase.auth.signOut().then(() => {
+                      setAvatarDropdown(false);
+                      router.push("/");
+                    });
+                  }}
+                  style={{
+                    marginTop: 4,
+                    width: "100%",
+                    fontSize: ".78rem",
+                    fontWeight: 700,
+                    padding: "7px 10px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#F3F4F6",
+                    color: "#374151",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  Çıkış Yap
+                </button>
+              </div>
+            )}
+          </div>
           <div className="phero-info">
             <div className="phero-name">
               {profile.ad
@@ -817,7 +885,7 @@ export default function ProfilPage() {
 
       {/* DEĞERLENDİRME MODAL */}
       {reviewModal && (
-        <div className="modal-overlay" onClick={e => { if(e.target===e.currentTarget) setReviewModal(false); }}>
+        <div className="modal-overlay" onClick={e => { if(e.target===e.currentTarget) setReviewModal(false); setAvatarDropdown(false); }}>
           <div className="modal">
             <div className="modal-head">
               <span className="modal-title">⭐ Tesis Değerlendirmesi</span>
@@ -844,7 +912,7 @@ export default function ProfilPage() {
 
       {/* KOD GİR MODAL */}
       {kodModal && (
-        <div className="modal-overlay" style={{alignItems:"flex-end"}} onClick={e => { if(e.target===e.currentTarget) setKodModal(false); }}>
+        <div className="modal-overlay" style={{alignItems:"flex-end"}} onClick={e => { if(e.target===e.currentTarget) setKodModal(false); setAvatarDropdown(false); }}>
           <div className="kod-sheet">
             <button className="modal-close" style={{position:"absolute",top:16,right:16}} onClick={() => setKodModal(false)}>✕</button>
             <div style={{fontSize:"1rem",fontWeight:900,marginBottom:6,color:"var(--navy)"}}>⌨️ Şezlong Kodu Gir</div>
@@ -857,7 +925,7 @@ export default function ProfilPage() {
 
       {/* ŞİFRE DEĞİŞTİR MODAL */}
       {showPasswordModal && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowPasswordModal(false); }}>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowPasswordModal(false); setAvatarDropdown(false); } }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-head">
               <span className="modal-title">🔑 Şifreyi Değiştir</span>
