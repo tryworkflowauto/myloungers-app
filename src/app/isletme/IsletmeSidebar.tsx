@@ -112,13 +112,15 @@ export default function IsletmeSidebar() {
     <aside style={{ width: '240px', background: '#0A1628', height: '100vh', minHeight: '100vh', position: 'fixed', left: 0, top: 0, display: 'flex', flexDirection: 'column', zIndex: 100, overflowY: 'auto' }}>
       {/* Logo */}
       <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/MyLoungers_Logo-02.png" width={100} height={60} style={{ borderRadius: '10px', objectFit: 'contain' }} alt="MyLoungers" />
-          <div>
-            <span style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#fff' }}>MY LOUNGERS</span>
-            <span style={{ display: 'block', fontSize: '10px', color: '#0ABAB5' }}>İşletme Paneli</span>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img src="/MyLoungers_Logo-02.png" width={100} height={60} style={{ borderRadius: '10px', objectFit: 'contain' }} alt="MyLoungers" />
+            <div>
+              <span style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#fff' }}>MY LOUNGERS</span>
+              <span style={{ display: 'block', fontSize: '10px', color: '#0ABAB5' }}>İşletme Paneli</span>
+            </div>
           </div>
-        </div>
+        </Link>
       </div>
       {/* Tesis Seçici */}
       <div style={{ margin: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
