@@ -346,7 +346,7 @@ export default function IsletmeDashboardPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [tesisId, authChecked, supabase]);
+  }, [tesisId, authChecked]);
 
   if (!authChecked || loading) {
     return (
