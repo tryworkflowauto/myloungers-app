@@ -53,29 +53,12 @@ const RESERVATIONS: Reservation[] = [
   { id:5, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-6988", dates:"10 Nis 2025", szl:"A5 · İskele", gun:"1 gün", odenen:"₺1.250", status:"cancel", statusTxt:"✗ İptal", statusCss:"background:#FEF2F2;color:#DC2626;border-color:#FECACA", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
 ];
 
-const FAVS = [
-  { id:1, name:"Zuzuu Beach Hotel", meta:"🏖️ Beach Club · Bodrum · ⭐ 9.6", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
-  { id:2, name:"Marmaris Beach Resort", meta:"🏖️ Beach Club · Marmaris · ⭐ 9.2", img:"https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&fit=crop" },
-  { id:3, name:"Fethiye Paradise Club", meta:"🏖️ Beach Club · Fethiye · ⭐ 9.0", img:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&fit=crop" },
-  { id:4, name:"Bodrum Luxury Suites", meta:"🏨 Hotel · Bodrum · ⭐ 9.4", img:"https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&fit=crop" },
-];
-
-const NOTIFS = [
-  { id:1, ic:"🎉", t:"Rezervasyonunuz Onaylandı", s:"Zuzuu Beach Hotel · 15–17 Temmuz rezervasyonunuz onaylandı. QR kodunuz hazır.", time:"2 saat önce", unread:true },
-  { id:2, ic:"⏰", t:"Yarın Rezervasyonunuz Var", s:"Marmaris Beach Resort · 3 Haziran için rezervasyonunuzu unutmayın!", time:"5 saat önce", unread:true },
-  { id:3, ic:"💰", t:"Erken Rezervasyon İndirimi", s:"Bodrum'daki favori tesislerinizde %20 erken rezervasyon indirimi başladı!", time:"1 gün önce", unread:true },
-  { id:4, ic:"✅", t:"Ödeme Tamamlandı", s:"₺1.500 ödemeniz başarıyla alındı · Fethiye Paradise Club", time:"15 gün önce", unread:false },
-  { id:5, ic:"⭐", t:"Değerlendirme Hatırlatması", s:"Bodrum Luxury Suites deneyiminizi paylaşmak ister misiniz?", time:"20 gün önce", unread:false },
-];
-
 export default function ProfilPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("reservations");
   const [resFilter, setResFilter] = useState("all");
-  const [favs, setFavs] = useState(FAVS);
-  const [notifs, setNotifs] = useState(NOTIFS);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [resLoading, setResLoading] = useState(false);
   const [reviewModal, setReviewModal] = useState(false);
@@ -85,6 +68,8 @@ export default function ProfilPage() {
   const [kodModal, setKodModal] = useState(false);
   const [kodVal, setKodVal] = useState("");
   const [saveOk, setSaveOk] = useState(false);
+  const [totalReservations, setTotalReservations] = useState<number | null>(null);
+  const [totalSpent, setTotalSpent] = useState<number | null>(null);
   const [profile, setProfile] = useState({
     ad: "",
     soyad: "",
@@ -174,6 +159,12 @@ export default function ProfilPage() {
 
         const today = new Date().toISOString().slice(0, 10);
 
+        const toplamRez = (rezData ?? []).length;
+        const toplamTutar = (rezData ?? []).reduce((sum: number, r: any) => {
+          const t = typeof r.toplam_tutar === "number" ? r.toplam_tutar : Number(r.toplam_tutar || 0);
+          return sum + (isNaN(t) ? 0 : t);
+        }, 0);
+
         const uiRes: Reservation[] = (rezData ?? []).map((r: any) => {
           const startStr = r.baslangic_tarih as string | null;
           const endStr = r.bitis_tarih as string | null;
@@ -250,6 +241,8 @@ export default function ProfilPage() {
         });
 
         setReservations(uiRes);
+        setTotalReservations(toplamRez);
+        setTotalSpent(toplamTutar);
         setResLoading(false);
       } catch (e) {
         console.error("Profil rezervasyon yükleme hatası:", e);
@@ -524,9 +517,22 @@ export default function ProfilPage() {
             </div>
           </div>
           <div className="phero-stats">
-            <div><div className="hstat-n">5</div><div className="hstat-l">Rezervasyon</div></div>
-            <div><div className="hstat-n">₺14.750</div><div className="hstat-l">Toplam Harcama</div></div>
-            <div><div className="hstat-n">4</div><div className="hstat-l">Favori Tesis</div></div>
+            <div>
+              <div className="hstat-n">
+                {totalReservations !== null ? totalReservations : "—"}
+              </div>
+              <div className="hstat-l">Rezervasyon</div>
+            </div>
+            <div>
+              <div className="hstat-n">
+                {totalSpent !== null ? `₺${totalSpent.toLocaleString("tr-TR")}` : "—"}
+              </div>
+              <div className="hstat-l">Toplam Harcama</div>
+            </div>
+            <div>
+              <div className="hstat-n">0</div>
+              <div className="hstat-l">Favori Tesis</div>
+            </div>
           </div>
         </div>
       </div>
@@ -572,8 +578,8 @@ export default function ProfilPage() {
           <div className="sm-head">Hesabım</div>
           {[
             {id:"reservations", ic:"🏖️", label:"Rezervasyonlarım", cnt:reservations.length, cntColor:"var(--or)"},
-            {id:"favorites", ic:"❤️", label:"Favorilerim", cnt:favs.length, cntColor:"var(--teal)"},
-            {id:"notifications", ic:"🔔", label:"Bildirimler", cnt:notifs.filter(n=>n.unread).length, cntColor:"var(--or)"},
+            {id:"favorites", ic:"❤️", label:"Favorilerim", cnt:0, cntColor:"var(--teal)"},
+            {id:"notifications", ic:"🔔", label:"Bildirimler", cnt:0, cntColor:"var(--or)"},
           ].map(item => (
             <button key={item.id} className={`sm-item${activeTab===item.id?" on":""}`} onClick={() => setActiveTab(item.id)}>
               <span style={{fontSize:"1rem",width:22,textAlign:"center"}}>{item.ic}</span>
@@ -659,17 +665,10 @@ export default function ProfilPage() {
           {activeTab === "favorites" && (
             <div>
               <div className="sec-head"><div><div className="sec-title">❤️ Favorilerim</div><div className="sec-sub">Kaydettiğiniz tesisler</div></div></div>
-              <div className="fav-grid">
-                {favs.map(f => (
-                  <div key={f.id} className="fav-card" onClick={() => router.push("/hotel/zuzuu-beach-hotel")}>
-                    <img className="fav-img" src={f.img} alt={f.name} />
-                    <div className="fav-body">
-                      <div className="fav-name">{f.name}</div>
-                      <div className="fav-meta">{f.meta}</div>
-                      <button className="fav-remove" onClick={e => { e.stopPropagation(); setFavs(prev => prev.filter(x => x.id !== f.id)); }}>✕ Listeden çıkar</button>
-                    </div>
-                  </div>
-                ))}
+              <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,textAlign:"center",color:"var(--i3)"}}>
+                <div style={{fontSize:"2rem",opacity:.4}}>🤍</div>
+                <div style={{fontSize:".85rem",marginTop:8}}>Henüz favori tesisiniz yok.</div>
+                <div style={{fontSize:".78rem",marginTop:4}}>Beğendiğiniz tesislerde kalp ikonuna tıklayarak favorilere ekleyebilirsiniz.</div>
               </div>
             </div>
           )}
@@ -677,18 +676,12 @@ export default function ProfilPage() {
           {/* BİLDİRİMLER */}
           {activeTab === "notifications" && (
             <div>
-              <div className="sec-head"><div><div className="sec-title">🔔 Bildirimler</div><div className="sec-sub">{notifs.filter(n=>n.unread).length} okunmamış bildirim</div></div></div>
-              {notifs.map(n => (
-                <div key={n.id} className={`notif-card${n.unread?" unread":""}`} onClick={() => setNotifs(prev => prev.map(x => x.id===n.id ? {...x,unread:false} : x))}>
-                  {n.unread && <div className="notif-dot" />}
-                  <span className="notif-ic">{n.ic}</span>
-                  <div style={{flex:1}}>
-                    <div className="notif-t">{n.t}</div>
-                    <div className="notif-s">{n.s}</div>
-                  </div>
-                  <span className="notif-time">{n.time}</span>
-                </div>
-              ))}
+              <div className="sec-head"><div><div className="sec-title">🔔 Bildirimler</div><div className="sec-sub">Henüz bildiriminiz yok.</div></div></div>
+              <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,textAlign:"center",color:"var(--i3)"}}>
+                <div style={{fontSize:"2rem",opacity:.4}}>🔕</div>
+                <div style={{fontSize:".85rem",marginTop:8}}>Henüz bildiriminiz yok.</div>
+                <div style={{fontSize:".78rem",marginTop:4}}>Rezervasyonlarınız ve kampanyalarla ilgili güncellemeler burada görünecek.</div>
+              </div>
             </div>
           )}
 
