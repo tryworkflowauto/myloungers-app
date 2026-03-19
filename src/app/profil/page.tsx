@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 type Reservation = {
@@ -71,7 +70,8 @@ const NOTIFS = [
 
 export default function ProfilPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const [user, setUser] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("reservations");
   const [resFilter, setResFilter] = useState("all");
   const [favs, setFavs] = useState(FAVS);
@@ -95,13 +95,23 @@ export default function ProfilPage() {
   });
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/giris");
+    async function loadUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      setUserLoading(false);
     }
-  }, [status, router]);
+    loadUser();
+  }, []);
 
   useEffect(() => {
-    const user = session?.user;
+    if (!user && !userLoading) {
+      router.push("/giris");
+    }
+  }, [user, userLoading, router]);
+
+  useEffect(() => {
     if (user) {
       setProfile((prev) => ({
         ...prev,
@@ -109,15 +119,15 @@ export default function ProfilPage() {
         email: user.email || prev.email || "",
       }));
     }
-  }, [session]);
+  }, [user]);
 
   useEffect(() => {
     async function loadReservations() {
-      if (status !== "authenticated" || !session?.user) return;
+      if (!user) return;
 
       try {
         setResLoading(true);
-        const userId = (session.user as any).id;
+        const userId = user?.id;
 
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
@@ -490,7 +500,7 @@ export default function ProfilPage() {
         <span style={{ flex: 1 }} />
         <button
           className="pnav-logout"
-          onClick={() => signOut({ callbackUrl: "/giris" })}
+          onClick={() => supabase.auth.signOut().then(() => router.push("/giris"))}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Çıkış
@@ -503,10 +513,10 @@ export default function ProfilPage() {
           <div className="pavatar">{avatarLetter}</div>
           <div className="phero-info">
             <div className="phero-name">
-              {profile.ad || session?.user?.name || "Misafir"}
+              {profile.ad || (user as any)?.name || "Misafir"}
             </div>
             <div className="phero-email">
-              {profile.email || session?.user?.email || ""}
+              {profile.email || (user as any)?.email || ""}
             </div>
             <div className="phero-badges">
               <span className="hbadge hbadge-teal">✓ E-posta Doğrulandı</span>
