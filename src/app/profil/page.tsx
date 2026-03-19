@@ -628,7 +628,9 @@ export default function ProfilPage() {
           <div className="pavatar">{avatarLetter}</div>
           <div className="phero-info">
             <div className="phero-name">
-              {profile.ad || "Misafir"}
+              {profile.ad
+                ? `${profile.ad}${profile.soyad ? " " + profile.soyad : ""}`
+                : "Misafir"}
             </div>
             <div className="phero-email">
               {profile.email || (user as any)?.email || ""}
