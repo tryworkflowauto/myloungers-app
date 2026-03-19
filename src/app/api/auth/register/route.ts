@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Geçersiz alanlar" }, { status: 400 });
     }
 
-    // Email zaten var mı?
+    // Email zaten kullanicilar tablosunda var mı?
     const { data: existing, error: existingErr } = await supabase
       .from("kullanicilar")
       .select("id")
@@ -29,6 +29,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Bu e-posta ile kullanıcı zaten kayıtlı" }, { status: 409 });
     }
 
+    // Supabase Auth tarafında kullanıcı oluştur
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError || !authData?.user) {
+      console.error("Supabase auth signUp hatası:", authError);
+      return NextResponse.json(
+        { ok: false, error: authError?.message || "Kayıt başarısız" },
+        { status: 400 }
+      );
+    }
+
     // isim → ad / soyad kaba ayrımı
     const [first, ...rest] = name.split(" ");
     const ad = first;
@@ -40,6 +54,7 @@ export async function POST(req: Request) {
     const { error: insertErr } = await supabase
       .from("kullanicilar")
       .insert({
+        id: authData.user.id,
         ad,
         soyad,
         telefon: null,
