@@ -302,7 +302,23 @@ export default function ProfilPage() {
     alert("✅ Kod doğrulandı! Şezlong aktif edildi.");
   }
 
-  function saveProfile() {
+  async function saveProfile() {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("kullanicilar")
+      .update({
+        ad: profile.ad,
+        soyad: profile.soyad,
+        telefon: profile.tel,
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      console.error("Profil güncellenemedi:", error);
+      return;
+    }
+
     setSaveOk(true);
     setTimeout(() => setSaveOk(false), 2000);
   }
