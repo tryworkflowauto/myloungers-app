@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -86,6 +86,8 @@ export default function ProfilPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [avatarDropdown, setAvatarDropdown] = useState(false);
+  const [userDropdown, setUserDropdown] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -135,6 +137,16 @@ export default function ProfilPage() {
 
     loadUserProfile();
   }, [user]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   useEffect(() => {
     async function loadReservations() {
@@ -559,13 +571,72 @@ export default function ProfilPage() {
           />
         </Link>
         <span style={{ flex: 1 }} />
-        <button
-          className="pnav-logout"
-          onClick={() => supabase.auth.signOut().then(() => router.push("/giris"))}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Çıkış
-        </button>
+        <div ref={userMenuRef} style={{ position: "relative" }}>
+          <button
+            type="button"
+            className="pnav-logout"
+            onClick={() => setUserDropdown((v) => !v)}
+          >
+            {(profile.ad || "") + (profile.soyad ? " " + profile.soyad : "")} ▾
+          </button>
+          {userDropdown && (
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                marginTop: 8,
+                minWidth: 160,
+                background: "#FFFFFF",
+                borderRadius: 12,
+                boxShadow: "0 10px 30px rgba(15,23,42,0.18)",
+                border: "1px solid #E5E7EB",
+                padding: 8,
+                zIndex: 260,
+              }}
+            >
+              <Link
+                href="/profil"
+                className="nav-user"
+                style={{
+                  display: "block",
+                  fontSize: ".8rem",
+                  fontWeight: 700,
+                  padding: "7px 10px",
+                  borderRadius: 8,
+                  textDecoration: "none",
+                  color: "#0A1628",
+                }}
+                onClick={() => setUserDropdown(false)}
+              >
+                Profilim
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  supabase.auth.signOut().then(() => {
+                    setUserDropdown(false);
+                    router.push("/");
+                  });
+                }}
+                style={{
+                  marginTop: 4,
+                  width: "100%",
+                  fontSize: ".78rem",
+                  fontWeight: 700,
+                  padding: "7px 10px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#F3F4F6",
+                  color: "#374151",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                Çıkış Yap
+              </button>
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* HERO */}
