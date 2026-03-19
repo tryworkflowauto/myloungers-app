@@ -552,9 +552,10 @@ export default function ProfilPage() {
         <Link href="/">
           <img
             className="pnav-logo"
-            src="/logo.png"
+            src="/MyLoungers_Logo-02.png"
             alt="MyLoungers"
             onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}}
+            style={{ height: 44 }}
           />
         </Link>
         <span style={{ flex: 1 }} />
