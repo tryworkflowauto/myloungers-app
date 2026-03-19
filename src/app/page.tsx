@@ -301,9 +301,20 @@ export default function Home() {
       }
     }
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadBizUser();
+      } else {
+        setBizUser(null);
+      }
+    });
+
     loadBizUser();
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
 
