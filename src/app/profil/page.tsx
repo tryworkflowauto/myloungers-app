@@ -292,6 +292,15 @@ export default function ProfilPage() {
       "K"
     ).toUpperCase();
 
+  const memberSince = (() => {
+    const created = (user as any)?.created_at as string | undefined;
+    if (!created) return "Üye: —";
+    const d = new Date(created);
+    if (isNaN(d.getTime())) return "Üye: —";
+    const aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+    return `Üye: ${aylar[d.getMonth()]} ${d.getFullYear()}`;
+  })();
+
   return (
     <>
       <style>{`
@@ -513,7 +522,7 @@ export default function ProfilPage() {
             <div className="phero-badges">
               <span className="hbadge hbadge-teal">✓ E-posta Doğrulandı</span>
               <span className="hbadge hbadge-or">🏖️ Sadık Üye</span>
-              <span className="hbadge hbadge-wh">📅 Üye: Ocak 2025</span>
+              <span className="hbadge hbadge-wh">📅 {memberSince}</span>
             </div>
           </div>
           <div className="phero-stats">
