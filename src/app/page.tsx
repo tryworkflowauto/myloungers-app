@@ -255,7 +255,9 @@ export default function Home() {
 
     async function loadBizUser() {
       try {
+        console.log("loadBizUser çalıştı");
         const { data: authData, error: authError } = await supabase.auth.getUser();
+        console.log("auth user:", authData?.user?.email);
         if (authError || !authData?.user || cancelled) {
           setBizUser(null);
           return;
@@ -267,6 +269,8 @@ export default function Home() {
           .select("rol, ad, soyad, email, tesis_id")
           .eq("id", userId)
           .maybeSingle();
+
+        console.log("kullanici rol:", (kullanici as any)?.rol);
 
         const rol = (kullanici as any)?.rol as string | null | undefined;
         const rolLower = (rol || "").toLowerCase();
@@ -294,6 +298,7 @@ export default function Home() {
             : (kullanici as any).ad || (kullanici as any).soyad || (kullanici as any).email || authData.user.email;
 
         if (!cancelled) {
+          console.log("bizUser set ediliyor:", fullName, tesisAd);
           setBizUser({ name: fullName as string, tesisAd });
         }
       } catch {
