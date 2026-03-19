@@ -844,7 +844,6 @@ export default function ProfilPage() {
               <div className="sec-head"><div><div className="sec-title">🔒 Güvenlik</div><div className="sec-sub">Hesap güvenliği ve gizlilik</div></div></div>
               {[
                 {ic:"🔑", t:"Şifre", s:"Son değişiklik: 3 ay önce", btn:"Şifreyi Değiştir", danger:false},
-                {ic:"📱", t:"İki Faktörlü Doğrulama", s:"SMS ile doğrulama aktif", btn:"Yönet", danger:false},
                 {ic:"📧", t:"E-posta Bildirimleri", s:"Rezervasyon ve kampanya bildirimleri açık", btn:"Ayarla", danger:false},
                 {ic:"📋", t:"Veri ve Gizlilik", s:"KVKK kapsamında verilerinizi yönetin", btn:"Görüntüle", danger:false},
               ].map((item, i) => (
