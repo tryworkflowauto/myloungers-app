@@ -98,13 +98,36 @@ export default function ProfilPage() {
   }, [user, userLoading, router]);
 
   useEffect(() => {
-    if (user) {
-      setProfile((prev) => ({
-        ...prev,
-        ad: (user as any).name || prev.ad || "Misafir",
-        email: user.email || prev.email || "",
-      }));
+    async function loadUserProfile() {
+      if (!user) return;
+
+      try {
+        const { data: kullanici } = await supabase
+          .from("kullanicilar")
+          .select("ad, soyad")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const fullName =
+          kullanici?.ad && kullanici?.soyad
+            ? `${kullanici.ad} ${kullanici.soyad}`
+            : kullanici?.ad || (user as any)?.email || profile.ad || "Misafir";
+
+        setProfile((prev) => ({
+          ...prev,
+          ad: fullName,
+          email: user.email || prev.email || "",
+        }));
+      } catch {
+        setProfile((prev) => ({
+          ...prev,
+          ad: (user as any)?.email || prev.ad || "Misafir",
+          email: user.email || prev.email || "",
+        }));
+      }
     }
+
+    loadUserProfile();
   }, [user]);
 
   useEffect(() => {
@@ -579,7 +602,7 @@ export default function ProfilPage() {
           <div className="pavatar">{avatarLetter}</div>
           <div className="phero-info">
             <div className="phero-name">
-              {profile.ad || (user as any)?.name || "Misafir"}
+              {profile.ad || "Misafir"}
             </div>
             <div className="phero-email">
               {profile.email || (user as any)?.email || ""}
