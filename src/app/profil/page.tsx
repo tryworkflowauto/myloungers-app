@@ -304,6 +304,15 @@ export default function ProfilPage() {
   async function saveProfile() {
     if (!user) return;
 
+    console.log("update yapılacak user id:", user?.id);
+    console.log("update edilecek veriler:", {
+      ad: profile.ad,
+      soyad: profile.soyad,
+      telefon: profile.tel,
+      dogum_tarihi: profile.dogum,
+      sehir: profile.sehir,
+    });
+
     const { error } = await supabase
       .from("kullanicilar")
       .update({
