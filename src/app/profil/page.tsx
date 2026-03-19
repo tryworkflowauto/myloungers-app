@@ -78,6 +78,7 @@ export default function ProfilPage() {
     dogum: "",
     sehir: "",
   });
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -494,10 +495,74 @@ export default function ProfilPage() {
       {/* NAV */}
       <nav className="pnav">
         <Link href="/"><img className="pnav-logo" src="/logo.png" alt="MyLoungers" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}} /></Link>
-        <Link href="/" className="pnav-back">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          Ana Sayfa
-        </Link>
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            className="pnav-back"
+            onClick={() => setNavMenuOpen((v) => !v)}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            Ana Sayfa
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          {navMenuOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "110%",
+                left: 0,
+                minWidth: 140,
+                background: "#FFFFFF",
+                borderRadius: 10,
+                boxShadow: "0 10px 25px rgba(15,23,42,0.18)",
+                border: "1px solid #E5E7EB",
+                padding: 6,
+                zIndex: 250,
+              }}
+            >
+              <Link
+                href="/"
+                className="nav-user"
+                style={{
+                  display: "block",
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  fontSize: ".78rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  color: "#0A1628",
+                }}
+                onClick={() => setNavMenuOpen(false)}
+              >
+                Ana Sayfa
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  supabase.auth.signOut().then(() => {
+                    setNavMenuOpen(false);
+                    router.push("/");
+                  });
+                }}
+                style={{
+                  marginTop: 4,
+                  width: "100%",
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#F3F4F6",
+                  fontSize: ".78rem",
+                  fontWeight: 700,
+                  color: "#374151",
+                  textAlign: "left",
+                  cursor: "pointer",
+                }}
+              >
+                Çıkış Yap
+              </button>
+            </div>
+          )}
+        </div>
         <span style={{ flex: 1 }} />
         <button
           className="pnav-logout"
