@@ -258,7 +258,7 @@ export default function ProfilPage() {
     }
 
     loadReservations();
-  }, [status, session]);
+  }, [user]);
 
   const filteredRes = reservations.filter(
     (r) => resFilter === "all" || r.status === resFilter
