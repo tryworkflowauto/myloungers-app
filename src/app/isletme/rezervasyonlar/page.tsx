@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -183,8 +182,7 @@ const emptyEditForm = {
 };
 
 export default function IsletmeRezervasyonlarPage() {
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [rezervasyonlar, setRezervasyonlar] = useState<Rezervasyon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,6 +251,32 @@ export default function IsletmeRezervasyonlarPage() {
       window.removeEventListener("afterprint", onAfterPrint);
     };
   }, [printReceipt]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        setTesisId(null);
+        return;
+      }
+      const { data: kullanici, error: kullaniciErr } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (kullaniciErr || !kullanici || kullanici.tesis_id == null) {
+        setTesisId(null);
+        return;
+      }
+      setTesisId(String(kullanici.tesis_id));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Supabase: tesis_id ile rezervasyonları çek
   useEffect(() => {
