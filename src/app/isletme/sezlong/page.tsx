@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -28,6 +28,7 @@ type GrupRow = {
   fiyat: string;
   doluluk: string;
   aciklama?: string;
+  sira?: number;
 };
 
 // Harita bloğu + şezlong listesi (key = grup id)
@@ -234,12 +235,44 @@ export default function IsletmeSezlongPage() {
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
   const [durumFiltresi, setDurumFiltresi] = useState<string | null>(null);
   const [grupFiltresi, setGrupFiltresi] = useState<string | null>(null);
+  const [grupDragId, setGrupDragId] = useState<string | null>(null);
+  const [grupDropTargetId, setGrupDropTargetId] = useState<string | null>(null);
   const [seciliTarih, setSeciliTarih] = useState(() => new Date().toISOString().slice(0, 10));
   const [mod, setMod] = useState<"duzenleme" | "goruntulem" | "musteri">("duzenleme");
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  }
+
+  function handleGrupReorderDrop(e: DragEvent, targetId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    const draggedId = e.dataTransfer.getData("text/grup-id");
+    setGrupDropTargetId(null);
+    if (!draggedId || draggedId === targetId) return;
+    setGruplar((prev) => {
+      const dragIdx = prev.findIndex((x) => x.id === draggedId);
+      const dropIdx = prev.findIndex((x) => x.id === targetId);
+      if (dragIdx < 0 || dropIdx < 0 || dragIdx === dropIdx) return prev;
+      const next = [...prev];
+      const [removed] = next.splice(dragIdx, 1);
+      next.splice(dropIdx, 0, removed);
+      const withSira = next.map((row, idx) => ({ ...row, sira: idx }));
+      const tid = tesisId;
+      if (tid) {
+        void (async () => {
+          const results = await Promise.all(
+            withSira.map((row, idx) =>
+              supabase.from("sezlong_gruplari").update({ sira: idx }).eq("id", row.id).eq("tesis_id", tid)
+            )
+          );
+          const err = results.find((r) => r.error);
+          if (err?.error) showToast("❌ Sıra kaydedilemedi");
+        })();
+      }
+      return withSira;
+    });
   }
 
   // Supabase Auth ile tesis_id yükle
@@ -283,11 +316,25 @@ export default function IsletmeSezlongPage() {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, aciklama").eq("tesis_id", tesisId),
+      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, aciklama, sira").eq("tesis_id", tesisId),
       supabase.from("sezlonglar").select("id, grup_id, numara, durum").eq("tesis_id", tesisId),
     ]).then(([gRes, sRes]) => {
       if (cancelled) return;
-      const grupRows = (gRes.data ?? []) as { id: string; ad: string; renk: string; kapasite: number; fiyat: number | null; aciklama?: string | null }[];
+      const grupRows = (gRes.data ?? []) as {
+        id: string;
+        ad: string;
+        renk: string;
+        kapasite: number;
+        fiyat: number | null;
+        aciklama?: string | null;
+        sira?: number | null;
+      }[];
+      grupRows.sort((a, b) => {
+        const sa = Number(a.sira ?? 0);
+        const sb = Number(b.sira ?? 0);
+        if (sa !== sb) return sa - sb;
+        return String(a.id).localeCompare(String(b.id));
+      });
       const sezRows = (sRes.data ?? []) as { id: string; grup_id: string; numara: number; durum: string }[];
       const byGrup = new Map<string, typeof sezRows>();
       for (const s of sezRows) {
@@ -312,6 +359,7 @@ export default function IsletmeSezlongPage() {
         const prefix = g.ad.charAt(0).toUpperCase();
         const fiyatNum = Number(g.fiyat) || 0;
         const aciklama = (g as { aciklama?: string | null }).aciklama?.trim() || "";
+        const siraVal = Number(g.sira ?? 0);
         grList.push({
           id: g.id,
           name: g.ad,
@@ -322,6 +370,7 @@ export default function IsletmeSezlongPage() {
           fiyat: fiyatNum ? `₺${fiyatNum.toLocaleString("tr")}` : "—",
           doluluk: `${dolulukPct}%`,
           aciklama: aciklama || undefined,
+          sira: siraVal,
         });
         harita[g.id] = {
           id: g.id,
@@ -555,6 +604,7 @@ export default function IsletmeSezlongPage() {
     if (!currentTesisId || !grupEkleForm.ad.trim()) return;
     const kapasite = Math.max(1, Math.min(200, Number(grupEkleForm.kapasite) || 10));
     const aciklamaInsert = grupEkleForm.aciklama?.trim() || null;
+    const nextSira = gruplar.length === 0 ? 0 : Math.max(...gruplar.map((r) => r.sira ?? 0)) + 1;
     const { data: grup, error: gErr } = await supabase
       .from("sezlong_gruplari")
       .insert({
@@ -564,6 +614,7 @@ export default function IsletmeSezlongPage() {
         kapasite,
         fiyat: Number(grupEkleForm.fiyat) || 0,
         aciklama: aciklamaInsert,
+        sira: nextSira,
       })
       .select("id, ad, renk, kapasite, fiyat")
       .single();
@@ -585,7 +636,7 @@ export default function IsletmeSezlongPage() {
     }
     const { data: newSez } = await supabase.from("sezlonglar").select("id, numara, durum").eq("grup_id", g.id).order("numara", { ascending: true });
     const durumlar: SezlongSlot[] = (newSez ?? []).map((s: { id: string; numara: number; durum: string }) => ({ id: s.id, numara: s.numara, durum: s.durum || "bos" }));
-    setGruplar((prev) => [...prev, { id: g.id, name: g.ad, count: kapasite, color: g.renk || TEAL, dolu: 0, bos: kapasite, fiyat: g.fiyat ? `₺${g.fiyat.toLocaleString("tr")}` : "—", doluluk: "0%" }]);
+    setGruplar((prev) => [...prev, { id: g.id, name: g.ad, count: kapasite, color: g.renk || TEAL, dolu: 0, bos: kapasite, fiyat: g.fiyat ? `₺${g.fiyat.toLocaleString("tr")}` : "—", doluluk: "0%", sira: nextSira }]);
     setHaritaGruplari((prev) => ({
       ...prev,
       [g.id]: {
@@ -806,10 +857,21 @@ export default function IsletmeSezlongPage() {
               {gruplar.map((g) => (
                 <div
                   key={g.id}
+                  onDragOver={(e) => {
+                    if (!grupDragId || grupDragId === g.id) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setGrupDropTargetId(g.id);
+                  }}
+                  onDrop={(e) => handleGrupReorderDrop(e, g.id)}
                   style={{
                     border: `1.5px solid ${g.color}`,
                     borderRadius: 10,
                     overflow: "hidden",
+                    boxShadow:
+                      grupDropTargetId === g.id && grupDragId && grupDragId !== g.id
+                        ? `0 0 0 2px ${TEAL}`
+                        : undefined,
                   }}
                 >
                   <div
@@ -821,6 +883,31 @@ export default function IsletmeSezlongPage() {
                       cursor: "pointer",
                     }}
                   >
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/grup-id", g.id);
+                        e.dataTransfer.effectAllowed = "move";
+                        setGrupDragId(g.id);
+                      }}
+                      onDragEnd={() => {
+                        setGrupDragId(null);
+                        setGrupDropTargetId(null);
+                      }}
+                      onClick={(ev) => ev.stopPropagation()}
+                      style={{
+                        cursor: "grab",
+                        padding: "2px 4px",
+                        fontSize: 12,
+                        color: GRAY400,
+                        flexShrink: 0,
+                        userSelect: "none",
+                        lineHeight: 1,
+                      }}
+                      title="Sürükleyerek sırala"
+                    >
+                      ⋮⋮
+                    </div>
                     <div style={{ width: 12, height: 12, borderRadius: 4, background: g.color, flexShrink: 0 }} />
                     <span style={{ fontSize: 12, fontWeight: 700, color: NAVY, flex: 1 }}>{g.name}</span>
                     <span style={{ fontSize: 11, color: GRAY400 }}>{g.count} şezlong</span>
@@ -1006,7 +1093,10 @@ export default function IsletmeSezlongPage() {
             {loading ? (
               <div style={{ padding: 40, textAlign: "center", color: GRAY400, fontSize: 13 }}>Yükleniyor...</div>
             ) : (
-              Object.entries(haritaGruplari).map(([key, mb]) => {
+              gruplar.map((row) => {
+                const key = row.id;
+                const mb = haritaGruplari[key];
+                if (!mb) return null;
                 const g = mb;
                 const grupGizli = grupFiltresi !== null && grupFiltresi !== key;
 
