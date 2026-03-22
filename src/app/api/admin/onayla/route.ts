@@ -64,7 +64,8 @@ export async function POST(req: Request) {
 
     // 3) Supabase Auth'a davet maili ile kullanıcı oluştur
     if (b.email) {
-      const { error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(b.email);
+      const { data: inviteData, error: inviteErr } =
+        await supabaseAdmin.auth.admin.inviteUserByEmail(b.email);
       if (inviteErr) {
         const errMsg = inviteErr?.message ?? String(inviteErr);
         console.error("auth inviteUserByEmail error", errMsg, inviteErr);
@@ -73,13 +74,15 @@ export async function POST(req: Request) {
           { status: 500 }
         );
       }
+      const authUserId = inviteData.user.id;
 
       // 4) kullanicilar tablosuna kayıt
       const { error: userInsErr } = await supabaseAdmin.from("kullanicilar").insert({
+        id: authUserId,
         ad: b.ad_soyad,
         email: b.email,
         rol: "isletme",
-        tesis_id: (tesis as { id: string }).id,
+        tesis_id: tesis.id,
       });
       if (userInsErr) {
         console.error("kullanicilar insert error", userInsErr);
