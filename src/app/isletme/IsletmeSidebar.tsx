@@ -9,7 +9,7 @@ const menuItems = [
   { section: 'ANA MENÜ' },
   { icon: '📊', label: 'Dashboard', href: '/isletme' },
   { icon: '🏖️', label: 'Şezlong Haritası', href: '/isletme/sezlong' },
-  { icon: '📋', label: 'Rezervasyonlar', href: '/isletme/rezervasyonlar', badge: 12 },
+  { icon: '📋', label: 'Rezervasyonlar', href: '/isletme/rezervasyonlar' },
   { icon: '🍽️', label: 'Siparişler', href: '/isletme/siparisler', badge: 5 },
   { section: 'YÖNETİM' },
   { icon: '🍹', label: 'Menü Yönetimi', href: '/isletme/menu' },
@@ -29,6 +29,7 @@ export default function IsletmeSidebar() {
   );
   const [tesisAdi, setTesisAdi] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [rezBekleyenCount, setRezBekleyenCount] = useState(0);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [cikisModal,    setCikisModal]    = useState(false);
   const [toast,         setToast]         = useState<string | null>(null);
@@ -56,6 +57,7 @@ export default function IsletmeSidebar() {
       if (kullaniciError || !kullanici || cancelled) {
         setTesisAdi(null);
         setUserName(authData.user.email ?? authData.user.user_metadata?.name ?? null);
+        setRezBekleyenCount(0);
         return;
       }
 
@@ -68,6 +70,7 @@ export default function IsletmeSidebar() {
       const tesisId = kullanici.tesis_id as string | null | undefined;
       if (!tesisId) {
         setTesisAdi(null);
+        setRezBekleyenCount(0);
         return;
       }
 
@@ -135,11 +138,15 @@ export default function IsletmeSidebar() {
             <div key={i} style={{ padding: '16px 16px 6px', fontSize: '9px', fontWeight: 700, color: '#94A3B8', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{item.section}</div>
           );
           const isActive = pathname === item.href;
+          const badgeToShow =
+            item.href === '/isletme/rezervasyonlar'
+              ? (rezBekleyenCount > 0 ? rezBekleyenCount : null)
+              : ('badge' in item && item.badge ? item.badge : null);
           return (
             <Link key={i} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', textDecoration: 'none', position: 'relative', background: isActive ? 'rgba(10,186,181,0.15)' : 'transparent', borderLeft: isActive ? '3px solid #0ABAB5' : '3px solid transparent' }}>
               <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '15px', background: isActive ? 'rgba(10,186,181,0.2)' : 'transparent' }}>{item.icon}</div>
               <span style={{ fontSize: '13px', color: isActive ? '#0ABAB5' : '#CBD5E1', fontWeight: isActive ? 600 : 500, flex: 1 }}>{item.label}</span>
-              {'badge' in item && item.badge && <span style={{ background: '#F5821F', color: 'white', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px' }}>{item.badge}</span>}
+              {badgeToShow != null && <span style={{ background: '#F5821F', color: 'white', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px' }}>{badgeToShow}</span>}
             </Link>
           );
         })}
