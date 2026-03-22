@@ -165,22 +165,44 @@ export default function IsletmeTesisPage() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  // Load active tesis from Supabase
+  // Load tesis from Supabase (current user's tesis_id)
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from("tesisler")
-      .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar")
-      .eq("aktif", true)
-      .limit(1)
-      .single()
-      .then(({ data, error }) => {
-        if (cancelled || !data) {
-          if (error) console.error("Tesis yüklenemedi:", error);
-          return;
-        }
-        const row: any = data;
-        setTesisId(String(row.id));
+    (async () => {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        if (authErr) console.error("Tesis yüklenemedi:", authErr);
+        return;
+      }
+      const userId = authData.user.id;
+
+      const { data: kullanici, error: kullaniciErr } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (kullaniciErr || !kullanici || kullanici.tesis_id == null) {
+        if (kullaniciErr) console.error("Tesis yüklenemedi:", kullaniciErr);
+        return;
+      }
+      const tesis_id = kullanici.tesis_id as string;
+
+      const { data, error } = await supabase
+        .from("tesisler")
+        .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar")
+        .eq("id", tesis_id)
+        .limit(1)
+        .single();
+
+      if (cancelled || !data) {
+        if (error) console.error("Tesis yüklenemedi:", error);
+        return;
+      }
+      const row: any = data;
+      setTesisId(String(row.id));
 
         if (row.ad) setTesisAdi(row.ad);
 
@@ -272,7 +294,7 @@ export default function IsletmeTesisPage() {
           if (ulasim.saatBit) setDolmusSaatBit(ulasim.saatBit);
           if (ulasim.not) setDolmusNot(ulasim.not);
         }
-      });
+    })();
     return () => {
       cancelled = true;
     };
