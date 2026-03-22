@@ -10,7 +10,7 @@ const menuItems = [
   { icon: '📊', label: 'Dashboard', href: '/isletme' },
   { icon: '🏖️', label: 'Şezlong Haritası', href: '/isletme/sezlong' },
   { icon: '📋', label: 'Rezervasyonlar', href: '/isletme/rezervasyonlar' },
-  { icon: '🍽️', label: 'Siparişler', href: '/isletme/siparisler', badge: 5 },
+  { icon: '🍽️', label: 'Siparişler', href: '/isletme/siparisler' },
   { section: 'YÖNETİM' },
   { icon: '🍹', label: 'Menü Yönetimi', href: '/isletme/menu' },
   { icon: '👥', label: 'Personel', href: '/isletme/personel' },
@@ -30,6 +30,7 @@ export default function IsletmeSidebar() {
   const [tesisAdi, setTesisAdi] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [rezBekleyenCount, setRezBekleyenCount] = useState(0);
+  const [siparisYeniCount, setSiparisYeniCount] = useState(0);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [cikisModal,    setCikisModal]    = useState(false);
   const [toast,         setToast]         = useState<string | null>(null);
@@ -58,6 +59,7 @@ export default function IsletmeSidebar() {
         setTesisAdi(null);
         setUserName(authData.user.email ?? authData.user.user_metadata?.name ?? null);
         setRezBekleyenCount(0);
+        setSiparisYeniCount(0);
         return;
       }
 
@@ -71,6 +73,7 @@ export default function IsletmeSidebar() {
       if (!tesisId) {
         setTesisAdi(null);
         setRezBekleyenCount(0);
+        setSiparisYeniCount(0);
         return;
       }
 
@@ -84,6 +87,15 @@ export default function IsletmeSidebar() {
         setTesisAdi((tesis as { ad: string }).ad);
       } else if (!cancelled) {
         setTesisAdi(null);
+      }
+
+      const [{ count: rezCount, error: rezErr }, { count: sipCount, error: sipErr }] = await Promise.all([
+        supabase.from('rezervasyonlar').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
+        supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
+      ]);
+      if (!cancelled) {
+        setRezBekleyenCount(rezErr ? 0 : (rezCount ?? 0));
+        setSiparisYeniCount(sipErr ? 0 : (sipCount ?? 0));
       }
     }
 
@@ -141,7 +153,9 @@ export default function IsletmeSidebar() {
           const badgeToShow =
             item.href === '/isletme/rezervasyonlar'
               ? (rezBekleyenCount > 0 ? rezBekleyenCount : null)
-              : ('badge' in item && item.badge ? item.badge : null);
+              : item.href === '/isletme/siparisler'
+                ? (siparisYeniCount > 0 ? siparisYeniCount : null)
+                : ('badge' in item && item.badge ? item.badge : null);
           return (
             <Link key={i} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', textDecoration: 'none', position: 'relative', background: isActive ? 'rgba(10,186,181,0.15)' : 'transparent', borderLeft: isActive ? '3px solid #0ABAB5' : '3px solid transparent' }}>
               <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '15px', background: isActive ? 'rgba(10,186,181,0.2)' : 'transparent' }}>{item.icon}</div>

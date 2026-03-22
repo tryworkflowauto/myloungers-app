@@ -229,6 +229,7 @@ export default function IsletmeSiparislerPage() {
   const [gecmisList, setGecmisList] = useState<GecmisItem[]>([]);
   const [garsonlarList, setGarsonlarList] = useState<Garson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [gunlukCiroStr, setGunlukCiroStr] = useState("₺0");
 
   const [activeTab, setActiveTab] = useState<"aktif" | "gecmis">("aktif");
   const [toast, setToast] = useState<string | null>(null);
@@ -289,6 +290,7 @@ export default function IsletmeSiparislerPage() {
       setHazirList([]);
       setTeslimList([]);
       setGecmisList([]);
+      setGunlukCiroStr("₺0");
       setLoading(false);
       return;
     }
@@ -314,6 +316,7 @@ export default function IsletmeSiparislerPage() {
           setHazirList([]);
           setTeslimList([]);
           setGecmisList([]);
+          setGunlukCiroStr("₺0");
           setLoading(false);
           return;
         }
@@ -345,6 +348,10 @@ export default function IsletmeSiparislerPage() {
               gecmis.push(mapSiparisToGecmis(s, garsonMap, "#" + String(gecmisNo--).padStart(3, "0")));
             }
           });
+          const ciroTamam = rows
+            .filter((r: any) => r.durum === "teslim_edildi" || r.durum === "tamamlandi")
+            .reduce((acc: number, r: any) => acc + Number(r.toplam ?? 0), 0);
+          setGunlukCiroStr(`₺${ciroTamam.toLocaleString("tr-TR")}`);
           setYeniList(yeni);
           setHazirList(hazir);
           setTeslimList(teslim);
@@ -535,8 +542,8 @@ export default function IsletmeSiparislerPage() {
             { icon: "🆕", val: String(yeniList.length), lbl: "Yeni Sipariş", valColor: YELLOW, iconBg: "#FEF3C7" },
             { icon: "🍳", val: String(hazirList.length), lbl: "Hazırlanıyor", valColor: BLUE, iconBg: "#DBEAFE" },
             { icon: "✅", val: String(gecmisList.filter((g) => g.durum === "teslim").length + teslimList.length), lbl: "Teslim Edildi", valColor: GREEN, iconBg: "#DCFCE7" },
-            { icon: "💰", val: "₺18.4K", lbl: "Günlük Ciro", valColor: ORANGE, iconBg: "#FFEDD5" },
-            { icon: "⏱️", val: "12dk", lbl: "Ort. Teslimat", valColor: "#7C3AED", iconBg: "#F5F3FF" },
+            { icon: "💰", val: gunlukCiroStr, lbl: "Günlük Ciro", valColor: ORANGE, iconBg: "#FFEDD5" },
+            { icon: "⏱️", val: "0 dk", lbl: "Ort. Teslimat", valColor: "#7C3AED", iconBg: "#F5F3FF" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 12, padding: "14px 16px", border: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: s.iconBg }}>{s.icon}</div>
