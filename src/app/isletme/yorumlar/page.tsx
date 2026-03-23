@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 const NAVY   = "#0A1628";
@@ -113,8 +112,21 @@ const INIT_YORUMLAR: Yorum[] = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function IsletmeYorumlarPage() {
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const [tesisId, setTesisId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getTesisId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", user.id)
+        .single();
+      if (data?.tesis_id) setTesisId(data.tesis_id);
+    };
+    getTesisId();
+  }, []);
 
   const [yorumlar,      setYorumlar]      = useState<Yorum[]>(INIT_YORUMLAR);
   const [activeTab,     setActiveTab]     = useState("tum");
