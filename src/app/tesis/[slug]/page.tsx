@@ -56,8 +56,11 @@ export default function TesisDetailPage() {
   const [lbIdx, setLbIdx] = useState(0);
   const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
     about: true, feats: true, plan: true, szl: true,
-    video: true, transport: true, rules: true, reviews: true,
+    video: true, transport: true, rules: true, menu: false, reviews: true,
   });
+  const [menuKategoriler, setMenuKategoriler] = useState<any[]>([]);
+  const [menuUrunler, setMenuUrunler] = useState<any[]>([]);
+  const [aktifMenuKat, setAktifMenuKat] = useState<string>("tumü");
   const [yorumlar, setYorumlar] = useState<any[]>([]);
   const [yorumYukleniyor, setYorumYukleniyor] = useState(false);
   const [yorumForm, setYorumForm] = useState({
@@ -257,6 +260,27 @@ export default function TesisDetailPage() {
       setYorumYukleniyor(false);
     };
     fetchYorumlar();
+  }, [row?.id]);
+
+  useEffect(() => {
+    if (!row?.id) return;
+    const fetchMenu = async () => {
+      const { data: katlar } = await supabase
+        .from("menu_kategorileri")
+        .select("*")
+        .eq("tesis_id", row.id)
+        .eq("aktif", true)
+        .order("sira", { ascending: true });
+      const { data: urunler } = await supabase
+        .from("menu_urunleri")
+        .select("*")
+        .eq("tesis_id", row.id)
+        .eq("aktif", true)
+        .order("sira", { ascending: true });
+      if (katlar) setMenuKategoriler(katlar);
+      if (urunler) setMenuUrunler(urunler);
+    };
+    fetchMenu();
   }, [row?.id]);
 
   const handleYorumGonder = async () => {
@@ -1383,6 +1407,71 @@ export default function TesisDetailPage() {
                 </div>
               </div>}
             </div>
+
+            {menuKategoriler.length > 0 && (
+              <div className="panel">
+                <div className="ph" onClick={() => togglePanel("menu")}>
+                  <div className="ph-l">
+                    <span className="ph-ic">🍽️</span>
+                    <div>
+                      <div className="ph-title">Menü</div>
+                      <div className="ph-sub">{menuUrunler.length} ürün · {menuKategoriler.length} kategori</div>
+                    </div>
+                  </div>
+                  <svg className={`ch${openPanels.menu ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+                {openPanels.menu && (
+                  <div className="pb" style={{ padding: 20 }}>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => setAktifMenuKat("tumü")}
+                        style={{ padding: "6px 14px", borderRadius: 20, border: "none", background: aktifMenuKat === "tumü" ? "#0ea5e9" : "#f1f5f9", color: aktifMenuKat === "tumü" ? "#fff" : "#374151", fontWeight: 600, cursor: "pointer", fontSize: ".8rem" }}
+                      >
+                        Tümü
+                      </button>
+                      {menuKategoriler.map((kat) => (
+                        <button
+                          key={kat.id}
+                          onClick={() => setAktifMenuKat(kat.id)}
+                          style={{ padding: "6px 14px", borderRadius: 20, border: "none", background: aktifMenuKat === kat.id ? "#0ea5e9" : "#f1f5f9", color: aktifMenuKat === kat.id ? "#fff" : "#374151", fontWeight: 600, cursor: "pointer", fontSize: ".8rem" }}
+                        >
+                          {kat.icon} {kat.ad}
+                        </button>
+                      ))}
+                    </div>
+                    {(aktifMenuKat === "tumü" ? menuKategoriler : menuKategoriler.filter((k) => k.id === aktifMenuKat)).map((kat) => {
+                      const katUrunler = menuUrunler.filter((u) => u.kategori_id === kat.id);
+                      if (katUrunler.length === 0) return null;
+                      return (
+                        <div key={kat.id} style={{ marginBottom: 20 }}>
+                          <div style={{ fontWeight: 700, fontSize: ".9rem", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 6 }}>
+                            <span>{kat.icon}</span><span>{kat.ad}</span>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {katUrunler.map((urun) => (
+                              <div key={urun.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                                {urun.fotograflar?.[0] ? (
+                                  <img src={urun.fotograflar[0]} alt={urun.ad} style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover" }} />
+                                ) : (
+                                  <div style={{ width: 52, height: 52, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{urun.icon || "🍽️"}</div>
+                                )}
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 600, fontSize: ".85rem" }}>{urun.ad}</div>
+                                  {urun.aciklama && <div style={{ fontSize: ".75rem", color: "#6b7280", marginTop: 2 }}>{urun.aciklama}</div>}
+                                </div>
+                                <div style={{ fontWeight: 700, color: "#0ea5e9", fontSize: ".9rem", whiteSpace: "nowrap" }}>₺{urun.fiyat}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* YORUMLAR */}
             <div className="panel">
