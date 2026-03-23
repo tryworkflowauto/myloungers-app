@@ -18,7 +18,7 @@ const menuItems = [
   { icon: '📅', label: 'Sezon & Fiyatlar', href: '/isletme/sezon' },
   { section: 'TESİS' },
   { icon: '🏨', label: 'Tesis Bilgileri', href: '/isletme/tesis' },
-  { icon: '⭐', label: 'Yorumlar', href: '/isletme/yorumlar', badge: 3 },
+  { icon: '⭐', label: 'Yorumlar', href: '/isletme/yorumlar' },
 ];
 
 export default function IsletmeSidebar() {
@@ -31,6 +31,7 @@ export default function IsletmeSidebar() {
   const [userName, setUserName] = useState<string | null>(null);
   const [rezBekleyenCount, setRezBekleyenCount] = useState(0);
   const [siparisYeniCount, setSiparisYeniCount] = useState(0);
+  const [bekleyenYorumSayisi, setBekleyenYorumSayisi] = useState(0);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [cikisModal,    setCikisModal]    = useState(false);
   const [toast,         setToast]         = useState<string | null>(null);
@@ -44,6 +45,7 @@ export default function IsletmeSidebar() {
       if (authError || !authData?.user || cancelled) {
         setTesisAdi(null);
         setUserName(null);
+        setBekleyenYorumSayisi(0);
         return;
       }
 
@@ -60,6 +62,7 @@ export default function IsletmeSidebar() {
         setUserName(authData.user.email ?? authData.user.user_metadata?.name ?? null);
         setRezBekleyenCount(0);
         setSiparisYeniCount(0);
+        setBekleyenYorumSayisi(0);
         return;
       }
 
@@ -74,6 +77,7 @@ export default function IsletmeSidebar() {
         setTesisAdi(null);
         setRezBekleyenCount(0);
         setSiparisYeniCount(0);
+        setBekleyenYorumSayisi(0);
         return;
       }
 
@@ -89,13 +93,15 @@ export default function IsletmeSidebar() {
         setTesisAdi(null);
       }
 
-      const [{ count: rezCount, error: rezErr }, { count: sipCount, error: sipErr }] = await Promise.all([
+      const [{ count: rezCount, error: rezErr }, { count: sipCount, error: sipErr }, { count: yorumCount, error: yorumErr }] = await Promise.all([
         supabase.from('rezervasyonlar').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
         supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
+        supabase.from('yorumlar').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
       ]);
       if (!cancelled) {
         setRezBekleyenCount(rezErr ? 0 : (rezCount ?? 0));
         setSiparisYeniCount(sipErr ? 0 : (sipCount ?? 0));
+        setBekleyenYorumSayisi(yorumErr ? 0 : (yorumCount ?? 0));
       }
     }
 
@@ -155,6 +161,8 @@ export default function IsletmeSidebar() {
               ? (rezBekleyenCount > 0 ? rezBekleyenCount : null)
               : item.href === '/isletme/siparisler'
                 ? (siparisYeniCount > 0 ? siparisYeniCount : null)
+                : item.href === '/isletme/yorumlar'
+                  ? (bekleyenYorumSayisi > 0 ? bekleyenYorumSayisi : null)
                 : ('badge' in item && item.badge ? item.badge : null);
           return (
             <Link key={i} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', textDecoration: 'none', position: 'relative', background: isActive ? 'rgba(10,186,181,0.15)' : 'transparent', borderLeft: isActive ? '3px solid #0ABAB5' : '3px solid transparent' }}>
