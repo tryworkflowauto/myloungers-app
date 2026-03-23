@@ -74,9 +74,31 @@ export default function AdminYorumlarPage() {
   });
 
   const handleSil = async (id: string) => {
+    const silinen = yorumlar.find(y => y.id === id);
     const { error } = await supabase.from("yorumlar").delete().eq("id", id);
     if (!error) {
       setYorumlar(prev => prev.filter(y => y.id !== id));
+      // Tesis puanını güncelle
+      if (silinen) {
+        const { data: kalanYorumlar } = await supabase
+          .from("yorumlar")
+          .select("puan")
+          .eq("tesis_id", silinen.tesis_id)
+          .eq("durum", "onaylı");
+
+        if (kalanYorumlar && kalanYorumlar.length > 0) {
+          const ort = kalanYorumlar.reduce((acc: number, y: any) => acc + (y.puan || 0), 0) / kalanYorumlar.length;
+          await supabase
+            .from("tesisler")
+            .update({ puan: Math.round(ort * 10) / 10, yorum_sayisi: kalanYorumlar.length })
+            .eq("id", silinen.tesis_id);
+        } else {
+          await supabase
+            .from("tesisler")
+            .update({ puan: 0, yorum_sayisi: 0 })
+            .eq("id", silinen.tesis_id);
+        }
+      }
       showToast("Yorum silindi");
     }
   };
