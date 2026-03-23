@@ -58,6 +58,19 @@ export default function TesisDetailPage() {
     about: true, feats: true, plan: true, szl: true,
     video: true, transport: true, rules: true, reviews: true,
   });
+  const [yorumlar, setYorumlar] = useState<any[]>([]);
+  const [yorumYukleniyor, setYorumYukleniyor] = useState(false);
+  const [yorumForm, setYorumForm] = useState({
+    yorum: "",
+    puan: 0,
+    konum_puan: 0,
+    temizlik_puan: 0,
+    hizmet_puan: 0,
+    fiyat_puan: 0,
+  });
+  const [yorumGonderiliyor, setYorumGonderiliyor] = useState(false);
+  const [yorumHata, setYorumHata] = useState("");
+  const [yorumBasarili, setYorumBasarili] = useState(false);
   const [calDt, setCalDt] = useState(new Date());
   const [selStart, setSelStart] = useState<Date | null>(null);
   const [selEnd, setSelEnd] = useState<Date | null>(null);
@@ -219,6 +232,48 @@ export default function TesisDetailPage() {
       cancelled = true;
     };
   }, [row?.id]);
+
+  useEffect(() => {
+    if (!row?.id) return;
+    const fetchYorumlar = async () => {
+      setYorumYukleniyor(true);
+      const { data, error } = await supabase
+        .from("yorumlar")
+        .select("*")
+        .eq("tesis_id", row.id)
+        .eq("durum", "onaylı")
+        .order("created_at", { ascending: false });
+      if (!error && data) setYorumlar(data);
+      setYorumYukleniyor(false);
+    };
+    fetchYorumlar();
+  }, [row?.id]);
+
+  const handleYorumGonder = async () => {
+    setYorumHata("");
+    setYorumBasarili(false);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setYorumHata("Yorum yapmak için giriş yapmalısınız."); return; }
+    if (!yorumForm.yorum.trim()) { setYorumHata("Lütfen yorum yazınız."); return; }
+    if (yorumForm.puan === 0) { setYorumHata("Lütfen genel puan veriniz."); return; }
+    setYorumGonderiliyor(true);
+    const { error } = await supabase.from("yorumlar").insert({
+      tesis_id: row.id,
+      kullanici_id: user.id,
+      yorum: yorumForm.yorum.trim(),
+      puan: yorumForm.puan,
+      konum_puan: yorumForm.konum_puan || yorumForm.puan,
+      temizlik_puan: yorumForm.temizlik_puan || yorumForm.puan,
+      hizmet_puan: yorumForm.hizmet_puan || yorumForm.puan,
+      fiyat_puan: yorumForm.fiyat_puan || yorumForm.puan,
+      durum: "bekliyor",
+      dogrulanmis: false,
+    });
+    setYorumGonderiliyor(false);
+    if (error) { setYorumHata("Yorum gönderilemedi: " + error.message); return; }
+    setYorumBasarili(true);
+    setYorumForm({ yorum: "", puan: 0, konum_puan: 0, temizlik_puan: 0, hizmet_puan: 0, fiyat_puan: 0 });
+  };
 
   // Mock müsaitlik üret
   useEffect(() => {
@@ -1361,6 +1416,81 @@ export default function TesisDetailPage() {
                       )}
                     </div>
                   </div>
+                  {/* YORUM FORMU */}
+                  <div style={{ marginBottom: 24, padding: 16, background: "var(--bg2, #f8f9fa)", borderRadius: 12, border: "1px solid var(--border, #e5e7eb)" }}>
+                    <div style={{ fontWeight: 600, marginBottom: 12 }}>Yorum Yaz</div>
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: ".8rem", color: "var(--i3)", marginBottom: 4 }}>Genel Puan *</div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {[1,2,3,4,5].map(s => (
+                          <span
+                            key={s}
+                            onClick={() => setYorumForm(f => ({ ...f, puan: s }))}
+                            style={{ fontSize: 24, cursor: "pointer", color: s <= yorumForm.puan ? "#f59e0b" : "#d1d5db" }}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                      {[["konum_puan","Konum"],["temizlik_puan","Temizlik"],["hizmet_puan","Hizmet"],["fiyat_puan","Fiyat/Değer"]].map(([key, label]) => (
+                        <div key={key}>
+                          <div style={{ fontSize: ".75rem", color: "var(--i3)", marginBottom: 2 }}>{label}</div>
+                          <div style={{ display: "flex", gap: 2 }}>
+                            {[1,2,3,4,5].map(s => (
+                              <span
+                                key={s}
+                                onClick={() => setYorumForm(f => ({ ...f, [key]: s }))}
+                                style={{ fontSize: 16, cursor: "pointer", color: s <= (yorumForm as any)[key] ? "#f59e0b" : "#d1d5db" }}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <textarea
+                      value={yorumForm.yorum}
+                      onChange={e => setYorumForm(f => ({ ...f, yorum: e.target.value }))}
+                      placeholder="Deneyiminizi paylaşın..."
+                      rows={3}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border, #e5e7eb)", fontSize: ".85rem", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                    />
+                    {yorumHata && <p style={{ color: "#ef4444", fontSize: ".8rem", marginTop: 4 }}>{yorumHata}</p>}
+                    {yorumBasarili && <p style={{ color: "#22c55e", fontSize: ".8rem", marginTop: 4 }}>Yorumunuz alındı, onay bekliyor.</p>}
+                    <button
+                      onClick={handleYorumGonder}
+                      disabled={yorumGonderiliyor}
+                      style={{ marginTop: 10, padding: "8px 20px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: ".85rem" }}
+                    >
+                      {yorumGonderiliyor ? "Gönderiliyor..." : "Yorum Gönder"}
+                    </button>
+                  </div>
+
+                  {/* MEVCUT YORUMLAR */}
+                  {yorumYukleniyor ? (
+                    <p style={{ fontSize: ".8rem", color: "var(--i3)" }}>Yorumlar yükleniyor...</p>
+                  ) : yorumlar.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {yorumlar.map(y => (
+                        <div key={y.id} style={{ padding: 12, background: "var(--bg2, #f8f9fa)", borderRadius: 10, border: "1px solid var(--border, #e5e7eb)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontWeight: 600, fontSize: ".85rem" }}>{y.musteri_adi || "Misafir"}</span>
+                            <span style={{ color: "#f59e0b", fontSize: ".85rem" }}>{"★".repeat(y.puan || 0)}</span>
+                          </div>
+                          <p style={{ fontSize: ".8rem", color: "var(--i2)", margin: 0 }}>{y.yorum}</p>
+                          {y.isleme_yaniti && (
+                            <div style={{ marginTop: 8, padding: "8px 10px", background: "#eff6ff", borderRadius: 8, fontSize: ".78rem", color: "#1d4ed8" }}>
+                              <strong>İşletme yanıtı:</strong> {y.isleme_yaniti}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
                   <p
                     style={{
                       fontSize: ".8rem",
