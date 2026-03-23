@@ -275,8 +275,7 @@ export default function TesisDetailPage() {
         .from("menu_urunleri")
         .select("*")
         .eq("tesis_id", row.id)
-        .eq("aktif", true)
-        .order("sira", { ascending: true });
+        .eq("aktif", true);
       if (katlar) setMenuKategoriler(katlar);
       if (urunler) setMenuUrunler(urunler);
     };
