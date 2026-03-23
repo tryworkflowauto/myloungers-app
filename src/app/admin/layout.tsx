@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminToastProvider } from "./AdminToastContext";
+import { supabase } from "@/lib/supabase";
 
 // CSV export helper (komisyon summary)
 function komisyonCsvIndir() {
@@ -40,14 +41,18 @@ const NAV_ITEMS = [
   { href: "/admin/kullanicilar",  label: "Kullanıcılar",      icon: "👤"                                 },
   { href: "/admin/komisyon",      label: "Komisyon Takibi",   icon: "💰", activePath: "/admin/komisyon"  },
   { href: "/admin/abonelikler",   label: "Abonelikler",       icon: "📄"                                 },
-  { href: "/admin/yorumlar",      label: "Yorum Yönetimi",    icon: "⭐", badge: 3, badgeColor: RED      },
+  { href: "/admin/yorumlar",      label: "Yorum Yönetimi",    icon: "⭐", badgeColor: RED                },
   { href: "/admin/sikayetler",    label: "Şikayetler",        icon: "🚨", badge: 1, badgeColor: RED      },
   { href: "/admin/ayarlar",       label: "Platform Ayarları", icon: "⚙️"                                 },
 ];
 
-function NavLink({ item }: { item: (typeof NAV_ITEMS)[0] }) {
+function NavLink({ item, bekleyenYorumSayisi }: { item: (typeof NAV_ITEMS)[0]; bekleyenYorumSayisi: number }) {
   const pathname = usePathname();
   const isActive = item.activePath ? pathname === item.activePath : pathname.startsWith(item.href) && (item.href === "/admin" ? pathname === "/admin" : true);
+  const badgeToShow =
+    item.href === "/admin/yorumlar"
+      ? (bekleyenYorumSayisi > 0 ? bekleyenYorumSayisi : null)
+      : item.badge;
 
   return (
     <Link
@@ -63,17 +68,29 @@ function NavLink({ item }: { item: (typeof NAV_ITEMS)[0] }) {
     >
       <div style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, fontSize: 14, background: isActive ? "rgba(245,130,31,0.2)" : "transparent" }}>{item.icon}</div>
       <span style={{ fontSize: 13, color: isActive ? ORANGE : "#CBD5E1", fontWeight: isActive ? 600 : 500 }}>{item.label}</span>
-      {item.badge && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10, background: item.badgeColor, color: "white" }}>{item.badge}</span>}
+      {badgeToShow && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10, background: item.badgeColor, color: "white" }}>{badgeToShow}</span>}
     </Link>
   );
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [bekleyenYorumSayisi, setBekleyenYorumSayisi] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; color: string } | null>(null);
   const [sifre, setSifre] = useState("MyL2026beach");
   const [komisyonSec, setKomisyonSec] = useState("%15 Standart");
   const [ozelKomisyon, setOzelKomisyon] = useState("");
+
+  useEffect(() => {
+    const fetchBekleyenYorumlar = async () => {
+      const { count } = await supabase
+        .from("yorumlar")
+        .select("*", { count: "exact", head: true })
+        .eq("durum", "bekliyor");
+      setBekleyenYorumSayisi(count || 0);
+    };
+    fetchBekleyenYorumlar();
+  }, []);
 
   const showToast = useCallback((msg: string, color: string = GREEN) => {
     setToast({ msg, color });
@@ -103,13 +120,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{ margin: "10px 16px", background: "rgba(245,130,31,0.15)", border: "1px solid rgba(245,130,31,0.3)", borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 700, color: ORANGE }}>🔐 Platform Yöneticisi</div>
         <nav style={{ padding: "4px 0", flex: 1 }}>
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Platform</div>
-          {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} />)}
+          {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Finans</div>
-          {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} />)}
+          {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Moderasyon</div>
-          {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} />)}
+          {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Sistem</div>
-          <NavLink item={NAV_ITEMS[7]} />
+          <NavLink item={NAV_ITEMS[7]} bekleyenYorumSayisi={bekleyenYorumSayisi} />
         </nav>
         <div style={{ padding: 14, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
