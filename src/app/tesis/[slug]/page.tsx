@@ -71,6 +71,7 @@ export default function TesisDetailPage() {
   const [yorumGonderiliyor, setYorumGonderiliyor] = useState(false);
   const [yorumHata, setYorumHata] = useState("");
   const [yorumBasarili, setYorumBasarili] = useState(false);
+  const [altPuanlar, setAltPuanlar] = useState({ konum: 0, temizlik: 0, hizmet: 0, fiyat: 0, genel: 0 });
   const [calDt, setCalDt] = useState(new Date());
   const [selStart, setSelStart] = useState<Date | null>(null);
   const [selEnd, setSelEnd] = useState<Date | null>(null);
@@ -243,6 +244,15 @@ export default function TesisDetailPage() {
         .eq("tesis_id", row.id)
         .eq("durum", "onaylı")
         .order("created_at", { ascending: false });
+      // Alt kategori ortalamalarını hesapla
+      if (data && data.length > 0) {
+        const konumOrt = data.reduce((acc: number, y: any) => acc + (y.konum_puan || 0), 0) / data.length;
+        const temizlikOrt = data.reduce((acc: number, y: any) => acc + (y.temizlik_puan || 0), 0) / data.length;
+        const hizmetOrt = data.reduce((acc: number, y: any) => acc + (y.hizmet_puan || 0), 0) / data.length;
+        const fiyatOrt = data.reduce((acc: number, y: any) => acc + (y.fiyat_puan || 0), 0) / data.length;
+        const genelOrt = data.reduce((acc: number, y: any) => acc + (y.puan || 0), 0) / data.length;
+        setAltPuanlar({ konum: konumOrt, temizlik: temizlikOrt, hizmet: hizmetOrt, fiyat: fiyatOrt, genel: genelOrt });
+      }
       if (!error && data) setYorumlar(data);
       setYorumYukleniyor(false);
     };
@@ -1427,10 +1437,10 @@ export default function TesisDetailPage() {
                             <div className="score-bar-bg">
                               <div
                                 className="score-bar-fill"
-                                style={{ width: "0%" }}
+                                style={{ width: `${(label === "Konum" ? altPuanlar.konum : label === "Temizlik" ? altPuanlar.temizlik : label === "Hizmet" ? altPuanlar.hizmet : altPuanlar.fiyat) / 5 * 100}%` }}
                               />
                             </div>
-                            <span>0.0</span>
+                            <span>{(label === "Konum" ? altPuanlar.konum : label === "Temizlik" ? altPuanlar.temizlik : label === "Hizmet" ? altPuanlar.hizmet : altPuanlar.fiyat).toFixed(1)}</span>
                           </div>
                         )
                       )}
