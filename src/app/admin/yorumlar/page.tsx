@@ -1,24 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdminToast } from "../AdminToastContext";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628"; const TEAL = "#0ABAB5";
 const GRAY50 = "#F8FAFC"; const GRAY100 = "#F1F5F9"; const GRAY200 = "#E2E8F0";
 const GRAY400 = "#94A3B8"; const GRAY600 = "#475569"; const GRAY800 = "#1E293B";
 const GREEN = "#10B981"; const RED = "#EF4444"; const ORANGE = "#F5821F";
 
-type Yorum = { id: number; tesis: string; musteri: string; puan: number; tarih: string; metin: string; sikayet: boolean; };
-
-const INIT: Yorum[] = [
-  { id: 1, tesis: "Zuzuu Beach Hotel",  musteri: "Emre K.",  puan: 9, tarih: "8 Mar 2026",  metin: "Harika bir deneyimdi, şezlonglar çok temizdi.", sikayet: false },
-  { id: 2, tesis: "Palmiye Beach Club", musteri: "Selin Ç.", puan: 7, tarih: "7 Mar 2026",  metin: "Genel olarak iyiydi, personel güler yüzlüydü.", sikayet: false },
-  { id: 3, tesis: "Zuzuu Beach Hotel",  musteri: "Mert Ö.",  puan: 3, tarih: "6 Mar 2026",  metin: "Beklentimin altındaydı, fiyatlar çok yüksek.", sikayet: true },
-  { id: 4, tesis: "Poseidon Lux",       musteri: "Elif Ş.", puan: 10, tarih: "5 Mar 2026", metin: "Mükemmel, kesinlikle tekrar geleceğim!", sikayet: false },
-  { id: 5, tesis: "Olimpia Beach",      musteri: "Deniz A.", puan: 6, tarih: "4 Mar 2026",  metin: "Fena değil ama biraz gürültülüydü.", sikayet: false },
-  { id: 6, tesis: "Palmiye Beach Club", musteri: "Kaan B.",  puan: 2, tarih: "3 Mar 2026",  metin: "Berbat! Rezervasyon iptal edildi son dakikada.", sikayet: true },
-  { id: 7, tesis: "Zuzuu Beach Hotel",  musteri: "Ayşe T.",  puan: 8, tarih: "2 Mar 2026",  metin: "Çok keyifli bir gündü, tavsiye ederim.", sikayet: false },
-];
+type Yorum = {
+  id: string;
+  tesis: string;
+  tesis_id: string;
+  musteri: string;
+  puan: number;
+  tarih: string;
+  metin: string;
+  durum: string;
+  sikayet: boolean;
+};
 
 function Stars({ puan }: { puan: number }) {
   return (
@@ -30,13 +31,40 @@ function Stars({ puan }: { puan: number }) {
 
 export default function AdminYorumlarPage() {
   const { showToast } = useAdminToast();
-  const [yorumlar, setYorumlar] = useState<Yorum[]>(INIT);
+  const [yorumlar, setYorumlar] = useState<Yorum[]>([]);
+  const [yukleniyor, setYukleniyor] = useState(true);
   const [silModal, setSilModal] = useState<Yorum | null>(null);
   const [ara, setAra] = useState("");
   const [filtreTesis, setFiltreTesis] = useState("tumu");
   const [filtrePuan, setFiltrePuan] = useState("tumu");
 
-  const tesisler = Array.from(new Set(INIT.map(y => y.tesis)));
+  useEffect(() => {
+    const fetchYorumlar = async () => {
+      setYukleniyor(true);
+      const { data, error } = await supabase
+        .from("yorumlar")
+        .select("id, tesis_id, musteri_adi, puan, created_at, yorum, durum, tesisler(ad)")
+        .order("created_at", { ascending: false });
+      if (!error && data) {
+        const mapped: Yorum[] = data.map((r: any) => ({
+          id: r.id,
+          tesis_id: r.tesis_id,
+          tesis: r.tesisler?.ad || "Bilinmiyor",
+          musteri: r.musteri_adi || "Misafir",
+          puan: r.puan || 0,
+          tarih: new Date(r.created_at).toLocaleDateString("tr-TR"),
+          metin: r.yorum || "",
+          durum: r.durum || "bekliyor",
+          sikayet: r.durum === "sikayet",
+        }));
+        setYorumlar(mapped);
+      }
+      setYukleniyor(false);
+    };
+    fetchYorumlar();
+  }, []);
+
+  const tesisler = Array.from(new Set(yorumlar.map(y => y.tesis)));
 
   const liste = yorumlar.filter(y => {
     const araOk = !ara || y.musteri.toLowerCase().includes(ara.toLowerCase()) || y.metin.toLowerCase().includes(ara.toLowerCase());
@@ -45,10 +73,37 @@ export default function AdminYorumlarPage() {
     return araOk && tesisOk && puanOk;
   });
 
-  function yorumSil(y: Yorum) {
-    setYorumlar(p => p.filter(x => x.id !== y.id));
-    setSilModal(null); showToast("🗑️ Yorum silindi", RED);
-  }
+  const handleSil = async (id: string) => {
+    const { error } = await supabase.from("yorumlar").delete().eq("id", id);
+    if (!error) {
+      setYorumlar(prev => prev.filter(y => y.id !== id));
+      showToast("Yorum silindi");
+    }
+  };
+
+  const handleOnayla = async (id: string, tesis_id: string) => {
+    const { error } = await supabase
+      .from("yorumlar")
+      .update({ durum: "onaylı" })
+      .eq("id", id);
+    if (!error) {
+      setYorumlar(prev => prev.map(y => y.id === id ? { ...y, durum: "onaylı" } : y));
+      // Tesis puanını güncelle
+      const { data: tumYorumlar } = await supabase
+        .from("yorumlar")
+        .select("puan")
+        .eq("tesis_id", tesis_id)
+        .eq("durum", "onaylı");
+      if (tumYorumlar && tumYorumlar.length > 0) {
+        const ort = tumYorumlar.reduce((acc, y) => acc + (y.puan || 0), 0) / tumYorumlar.length;
+        await supabase
+          .from("tesisler")
+          .update({ puan: Math.round(ort * 10) / 10, yorum_sayisi: tumYorumlar.length })
+          .eq("id", tesis_id);
+      }
+      showToast("Yorum onaylandı");
+    }
+  };
 
   const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" };
   const selStyle: React.CSSProperties = { padding: "8px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 12, background: "white", cursor: "pointer" };
@@ -73,6 +128,7 @@ export default function AdminYorumlarPage() {
       </div>
 
       <div style={{ fontSize: 11, color: GRAY400, marginBottom: 10 }}>{liste.length} yorum — {liste.filter(y => y.sikayet).length} şikayet</div>
+      {yukleniyor && <p style={{ padding: 20, color: "#888" }}>Yükleniyor...</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {liste.length === 0 && (
@@ -90,7 +146,17 @@ export default function AdminYorumlarPage() {
               </div>
               <p style={{ fontSize: 12, color: GRAY600, margin: 0, lineHeight: 1.5 }}>&ldquo;{y.metin}&rdquo;</p>
             </div>
-            <button onClick={() => setSilModal(y)} style={{ flexShrink: 0, padding: "5px 11px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid #FECACA`, background: "#FEF2F2", color: RED, cursor: "pointer" }}>🗑️ Sil</button>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              {y.durum === "bekliyor" && (
+                <button
+                  onClick={() => handleOnayla(y.id, y.tesis_id)}
+                  style={{ marginRight: 8, padding: "4px 12px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, fontWeight: 600, cursor: "pointer", fontSize: ".8rem" }}
+                >
+                  ✓ Onayla
+                </button>
+              )}
+              <button onClick={() => setSilModal(y)} style={{ flexShrink: 0, padding: "5px 11px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid #FECACA`, background: "#FEF2F2", color: RED, cursor: "pointer" }}>🗑️ Sil</button>
+            </div>
           </div>
         ))}
       </div>
@@ -107,7 +173,15 @@ export default function AdminYorumlarPage() {
             <p style={{ fontSize: 12, color: GRAY600, marginBottom: 16, textAlign: "center" }}>Bu yorumu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setSilModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
-              <button onClick={() => yorumSil(silModal)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️ Evet, Sil</button>
+              <button
+                onClick={async () => {
+                  await handleSil(silModal.id);
+                  setSilModal(null);
+                }}
+                style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "none", background: RED, color: "white", cursor: "pointer" }}
+              >
+                🗑️ Evet, Sil
+              </button>
             </div>
           </div>
         </div>
