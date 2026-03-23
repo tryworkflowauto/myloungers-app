@@ -256,10 +256,17 @@ export default function TesisDetailPage() {
     if (!user) { setYorumHata("Yorum yapmak için giriş yapmalısınız."); return; }
     if (!yorumForm.yorum.trim()) { setYorumHata("Lütfen yorum yazınız."); return; }
     if (yorumForm.puan === 0) { setYorumHata("Lütfen genel puan veriniz."); return; }
+    const { data: kullanici } = await supabase
+      .from("kullanicilar")
+      .select("ad, soyad")
+      .eq("id", user.id)
+      .single();
+    const musteriAdi = kullanici ? `${kullanici.ad || ""} ${kullanici.soyad || ""}`.trim() : "Misafir";
     setYorumGonderiliyor(true);
     const { error } = await supabase.from("yorumlar").insert({
       tesis_id: row?.id,
       kullanici_id: user.id,
+      musteri_adi: musteriAdi,
       yorum: yorumForm.yorum.trim(),
       puan: yorumForm.puan,
       konum_puan: yorumForm.konum_puan || yorumForm.puan,
@@ -271,6 +278,19 @@ export default function TesisDetailPage() {
     });
     setYorumGonderiliyor(false);
     if (error) { setYorumHata("Yorum gönderilemedi: " + error.message); return; }
+    const { data: tumYorumlar } = await supabase
+      .from("yorumlar")
+      .select("puan")
+      .eq("tesis_id", row?.id)
+      .eq("durum", "onaylı");
+
+    if (tumYorumlar && tumYorumlar.length > 0) {
+      const ortalama = tumYorumlar.reduce((acc, y) => acc + (y.puan || 0), 0) / tumYorumlar.length;
+      await supabase
+        .from("tesisler")
+        .update({ puan: Math.round(ortalama * 10) / 10, yorum_sayisi: tumYorumlar.length })
+        .eq("id", row?.id);
+    }
     setYorumBasarili(true);
     setYorumForm({ yorum: "", puan: 0, konum_puan: 0, temizlik_puan: 0, hizmet_puan: 0, fiyat_puan: 0 });
   };
