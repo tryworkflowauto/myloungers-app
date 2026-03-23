@@ -156,14 +156,14 @@ export default function IsletmeSidebar() {
             <div key={i} style={{ padding: '16px 16px 6px', fontSize: '9px', fontWeight: 700, color: '#94A3B8', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{item.section}</div>
           );
           const isActive = pathname === item.href;
-          const badgeToShow =
+          const badgeToShow: number | null =
             item.href === '/isletme/rezervasyonlar'
               ? (rezBekleyenCount > 0 ? rezBekleyenCount : null)
               : item.href === '/isletme/siparisler'
                 ? (siparisYeniCount > 0 ? siparisYeniCount : null)
                 : item.href === '/isletme/yorumlar'
                   ? (bekleyenYorumSayisi > 0 ? bekleyenYorumSayisi : null)
-                : ('badge' in item && item.badge ? item.badge : null);
+                : ('badge' in item && typeof item.badge === 'number' && item.badge > 0 ? item.badge : null);
           return (
             <Link key={i} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', textDecoration: 'none', position: 'relative', background: isActive ? 'rgba(10,186,181,0.15)' : 'transparent', borderLeft: isActive ? '3px solid #0ABAB5' : '3px solid transparent' }}>
               <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '15px', background: isActive ? 'rgba(10,186,181,0.2)' : 'transparent' }}>{item.icon}</div>
