@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -119,8 +118,7 @@ function ProductCard({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function IsletmeMenuPage() {
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [urunler, setUrunler] = useState<Urun[]>([]);
   const [kategoriler, setKategoriler] = useState<KategoriItem[]>([]);
@@ -130,6 +128,20 @@ export default function IsletmeMenuPage() {
   const [aramaMetni, setAramaMetni] = useState("");
   const [filtreDurum, setFiltreDurum] = useState("");
   const [siralama, setSiralama] = useState("default");
+
+  useEffect(() => {
+    const getTesisId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", user.id)
+        .single();
+      if (data?.tesis_id) setTesisId(data.tesis_id);
+    };
+    getTesisId();
+  }, []);
 
   // Modals
   const [urunModalOpen, setUrunModalOpen] = useState(false);
