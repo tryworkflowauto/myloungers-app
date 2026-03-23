@@ -258,7 +258,7 @@ export default function TesisDetailPage() {
     if (yorumForm.puan === 0) { setYorumHata("Lütfen genel puan veriniz."); return; }
     setYorumGonderiliyor(true);
     const { error } = await supabase.from("yorumlar").insert({
-      tesis_id: row.id,
+      tesis_id: row?.id,
       kullanici_id: user.id,
       yorum: yorumForm.yorum.trim(),
       puan: yorumForm.puan,
