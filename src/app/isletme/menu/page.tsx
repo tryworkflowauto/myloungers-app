@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -435,6 +436,24 @@ export default function IsletmeMenuPage() {
 
   const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" };
   const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 };
+  const siralanabilirKategoriler = kategoriler.filter((k) => k.id !== "tumu");
+
+  const handleKategoriSirala = async (result: DropResult) => {
+    if (!result.destination) return;
+    const items = Array.from(siralanabilirKategoriler);
+    const [removed] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, removed);
+    setKategoriler((prev) => {
+      const tumu = prev.find((k) => k.id === "tumu");
+      return tumu ? [tumu, ...items] : items;
+    });
+    for (let i = 0; i < items.length; i++) {
+      await supabase
+        .from("menu_kategorileri")
+        .update({ sira: i + 1 })
+        .eq("id", items[i].id);
+    }
+  };
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800, display: "flex", flexDirection: "column", minHeight: "100%" }}>
@@ -469,29 +488,66 @@ export default function IsletmeMenuPage() {
         <div style={{ width: 220, background: "white", borderRight: `1px solid ${GRAY200}`, overflowY: "auto", flexShrink: 0, padding: 16 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Kategoriler</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 16 }}>
-            {kategoriler.map((k) => (
-              <div
-                key={k.id}
-                onMouseEnter={() => setHoveredCatId(k.id)}
-                onMouseLeave={() => setHoveredCatId(null)}
-                onClick={() => setSeciliKat(k.id)}
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, cursor: "pointer", transition: "all 0.15s", background: seciliKat === k.id ? "rgba(10,186,181,0.1)" : "transparent", border: seciliKat === k.id ? "1.5px solid rgba(10,186,181,0.3)" : "1.5px solid transparent" }}
-              >
-                <div style={{ fontSize: 18, width: 28, textAlign: "center" }}>{k.icon}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: NAVY }}>{k.name}</strong>
-                  <span style={{ fontSize: 10, color: GRAY400 }}>{katCounts[k.id] ?? 0} ürün</span>
-                </div>
-                {k.id !== "tumu" && hoveredCatId === k.id ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                    <button type="button" title="Düzenle" onClick={() => { setCatForm({ name: k.name, icon: k.icon }); setEditCatModal(k); }} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: GRAY100, color: GRAY800, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✏️</button>
-                    <button type="button" title="Sil" onClick={() => deleteKategori(k)} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#FEE2E2", color: RED, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
+            {kategoriler
+              .filter((k) => k.id === "tumu")
+              .map((k) => (
+                <div
+                  key={k.id}
+                  onMouseEnter={() => setHoveredCatId(k.id)}
+                  onMouseLeave={() => setHoveredCatId(null)}
+                  onClick={() => setSeciliKat(k.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, cursor: "pointer", transition: "all 0.15s", background: seciliKat === k.id ? "rgba(10,186,181,0.1)" : "transparent", border: seciliKat === k.id ? "1.5px solid rgba(10,186,181,0.3)" : "1.5px solid transparent" }}
+                >
+                  <div style={{ fontSize: 18, width: 28, textAlign: "center" }}>{k.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: NAVY }}>{k.name}</strong>
+                    <span style={{ fontSize: 10, color: GRAY400 }}>{katCounts[k.id] ?? 0} ürün</span>
                   </div>
-                ) : (
                   <span style={{ fontSize: 11, fontWeight: 700, color: TEAL }}>{katCounts[k.id] ?? 0}</span>
+                </div>
+              ))}
+            <DragDropContext onDragEnd={handleKategoriSirala}>
+              <Droppable droppableId="kategoriler">
+                {(provided) => (
+                  <div ref={provided.innerRef} {...provided.droppableProps}>
+                    {siralanabilirKategoriler.map((k, index) => (
+                      <Draggable key={k.id} draggableId={String(k.id)} index={index}>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <div
+                              key={k.id}
+                              onMouseEnter={() => setHoveredCatId(k.id)}
+                              onMouseLeave={() => setHoveredCatId(null)}
+                              onClick={() => setSeciliKat(k.id)}
+                              style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, cursor: "pointer", transition: "all 0.15s", background: seciliKat === k.id ? "rgba(10,186,181,0.1)" : "transparent", border: seciliKat === k.id ? "1.5px solid rgba(10,186,181,0.3)" : "1.5px solid transparent" }}
+                            >
+                              <div style={{ fontSize: 18, width: 28, textAlign: "center" }}>{k.icon}</div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <strong style={{ display: "block", fontSize: 12, fontWeight: 600, color: NAVY }}>{k.name}</strong>
+                                <span style={{ fontSize: 10, color: GRAY400 }}>{katCounts[k.id] ?? 0} ürün</span>
+                              </div>
+                              {hoveredCatId === k.id ? (
+                                <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                                  <button type="button" title="Düzenle" onClick={() => { setCatForm({ name: k.name, icon: k.icon }); setEditCatModal(k); }} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: GRAY100, color: GRAY800, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✏️</button>
+                                  <button type="button" title="Sil" onClick={() => deleteKategori(k)} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#FEE2E2", color: RED, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: 11, fontWeight: 700, color: TEAL }}>{katCounts[k.id] ?? 0}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
                 )}
-              </div>
-            ))}
+              </Droppable>
+            </DragDropContext>
           </div>
           <button
             onClick={() => { setCatForm(emptyCatForm); setCatModalOpen(true); }}
