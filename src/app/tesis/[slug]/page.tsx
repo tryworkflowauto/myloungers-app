@@ -1452,8 +1452,8 @@ export default function TesisDetailPage() {
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {katUrunler.map((urun) => (
                               <div key={urun.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e5e7eb" }}>
-                                {urun.fotograflar?.[0] ? (
-                                  <img src={urun.fotograflar[0]} alt={urun.ad} style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover" }} />
+                                {urun.gorsel_url ? (
+                                  <img src={urun.gorsel_url} alt={urun.ad} style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover" }} />
                                 ) : (
                                   <div style={{ width: 52, height: 52, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{urun.icon || "🍽️"}</div>
                                 )}
