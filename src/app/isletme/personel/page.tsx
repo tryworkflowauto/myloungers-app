@@ -543,7 +543,6 @@ export default function IsletmePersonelPage() {
             { key: "tumu", icon: "👥", val: String(personeller.length), lbl: "Toplam Personel", iconBg: "#DBEAFE", valColor: NAVY },
             { key: "aktif", icon: "✅", val: String(aktifSayisi), lbl: "Aktif Bugün", iconBg: "#DCFCE7", valColor: GREEN },
             { key: "teslimat", icon: "🛵", val: String(toplamTeslimat), lbl: "Toplam Teslimat", iconBg: "#FFEDD5", valColor: ORANGE },
-            { key: "sure", icon: "⏱️", val: "11dk", lbl: "Ort. Teslimat Süresi", iconBg: "#F5F3FF", valColor: PURPLE },
           ].map((s) => (
             <div
               key={s.key}
