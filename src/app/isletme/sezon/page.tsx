@@ -384,17 +384,27 @@ export default function IsletmeSezonPage() {
   }
   async function kaydetDegisiklikler() {
     for (const f of fiyatlar) {
+      const erkenVal = f.erken;
       const { error } = await supabase
+        .from("sezlong_gruplari")
+        .update({ fiyat: erkenVal })
+        .eq("id", f.id);
+      if (error) {
+        console.error("Grup fiyatları kaydedilemedi:", error);
+        continue;
+      }
+
+      const { error: detayErr } = await supabase
         .from("sezlong_gruplari")
         .update({
           erken: f.erken,
           yuksek: f.yuksek,
           normal: f.normal,
-          fiyat: f.erken,
         })
         .eq("id", f.id);
-      if (error) {
-        console.error("Grup fiyatları kaydedilemedi:", error);
+
+      if (detayErr) {
+        console.error("Detay sezon fiyatları kaydedilemedi:", detayErr);
       }
     }
     showToast("✅ Değişiklikler kaydedildi!");
