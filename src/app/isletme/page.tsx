@@ -85,24 +85,20 @@ type SiparisItem = {
   durumTip: string;
 };
 
-const MOCK_UYARILAR = [
-  { ikon: "🍽️", baslik: "5 Bekleyen Sipariş", detay: "En eskisi 18 dk önce", renk: "turuncu", href: "/isletme/siparisler" },
-  { ikon: "⭐", baslik: "3 Cevaplanmayan Yorum", detay: "1 şikayet içeriyor", renk: "kirmizi", href: "/isletme/yorumlar" },
-  { ikon: "💰", baslik: "5 Bakiye Sona Eriyor", detay: "3 gün içinde · ₺3.840", renk: "sari", href: "/isletme/raporlar" },
-  { ikon: "📋", baslik: "Yarın 8 Rezervasyon", detay: "İlk giriş saat 09:00", renk: "mavi", href: "/isletme/rezervasyonlar" },
-];
+type UyariItem = {
+  ikon: string;
+  baslik: string;
+  detay: string;
+  renk: "turuncu" | "kirmizi" | "sari" | "mavi";
+  href: string;
+};
 
-const MOCK_SIPARISLER: SiparisItem[] = [
-  { no: "S-22", urunler: "Mojito × 2 · Nachos", musteri: "Ayşe Y. · Silver", sure: "18dk", sureTip: "danger", durum: "Yeni", durumTip: "yeni" },
-  { no: "V-3", urunler: "Izgara Levrek · Rosé", musteri: "Fatma D. · VIP", sure: "12dk", sureTip: "warn", durum: "Hazırlanıyor", durumTip: "hazir" },
-  { no: "İ-5", urunler: "Limonata × 3", musteri: "Mehmet K. · İskele", sure: "4dk", sureTip: "ok", durum: "Hazırlanıyor", durumTip: "hazir" },
-  { no: "G-1", urunler: "Kahvaltı Tabağı × 2", musteri: "Banu K. · Gold", sure: "2dk", sureTip: "ok", durum: "Yeni", durumTip: "yeni" },
-];
-
-const MOCK_BAKIYE = [
-  { initials: "BK", isim: "Banu Koç", detay: "₺120 kalan · S-22", gun: 5 },
-  { initials: "SE", isim: "Selin Erdoğan", detay: "₺3.200 kalan · V-8,9,10", gun: 3 },
-];
+type BakiyeItem = {
+  initials: string;
+  isim: string;
+  detay: string;
+  gun: number;
+};
 
 const GRUP_IKONLAR: Record<string, string> = { Gold: "⭐", VIP: "🔥", İskele: "⚓", Silver: "🌊" };
 const RENK_PALETI = [GOLD_PURPLE, ORANGE, YELLOW, TEAL, BLUE, PURPLE];
@@ -147,6 +143,9 @@ export default function IsletmeDashboardPage() {
   const [dolulukLegend, setDolulukLegend] = useState({ dolu: 0, rezerve: 0, bos: 0, bakim: 0 });
   const [rezervasyonlar, setRezervasyonlar] = useState<RezervasyonItem[]>([]);
   const [yorumlar, setYorumlar] = useState<YorumItem[]>([]);
+  const [uyarilar, setUyarilar] = useState<UyariItem[]>([]);
+  const [bekleyenSiparisler, setBekleyenSiparisler] = useState<SiparisItem[]>([]);
+  const [yaklasanBakiyeler, setYaklasanBakiyeler] = useState<BakiyeItem[]>([]);
 
   const [tarih, setTarih] = useState("");
   const [saat, setSaat] = useState("--:--");
@@ -226,9 +225,23 @@ export default function IsletmeDashboardPage() {
 
     async function load() {
       setLoading(true);
-      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const haftaninBasi = new Date(now);
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      haftaninBasi.setDate(now.getDate() - diffToMonday);
+      haftaninBasi.setHours(0, 0, 0, 0);
+      const haftaninSonu = new Date(haftaninBasi);
+      haftaninSonu.setDate(haftaninBasi.getDate() + 6);
+      haftaninSonu.setHours(23, 59, 59, 999);
+      const bugunBas = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const bugunSon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const ucGunSonra = new Date(now);
+      ucGunSonra.setDate(now.getDate() + 3);
+      ucGunSonra.setHours(23, 59, 59, 999);
 
-      const [tesisRes, sezonRes, gruplarRes, sezlonglarRes, rezRes, yorumRes, siparisRes] = await Promise.all([
+      const [tesisRes, sezonRes, gruplarRes, sezlonglarRes, rezRes, yorumRes, siparisRes, bekleyenSiparisRes, yaklasanRezRes, yaklasanBakiyeRes, haftalikGelirRes, gunlukGelirRes, aktifMusteriRes] = await Promise.all([
         supabase.from("tesisler").select("id, ad").eq("id", tesisId).maybeSingle(),
         supabase.from("sezonlar").select("id, ad, baslangic, bitis").eq("tesis_id", tesisId).eq("aktif", true).order("bitis", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("sezlong_gruplari").select("id, ad, renk").eq("tesis_id", tesisId),
@@ -236,6 +249,12 @@ export default function IsletmeDashboardPage() {
         supabase.from("rezervasyonlar").select("id, baslangic_tarih, bitis_tarih, kisi_sayisi, kullanici_id, kullanicilar(ad)").eq("tesis_id", tesisId).gte("bitis_tarih", today).order("baslangic_tarih", { ascending: true }).limit(10),
         supabase.from("yorumlar").select("id, puan, yorum, created_at, kullanici_id, kullanicilar(ad)").eq("tesis_id", tesisId).eq("durum", "aktif").order("created_at", { ascending: false }).limit(5),
         supabase.from("siparisler").select("id, durum, created_at").eq("tesis_id", tesisId).gte("created_at", `${today}T00:00:00Z`),
+        supabase.from("siparisler").select("id, durum, created_at").eq("tesis_id", tesisId).eq("durum", "bekliyor").order("created_at", { ascending: true }).limit(8),
+        supabase.from("rezervasyonlar").select("id, baslangic_tarih").eq("tesis_id", tesisId).gte("baslangic_tarih", now.toISOString()).lte("baslangic_tarih", ucGunSonra.toISOString()),
+        supabase.from("rezervasyonlar").select("id, musteri_adi, bakiye_kalan, bakiye_son_tarih").eq("tesis_id", tesisId).not("bakiye_son_tarih", "is", null).lte("bakiye_son_tarih", ucGunSonra.toISOString()).order("bakiye_son_tarih", { ascending: true }).limit(10),
+        supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).gte("created_at", haftaninBasi.toISOString()).lte("created_at", haftaninSonu.toISOString()),
+        supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).gte("created_at", bugunBas.toISOString()).lte("created_at", bugunSon.toISOString()),
+        supabase.from("rezervasyonlar").select("id", { count: "exact", head: true }).eq("tesis_id", tesisId).eq("durum", "aktif").gte("created_at", bugunBas.toISOString()).lte("created_at", bugunSon.toISOString()),
       ]);
 
       if (cancelled) return;
@@ -254,7 +273,6 @@ export default function IsletmeDashboardPage() {
       const yorumList = (yorumRes.data ?? []) as any[];
       const siparisBugun = (siparisRes.data ?? []) as { durum: string }[];
 
-      const now = new Date();
       let kalanGun = 0;
       let baslangicStr = "";
       let bitisStr = "";
@@ -281,6 +299,10 @@ export default function IsletmeDashboardPage() {
       const doluSezlong = sezlonglar.filter((s) => s.durum === "dolu" || s.durum === "rezerve").length;
       const dolulukYuzde = toplamSezlong > 0 ? Math.round((doluSezlong / toplamSezlong) * 100) : 0;
 
+      const haftalikGelir = (haftalikGelirRes.data ?? []).reduce((acc: number, r: any) => acc + Number(r.toplam_tutar ?? 0), 0);
+      const gunlukGelir = (gunlukGelirRes.data ?? []).reduce((acc: number, r: any) => acc + Number(r.toplam_tutar ?? 0), 0);
+      const aktifMusteri = aktifMusteriRes.count ?? 0;
+
       setSezonData({
         ad: sezon?.ad ?? "Sezon",
         tesis: tesisAdi,
@@ -288,15 +310,15 @@ export default function IsletmeDashboardPage() {
         bitis: bitisStr || "—",
         kalanGun,
         doluluk: dolulukYuzde,
-        haftalikGelir: "₺—",
+        haftalikGelir: `₺${haftalikGelir.toLocaleString("tr-TR")}`,
         hava: { derece: 24, durum: "Açık", ruzgar: "12 km/s", deniz: "Sakin" },
       });
 
       setStatData([
-        { etiket: "Günlük Gelir", ikon: "💰", deger: "₺—", sub: "Bugün", change: "—", changeClass: "neutral", renk: "teal" },
+        { etiket: "Günlük Gelir", ikon: "💰", deger: `₺${gunlukGelir.toLocaleString("tr-TR")}`, sub: "Bugün", change: "—", changeClass: "neutral", renk: "teal" },
         { etiket: "Aktif Şezlonglar", ikon: "🏖️", deger: String(doluSezlong), ek: `/${toplamSezlong}`, sub: `${toplamSezlong - doluSezlong} boş şezlong`, change: "= Veri", changeClass: "neutral", renk: "orange" },
         { etiket: "Tamamlanan Sipariş", ikon: "🍽️", deger: String(siparisBugun.filter((s) => s.durum === "teslim").length), sub: "Bugün", change: "—", changeClass: "neutral", renk: "green" },
-        { etiket: "Aktif Müşteri", ikon: "👥", deger: "—", sub: "Tesiste", change: "—", changeClass: "neutral", renk: "purple" },
+        { etiket: "Aktif Müşteri", ikon: "👥", deger: String(aktifMusteri), sub: "Tesiste", change: "—", changeClass: "neutral", renk: "purple" },
       ]);
 
       const dolulukList: DolulukGrubu[] = gruplar.map((g, i) => {
@@ -340,6 +362,45 @@ export default function IsletmeDashboardPage() {
         };
       });
       setYorumlar(yorumItems);
+
+      const bekleyenSiparisItems: SiparisItem[] = ((bekleyenSiparisRes.data ?? []) as any[]).map((s: any) => {
+        const createdAt = s.created_at ? new Date(s.created_at) : null;
+        const dk = createdAt ? Math.max(1, Math.round((Date.now() - createdAt.getTime()) / 60000)) : 0;
+        const sureTip = dk >= 15 ? "danger" : dk >= 8 ? "warn" : "ok";
+        return {
+          no: String(s.id ?? "—").slice(0, 6).toUpperCase(),
+          urunler: `Sipariş #${String(s.id ?? "—").slice(0, 8)}`,
+          musteri: "Misafir",
+          sure: `${dk}dk`,
+          sureTip,
+          durum: "Yeni",
+          durumTip: "yeni",
+        };
+      });
+      setBekleyenSiparisler(bekleyenSiparisItems);
+
+      const yaklasanBakiyeItems: BakiyeItem[] = ((yaklasanBakiyeRes.data ?? []) as any[]).map((b: any) => {
+        const isim = b.musteri_adi || "Misafir";
+        const son = b.bakiye_son_tarih ? new Date(b.bakiye_son_tarih) : null;
+        const gun = son ? Math.max(0, Math.ceil((son.getTime() - Date.now()) / (24 * 60 * 60 * 1000))) : 0;
+        return {
+          initials: getInitials(isim),
+          isim,
+          detay: `₺${Number(b.bakiye_kalan ?? 0).toLocaleString("tr-TR")} kalan`,
+          gun,
+        };
+      });
+      setYaklasanBakiyeler(yaklasanBakiyeItems);
+
+      const yaklasanRezCount = (yaklasanRezRes.data ?? []).length;
+      const bakiyeYaklasanCount = yaklasanBakiyeItems.length;
+      const bakiyeRiskToplam = ((yaklasanBakiyeRes.data ?? []) as any[]).reduce((acc: number, b: any) => acc + Number(b.bakiye_kalan ?? 0), 0);
+      setUyarilar([
+        { ikon: "🍽️", baslik: `${bekleyenSiparisItems.length} Bekleyen Sipariş`, detay: bekleyenSiparisItems.length ? `En eskisi ${bekleyenSiparisItems[0].sure} önce` : "Bekleyen sipariş yok", renk: "turuncu", href: "/isletme/siparisler" },
+        { ikon: "⭐", baslik: `${yorumItems.filter((y) => !y.pozitif).length} Cevaplanmayan Yorum`, detay: `${yorumItems.filter((y) => !y.pozitif).length} şikayet içeriyor`, renk: "kirmizi", href: "/isletme/yorumlar" },
+        { ikon: "💰", baslik: `${bakiyeYaklasanCount} Bakiye Sona Eriyor`, detay: `3 gün içinde · ₺${bakiyeRiskToplam.toLocaleString("tr-TR")}`, renk: "sari", href: "/isletme/raporlar" },
+        { ikon: "📋", baslik: `Önümüzdeki 3 günde ${yaklasanRezCount} Rezervasyon`, detay: "Yaklaşan rezervasyonlar", renk: "mavi", href: "/isletme/rezervasyonlar" },
+      ]);
 
       setLoading(false);
     }
@@ -434,7 +495,7 @@ export default function IsletmeDashboardPage() {
 
         {/* UYARILAR — .uyari-row, .uyari-kart + turuncu/kirmizi/sari/mavi + renkleri */}
         <div className="flex gap-2.5 mb-5 flex-wrap">
-          {MOCK_UYARILAR.map((u, i) => {
+          {uyarilar.map((u, i) => {
             const styles: Record<string, { bg: string; border: string; strong: string; span: string }> = {
               turuncu: { bg: "#FFF7ED", border: "#FED7AA", strong: "#C2410C", span: "#EA580C" },
               kirmizi: { bg: "#FEF2F2", border: "#FECACA", strong: "#991B1B", span: "#DC2626" },
@@ -565,9 +626,9 @@ export default function IsletmeDashboardPage() {
           <div className="bg-white rounded-[14px] overflow-hidden" style={{ border: `1px solid ${GRAY200}` }}>
             <div className="flex items-center justify-between" style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}` }}>
               <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>🍽️ Aktif Siparişler</h3>
-              <span style={{ fontSize: 10, fontWeight: 700, color: ORANGE, background: "#FFF7ED", padding: "2px 8px", borderRadius: 20 }}>5 Bekliyor</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: ORANGE, background: "#FFF7ED", padding: "2px 8px", borderRadius: 20 }}>{bekleyenSiparisler.length} Bekliyor</span>
             </div>
-            {MOCK_SIPARISLER.map((s, i) => (
+            {bekleyenSiparisler.map((s, i) => (
               <div
                 key={i}
                 className="flex items-center gap-3 cursor-pointer last:border-b-0"
@@ -703,9 +764,9 @@ export default function IsletmeDashboardPage() {
             <div className="bg-white rounded-[14px] overflow-hidden" style={{ border: `1px solid ${GRAY200}` }}>
               <div className="flex items-center justify-between" style={{ padding: "14px 18px", borderBottom: `1px solid ${GRAY100}` }}>
                 <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>💰 Sona Yakın Bakiyeler</h3>
-                <span style={{ fontSize: 10, fontWeight: 700, color: YELLOW, background: "#FFFBEB", padding: "2px 8px", borderRadius: 20 }}>5 Müşteri</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: YELLOW, background: "#FFFBEB", padding: "2px 8px", borderRadius: 20 }}>{yaklasanBakiyeler.length} Müşteri</span>
               </div>
-              {MOCK_BAKIYE.map((b, i) => (
+              {yaklasanBakiyeler.map((b, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-3 cursor-pointer last:border-b-0"
