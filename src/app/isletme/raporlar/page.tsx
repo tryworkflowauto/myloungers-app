@@ -142,6 +142,7 @@ export default function IsletmeRaporlarPage() {
       .select("toplam_tutar")
       .eq("tesis_id", tesisId)
       .then(({ data, error }) => {
+        console.log("[sumRez] tesisId:", tesisId, "data:", data, "error:", error);
         if (error) {
           console.error("rezervasyonlar sum error:", error);
           setSumRez(0);
@@ -155,6 +156,7 @@ export default function IsletmeRaporlarPage() {
       .select("toplam")
       .eq("tesis_id", tesisId)
       .then(({ data, error }) => {
+        console.log("[sumSip] tesisId:", tesisId, "data:", data, "error:", error);
         if (error) {
           console.error("siparisler sum error:", error);
           setSumSip(0);
