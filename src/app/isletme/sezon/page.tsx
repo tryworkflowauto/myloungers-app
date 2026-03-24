@@ -184,11 +184,20 @@ export default function IsletmeSezonPage() {
     setLoading(true);
     Promise.all([
       supabase.from("sezonlar").select("id, ad, baslangic, bitis, aktif").eq("tesis_id", tesisId).order("baslangic", { ascending: true }),
-      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat").eq("tesis_id", tesisId),
+      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, erken_fiyat, yuksek_fiyat, normal_fiyat").eq("tesis_id", tesisId),
     ]).then(([sezonRes, grupRes]) => {
       if (cancelled) return;
       const sezonRows = (sezonRes.data ?? []) as { id: string; ad: string; baslangic: string; bitis: string; aktif: boolean }[];
-      const grupRows = (grupRes.data ?? []) as { id: string; ad: string; renk: string; kapasite: number; fiyat: number | null }[];
+      const grupRows = (grupRes.data ?? []) as {
+        id: string;
+        ad: string;
+        renk: string;
+        kapasite: number;
+        fiyat: number | null;
+        erken_fiyat: number | null;
+        yuksek_fiyat: number | null;
+        normal_fiyat: number | null;
+      }[];
       const today = new Date().toISOString().slice(0, 10);
       setSezonlar(sezonRows.map((r, i) => {
         const bas = r.baslangic || "";
@@ -205,15 +214,18 @@ export default function IsletmeSezonPage() {
       }));
       setFiyatlar(grupRows.map((r) => {
         const f = Number(r.fiyat) || DEFAULT_FIYAT;
+        const erkenFiyat = Number(r.erken_fiyat ?? f) || DEFAULT_FIYAT;
+        const yuksekFiyat = Number(r.yuksek_fiyat ?? f) || DEFAULT_FIYAT;
+        const normalFiyat = Number(r.normal_fiyat ?? f) || DEFAULT_FIYAT;
         const color = r.renk || TEAL;
         return {
           id: r.id,
           name: grupDisplayName(r.ad),
           sub: `${r.kapasite ?? 0} şezlong`,
           color,
-          erken: f,
-          yuksek: f,
-          normal: f,
+          erken: erkenFiyat,
+          yuksek: yuksekFiyat,
+          normal: normalFiyat,
           minGun: 1,
           anlikColor: color,
         };
@@ -384,27 +396,16 @@ export default function IsletmeSezonPage() {
   }
   async function kaydetDegisiklikler() {
     for (const f of fiyatlar) {
-      const erkenVal = f.erken;
       const { error } = await supabase
         .from("sezlong_gruplari")
-        .update({ fiyat: erkenVal })
+        .update({
+          erken_fiyat: f.erken,
+          yuksek_fiyat: f.yuksek,
+          normal_fiyat: f.normal,
+        })
         .eq("id", f.id);
       if (error) {
         console.error("Grup fiyatları kaydedilemedi:", error);
-        continue;
-      }
-
-      const { error: detayErr } = await supabase
-        .from("sezlong_gruplari")
-        .update({
-          erken: f.erken,
-          yuksek: f.yuksek,
-          normal: f.normal,
-        })
-        .eq("id", f.id);
-
-      if (detayErr) {
-        console.error("Detay sezon fiyatları kaydedilemedi:", detayErr);
       }
     }
     showToast("✅ Değişiklikler kaydedildi!");
