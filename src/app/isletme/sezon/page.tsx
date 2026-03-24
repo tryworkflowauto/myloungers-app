@@ -384,8 +384,18 @@ export default function IsletmeSezonPage() {
   }
   async function kaydetDegisiklikler() {
     for (const f of fiyatlar) {
-      const val = seciliSezon === "yuksek" ? f.yuksek : seciliSezon === "normal" ? f.normal : f.erken;
-      await supabase.from("sezlong_gruplari").update({ fiyat: val }).eq("id", f.id);
+      const { error } = await supabase
+        .from("sezlong_gruplari")
+        .update({
+          erken: f.erken,
+          yuksek: f.yuksek,
+          normal: f.normal,
+          fiyat: f.erken,
+        })
+        .eq("id", f.id);
+      if (error) {
+        console.error("Grup fiyatları kaydedilemedi:", error);
+      }
     }
     showToast("✅ Değişiklikler kaydedildi!");
   }
