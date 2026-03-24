@@ -765,22 +765,15 @@ export default function IsletmeSezonPage() {
                         %{k.indirimOran}
                       </span>
                     </div>
-                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6, background: "white" }}>
-                      <div style={{ fontSize: "12px" }}>
-                        <span style={{ color: "#94A3B8" }}>Kalan Süre: </span>
-                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{kalanGun(k.bit) || "—"}</span>
+                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 0, background: "white" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                        <span style={{ color: "#94A3B8" }}>İndirim Tipi</span>
+                        <span style={{ fontWeight: 700, color: "#111827" }}>{k.tip === "sabit" ? "Sabit Fiyat" : "Oran İndirimi"}</span>
                       </div>
-                      <div style={{ fontSize: "12px" }}>
-                        <span style={{ color: "#94A3B8" }}>İndirim Tipi: </span>
-                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{k.tip === "sabit" ? "Sabit Fiyat" : "Oran İndirimi"}</span>
-                      </div>
-                      <div style={{ fontSize: "12px" }}>
-                        <span style={{ color: "#94A3B8" }}>Uygulanan Gruplar: </span>
-                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{k.gruplar.length > 0 ? "Mevcut" : "—"}</span>
-                      </div>
-                      {k.gruplar.length > 0 && (
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-                          {k.gruplar.map((gr) => (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "13px", padding: "6px 0", borderBottom: "1px solid #f1f5f9", gap: 8 }}>
+                        <span style={{ color: "#94A3B8" }}>Uygulanan Gruplar</span>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          {k.gruplar.length > 0 ? k.gruplar.map((gr) => (
                             <span
                               key={gr}
                               style={{
@@ -794,12 +787,16 @@ export default function IsletmeSezonPage() {
                             >
                               {gr}
                             </span>
-                          ))}
+                          )) : <span style={{ fontWeight: 700, color: "#111827" }}>—</span>}
                         </div>
-                      )}
-                      <div style={{ fontSize: "12px" }}>
-                        <span style={{ color: "#94A3B8" }}>Müşteri Görünümü: </span>
-                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{k.musteriGoster ? "✓ Gösteriliyor" : "— Gizli"}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                        <span style={{ color: "#94A3B8" }}>Müşteri Görünümü</span>
+                        <span style={{ fontWeight: 700, color: k.musteriGoster ? "#16A34A" : "#6B7280" }}>{k.musteriGoster ? "✓ Gösteriliyor" : "— Gizli"}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                        <span style={{ color: "#94A3B8" }}>Kalan Süre</span>
+                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{kalanGun(k.bit) || "—"}</span>
                       </div>
                     </div>
                     <div style={{ padding: "10px 16px", background: "#F8FAFC", borderTop: "1px solid #F1F5F9", display: "flex", gap: 6, justifyContent: "flex-end" }}>
