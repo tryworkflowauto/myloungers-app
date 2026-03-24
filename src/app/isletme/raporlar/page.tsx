@@ -491,22 +491,32 @@ export default function IsletmeRaporlarPage() {
 
       const now = new Date();
       let start = new Date(now);
+      let end = new Date(now);
       if (donemGelir === "bugun") {
         start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       } else if (donemGelir === "hafta") {
+        const day = now.getDay(); // 0: Pazar, 1: Pazartesi, ...
+        const diffToMonday = day === 0 ? 6 : day - 1;
         start = new Date(now);
-        start.setDate(now.getDate() - 6);
+        start.setDate(now.getDate() - diffToMonday);
         start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
       } else if (donemGelir === "ay") {
         start = new Date(now);
         start.setDate(now.getDate() - 29);
         start.setHours(0, 0, 0, 0);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       } else {
         start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       }
 
       const startIso = start.toISOString();
-      const endIso = now.toISOString();
+      const endIso = end.toISOString();
+      console.log("[getGunlukData] date range:", { donemGelir, startIso, endIso });
 
       const [rezRes, sipRes] = await Promise.all([
         supabase
@@ -529,6 +539,10 @@ export default function IsletmeRaporlarPage() {
         setGunlukChartData([]);
         return;
       }
+      console.log("[getGunlukData] supabase row counts:", {
+        rezervasyonlar: rezRes.data?.length ?? 0,
+        siparisler: sipRes.data?.length ?? 0,
+      });
 
       const monthsShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
       const weekdaysShort = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
@@ -601,6 +615,7 @@ export default function IsletmeRaporlarPage() {
 
   // ── Derived data ─────────────────────────────────────────────────────────
   function getGunlukData(): GunlukItem[] {
+    console.log("[getGunlukData] chart item count:", gunlukChartData.length);
     return gunlukChartData;
   }
 
