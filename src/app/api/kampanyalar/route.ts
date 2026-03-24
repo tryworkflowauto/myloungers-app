@@ -22,6 +22,9 @@ export async function POST(req: Request) {
       indirim_orani,
       baslangic_tarihi,
       bitis_tarihi,
+      tip,
+      gruplar,
+      musteri_goster,
       durum,
     } = body ?? {};
 
@@ -38,6 +41,9 @@ export async function POST(req: Request) {
         indirim_orani: indirim_orani ?? 0,
         baslangic_tarihi: baslangic_tarihi ?? null,
         bitis_tarihi: bitis_tarihi ?? null,
+        tip: tip ?? "oran",
+        gruplar: Array.isArray(gruplar) ? gruplar : [],
+        musteri_goster: musteri_goster ?? true,
         durum: durum ?? "aktif",
       })
       .select("id")
@@ -66,6 +72,10 @@ export async function PUT(req: Request) {
       indirim_orani,
       baslangic_tarihi,
       bitis_tarihi,
+      tip,
+      gruplar,
+      musteri_goster,
+      durum,
     } = body ?? {};
 
     if (!id || !tesis_id || !ad) {
@@ -80,6 +90,10 @@ export async function PUT(req: Request) {
         indirim_orani: indirim_orani ?? 0,
         baslangic_tarihi: baslangic_tarihi ?? null,
         bitis_tarihi: bitis_tarihi ?? null,
+        tip: tip ?? "oran",
+        gruplar: Array.isArray(gruplar) ? gruplar : [],
+        musteri_goster: musteri_goster ?? true,
+        durum: durum ?? "aktif",
       })
       .eq("id", id)
       .eq("tesis_id", tesis_id);

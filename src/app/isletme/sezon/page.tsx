@@ -233,7 +233,7 @@ export default function IsletmeSezonPage() {
     try {
       const { data, error } = await supabase
         .from("kampanyalar")
-        .select("id, ad, aciklama, indirim_orani, baslangic_tarihi, bitis_tarihi, durum")
+        .select("id, ad, aciklama, indirim_orani, baslangic_tarihi, bitis_tarihi, durum, tip, gruplar, musteri_goster")
         .eq("tesis_id", tesisId)
         .order("created_at", { ascending: false });
       if (error || !data) {
@@ -246,17 +246,18 @@ export default function IsletmeSezonPage() {
         const bit = (r.bitis_tarihi as string | null) ?? "";
         const headerBg = `linear-gradient(135deg,${ORANGE},#C2410C)`;
         const durum: KampanyaDurum =
-          r.durum === "planli" || r.durum === "tamamlandi" || r.durum === "durduruldu" ? r.durum : "aktif";
+          r.durum === "planli" || r.durum === "tamamlandi" || r.durum === "durduruldu" || r.durum === "taslak" ? (r.durum === "taslak" ? "planli" : r.durum) : "aktif";
+        const gruplar = Array.isArray(r.gruplar) ? r.gruplar.filter((x: any) => typeof x === "string") : [];
         return {
           id: r.id as number,
           name: r.ad ?? "Kampanya",
           bas,
           bit,
-          tip: "oran" as const,
+          tip: r.tip === "sabit" ? "sabit" : "oran",
           indirimOran: Number(r.indirim_orani ?? 0),
           sabitFiyatlar: {},
-          gruplar: [],
-          musteriGoster: true,
+          gruplar,
+          musteriGoster: Boolean(r.musteri_goster ?? true),
           headerBg,
           durum,
         } as Kampanya;
@@ -409,7 +410,7 @@ export default function IsletmeSezonPage() {
     setKampForm({ name: k.name, bas: k.bas, bit: k.bit, tip: k.tip, indirimOran: k.indirimOran, sabitFiyatlar: k.sabitFiyatlar, gruplar: k.gruplar, musteriGoster: k.musteriGoster });
     setKampModal(true);
   }
-  async function saveKampanya() {
+  async function saveKampanya(durumOverride?: "aktif" | "taslak") {
     console.log("[saveKampanya] called", { tesisId, editKampId: editKamp?.id ?? null, kampForm });
     if (!kampForm.name || !tesisId) {
       console.log("[saveKampanya] blocked", { hasName: !!kampForm.name, tesisId });
@@ -423,7 +424,10 @@ export default function IsletmeSezonPage() {
       indirim_orani: kampForm.indirimOran,
       baslangic_tarihi: kampForm.bas || null,
       bitis_tarihi: kampForm.bit || null,
-      durum: "aktif",
+      tip: kampForm.tip,
+      gruplar: kampForm.gruplar,
+      musteri_goster: kampForm.musteriGoster,
+      durum: durumOverride ?? "aktif",
     };
     console.log("[saveKampanya] payload:", payload);
     if (editKamp) {
@@ -438,6 +442,10 @@ export default function IsletmeSezonPage() {
           indirim_orani: payload.indirim_orani,
           baslangic_tarihi: payload.baslangic_tarihi,
           bitis_tarihi: payload.bitis_tarihi,
+          tip: payload.tip,
+          gruplar: payload.gruplar,
+          musteri_goster: payload.musteri_goster,
+          durum: payload.durum,
         }),
       });
       const result = await res.json().catch(() => null);
@@ -722,7 +730,11 @@ export default function IsletmeSezonPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "14px" }}>
                 {kampanyalar.map((k) => (
                   <div key={k.id} style={{ borderRadius: "14px", overflow: "hidden", border: "1.5px solid #E2E8F0", transition: "all 0.2s" }}>
-                    <div style={{ padding: "12px 14px", background: k.headerBg || "linear-gradient(135deg,#F5821F,#C2410C)", color: "white", position: "relative" }}>
+                    <div style={{ padding: "12px 14px", background: (k.durum === "aktif")
+                      ? "linear-gradient(135deg,#F5821F,#C2410C)"
+                      : (k.durum === "planli"
+                        ? "linear-gradient(135deg,#6366f1,#4f46e5)"
+                        : "linear-gradient(135deg,#94a3b8,#64748b)"), color: "white", position: "relative" }}>
                       <span style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)", color: "white", borderRadius: "20px", padding: "4px 10px", fontSize: "10px", fontWeight: 700 }}>
                         {chipOf(k.durum)}
                       </span>
@@ -738,6 +750,10 @@ export default function IsletmeSezonPage() {
                       <div style={{ fontSize: "12px" }}>
                         <span style={{ color: "#94A3B8" }}>Kalan Süre: </span>
                         <span style={{ fontWeight: 700, color: "#1E293B" }}>{kalanGun(k.bit) || "—"}</span>
+                      </div>
+                      <div style={{ fontSize: "12px" }}>
+                        <span style={{ color: "#94A3B8" }}>İndirim Tipi: </span>
+                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{k.tip === "sabit" ? "Sabit Fiyat" : "Oran İndirimi"}</span>
                       </div>
                       <div style={{ fontSize: "12px" }}>
                         <span style={{ color: "#94A3B8" }}>Uygulanan Gruplar: </span>
@@ -762,6 +778,10 @@ export default function IsletmeSezonPage() {
                           ))}
                         </div>
                       )}
+                      <div style={{ fontSize: "12px" }}>
+                        <span style={{ color: "#94A3B8" }}>Müşteri Görünümü: </span>
+                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{k.musteriGoster ? "✓ Gösteriliyor" : "— Gizli"}</span>
+                      </div>
                     </div>
                     <div style={{ padding: "10px 16px", background: "#F8FAFC", borderTop: "1px solid #F1F5F9", display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       <button onClick={() => openKampDuzenle(k)} style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #E2E8F0", background: "white", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>✏️</button>
@@ -934,6 +954,9 @@ export default function IsletmeSezonPage() {
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
               <button onClick={() => setKampModal(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button onClick={() => { saveKampanya("taslak"); }} disabled={!kampForm.name} style={{ background: "white", border: "1px solid #E2E8F0", color: "#475569", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: !kampForm.name ? "not-allowed" : "pointer", opacity: !kampForm.name ? 0.6 : 1 }}>
+                Taslak Kaydet
+              </button>
               <button onClick={() => { saveKampanya(); }} disabled={!kampForm.name} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: !kampForm.name ? GRAY200 : ORANGE, color: !kampForm.name ? GRAY400 : "white", cursor: !kampForm.name ? "not-allowed" : "pointer" }}>
                 {editKamp ? "💾 Güncelle" : "🚀 Kampanyayı Kaydet"}
               </button>
