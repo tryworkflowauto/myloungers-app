@@ -112,7 +112,7 @@ export default function IsletmeRaporlarPage() {
   const [sumRez, setSumRez] = useState(0);
   const [sumSip, setSumSip] = useState(0);
   const [gunlukChartData, setGunlukChartData] = useState<GunlukItem[]>([]);
-  const [grupBazliGelirRows, setGrupBazliGelirRows] = useState<{ grup: string; toplam: number; rezervasyon: number }[]>([]);
+  const [grupBazliGelirRows, setGrupBazliGelirRows] = useState<{ grup: string; toplam: number; rezervasyon: number; renk: string }[]>([]);
   const [bakiyeRows, setBakiyeRows] = useState<any[]>([]);
   const [bakiyeSearch, setBakiyeSearch] = useState("");
   const [bakiyeDurum, setBakiyeDurum] = useState("");
@@ -694,7 +694,7 @@ export default function IsletmeRaporlarPage() {
 
       const { data, error } = await supabase
         .from("rezervasyonlar")
-        .select("toplam_tutar, sezlonglar(sezlong_gruplari(ad))")
+        .select("toplam_tutar, sezlonglar(sezlong_gruplari(ad, renk))")
         .eq("tesis_id", tesisId)
         .gte("created_at", startIso)
         .lte("created_at", endIso);
@@ -705,16 +705,17 @@ export default function IsletmeRaporlarPage() {
         return;
       }
 
-      const grouped = new Map<string, { toplam: number; rezervasyon: number }>();
+      const grouped = new Map<string, { toplam: number; rezervasyon: number; renk: string }>();
       (data ?? []).forEach((r: any) => {
         const grupAd = (r as any)?.sezlonglar?.sezlong_gruplari?.ad?.trim() || "Grupsuz";
+        const grupRenk = (r as any)?.sezlonglar?.sezlong_gruplari?.renk || "#0EA5E9";
         const tutar = Number(r?.toplam_tutar ?? 0);
-        const prev = grouped.get(grupAd) ?? { toplam: 0, rezervasyon: 0 };
-        grouped.set(grupAd, { toplam: prev.toplam + tutar, rezervasyon: prev.rezervasyon + 1 });
+        const prev = grouped.get(grupAd) ?? { toplam: 0, rezervasyon: 0, renk: grupRenk };
+        grouped.set(grupAd, { toplam: prev.toplam + tutar, rezervasyon: prev.rezervasyon + 1, renk: prev.renk || grupRenk });
       });
 
       const rows = Array.from(grouped.entries())
-        .map(([grup, vals]) => ({ grup, toplam: vals.toplam, rezervasyon: vals.rezervasyon }))
+        .map(([grup, vals]) => ({ grup, toplam: vals.toplam, rezervasyon: vals.rezervasyon, renk: vals.renk }))
         .sort((a, b) => b.toplam - a.toplam);
 
       setGrupBazliGelirRows(rows);
@@ -992,6 +993,7 @@ export default function IsletmeRaporlarPage() {
             {/* Grup + Ödeme (yakında gerçek veriye bağlanacak) */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, minHeight: 120 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Grup Bazlı Gelir</div>
                 {grupBazliGelirRows.length === 0 ? (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 80 }}>
                     <span style={{ fontSize: 12, color: GRAY400, fontStyle: "italic" }}>Bu tarih aralığında grup bazlı gelir verisi bulunamadı.</span>
@@ -1000,21 +1002,20 @@ export default function IsletmeRaporlarPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {(() => {
                       const maxToplam = Math.max(1, ...grupBazliGelirRows.map((r) => r.toplam));
-                      const renkler = ["#0EA5E9", "#22C55E", "#F59E0B", "#8B5CF6", "#EF4444", "#14B8A6", "#6366F1", "#F97316"];
-                      return grupBazliGelirRows.map((row, idx) => {
+                      return grupBazliGelirRows.map((row) => {
                         const yuzde = Math.max(6, Math.round((row.toplam / maxToplam) * 100));
-                        const barRenk = renkler[idx % renkler.length];
+                        const barRenk = row.renk || "#0EA5E9";
                         return (
                           <div key={row.grup} style={{ borderBottom: `1px solid ${GRAY100}`, paddingBottom: 8 }}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, fontSize: 12 }}>
-                              <span style={{ color: "#374151", fontWeight: 600 }}>{row.grup}</span>
-                              <span style={{ color: GRAY400 }}>{row.rezervasyon} rezervasyon</span>
+                              <span style={{ color: "#374151", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: "50%", background: barRenk, display: "inline-block", boxShadow: "0 0 0 2px #ffffff, 0 0 0 3px #e5e7eb" }} />
+                                <span>{row.grup}</span>
+                              </span>
+                              <span style={{ color: NAVY, fontWeight: 700 }}>₺{row.toplam.toLocaleString("tr-TR")}</span>
                             </div>
-                            <div style={{ width: "100%", height: 10, borderRadius: 999, background: "#F1F5F9", overflow: "hidden", marginBottom: 6 }}>
+                            <div style={{ width: "100%", height: 10, borderRadius: 999, background: "#F1F5F9", overflow: "hidden" }}>
                               <div style={{ width: `${yuzde}%`, height: "100%", background: `linear-gradient(90deg, ${barRenk}, ${barRenk}CC)` }} />
-                            </div>
-                            <div style={{ textAlign: "right", fontSize: 12, fontWeight: 700, color: NAVY }}>
-                              ₺{row.toplam.toLocaleString("tr-TR")}
                             </div>
                           </div>
                         );
