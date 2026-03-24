@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -234,8 +233,7 @@ function PersonelKart({ p, onEdit, onYetki, onToggle, onSil, sezlongOptions }: {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function IsletmePersonelPage() {
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [personeller, setPersoneller] = useState<Personel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -284,6 +282,35 @@ export default function IsletmePersonelPage() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const getTesisId = async () => {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        console.log("personel/getTesisId auth error:", authErr);
+        setTesisId(null);
+        return;
+      }
+      const { data: kullanici, error: kullaniciErr } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (kullaniciErr || !kullanici?.tesis_id) {
+        console.log("personel/getTesisId kullanici error:", kullaniciErr, "row:", kullanici);
+        setTesisId(null);
+        return;
+      }
+      setTesisId(String(kullanici.tesis_id));
+    };
+    getTesisId();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Sezlong list (for Atanan Şezlonglar checkbox list)
   useEffect(() => {
     if (!tesisId) {
@@ -299,10 +326,12 @@ export default function IsletmePersonelPage() {
       .order("numara", { ascending: true })
       .then(({ data, error }) => {
         if (error) {
+          console.log("personel/sezlong fetch error:", error, "tesisId:", tesisId);
           setSezlongOptions([]);
           setSezlongLoading(false);
           return;
         }
+        console.log("personel/sezlong fetch success:", { tesisId, count: (data ?? []).length });
         const list: SezlongOption[] = (data ?? []).map((s: any) => {
           const num = Number(s.numara ?? 0);
           const grupId = String(s.sezlong_gruplari?.id ?? "");
@@ -397,9 +426,21 @@ export default function IsletmePersonelPage() {
   }
 
   async function saveYeni() {
-    if (!yeniForm.name || !tesisId) return;
+    if (!yeniForm.name || !tesisId) {
+      console.log("personel/saveYeni blocked:", { hasName: !!yeniForm.name, tesisId });
+      return;
+    }
     const sezlonglarArr = yeniForm.sezlonglar ? yeniForm.sezlonglar.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const defaultYetkiler = yeniForm.rol === "mudur" ? ["Tüm Yetkiler"] : ["Siparişler"];
+    console.log("personel/saveYeni insert payload:", {
+      tesis_id: tesisId,
+      ad: yeniForm.name,
+      telefon: yeniForm.phone || null,
+      rol: yeniForm.rol,
+      aktif: yeniForm.aktif,
+      atanan_sezlonglar: sezlonglarArr,
+      yetkiler: defaultYetkiler,
+    });
     const { data: row, error } = await supabase.from("personel").insert({
       tesis_id: tesisId,
       ad: yeniForm.name,
@@ -413,6 +454,7 @@ export default function IsletmePersonelPage() {
       console.error("saveYeni error:", error);
       return;
     }
+    console.log("personel/saveYeni insert success:", row);
     const id = String((row as any).id);
     if (yeniPhoto) setPhotoInStorage(id, yeniPhoto);
     const newP = rowToPersonel(row as any, personeller.length);
