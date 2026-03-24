@@ -999,8 +999,8 @@ export default function IsletmeRaporlarPage() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "left", color: GRAY500, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Grup</th>
-                        <th style={{ textAlign: "right", color: GRAY500, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Toplam Gelir</th>
+                        <th style={{ textAlign: "left", color: GRAY400, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Grup</th>
+                        <th style={{ textAlign: "right", color: GRAY400, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Toplam Gelir</th>
                       </tr>
                     </thead>
                     <tbody>
