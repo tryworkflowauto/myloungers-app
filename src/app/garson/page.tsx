@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY   = "#0A1628";
 const TEAL   = "#0ABAB5";
@@ -26,47 +27,30 @@ type SiparisKart = {
   not?: string;
 };
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_SIPARISLER: SiparisKart[] = [
-  { id: "s1", sezlong: "S-22", musteri: "Ayşe Yıldız",  bolge: "Silver",  kisi: 2, sure: 22, sureClass: "danger", durum: "yeni",        not: "Hesabı alabilir miyiz?", urunler: [{ emoji: "🍹", isim: "Mojito", adet: 2 }, { emoji: "🍟", isim: "Nachos", adet: 1 }] },
-  { id: "s2", sezlong: "İ-5",  musteri: "Mehmet Kaya",  bolge: "İskele",  kisi: 2, sure: 11, sureClass: "warn",   durum: "hazirlaniyor", urunler: [{ emoji: "🍋", isim: "Limonata", adet: 3 }, { emoji: "🍷", isim: "Rosé Şarap", adet: 1 }] },
-  { id: "s3", sezlong: "S-14", musteri: "Banu Koç",     bolge: "Silver",  kisi: 3, sure: 6,  sureClass: "ok",     durum: "yolda",        urunler: [{ emoji: "🐟", isim: "Izgara Levrek", adet: 2 }] },
-];
-
-const MOCK_GARSONLAR = ["Ayşe T.", "Can K.", "Ali R.", "Zeynep D."];
-
-const MOCK_BILDIRIMLER = [
-  { id: 1, metin: "S-22 · Ayşe Y. hesap istiyor",         zaman: "1 dk önce",   okundu: false },
-  { id: 2, metin: "Mutfak: İ-5 siparişi hazır",            zaman: "3 dk önce",   okundu: false },
-  { id: 3, metin: "S-7 müşterisi memnuniyet bildirdi ⭐",  zaman: "12 dk önce",  okundu: true  },
-];
-
-const SILVER_SZL  = ["S-1","S-2","S-3","S-4","S-5","S-6","S-7","S-8","S-9","S-10","S-11","S-12","S-13","S-14","S-15","S-22","S-23","S-24","S-25","S-26"];
-const SILVER_DURUM: Record<string, "dolu"|"bos"|"rezerve"|"cagri"> = {
-  "S-1":"dolu","S-2":"dolu","S-3":"bos","S-4":"dolu","S-5":"bos","S-6":"dolu","S-7":"rezerve","S-8":"dolu","S-9":"bos","S-10":"dolu",
-  "S-11":"dolu","S-12":"bos","S-13":"dolu","S-14":"dolu","S-15":"bos","S-22":"cagri","S-23":"dolu","S-24":"bos","S-25":"dolu","S-26":"rezerve",
-};
-const ISKELE_SZL  = ["İ-1","İ-2","İ-3","İ-4","İ-5","İ-6","İ-7","İ-8","İ-9","İ-10","İ-11","İ-12","İ-13","İ-14","İ-15"];
-const ISKELE_DURUM: Record<string, "dolu"|"bos"|"rezerve"> = {
-  "İ-1":"dolu","İ-2":"dolu","İ-3":"bos","İ-4":"dolu","İ-5":"dolu","İ-6":"bos","İ-7":"dolu","İ-8":"rezerve","İ-9":"bos","İ-10":"dolu",
-  "İ-11":"dolu","İ-12":"bos","İ-13":"dolu","İ-14":"bos","İ-15":"rezerve",
-};
-const HAFTALIK = [
-  { gun: "Pzt", h: 60 }, { gun: "Sal", h: 75 }, { gun: "Çar", h: 50 }, { gun: "Per", h: 90 },
-  { gun: "Cum", h: 100 }, { gun: "Cmt", h: 80, color: ORANGE }, { gun: "Paz", h: 55, dashed: true },
-];
+type BildirimItem = { id: number; metin: string; zaman: string; okundu: boolean };
+type BolgeItem = { kod: string; durum: "dolu" | "bos" | "rezerve" | "cagri" };
+type BolgeData = { ad: string; ikon: string; items: BolgeItem[] };
+type HaftalikItem = { gun: string; h: number; color?: string; dashed?: boolean };
+type SonTeslimItem = { sz: string; ad: string; sure: string; zaman: string };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function GarsonPage() {
   const [sayfa,         setSayfa]         = useState<"siparisler"|"bolge"|"performans">("siparisler");
   const [aktif,         setAktif]         = useState(true);
   const [cagriGoster,   setCagriGoster]   = useState(true);
-  const [siparisler,    setSiparisler]    = useState<SiparisKart[]>(MOCK_SIPARISLER);
+  const [siparisler,    setSiparisler]    = useState<SiparisKart[]>([]);
   const [toast,         setToast]         = useState<string | null>(null);
   const [yonModal,      setYonModal]      = useState(false);
   const [bildPanel,     setBildPanel]     = useState(false);
-  const [bildirimler,   setBildirimler]   = useState(MOCK_BILDIRIMLER);
+  const [bildirimler,   setBildirimler]   = useState<BildirimItem[]>([]);
   const [detayModal,    setDetayModal]    = useState<SiparisKart | null>(null);
+  const [garsonAd,      setGarsonAd]      = useState("Garson");
+  const [garsonRol,     setGarsonRol]     = useState("Garson");
+  const [garsonBolge,   setGarsonBolge]   = useState("Bölge: —");
+  const [garsonlar,     setGarsonlar]     = useState<string[]>([]);
+  const [bolgeler,      setBolgeler]      = useState<BolgeData[]>([]);
+  const [haftalik,      setHaftalik]      = useState<HaftalikItem[]>([]);
+  const [sonTeslimler,  setSonTeslimler]  = useState<SonTeslimItem[]>([]);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
@@ -77,6 +61,161 @@ export default function GarsonPage() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  useEffect(() => {
+    async function loadData() {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !authData?.user) return;
+
+      const userId = authData.user.id;
+      const { data: personel } = await supabase
+        .from("personel")
+        .select("id, ad, rol, tesis_id")
+        .or(`kullanici_id.eq.${userId},id.eq.${userId}`)
+        .maybeSingle();
+      if (!personel?.tesis_id) return;
+
+      const personelId = String(personel.id);
+      const tesisId = String(personel.tesis_id);
+      setGarsonAd(personel.ad || "Garson");
+      setGarsonRol(personel.rol || "Garson");
+
+      const [{ data: allPersonel }, { data: sipRes }, { data: bildRes }, { data: szRes }, { data: tesRes }] = await Promise.all([
+        supabase.from("personel").select("ad").eq("tesis_id", tesisId),
+        supabase
+          .from("siparisler")
+          .select("id, garson_id, durum, created_at, not, musteri_adi, kisi_sayisi, sezlong_id, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi)")
+          .eq("tesis_id", tesisId)
+          .eq("garson_id", personelId)
+          .in("durum", ["bekliyor", "hazirlaniyor", "yolda"])
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("siparisler")
+          .select("id, created_at, musteri_adi, sezlonglar(numara)")
+          .eq("tesis_id", tesisId)
+          .eq("garson_id", personelId)
+          .eq("durum", "bekliyor")
+          .order("created_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("sezlonglar")
+          .select("id, numara, durum, grup_id, sezlong_gruplari(ad)")
+          .eq("tesis_id", tesisId)
+          .order("numara", { ascending: true }),
+        supabase
+          .from("siparisler")
+          .select("id, created_at, teslim_suresi_dk, musteri_adi, sezlonglar(numara)")
+          .eq("tesis_id", tesisId)
+          .eq("garson_id", personelId)
+          .eq("durum", "teslim")
+          .order("created_at", { ascending: false })
+          .limit(10),
+      ]);
+
+      setGarsonlar((allPersonel ?? []).map((p: any) => p.ad).filter(Boolean));
+
+      const siparisRows = (sipRes ?? []) as any[];
+      const nowMs = Date.now();
+      const siparisKartlari: SiparisKart[] = siparisRows.map((s: any) => {
+        const createdAtMs = s.created_at ? new Date(s.created_at).getTime() : nowMs;
+        const sure = Math.max(1, Math.round((nowMs - createdAtMs) / 60000));
+        const sureClass: "ok" | "warn" | "danger" = sure >= 15 ? "danger" : sure >= 8 ? "warn" : "ok";
+        const durum: SiparisDurum = s.durum === "bekliyor" ? "yeni" : s.durum;
+        const kalemler = (s.siparis_kalemleri ?? []).map((k: any) => ({
+          emoji: "🍽️",
+          isim: k.urun_adi || "Ürün",
+          adet: Number(k.adet ?? 1),
+        }));
+        return {
+          id: String(s.id),
+          sezlong: s.sezlonglar?.numara ? String(s.sezlonglar.numara) : "—",
+          musteri: s.musteri_adi || "Misafir",
+          bolge: s.sezlonglar?.sezlong_gruplari?.ad || "Bölge",
+          kisi: Number(s.kisi_sayisi ?? 1),
+          sure,
+          sureClass,
+          durum,
+          urunler: kalemler.length ? kalemler : [{ emoji: "🍽️", isim: "Sipariş", adet: 1 }],
+          not: s.not || undefined,
+        };
+      });
+      setSiparisler(siparisKartlari);
+
+      const bildirimRows = (bildRes ?? []) as any[];
+      setBildirimler(
+        bildirimRows.map((b: any, idx: number) => {
+          const t = b.created_at ? new Date(b.created_at) : new Date();
+          const dk = Math.max(1, Math.round((Date.now() - t.getTime()) / 60000));
+          return {
+            id: idx + 1,
+            metin: `${b.sezlonglar?.numara || "—"} · ${b.musteri_adi || "Misafir"} yeni sipariş bıraktı`,
+            zaman: `${dk} dk önce`,
+            okundu: false,
+          };
+        })
+      );
+
+      const sezlongRows = (szRes ?? []) as any[];
+      const cagriSezlongSet = new Set(
+        siparisRows
+          .filter((s: any) => s.durum === "bekliyor")
+          .map((s: any) => (s.sezlonglar?.numara ? String(s.sezlonglar.numara) : ""))
+          .filter(Boolean)
+      );
+      const grouped = new Map<string, BolgeItem[]>();
+      sezlongRows.forEach((sz: any) => {
+        const bolgeAd = sz.sezlong_gruplari?.ad || "Bölge";
+        if (!grouped.has(bolgeAd)) grouped.set(bolgeAd, []);
+        const kod = String(sz.numara ?? "—");
+        grouped.get(bolgeAd)!.push({
+          kod,
+          durum: cagriSezlongSet.has(kod)
+            ? "cagri"
+            : ((sz.durum === "dolu" || sz.durum === "bos" || sz.durum === "rezerve") ? sz.durum : "bos"),
+        });
+      });
+      const bolgeList: BolgeData[] = Array.from(grouped.entries()).map(([ad, items], i) => ({
+        ad,
+        ikon: i === 0 ? "🌊" : "⚓",
+        items,
+      }));
+      setBolgeler(bolgeList);
+      setGarsonBolge(`Bölge: ${bolgeList.map((b) => b.ad).join(" & ") || "—"}`);
+
+      const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+      const byDay = new Map<string, number>();
+      days.forEach((d) => byDay.set(d, 0));
+      siparisRows.forEach((s: any) => {
+        const d = s.created_at ? new Date(s.created_at) : new Date();
+        const key = days[d.getDay()];
+        byDay.set(key, (byDay.get(key) ?? 0) + 1);
+      });
+      const maxCount = Math.max(1, ...Array.from(byDay.values()));
+      setHaftalik(
+        days.map((gun) => ({
+          gun,
+          h: Math.max(12, Math.round(((byDay.get(gun) ?? 0) / maxCount) * 100)),
+          color: gun === "Cmt" ? ORANGE : undefined,
+          dashed: gun === days[new Date().getDay()],
+        }))
+      );
+
+      const teslimRows = (tesRes ?? []) as any[];
+      setSonTeslimler(
+        teslimRows.map((r: any) => {
+          const t = r.created_at ? new Date(r.created_at) : new Date();
+          return {
+            sz: r.sezlonglar?.numara ? String(r.sezlonglar.numara) : "—",
+            ad: r.musteri_adi || "Misafir",
+            sure: `${Number(r.teslim_suresi_dk ?? 0)}dk`,
+            zaman: t.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+          };
+        })
+      );
+    }
+
+    loadData();
   }, []);
 
   // ── Sipariş actions ───────────────────────────────────────────────────────
@@ -125,10 +264,10 @@ export default function GarsonPage() {
       {/* TOPBAR */}
       <header style={{ background: NAVY, padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, background: `linear-gradient(135deg,${TEAL},${ORANGE})`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "white" }}>MG</div>
+          <div style={{ width: 36, height: 36, background: `linear-gradient(135deg,${TEAL},${ORANGE})`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "white" }}>{garsonAd.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "GS"}</div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>Mehmet Güneş</div>
-            <div style={{ fontSize: 10, color: TEAL }}>🛵 Garson · Bölge: Silver & İskele</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{garsonAd}</div>
+            <div style={{ fontSize: 10, color: TEAL }}>🛵 {garsonRol} · {garsonBolge}</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -248,42 +387,31 @@ export default function GarsonPage() {
         {sayfa === "bolge" && (
           <>
             <div style={{ fontSize: 12, fontWeight: 700, color: GRAY400, marginBottom: 10 }}>Atandığım Bölgeler</div>
-            <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 14, marginBottom: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>🌊 Silver Bölge</h3>
-                <span style={{ fontSize: 11, color: GRAY400 }}>22 Dolu · 8 Boş · <span style={{ color: RED, fontWeight: 700 }}>1 Çağrı</span></span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
-                {SILVER_SZL.map((sz) => {
-                  const d = SILVER_DURUM[sz];
-                  const st: Record<string, { background: string; color: string; borderColor: string }> = { dolu: { background: "#FFF7ED", color: ORANGE, borderColor: "#FED7AA" }, bos: { background: "#F0FDF4", color: GREEN, borderColor: "#BBF7D0" }, rezerve: { background: "#EFF6FF", color: BLUE, borderColor: "#BFDBFE" }, cagri: { background: "#FEF2F2", color: RED, borderColor: "#FECACA" } };
-                  return (
-                    <div key={sz} style={{ borderRadius: 8, padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, cursor: "pointer", border: `1.5px solid ${st[d]?.borderColor ?? "transparent"}`, ...st[d] }}>
-                      <span style={{ fontSize: 14 }}>{d === "dolu" ? "🟠" : d === "bos" ? "🟢" : d === "rezerve" ? "🔵" : "🔴"}</span>
-                      {sz}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 14, marginBottom: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>⚓ İskele Bölge</h3>
-                <span style={{ fontSize: 11, color: GRAY400 }}>13 Dolu · 7 Boş</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
-                {ISKELE_SZL.map((sz) => {
-                  const d = ISKELE_DURUM[sz];
-                  const st: Record<string, { background: string; color: string; borderColor: string }> = { dolu: { background: "#FFF7ED", color: ORANGE, borderColor: "#FED7AA" }, bos: { background: "#F0FDF4", color: GREEN, borderColor: "#BBF7D0" }, rezerve: { background: "#EFF6FF", color: BLUE, borderColor: "#BFDBFE" } };
-                  return (
-                    <div key={sz} style={{ borderRadius: 8, padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, cursor: "pointer", border: `1.5px solid ${st[d]?.borderColor ?? "transparent"}`, ...st[d] }}>
-                      <span style={{ fontSize: 14 }}>{d === "dolu" ? "🟠" : d === "bos" ? "🟢" : "🔵"}</span>
-                      {sz}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {bolgeler.map((bolge) => {
+              const dolu = bolge.items.filter((i) => i.durum === "dolu").length;
+              const bos = bolge.items.filter((i) => i.durum === "bos").length;
+              const cagri = bolge.items.filter((i) => i.durum === "cagri").length;
+              return (
+                <div key={bolge.ad} style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 14, marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <h3 style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{bolge.ikon} {bolge.ad} Bölge</h3>
+                    <span style={{ fontSize: 11, color: GRAY400 }}>{dolu} Dolu · {bos} Boş {cagri > 0 ? <>· <span style={{ color: RED, fontWeight: 700 }}>{cagri} Çağrı</span></> : null}</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+                    {bolge.items.map((sz) => {
+                      const d = sz.durum;
+                      const st: Record<string, { background: string; color: string; borderColor: string }> = { dolu: { background: "#FFF7ED", color: ORANGE, borderColor: "#FED7AA" }, bos: { background: "#F0FDF4", color: GREEN, borderColor: "#BBF7D0" }, rezerve: { background: "#EFF6FF", color: BLUE, borderColor: "#BFDBFE" }, cagri: { background: "#FEF2F2", color: RED, borderColor: "#FECACA" } };
+                      return (
+                        <div key={sz.kod} style={{ borderRadius: 8, padding: "8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, cursor: "pointer", border: `1.5px solid ${st[d]?.borderColor ?? "transparent"}`, ...st[d] }}>
+                          <span style={{ fontSize: 14 }}>{d === "dolu" ? "🟠" : d === "bos" ? "🟢" : d === "rezerve" ? "🔵" : "🔴"}</span>
+                          {sz.kod}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", padding: "4px 0 10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: GRAY600 }}>🟠 Dolu</div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: GRAY600 }}>🟢 Boş</div>
@@ -318,7 +446,7 @@ export default function GarsonPage() {
             <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 14, marginBottom: 10 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 12 }}>📈 Haftalık Teslimat</div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80 }}>
-                {HAFTALIK.map((h, i) => (
+                {haftalik.map((h, i) => (
                   <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, height: "100%", justifyContent: "flex-end" }}>
                     <div style={{ width: "100%", borderRadius: "4px 4px 0 0", background: h.color ?? TEAL, height: h.h + "%", border: h.dashed ? `2px dashed ${TEAL}` : undefined }} />
                     <span style={{ fontSize: 9, color: h.dashed ? TEAL : GRAY400 }}>{h.gun}{h.dashed ? "●" : ""}</span>
@@ -328,7 +456,7 @@ export default function GarsonPage() {
             </div>
             <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
               <div style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}`, fontSize: 12, fontWeight: 700, color: NAVY }}>Son Teslimler</div>
-              {[{ sz: "V-4", ad: "Zeynep A.", sure: "8dk", zaman: "13:45" }, { sz: "S-7", ad: "Can K.", sure: "11dk", zaman: "13:22" }].map((r, i) => (
+              {sonTeslimler.map((r, i) => (
                 <div key={i} style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between", borderLeft: `4px solid ${GREEN}` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 42, height: 42, borderRadius: 12, background: GREEN, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900 }}>{r.sz}</div>
@@ -377,7 +505,7 @@ export default function GarsonPage() {
             <h3 style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Başkasına Yönlendir</h3>
             <p style={{ fontSize: 12, color: GRAY400, marginBottom: 16 }}>S-22 çağrısını kim alsın?</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-              {MOCK_GARSONLAR.map((g) => (
+              {garsonlar.map((g) => (
                 <button
                   key={g}
                   onClick={() => yonlendir(g)}
