@@ -432,6 +432,36 @@ export default function IsletmeRaporlarPage() {
   }, [activeTab, donemUrun, tesisId]);
 
   useEffect(() => {
+    const now = new Date();
+    let bas = new Date(now);
+    let bit = new Date(now);
+
+    if (donemGelir === "bugun") {
+      bas = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      bit = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    } else if (donemGelir === "hafta") {
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      bas = new Date(now);
+      bas.setDate(now.getDate() - diffToMonday);
+      bit = new Date(bas);
+      bit.setDate(bas.getDate() + 6);
+    } else if (donemGelir === "ay") {
+      bas = new Date(now.getFullYear(), now.getMonth(), 1);
+      bit = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else {
+      bas = new Date(now.getFullYear(), 0, 1);
+      bit = new Date(now.getFullYear(), 11, 31);
+    }
+
+    const basStr = bas.toISOString().slice(0, 10);
+    const bitStr = bit.toISOString().slice(0, 10);
+    setTarihBaslangic(basStr);
+    setTarihBitis(bitStr);
+    setUygulanmisTarih({ bas: basStr, bit: bitStr });
+  }, [donemGelir]);
+
+  useEffect(() => {
     if (!tesisId) { setBakiyeRows([]); return; }
     supabase
       .from("rezervasyonlar")
