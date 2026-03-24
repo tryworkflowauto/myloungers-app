@@ -481,8 +481,8 @@ export default function IsletmeRaporlarPage() {
       bit = new Date(now.getFullYear(), 11, 31);
     }
 
-    const basStr = bas.toISOString().slice(0, 10);
-    const bitStr = bit.toISOString().slice(0, 10);
+    const basStr = `${bas.getFullYear()}-${String(bas.getMonth() + 1).padStart(2, "0")}-${String(bas.getDate()).padStart(2, "0")}`;
+    const bitStr = `${bit.getFullYear()}-${String(bit.getMonth() + 1).padStart(2, "0")}-${String(bit.getDate()).padStart(2, "0")}`;
     setTarihBaslangic(basStr);
     setTarihBitis(bitStr);
     setUygulanmisTarih({ bas: basStr, bit: bitStr });
