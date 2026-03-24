@@ -32,6 +32,7 @@ type BolgeItem = { kod: string; durum: "dolu" | "bos" | "rezerve" | "cagri" };
 type BolgeData = { ad: string; ikon: string; items: BolgeItem[] };
 type HaftalikItem = { gun: string; h: number; color?: string; dashed?: boolean };
 type SonTeslimItem = { sz: string; ad: string; sure: string; zaman: string };
+type PerfData = { teslimat: number; ortSure: number; musteri: number; puan: number; tip: number };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function GarsonPage() {
@@ -51,6 +52,7 @@ export default function GarsonPage() {
   const [bolgeler,      setBolgeler]      = useState<BolgeData[]>([]);
   const [haftalik,      setHaftalik]      = useState<HaftalikItem[]>([]);
   const [sonTeslimler,  setSonTeslimler]  = useState<SonTeslimItem[]>([]);
+  const [perf,          setPerf]          = useState<PerfData>({ teslimat: 0, ortSure: 0, musteri: 0, puan: 0, tip: 0 });
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
@@ -69,32 +71,56 @@ export default function GarsonPage() {
       if (authErr || !authData?.user) return;
 
       const userId = authData.user.id;
-      const { data: personel } = await supabase
+      const { data: personelByKid } = await supabase
         .from("personel")
-        .select("id, ad, rol, tesis_id")
-        .or(`kullanici_id.eq.${userId},id.eq.${userId}`)
+        .select("id, ad, rol, tesis_id, atanan_sezlonglar, yetkiler")
+        .eq("kullanici_id", userId)
         .maybeSingle();
-      if (!personel?.tesis_id) return;
+      const { data: personelById } = await supabase
+        .from("personel")
+        .select("id, ad, rol, tesis_id, atanan_sezlonglar, yetkiler")
+        .eq("id", userId)
+        .maybeSingle();
+      const personel = personelByKid ?? personelById;
+      const { data: kullanici } = await supabase
+        .from("kullanicilar")
+        .select("id, ad, tesis_id, rol")
+        .eq("id", userId)
+        .maybeSingle();
+      const tesisIdRaw = personel?.tesis_id ?? kullanici?.tesis_id;
+      if (!tesisIdRaw) return;
 
-      const personelId = String(personel.id);
-      const tesisId = String(personel.tesis_id);
-      setGarsonAd(personel.ad || "Garson");
-      setGarsonRol(personel.rol || "Garson");
+      const personelId = personel?.id ? String(personel.id) : userId;
+      const tesisId = String(tesisIdRaw);
+      setGarsonAd(personel?.ad || kullanici?.ad || "Garson");
+      setGarsonRol(personel?.rol || kullanici?.rol || "Garson");
+      const rawAtanan = personel?.atanan_sezlonglar;
+      const rawYetkiler = personel?.yetkiler;
+      const assignedFromAtanan = Array.isArray(rawAtanan) ? rawAtanan : (Array.isArray((rawAtanan as any)?.value) ? (rawAtanan as any).value : []);
+      const assignedFromYetki = Array.isArray(rawYetkiler) ? rawYetkiler : (Array.isArray((rawYetkiler as any)?.value) ? (rawYetkiler as any).value : []);
+      const assignedSezlongCodes = [...assignedFromAtanan, ...assignedFromYetki]
+        .filter((v: unknown): v is string => typeof v === "string")
+        .map((v) => v.trim())
+        .filter((v) => /^[A-Za-zÇĞİÖŞÜçğıöşü]+-?\d+$/u.test(v) || /^\d+$/.test(v));
+      const garsonIdList = Array.from(new Set([personelId, userId]));
+      const today = new Date();
+      const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+      const endToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
 
-      const [{ data: allPersonel }, { data: sipRes }, { data: bildRes }, { data: szRes }, { data: tesRes }] = await Promise.all([
+      const [{ data: allPersonel }, { data: sipRes }, { data: bildRes }, { data: szRes }, { data: tesRes }, { data: perfRes }] = await Promise.all([
         supabase.from("personel").select("ad").eq("tesis_id", tesisId),
         supabase
           .from("siparisler")
           .select("id, garson_id, durum, created_at, not, musteri_adi, kisi_sayisi, sezlong_id, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi)")
           .eq("tesis_id", tesisId)
-          .eq("garson_id", personelId)
+          .in("garson_id", garsonIdList)
           .in("durum", ["bekliyor", "hazirlaniyor", "yolda"])
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
           .select("id, created_at, musteri_adi, sezlonglar(numara)")
           .eq("tesis_id", tesisId)
-          .eq("garson_id", personelId)
+          .in("garson_id", garsonIdList)
           .eq("durum", "bekliyor")
           .order("created_at", { ascending: false })
           .limit(20),
@@ -107,10 +133,17 @@ export default function GarsonPage() {
           .from("siparisler")
           .select("id, created_at, teslim_suresi_dk, musteri_adi, sezlonglar(numara)")
           .eq("tesis_id", tesisId)
-          .eq("garson_id", personelId)
+          .in("garson_id", garsonIdList)
           .eq("durum", "teslim")
           .order("created_at", { ascending: false })
           .limit(10),
+        supabase
+          .from("siparisler")
+          .select("id, created_at, durum, toplam, memnuniyet, teslim_suresi, teslim_suresi_dk, tip_tutar, musteri_adi")
+          .eq("tesis_id", tesisId)
+          .in("garson_id", garsonIdList)
+          .gte("created_at", startToday)
+          .lte("created_at", endToday),
       ]);
 
       setGarsonlar((allPersonel ?? []).map((p: any) => p.ad).filter(Boolean));
@@ -156,7 +189,10 @@ export default function GarsonPage() {
         })
       );
 
-      const sezlongRows = (szRes ?? []) as any[];
+      const sezlongRowsAll = (szRes ?? []) as any[];
+      const sezlongRows = assignedSezlongCodes.length
+        ? sezlongRowsAll.filter((sz: any) => assignedSezlongCodes.includes(String(sz.numara ?? "")))
+        : sezlongRowsAll;
       const cagriSezlongSet = new Set(
         siparisRows
           .filter((s: any) => s.durum === "bekliyor")
@@ -213,6 +249,28 @@ export default function GarsonPage() {
           };
         })
       );
+
+      const perfRows = (perfRes ?? []) as any[];
+      const teslimat = perfRows.filter((r: any) => r.durum === "teslim").length;
+      const ortSureRaw =
+        teslimat > 0
+          ? perfRows
+              .filter((r: any) => r.durum === "teslim")
+              .reduce((sum: number, r: any) => sum + Number(r.teslim_suresi_dk ?? r.teslim_suresi ?? 0), 0) / teslimat
+          : 0;
+      const musteri = new Set(perfRows.map((r: any) => String(r.musteri_adi ?? "")).filter(Boolean)).size;
+      const puanRaw =
+        perfRows.length > 0
+          ? perfRows.reduce((sum: number, r: any) => sum + Number(r.memnuniyet ?? 0), 0) / perfRows.length
+          : 0;
+      const tip = perfRows.reduce((sum: number, r: any) => sum + Number(r.tip_tutar ?? r.toplam ?? 0), 0);
+      setPerf({
+        teslimat,
+        ortSure: Math.round(ortSureRaw),
+        musteri,
+        puan: Number(puanRaw.toFixed(1)),
+        tip,
+      });
     }
 
     loadData();
@@ -427,10 +485,10 @@ export default function GarsonPage() {
             <div style={{ fontSize: 12, fontWeight: 700, color: GRAY400, marginBottom: 10 }}>Bugünkü Performans</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
               {[
-                { val: "34",   unit: "Teslimat",                  color: GREEN  },
-                { val: "9dk",  unit: "Ort. Teslimat Süresi",      color: BLUE   },
-                { val: "18",   unit: "Hizmet Verilen Müşteri",    color: TEAL   },
-                { val: "4.9",  unit: "⭐ Müşteri Puanı",          color: PURPLE },
+                { val: String(perf.teslimat),                  unit: "Teslimat",               color: GREEN  },
+                { val: `${perf.ortSure}dk`,                    unit: "Ort. Teslimat Süresi",   color: BLUE   },
+                { val: String(perf.musteri),                   unit: "Hizmet Verilen Müşteri", color: TEAL   },
+                { val: perf.puan > 0 ? perf.puan.toFixed(1) : "0.0", unit: "⭐ Müşteri Puanı", color: PURPLE },
               ].map((c, i) => (
                 <div key={i} style={{ background: "white", borderRadius: 12, border: `1px solid ${GRAY200}`, padding: 14 }}>
                   <div style={{ fontSize: 26, fontWeight: 900, color: c.color }}>{c.val}</div>
@@ -438,7 +496,7 @@ export default function GarsonPage() {
                 </div>
               ))}
               <div style={{ gridColumn: "1/3", background: `linear-gradient(135deg,${ORANGE},#C2410C)`, borderRadius: 12, padding: 14, color: "white" }}>
-                <div style={{ fontSize: 28, fontWeight: 900 }}>₺280</div>
+                <div style={{ fontSize: 28, fontWeight: 900 }}>₺{perf.tip.toLocaleString("tr-TR")}</div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)" }}>💰 Bugünkü Tip Kazancı</div>
                 <div style={{ marginTop: 8, fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Direkt hesabına aktarılıyor</div>
               </div>
