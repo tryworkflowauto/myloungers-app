@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY   = "#0A1628";
 const TEAL   = "#0ABAB5";
@@ -24,33 +25,17 @@ type SiparisKart  = {
   urunler: UrunSatir[]; not?: string; teslimSaat?: string; durum: SiparisDurum;
 };
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_YENI: SiparisKart[] = [
-  { id: "s1", barColor: RED,    sezlong: "S-22", musteri: "Ayşe Y. · Silver",  sure: 22, sureLabel: "Bekleniyor", sureClass: "danger", oncelikli: true,  urunler: [{ emoji: "🍹", isim: "Mojito", adet: 2 }, { emoji: "🍟", isim: "Nachos", adet: 1 }], durum: "yeni" },
-  { id: "s2", barColor: ORANGE, sezlong: "V-3",  musteri: "Fatma D. · VIP",    sure: 14, sureLabel: "Bekleniyor", sureClass: "warn",                       urunler: [{ emoji: "🐟", isim: "Izgara Levrek", adet: 2 }, { emoji: "🥗", isim: "Mevsim Salatası", adet: 1 }], durum: "yeni" },
-  { id: "s3", barColor: YELLOW, sezlong: "İ-5",  musteri: "Mehmet K. · İskele",sure: 6,  sureLabel: "Bekleniyor", sureClass: "ok",                          urunler: [{ emoji: "🍋", isim: "Limonata", adet: 3 }, { emoji: "🍷", isim: "Rosé Şarap", adet: 1 }], not: "Limonatalar şekersiz olsun", durum: "yeni" },
-  { id: "s4", barColor: TEAL,   sezlong: "G-1",  musteri: "Banu K. · Gold",    sure: 2,  sureLabel: "Bekleniyor", sureClass: "ok",                          urunler: [{ emoji: "🍳", isim: "Kahvaltı Tabağı", adet: 2 }, { emoji: "☕", isim: "Türk Kahvesi", adet: 2 }], durum: "yeni" },
-];
-const MOCK_HAZIRLANIYOR: SiparisKart[] = [
-  { id: "h1", barColor: YELLOW, sezlong: "S-14", musteri: "Zeynep A. · Silver", sure: 8, sureLabel: "Hazırlanıyor", sureClass: "warn", urunler: [{ emoji: "🍋", isim: "Limonata", adet: 2, hazirlandi: true }, { emoji: "🍟", isim: "Nachos", adet: 1 }], durum: "hazirlaniyor" },
-  { id: "h2", barColor: GREEN,  sezlong: "V-8",  musteri: "Selin E. · VIP",     sure: 4, sureLabel: "Hazırlanıyor", sureClass: "ok",   urunler: [{ emoji: "🍹", isim: "Mojito",   adet: 3 }, { emoji: "🥂", isim: "Şampanya", adet: 1 }], durum: "hazirlaniyor" },
-];
-const MOCK_TAMAMLANDI: SiparisKart[] = [
-  { id: "t1", barColor: GRAY400, sezlong: "S-7",  musteri: "Can K. · Silver",  sure: 7,  sureLabel: "Hazırlandı", sureClass: "ok", urunler: [{ emoji: "🍹", isim: "Mojito", adet: 2, hazirlandi: true }], teslimSaat: "13:45'te teslim edildi", durum: "tamamlandi" },
-  { id: "t2", barColor: GRAY400, sezlong: "İ-3",  musteri: "Ali M. · İskele",  sure: 11, sureLabel: "Hazırlandı", sureClass: "ok", urunler: [{ emoji: "🐟", isim: "Izgara Levrek", adet: 1, hazirlandi: true }, { emoji: "🥗", isim: "Salata", adet: 1, hazirlandi: true }], teslimSaat: "13:22'de teslim edildi", durum: "tamamlandi" },
-  { id: "t3", barColor: GRAY400, sezlong: "V-4",  musteri: "Zeynep A.",         sure: 9,  sureLabel: "Hazırlandı", sureClass: "ok", urunler: [{ emoji: "🍷", isim: "Rosé Şarap", adet: 2, hazirlandi: true }], teslimSaat: "13:10'da teslim edildi", durum: "tamamlandi" },
-];
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function MutfakPage() {
-  const [yeni,         setYeni]         = useState<SiparisKart[]>(MOCK_YENI);
-  const [hazirlaniyor, setHazirlaniyor] = useState<SiparisKart[]>(MOCK_HAZIRLANIYOR);
-  const [tamamlandi,   setTamamlandi]   = useState<SiparisKart[]>(MOCK_TAMAMLANDI);
+  const [yeni,         setYeni]         = useState<SiparisKart[]>([]);
+  const [hazirlaniyor, setHazirlaniyor] = useState<SiparisKart[]>([]);
+  const [tamamlandi,   setTamamlandi]   = useState<SiparisKart[]>([]);
   const [sesAcik,      setSesAcik]      = useState(true);
   const [saat,         setSaat]         = useState("");
   const [toast,        setToast]        = useState<string | null>(null);
   const [onayModal,    setOnayModal]    = useState<SiparisKart | null>(null);
   const [detayModal,   setDetayModal]   = useState<SiparisKart | null>(null);
+  const [tesisId,      setTesisId]      = useState<string | null>(null);
 
   // Real-time clock (1-second interval)
   useEffect(() => {
@@ -70,31 +55,158 @@ export default function MutfakPage() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTesisId() {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        setTesisId(null);
+        return;
+      }
+      const { data: kullanici, error: kulErr } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (kulErr || !kullanici?.tesis_id) {
+        setTesisId(null);
+        return;
+      }
+      setTesisId(String(kullanici.tesis_id));
+    }
+    loadTesisId();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!tesisId) {
+      setYeni([]);
+      setHazirlaniyor([]);
+      setTamamlandi([]);
+      return;
+    }
+
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
+    const endToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+
+    const mapRowToKart = (s: any): SiparisKart => {
+      const createdAtMs = s?.created_at ? new Date(s.created_at).getTime() : Date.now();
+      const sure = Math.max(1, Math.round((Date.now() - createdAtMs) / 60000));
+      const sureClass: "ok" | "warn" | "danger" = sure >= 15 ? "danger" : sure >= 8 ? "warn" : "ok";
+      const durumDb = s?.durum;
+      const durum: SiparisDurum = durumDb === "bekliyor" ? "yeni" : (durumDb === "hazirlaniyor" ? "hazirlaniyor" : "tamamlandi");
+      const grup = s?.sezlonglar?.sezlong_gruplari?.ad ? ` · ${s.sezlonglar.sezlong_gruplari.ad}` : "";
+      const musteri = `${s?.musteri_adi || "Misafir"}${grup}`;
+      const urunler: UrunSatir[] = (s?.siparis_kalemleri ?? []).map((k: any) => ({
+        emoji: "🍽️",
+        isim: k?.urun_adi || "Ürün",
+        adet: Number(k?.adet ?? 1),
+        hazirlandi: Boolean(k?.hazirlandi) || durum === "tamamlandi",
+      }));
+      const teslimSaat = s?.updated_at
+        ? `${new Date(s.updated_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}'de teslim edildi`
+        : undefined;
+      return {
+        id: String(s?.id ?? ""),
+        barColor: durum === "yeni" ? RED : durum === "hazirlaniyor" ? YELLOW : GRAY400,
+        sezlong: s?.sezlonglar?.numara ? String(s.sezlonglar.numara) : "—",
+        musteri,
+        sure,
+        sureLabel: durum === "yeni" ? "Bekleniyor" : durum === "hazirlaniyor" ? "Hazırlanıyor" : "Hazırlandı",
+        sureClass,
+        oncelikli: sure >= 15,
+        urunler: urunler.length ? urunler : [{ emoji: "🍽️", isim: "Sipariş", adet: 1, hazirlandi: durum === "tamamlandi" }],
+        not: s?.not || undefined,
+        teslimSaat,
+        durum,
+      };
+    };
+
+    async function fetchSiparisler() {
+      const [yeniRes, hazRes, tamRes] = await Promise.all([
+        supabase
+          .from("siparisler")
+          .select("id, created_at, updated_at, durum, not, musteri_adi, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi, hazirlandi)")
+          .eq("tesis_id", tesisId)
+          .eq("durum", "bekliyor")
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("siparisler")
+          .select("id, created_at, updated_at, durum, not, musteri_adi, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi, hazirlandi)")
+          .eq("tesis_id", tesisId)
+          .eq("durum", "hazirlaniyor")
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("siparisler")
+          .select("id, created_at, updated_at, durum, not, musteri_adi, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi, hazirlandi)")
+          .eq("tesis_id", tesisId)
+          .eq("durum", "teslim")
+          .gte("updated_at", startToday)
+          .lte("updated_at", endToday)
+          .order("updated_at", { ascending: false }),
+      ]);
+
+      if (yeniRes.error || hazRes.error || tamRes.error) {
+        if (yeniRes.error) console.error("mutfak yeni siparis fetch error:", yeniRes.error);
+        if (hazRes.error) console.error("mutfak hazirlaniyor fetch error:", hazRes.error);
+        if (tamRes.error) console.error("mutfak tamamlanan fetch error:", tamRes.error);
+        return;
+      }
+
+      setYeni((yeniRes.data ?? []).map(mapRowToKart));
+      setHazirlaniyor((hazRes.data ?? []).map(mapRowToKart));
+      setTamamlandi((tamRes.data ?? []).map(mapRowToKart));
+    }
+
+    fetchSiparisler();
+
+    const channel = supabase
+      .channel(`mutfak-siparisler-${tesisId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "siparisler", filter: `tesis_id=eq.${tesisId}` },
+        () => { fetchSiparisler(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tesisId]);
+
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
   // ── ACİL auto-badge: sure >= 15 ──────────────────────────────────────────
   function isAcil(k: SiparisKart) { return k.sure >= 15 || k.oncelikli; }
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  function hazirlaBasla(kart: SiparisKart) {
-    setYeni(p => p.filter(s => s.id !== kart.id));
-    const yeniKart: SiparisKart = { ...kart, id: kart.id + "_h", sureLabel: "Hazırlanıyor", barColor: YELLOW, oncelikli: false, durum: "hazirlaniyor" };
-    setHazirlaniyor(p => [yeniKart, ...p]);
+  async function hazirlaBasla(kart: SiparisKart) {
+    const { error } = await supabase
+      .from("siparisler")
+      .update({ durum: "hazirlaniyor" })
+      .eq("id", kart.id);
+    if (error) {
+      console.error("mutfak hazirlaBasla update error:", error);
+      showToast("❌ Sipariş güncellenemedi");
+      return;
+    }
     setOnayModal(null);
     showToast("🍳 Hazırlanıyor: " + kart.sezlong);
   }
 
-  function tamamla(kart: SiparisKart) {
-    setHazirlaniyor(p => p.filter(s => s.id !== kart.id));
-    const now = new Date();
-    const teslimSaat = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
-    const tamamKart: SiparisKart = {
-      ...kart, id: kart.id + "_t", barColor: GRAY400,
-      sureLabel: "Hazırlandı",
-      urunler: kart.urunler.map(u => ({ ...u, hazirlandi: true })),
-      teslimSaat: teslimSaat + "'de garson aldı", durum: "tamamlandi",
-    };
-    setTamamlandi(p => [tamamKart, ...p]);
+  async function tamamla(kart: SiparisKart) {
+    const { error } = await supabase
+      .from("siparisler")
+      .update({ durum: "teslim" })
+      .eq("id", kart.id);
+    if (error) {
+      console.error("mutfak tamamla update error:", error);
+      showToast("❌ Sipariş güncellenemedi");
+      return;
+    }
     if (detayModal?.id === kart.id) setDetayModal(null);
     showToast("✅ Sipariş garsona verildi! — " + kart.sezlong);
   }
