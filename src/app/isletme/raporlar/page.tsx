@@ -112,6 +112,7 @@ export default function IsletmeRaporlarPage() {
   const [sumRez, setSumRez] = useState(0);
   const [sumSip, setSumSip] = useState(0);
   const [gunlukChartData, setGunlukChartData] = useState<GunlukItem[]>([]);
+  const [grupBazliGelirRows, setGrupBazliGelirRows] = useState<{ grup: string; toplam: number }[]>([]);
   const [bakiyeRows, setBakiyeRows] = useState<any[]>([]);
   const [bakiyeSearch, setBakiyeSearch] = useState("");
   const [bakiyeDurum, setBakiyeDurum] = useState("");
@@ -681,6 +682,46 @@ export default function IsletmeRaporlarPage() {
     fetchGunlukData();
   }, [donemGelir, tesisId]);
 
+  useEffect(() => {
+    async function fetchGrupBazliGelir() {
+      if (!tesisId || !tarihBaslangic || !tarihBitis) {
+        setGrupBazliGelirRows([]);
+        return;
+      }
+
+      const startIso = `${tarihBaslangic}T00:00:00.000`;
+      const endIso = `${tarihBitis}T23:59:59.999`;
+
+      const { data, error } = await supabase
+        .from("rezervasyonlar")
+        .select("toplam_tutar, sezlonglar(sezlong_gruplari(ad))")
+        .eq("tesis_id", tesisId)
+        .gte("created_at", startIso)
+        .lte("created_at", endIso);
+
+      if (error) {
+        console.error("grup bazli gelir fetch error:", error);
+        setGrupBazliGelirRows([]);
+        return;
+      }
+
+      const grouped = new Map<string, number>();
+      (data ?? []).forEach((r: any) => {
+        const grupAd = (r as any)?.sezlonglar?.sezlong_gruplari?.ad?.trim() || "Grupsuz";
+        const tutar = Number(r?.toplam_tutar ?? 0);
+        grouped.set(grupAd, (grouped.get(grupAd) ?? 0) + tutar);
+      });
+
+      const rows = Array.from(grouped.entries())
+        .map(([grup, toplam]) => ({ grup, toplam }))
+        .sort((a, b) => b.toplam - a.toplam);
+
+      setGrupBazliGelirRows(rows);
+    }
+
+    fetchGrupBazliGelir();
+  }, [tesisId, tarihBaslangic, tarihBitis]);
+
   // ── Derived data ─────────────────────────────────────────────────────────
   function getGunlukData(): GunlukItem[] {
     console.log("[DEBUG] getGunlukData called, tesisId:", tesisId, "donem:", donemGelir);
@@ -949,8 +990,31 @@ export default function IsletmeRaporlarPage() {
 
             {/* Grup + Ödeme (yakında gerçek veriye bağlanacak) */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-              <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
-                <span style={{ fontSize: 12, color: GRAY400, fontStyle: "italic" }}>Grup Bazlı Gelir raporu yakında burada olacak.</span>
+              <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, minHeight: 120 }}>
+                {grupBazliGelirRows.length === 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 80 }}>
+                    <span style={{ fontSize: 12, color: GRAY400, fontStyle: "italic" }}>Bu tarih aralığında grup bazlı gelir verisi bulunamadı.</span>
+                  </div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", color: GRAY500, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Grup</th>
+                        <th style={{ textAlign: "right", color: GRAY500, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Toplam Gelir</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grupBazliGelirRows.map((row) => (
+                        <tr key={row.grup}>
+                          <td style={{ padding: "8px 0", borderBottom: `1px solid ${GRAY100}`, color: GRAY700 }}>{row.grup}</td>
+                          <td style={{ padding: "8px 0", borderBottom: `1px solid ${GRAY100}`, textAlign: "right", fontWeight: 700, color: NAVY }}>
+                            ₺{row.toplam.toLocaleString("tr-TR")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
               <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, padding: 20, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 120 }}>
