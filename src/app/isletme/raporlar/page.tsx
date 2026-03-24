@@ -533,6 +533,19 @@ export default function IsletmeRaporlarPage() {
           .lte("created_at", endIso),
       ]);
 
+      console.log("[getGunlukData] rezervasyonlar raw:", {
+        startIso,
+        endIso,
+        data: rezRes.data,
+        error: rezRes.error,
+      });
+      console.log("[getGunlukData] siparisler raw:", {
+        startIso,
+        endIso,
+        data: sipRes.data,
+        error: sipRes.error,
+      });
+
       if (rezRes.error || sipRes.error) {
         if (rezRes.error) console.error("gunluk rezervasyonlar error:", rezRes.error);
         if (sipRes.error) console.error("gunluk siparisler error:", sipRes.error);
