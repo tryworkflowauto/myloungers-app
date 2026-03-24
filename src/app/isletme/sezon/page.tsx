@@ -684,7 +684,26 @@ export default function IsletmeSezonPage() {
             ) : kampanyalar.length === 0 ? (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>Henüz kampanya oluşturulmadı</div>
             ) : (
-              <div style={{ padding: 20, textAlign: "center", color: "#94A3B8" }}>Kampanyalar yakında aktif olacak.</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {kampanyalar.map((k) => (
+                  <div key={k.id} style={{ border: `1px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden", background: "white" }}>
+                    <div style={{ background: k.headerBg, color: "white", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <strong style={{ fontSize: 13 }}>{k.name}</strong>
+                      <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(255,255,255,0.2)", borderRadius: 999, padding: "3px 8px" }}>{chipOf(k.durum)}</span>
+                    </div>
+                    <div style={{ padding: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ fontSize: 12, color: GRAY600 }}>
+                        {fmtTarih(k.bas, k.bit)}
+                        {kalanGun(k.bit) ? <span style={{ marginLeft: 8, color: GRAY400 }}>({kalanGun(k.bit)})</span> : null}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button onClick={() => openKampDuzenle(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
+                        <button onClick={() => setSilModal(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
