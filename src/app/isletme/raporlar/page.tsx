@@ -628,6 +628,7 @@ export default function IsletmeRaporlarPage() {
 
   // ── Derived data ─────────────────────────────────────────────────────────
   function getGunlukData(): GunlukItem[] {
+    console.log("[DEBUG] getGunlukData called, tesisId:", tesisId, "donem:", donemGelir);
     console.log("[getGunlukData] chart item count:", gunlukChartData.length);
     return gunlukChartData;
   }
