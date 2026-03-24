@@ -112,7 +112,7 @@ export default function IsletmeRaporlarPage() {
   const [sumRez, setSumRez] = useState(0);
   const [sumSip, setSumSip] = useState(0);
   const [gunlukChartData, setGunlukChartData] = useState<GunlukItem[]>([]);
-  const [grupBazliGelirRows, setGrupBazliGelirRows] = useState<{ grup: string; toplam: number }[]>([]);
+  const [grupBazliGelirRows, setGrupBazliGelirRows] = useState<{ grup: string; toplam: number; rezervasyon: number }[]>([]);
   const [bakiyeRows, setBakiyeRows] = useState<any[]>([]);
   const [bakiyeSearch, setBakiyeSearch] = useState("");
   const [bakiyeDurum, setBakiyeDurum] = useState("");
@@ -705,15 +705,16 @@ export default function IsletmeRaporlarPage() {
         return;
       }
 
-      const grouped = new Map<string, number>();
+      const grouped = new Map<string, { toplam: number; rezervasyon: number }>();
       (data ?? []).forEach((r: any) => {
         const grupAd = (r as any)?.sezlonglar?.sezlong_gruplari?.ad?.trim() || "Grupsuz";
         const tutar = Number(r?.toplam_tutar ?? 0);
-        grouped.set(grupAd, (grouped.get(grupAd) ?? 0) + tutar);
+        const prev = grouped.get(grupAd) ?? { toplam: 0, rezervasyon: 0 };
+        grouped.set(grupAd, { toplam: prev.toplam + tutar, rezervasyon: prev.rezervasyon + 1 });
       });
 
       const rows = Array.from(grouped.entries())
-        .map(([grup, toplam]) => ({ grup, toplam }))
+        .map(([grup, vals]) => ({ grup, toplam: vals.toplam, rezervasyon: vals.rezervasyon }))
         .sort((a, b) => b.toplam - a.toplam);
 
       setGrupBazliGelirRows(rows);
@@ -996,24 +997,30 @@ export default function IsletmeRaporlarPage() {
                     <span style={{ fontSize: 12, color: GRAY400, fontStyle: "italic" }}>Bu tarih aralığında grup bazlı gelir verisi bulunamadı.</span>
                   </div>
                 ) : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left", color: GRAY400, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Grup</th>
-                        <th style={{ textAlign: "right", color: GRAY400, fontWeight: 700, paddingBottom: 8, borderBottom: `1px solid ${GRAY100}` }}>Toplam Gelir</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {grupBazliGelirRows.map((row) => (
-                        <tr key={row.grup}>
-                          <td style={{ padding: "8px 0", borderBottom: `1px solid ${GRAY100}`, color: "#374151" }}>{row.grup}</td>
-                          <td style={{ padding: "8px 0", borderBottom: `1px solid ${GRAY100}`, textAlign: "right", fontWeight: 700, color: NAVY }}>
-                            ₺{row.toplam.toLocaleString("tr-TR")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {(() => {
+                      const maxToplam = Math.max(1, ...grupBazliGelirRows.map((r) => r.toplam));
+                      const renkler = ["#0EA5E9", "#22C55E", "#F59E0B", "#8B5CF6", "#EF4444", "#14B8A6", "#6366F1", "#F97316"];
+                      return grupBazliGelirRows.map((row, idx) => {
+                        const yuzde = Math.max(6, Math.round((row.toplam / maxToplam) * 100));
+                        const barRenk = renkler[idx % renkler.length];
+                        return (
+                          <div key={row.grup} style={{ borderBottom: `1px solid ${GRAY100}`, paddingBottom: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, fontSize: 12 }}>
+                              <span style={{ color: "#374151", fontWeight: 600 }}>{row.grup}</span>
+                              <span style={{ color: GRAY400 }}>{row.rezervasyon} rezervasyon</span>
+                            </div>
+                            <div style={{ width: "100%", height: 10, borderRadius: 999, background: "#F1F5F9", overflow: "hidden", marginBottom: 6 }}>
+                              <div style={{ width: `${yuzde}%`, height: "100%", background: `linear-gradient(90deg, ${barRenk}, ${barRenk}CC)` }} />
+                            </div>
+                            <div style={{ textAlign: "right", fontSize: 12, fontWeight: 700, color: NAVY }}>
+                              ₺{row.toplam.toLocaleString("tr-TR")}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
                 )}
               </div>
 
