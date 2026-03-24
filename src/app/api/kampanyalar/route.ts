@@ -122,3 +122,30 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Beklenmeyen bir hata oluştu" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, tesis_id, durum } = body ?? {};
+
+    if (!id || !tesis_id || !durum) {
+      return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("kampanyalar")
+      .update({ durum })
+      .eq("id", id)
+      .eq("tesis_id", tesis_id);
+
+    if (error) {
+      console.error("[api/kampanyalar][PATCH] update durum error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[api/kampanyalar][PATCH] route error:", err);
+    return NextResponse.json({ error: "Beklenmeyen bir hata oluştu" }, { status: 500 });
+  }
+}

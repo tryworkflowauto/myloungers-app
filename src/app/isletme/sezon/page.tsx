@@ -492,6 +492,24 @@ export default function IsletmeSezonPage() {
     await fetchKampanyalar();
   }
 
+  async function handleKampanyaDurumGuncelle(k: Kampanya, durum: KampanyaDurum) {
+    const res = await fetch("/api/kampanyalar", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: k.id, tesis_id: tesisId, durum }),
+    });
+    const result = await res.json().catch(() => null);
+    if (!res.ok) {
+      console.error("[handleKampanyaDurumGuncelle] API patch error:", result);
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    setDurdurModal(null);
+    setBaslatModal(null);
+    showToast(durum === "durduruldu" ? `⏸ "${k.name}" durduruldu` : `▶ "${k.name}" başlatıldı`);
+    await fetchKampanyalar();
+  }
+
   // â”€â”€ Shared styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const inputCls: React.CSSProperties = { width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" };
   const labelCls: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 };
@@ -701,30 +719,22 @@ export default function IsletmeSezonPage() {
             ) : kampanyalar.length === 0 ? (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>Henüz kampanya oluşturulmadı</div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px" }}>
                 {kampanyalar.map((k) => (
-                  <div key={k.id} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "16px", padding: "20px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div key={k.id} style={{ background: "white", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 16px rgba(0,0,0,0.10)", border: "1px solid #f0f0f0", display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                      <strong style={{ fontSize: "18px", fontWeight: "700", color: "#1a1a2e", lineHeight: 1.25 }}>{k.name}</strong>
-                      <span style={{ background: "#22c55e", color: "white", borderRadius: "20px", padding: "4px 12px", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" }}>{chipOf(k.durum)}</span>
+                      <strong style={{ fontSize: "20px", fontWeight: "700", color: "#111", lineHeight: 1.25 }}>{k.name}</strong>
+                      <span style={{ background: "#22c55e", color: "white", borderRadius: "999px", padding: "4px 14px", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" }}>{chipOf(k.durum)}</span>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div style={{ padding: "10px 12px", borderRadius: 10, background: GRAY50, border: `1px solid ${GRAY100}` }}>
-                        <div style={{ fontSize: 10, color: GRAY400, fontWeight: 700, marginBottom: 4 }}>Tarih Aralığı</div>
-                        <div style={{ fontSize: 12, color: GRAY800 }}>{fmtTarih(k.bas, k.bit)}</div>
-                      </div>
-                      <div style={{ padding: "10px 12px", borderRadius: 10, background: "transparent", border: "1px solid #f1f5f9" }}>
-                        <div style={{ fontSize: 10, color: GRAY400, fontWeight: 700, marginBottom: 4 }}>İndirim</div>
-                        <div style={{ fontSize: "32px", fontWeight: "800", color: "#0ea5e9", lineHeight: 1 }}>%{k.indirimOran}</div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                    <div style={{ fontSize: "13px", color: "#888" }}>{fmtTarih(k.bas, k.bit)}</div>
+                    <div style={{ fontSize: "40px", fontWeight: "800", color: "#0ea5e9", lineHeight: 1 }}>%{k.indirimOran}</div>
+                    <div style={{ fontSize: "13px", color: "#888" }}>
                       {kalanGun(k.bit) ? `Kalan Süre: ${kalanGun(k.bit)}` : "Kalan Süre: —"}
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "auto auto 1fr", alignItems: "center", gap: 8, marginTop: "auto" }}>
+                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: "auto" }}>
                       <button onClick={() => openKampDuzenle(k)} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
                       <button onClick={() => setSilModal(k)} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️</button>
-                      <button onClick={() => (k.durum === "aktif" ? setDurdurModal(k) : setBaslatModal(k))} style={{ justifySelf: "end", padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: "none", background: k.durum === "aktif" ? YELLOW : GREEN, color: "white", cursor: "pointer" }}>
+                      <button onClick={() => (k.durum === "aktif" ? setDurdurModal(k) : setBaslatModal(k))} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: "none", background: k.durum === "aktif" ? YELLOW : GREEN, color: "white", cursor: "pointer" }}>
                         {k.durum === "aktif" ? "⏸ Durdur" : "▶ Başlat"}
                       </button>
                     </div>
@@ -904,13 +914,13 @@ export default function IsletmeSezonPage() {
       {durdurModal && (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setDurdurModal(null)}>
           <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>â¸</div>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>⏸</div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Kampanyayı Durdur</h3>
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu kampanya durdurulacak:</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{durdurModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setDurdurModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
-              <button onClick={() => { setKampanyalar(p => p.map(k => k.id === durdurModal.id ? { ...k, durum: "durduruldu" } : k)); showToast(`â¸ "${durdurModal.name}" durduruldu`); setDurdurModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: YELLOW, color: "white", cursor: "pointer" }}>â¸ Durdur</button>
+              <button onClick={() => handleKampanyaDurumGuncelle(durdurModal, "durduruldu")} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: YELLOW, color: "white", cursor: "pointer" }}>⏸ Durdur</button>
             </div>
           </div>
         </div>
@@ -926,7 +936,7 @@ export default function IsletmeSezonPage() {
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{baslatModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setBaslatModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
-              <button onClick={() => { setKampanyalar(p => p.map(k => k.id === baslatModal.id ? { ...k, durum: "aktif" } : k)); showToast(`▶ "${baslatModal.name}" başlatıldı`); setBaslatModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: GREEN, color: "white", cursor: "pointer" }}>▶ Şimdi Başlat</button>
+              <button onClick={() => handleKampanyaDurumGuncelle(baslatModal, "aktif")} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: GREEN, color: "white", cursor: "pointer" }}>▶ Şimdi Başlat</button>
             </div>
           </div>
         </div>
