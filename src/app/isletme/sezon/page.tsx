@@ -722,33 +722,41 @@ export default function IsletmeSezonPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "14px" }}>
                 {kampanyalar.map((k) => (
                   <div key={k.id} style={{ borderRadius: "14px", overflow: "hidden", border: "1.5px solid #E2E8F0", transition: "all 0.2s" }}>
-                    <div style={{ padding: "14px 16px", background: k.headerBg || "linear-gradient(135deg,#F5821F,#C2410C)", color: "white", position: "relative" }}>
-                      <span style={{ background: "rgba(255,255,255,0.25)", color: "white", borderRadius: "20px", padding: "3px 8px", fontSize: "9px", fontWeight: 700 }}>
+                    <div style={{ padding: "12px 14px", background: k.headerBg || "linear-gradient(135deg,#F5821F,#C2410C)", color: "white", position: "relative" }}>
+                      <span style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)", color: "white", borderRadius: "20px", padding: "4px 10px", fontSize: "10px", fontWeight: 700 }}>
                         {chipOf(k.durum)}
                       </span>
                       <div style={{ marginTop: 8, paddingRight: 90 }}>
                         <div style={{ fontSize: "14px", fontWeight: 800 }}>{k.name}</div>
                         <div style={{ fontSize: "11px", opacity: 0.85 }}>{fmtTarih(k.bas, k.bit)}</div>
                       </div>
-                      <span style={{ background: "white", borderRadius: "10px", padding: "6px 12px", fontSize: "16px", fontWeight: 900, color: "#F5821F", position: "absolute", top: 12, right: 12 }}>
+                      <span style={{ background: "white", borderRadius: "12px", padding: "8px 14px", fontSize: "20px", fontWeight: 900, color: "#F5821F", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", position: "absolute", top: 12, right: 12 }}>
                         %{k.indirimOran}
                       </span>
                     </div>
-                    <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6, background: "white" }}>
+                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6, background: "white" }}>
                       <div style={{ fontSize: "12px" }}>
                         <span style={{ color: "#94A3B8" }}>Kalan Süre: </span>
                         <span style={{ fontWeight: 700, color: "#1E293B" }}>{kalanGun(k.bit) || "—"}</span>
                       </div>
                       <div style={{ fontSize: "12px" }}>
                         <span style={{ color: "#94A3B8" }}>Uygulanan Gruplar: </span>
-                        <span style={{ fontWeight: 700, color: "#1E293B" }}>
-                          {k.gruplar.length > 0 ? k.gruplar.length : 0}
-                        </span>
+                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{k.gruplar.length > 0 ? "Mevcut" : "—"}</span>
                       </div>
                       {k.gruplar.length > 0 && (
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                           {k.gruplar.map((gr) => (
-                            <span key={gr} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 12, background: "#EEF2FF", color: "#3730A3" }}>
+                            <span
+                              key={gr}
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                padding: "2px 8px",
+                                borderRadius: "20px",
+                                background: `${(GRUP_COLORS[gr]?.text ?? "#64748B")}33`,
+                                color: GRUP_COLORS[gr]?.text ?? "#64748B",
+                              }}
+                            >
                               {gr}
                             </span>
                           ))}
