@@ -29,44 +29,6 @@ const AVATAR_GRADIENTS = [
   "linear-gradient(135deg,#a18cd1,#fbc2eb)",
 ];
 
-// ── Mock data ────────────────────────────────────────────────────────────────
-const GUNLUK_HAFTA = [
-  { gun: "Pzt", teal: 60, orange: 28, tealVal: "₺18K", sezVal: 18000, sipVal: 8400 },
-  { gun: "Sal", teal: 72, orange: 32, tealVal: "₺22K", sezVal: 22000, sipVal: 9600 },
-  { gun: "Çar", teal: 55, orange: 24, tealVal: "₺17K", sezVal: 17000, sipVal: 7200 },
-  { gun: "Per", teal: 80, orange: 38, tealVal: "₺24K", sezVal: 24000, sipVal: 11400 },
-  { gun: "Cum", teal: 90, orange: 42, tealVal: "₺28K", sezVal: 28000, sipVal: 12600 },
-  { gun: "Cmt", teal: 100, orange: 46, tealVal: "₺31K", sezVal: 31000, sipVal: 13800 },
-  { gun: "Paz", teal: 52, orange: 22, tealVal: "₺18.4K", sezVal: 18400, sipVal: 6600, isToday: true },
-];
-const GUNLUK_BUGUN = [
-  { gun: "09", teal: 20, orange: 8, tealVal: "₺2K", sezVal: 2000, sipVal: 600 },
-  { gun: "10", teal: 35, orange: 14, tealVal: "₺3.5K", sezVal: 3500, sipVal: 1000 },
-  { gun: "11", teal: 55, orange: 22, tealVal: "₺5.5K", sezVal: 5500, sipVal: 1600 },
-  { gun: "12", teal: 80, orange: 38, tealVal: "₺8K", sezVal: 8000, sipVal: 2800 },
-  { gun: "13", teal: 100, orange: 46, tealVal: "₺10K", sezVal: 10000, sipVal: 3400, isToday: true },
-];
-const GUNLUK_AY = [
-  { gun: "H1", teal: 62, orange: 28, tealVal: "₺84K", sezVal: 84000, sipVal: 26000 },
-  { gun: "H2", teal: 75, orange: 34, tealVal: "₺102K", sezVal: 102000, sipVal: 31000 },
-  { gun: "H3", teal: 88, orange: 40, tealVal: "₺118K", sezVal: 118000, sipVal: 36000 },
-  { gun: "H4", teal: 52, orange: 22, tealVal: "₺71K", sezVal: 71000, sipVal: 20000, isToday: true },
-];
-const GUNLUK_YIL = [
-  { gun: "Oca", teal: 30, orange: 14, tealVal: "₺48K", sezVal: 48000, sipVal: 14000 },
-  { gun: "Şub", teal: 38, orange: 18, tealVal: "₺61K", sezVal: 61000, sipVal: 18000 },
-  { gun: "Mar", teal: 52, orange: 24, tealVal: "₺84K", sezVal: 84000, sipVal: 24000, isToday: true },
-  { gun: "Nis", teal: 70, orange: 32, tealVal: "₺112K", sezVal: 0, sipVal: 0 },
-  { gun: "May", teal: 90, orange: 42, tealVal: "₺144K", sezVal: 0, sipVal: 0 },
-  { gun: "Haz", teal: 100, orange: 48, tealVal: "₺160K", sezVal: 0, sipVal: 0 },
-  { gun: "Tem", teal: 95, orange: 44, tealVal: "₺152K", sezVal: 0, sipVal: 0 },
-  { gun: "Ağu", teal: 88, orange: 40, tealVal: "₺140K", sezVal: 0, sipVal: 0 },
-  { gun: "Eyl", teal: 72, orange: 34, tealVal: "₺115K", sezVal: 0, sipVal: 0 },
-  { gun: "Eki", teal: 55, orange: 26, tealVal: "₺88K", sezVal: 0, sipVal: 0 },
-  { gun: "Kas", teal: 40, orange: 18, tealVal: "₺64K", sezVal: 0, sipVal: 0 },
-  { gun: "Ara", teal: 25, orange: 10, tealVal: "₺40K", sezVal: 0, sipVal: 0 },
-];
-
 const DONEM_STATS: Record<string, { toplam: string; sezlong: string; siparis: string; sonaEren: string; change: string }> = {
   bugun:  { toplam: "₺18.400",  sezlong: "₺11.200", siparis: "₺7.200",  sonaEren: "₺600",   change: "↑ %8 dünkü güne göre" },
   hafta:  { toplam: "₺148.400", sezlong: "₺89.500", siparis: "₺52.600", sonaEren: "₺6.300", change: "↑ %18 geçen haftaya göre" },
@@ -151,6 +113,7 @@ export default function IsletmeRaporlarPage() {
   // Gelir stat verileri (Supabase)
   const [sumRez, setSumRez] = useState(0);
   const [sumSip, setSumSip] = useState(0);
+  const [gunlukChartData, setGunlukChartData] = useState<GunlukItem[]>([]);
   const [bakiyeRows, setBakiyeRows] = useState<any[]>([]);
   const [bakiyeSearch, setBakiyeSearch] = useState("");
   const [bakiyeDurum, setBakiyeDurum] = useState("");
@@ -519,10 +482,126 @@ export default function IsletmeRaporlarPage() {
       });
   }, [tesisId]);
 
+  useEffect(() => {
+    async function fetchGunlukData() {
+      if (!tesisId) {
+        setGunlukChartData([]);
+        return;
+      }
+
+      const now = new Date();
+      let start = new Date(now);
+      if (donemGelir === "bugun") {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      } else if (donemGelir === "hafta") {
+        start = new Date(now);
+        start.setDate(now.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+      } else if (donemGelir === "ay") {
+        start = new Date(now);
+        start.setDate(now.getDate() - 29);
+        start.setHours(0, 0, 0, 0);
+      } else {
+        start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      }
+
+      const startIso = start.toISOString();
+      const endIso = now.toISOString();
+
+      const [rezRes, sipRes] = await Promise.all([
+        supabase
+          .from("rezervasyonlar")
+          .select("created_at, toplam_tutar")
+          .eq("tesis_id", tesisId)
+          .gte("created_at", startIso)
+          .lte("created_at", endIso),
+        supabase
+          .from("siparisler")
+          .select("created_at, toplam")
+          .eq("tesis_id", tesisId)
+          .gte("created_at", startIso)
+          .lte("created_at", endIso),
+      ]);
+
+      if (rezRes.error || sipRes.error) {
+        if (rezRes.error) console.error("gunluk rezervasyonlar error:", rezRes.error);
+        if (sipRes.error) console.error("gunluk siparisler error:", sipRes.error);
+        setGunlukChartData([]);
+        return;
+      }
+
+      const monthsShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+      const weekdaysShort = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+      const bucket = new Map<string, { gun: string; sezVal: number; sipVal: number; isToday: boolean }>();
+
+      const keyOf = (dt: Date) => {
+        if (donemGelir === "yil") return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+        return dt.toISOString().slice(0, 10);
+      };
+      const labelOf = (dt: Date) => {
+        if (donemGelir === "bugun") return String(dt.getHours()).padStart(2, "0");
+        if (donemGelir === "hafta") return weekdaysShort[dt.getDay()];
+        if (donemGelir === "ay") return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}`;
+        return monthsShort[dt.getMonth()];
+      };
+
+      if (donemGelir === "yil") {
+        for (let m = 0; m < 12; m++) {
+          const d = new Date(now.getFullYear(), m, 1);
+          const key = keyOf(d);
+          bucket.set(key, { gun: labelOf(d), sezVal: 0, sipVal: 0, isToday: m === now.getMonth() });
+        }
+      } else if (donemGelir === "bugun") {
+        for (let h = 0; h < 24; h++) {
+          const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, 0, 0, 0);
+          const key = `${d.toISOString().slice(0, 13)}:00`;
+          bucket.set(key, { gun: String(h).padStart(2, "0"), sezVal: 0, sipVal: 0, isToday: h === now.getHours() });
+        }
+      } else {
+        const days = donemGelir === "hafta" ? 7 : 30;
+        for (let i = days - 1; i >= 0; i--) {
+          const d = new Date(now);
+          d.setDate(now.getDate() - i);
+          const key = keyOf(d);
+          bucket.set(key, { gun: labelOf(d), sezVal: 0, sipVal: 0, isToday: key === now.toISOString().slice(0, 10) });
+        }
+      }
+
+      (rezRes.data ?? []).forEach((r: any) => {
+        const dt = r.created_at ? new Date(r.created_at) : null;
+        if (!dt) return;
+        const key = donemGelir === "bugun" ? `${dt.toISOString().slice(0, 13)}:00` : keyOf(dt);
+        if (!bucket.has(key)) return;
+        bucket.get(key)!.sezVal += Number(r.toplam_tutar ?? 0);
+      });
+
+      (sipRes.data ?? []).forEach((s: any) => {
+        const dt = s.created_at ? new Date(s.created_at) : null;
+        if (!dt) return;
+        const key = donemGelir === "bugun" ? `${dt.toISOString().slice(0, 13)}:00` : keyOf(dt);
+        if (!bucket.has(key)) return;
+        bucket.get(key)!.sipVal += Number(s.toplam ?? 0);
+      });
+
+      const maxSez = Math.max(1, ...Array.from(bucket.values()).map((v) => v.sezVal));
+      const maxSip = Math.max(1, ...Array.from(bucket.values()).map((v) => v.sipVal));
+      const rows: GunlukItem[] = Array.from(bucket.values()).map((v) => ({
+        gun: v.gun,
+        teal: Math.round((v.sezVal / maxSez) * 100),
+        orange: Math.round((v.sipVal / maxSip) * 100),
+        tealVal: `₺${v.sezVal.toLocaleString("tr-TR")}`,
+        sezVal: v.sezVal,
+        sipVal: v.sipVal,
+        isToday: v.isToday,
+      }));
+      setGunlukChartData(rows);
+    }
+    fetchGunlukData();
+  }, [donemGelir, tesisId]);
+
   // ── Derived data ─────────────────────────────────────────────────────────
-  // Bar chart data: tip GunlukItem[] olarak tanımlı; şu an boş.
   function getGunlukData(): GunlukItem[] {
-    return [] as GunlukItem[];
+    return gunlukChartData;
   }
 
   const donemStat = {
