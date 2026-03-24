@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -75,8 +74,7 @@ type GarsonRow = {
 // ── Component ────────────────────────────────────────────────────────────────
 export default function IsletmeRaporlarPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab]     = useState<TabKey>("gelir");
   const [donemGelir, setDonemGelir]   = useState("hafta");
@@ -128,6 +126,33 @@ export default function IsletmeRaporlarPage() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const getTesisId = async () => {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        setTesisId(null);
+        return;
+      }
+      const { data: kullanici, error: kullaniciErr } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (kullaniciErr || !kullanici?.tesis_id) {
+        setTesisId(null);
+        return;
+      }
+      setTesisId(String(kullanici.tesis_id));
+    };
+    getTesisId();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Supabase: rezervasyonlar + siparisler (toplamlar)
