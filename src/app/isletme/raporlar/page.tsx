@@ -1006,7 +1006,7 @@ export default function IsletmeRaporlarPage() {
                     <tbody>
                       {grupBazliGelirRows.map((row) => (
                         <tr key={row.grup}>
-                          <td style={{ padding: "8px 0", borderBottom: `1px solid ${GRAY100}`, color: GRAY700 }}>{row.grup}</td>
+                          <td style={{ padding: "8px 0", borderBottom: `1px solid ${GRAY100}`, color: "#374151" }}>{row.grup}</td>
                           <td style={{ padding: "8px 0", borderBottom: `1px solid ${GRAY100}`, textAlign: "right", fontWeight: 700, color: NAVY }}>
                             ₺{row.toplam.toLocaleString("tr-TR")}
                           </td>
