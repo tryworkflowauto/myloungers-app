@@ -465,7 +465,7 @@ export default function IsletmeSezonPage() {
     }
     setKampModal(false);
     setEditKamp(null);
-    fetchKampanyalar();
+    await fetchKampanyalar();
   }
   function toggleGrupInForm(g: string) {
     setKampForm(p => ({ ...p, gruplar: p.gruplar.includes(g) ? p.gruplar.filter(x => x !== g) : [...p.gruplar, g] }));
