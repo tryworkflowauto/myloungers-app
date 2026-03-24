@@ -95,3 +95,30 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Beklenmeyen bir hata oluştu" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, tesis_id } = body ?? {};
+
+    if (!id || !tesis_id) {
+      return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("kampanyalar")
+      .delete()
+      .eq("id", id)
+      .eq("tesis_id", tesis_id);
+
+    if (error) {
+      console.error("[api/kampanyalar][DELETE] delete error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[api/kampanyalar][DELETE] route error:", err);
+    return NextResponse.json({ error: "Beklenmeyen bir hata oluştu" }, { status: 500 });
+  }
+}

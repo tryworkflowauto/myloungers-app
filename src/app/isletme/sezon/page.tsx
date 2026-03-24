@@ -475,6 +475,23 @@ export default function IsletmeSezonPage() {
     showToast(`🔁 "${k.name}" kopyalandı — taslak oluşturuldu`);
   }
 
+  async function handleKampanyaSil(k: Kampanya) {
+    const res = await fetch("/api/kampanyalar", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: k.id, tesis_id: tesisId }),
+    });
+    const result = await res.json().catch(() => null);
+    if (!res.ok) {
+      console.error("[handleKampanyaSil] API delete error:", result);
+      showToast("❌ Kayıt başarısız");
+      return;
+    }
+    showToast(`🗑️ "${k.name}" silindi`);
+    setSilModal(null);
+    await fetchKampanyalar();
+  }
+
   // â”€â”€ Shared styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const inputCls: React.CSSProperties = { width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" };
   const labelCls: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 5 };
@@ -684,22 +701,32 @@ export default function IsletmeSezonPage() {
             ) : kampanyalar.length === 0 ? (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>Henüz kampanya oluşturulmadı</div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
                 {kampanyalar.map((k) => (
-                  <div key={k.id} style={{ border: `1px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden", background: "white" }}>
-                    <div style={{ background: k.headerBg, color: "white", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <strong style={{ fontSize: 13 }}>{k.name}</strong>
-                      <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(255,255,255,0.2)", borderRadius: 999, padding: "3px 8px" }}>{chipOf(k.durum)}</span>
+                  <div key={k.id} style={{ border: `1px solid ${GRAY200}`, borderRadius: 14, background: "white", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                      <strong style={{ fontSize: 14, color: NAVY, lineHeight: 1.3 }}>{k.name}</strong>
+                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 999, padding: "4px 8px", background: k.durum === "aktif" ? "#DCFCE7" : "#F1F5F9", color: k.durum === "aktif" ? "#166534" : GRAY600, whiteSpace: "nowrap" }}>{chipOf(k.durum)}</span>
                     </div>
-                    <div style={{ padding: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                      <div style={{ fontSize: 12, color: GRAY600 }}>
-                        {fmtTarih(k.bas, k.bit)}
-                        {kalanGun(k.bit) ? <span style={{ marginLeft: 8, color: GRAY400 }}>({kalanGun(k.bit)})</span> : null}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div style={{ padding: "10px 12px", borderRadius: 10, background: GRAY50, border: `1px solid ${GRAY100}` }}>
+                        <div style={{ fontSize: 10, color: GRAY400, fontWeight: 700, marginBottom: 4 }}>Tarih Aralığı</div>
+                        <div style={{ fontSize: 12, color: GRAY800 }}>{fmtTarih(k.bas, k.bit)}</div>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <button onClick={() => openKampDuzenle(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
-                        <button onClick={() => setSilModal(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️</button>
+                      <div style={{ padding: "10px 12px", borderRadius: 10, background: GRAY50, border: `1px solid ${GRAY100}` }}>
+                        <div style={{ fontSize: 10, color: GRAY400, fontWeight: 700, marginBottom: 4 }}>İndirim</div>
+                        <div style={{ fontSize: 13, color: ORANGE, fontWeight: 800 }}>%{k.indirimOran}</div>
                       </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: GRAY600 }}>
+                      {kalanGun(k.bit) ? `Kalan Süre: ${kalanGun(k.bit)}` : "Kalan Süre: —"}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "auto" }}>
+                      <button onClick={() => openKampDuzenle(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
+                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️</button>
+                      <button onClick={() => (k.durum === "aktif" ? setDurdurModal(k) : setBaslatModal(k))} style={{ marginLeft: "auto", padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: k.durum === "aktif" ? YELLOW : GREEN, color: "white", cursor: "pointer" }}>
+                        {k.durum === "aktif" ? "⏸ Durdur" : "▶ Başlat"}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -909,13 +936,13 @@ export default function IsletmeSezonPage() {
       {silModal && (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setSilModal(null)}>
           <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>ðŸ—‘ï¸</div>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Kampanyayı Sil</h3>
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu işlem geri alınamaz.</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{silModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setSilModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
-              <button onClick={() => { setKampanyalar(p => p.filter(k => k.id !== silModal.id)); showToast(`ðŸ—‘ï¸ "${silModal.name}" silindi`); setSilModal(null); }} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>ðŸ—‘ï¸ Evet, Sil</button>
+              <button onClick={() => handleKampanyaSil(silModal)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️ Evet, Sil</button>
             </div>
           </div>
         </div>
