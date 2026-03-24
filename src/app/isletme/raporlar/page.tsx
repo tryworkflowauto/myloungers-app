@@ -921,9 +921,9 @@ export default function IsletmeRaporlarPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
               {([
                 { label: "Toplam Gelir",     val: donemStat.toplam,   sub: { bugun:"Bugün",hafta:"Bu hafta",ay:"Bu ay",yil:"Bu yıl" }[donemGelir]!, change: donemStat.change, up: true,  color: TEAL   },
-                { label: "Şezlong Geliri",   val: donemStat.sezlong,  sub: "%60 toplam gelirin",    change: "↑ %12", up: true,  color: ORANGE  },
-                { label: "Sipariş Geliri",   val: donemStat.siparis,  sub: "%35 toplam gelirin",    change: "↑ %24", up: true,  color: GREEN   },
-                { label: "Sona Eren Bakiye", val: donemStat.sonaEren, sub: "İşletmeye geçen",       change: "↓ %5",  up: false, color: PURPLE  },
+                { label: "Şezlong Geliri",   val: donemStat.sezlong,  sub: "",                       change: "",      up: true,  color: ORANGE  },
+                { label: "Sipariş Geliri",   val: donemStat.siparis,  sub: "",                       change: "",      up: true,  color: GREEN   },
+                { label: "Sona Eren Bakiye", val: donemStat.sonaEren, sub: "",                       change: "",      up: false, color: PURPLE  },
               ] as const).map((s, i) => (
                 <div
                   key={i}
