@@ -241,7 +241,7 @@ export default function IsletmeDashboardPage() {
       ucGunSonra.setDate(now.getDate() + 3);
       ucGunSonra.setHours(23, 59, 59, 999);
 
-      const [tesisRes, sezonRes, gruplarRes, sezlonglarRes, rezRes, yorumRes, siparisRes, bekleyenSiparisRes, yaklasanRezRes, yaklasanBakiyeRes, haftalikGelirRes, gunlukGelirRes, aktifMusteriRes] = await Promise.all([
+      const [tesisRes, sezonRes, gruplarRes, sezlonglarRes, rezRes, yorumRes, siparisRes, bekleyenSiparisRes, yaklasanRezRes, yaklasanBakiyeRes, haftalikGelirRes, gunlukGelirRes, aktifMusteriRes, cevaplanmayanYorumRes] = await Promise.all([
         supabase.from("tesisler").select("id, ad").eq("id", tesisId).maybeSingle(),
         supabase.from("sezonlar").select("id, ad, baslangic, bitis").eq("tesis_id", tesisId).eq("aktif", true).order("bitis", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("sezlong_gruplari").select("id, ad, renk").eq("tesis_id", tesisId),
@@ -255,6 +255,7 @@ export default function IsletmeDashboardPage() {
         supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).gte("created_at", haftaninBasi.toISOString()).lte("created_at", haftaninSonu.toISOString()),
         supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).gte("created_at", bugunBas.toISOString()).lte("created_at", bugunSon.toISOString()),
         supabase.from("rezervasyonlar").select("id", { count: "exact", head: true }).eq("tesis_id", tesisId).eq("durum", "aktif").gte("created_at", bugunBas.toISOString()).lte("created_at", bugunSon.toISOString()),
+        supabase.from("yorumlar").select("id", { count: "exact", head: true }).eq("tesis_id", tesisId).neq("durum", "cevaplandi"),
       ]);
 
       if (cancelled) return;
@@ -395,9 +396,11 @@ export default function IsletmeDashboardPage() {
       const yaklasanRezCount = (yaklasanRezRes.data ?? []).length;
       const bakiyeYaklasanCount = yaklasanBakiyeItems.length;
       const bakiyeRiskToplam = ((yaklasanBakiyeRes.data ?? []) as any[]).reduce((acc: number, b: any) => acc + Number(b.bakiye_kalan ?? 0), 0);
+      const cevaplanmayanYorumSayisi = cevaplanmayanYorumRes.count ?? 0;
+      console.log("[dashboard] cevaplanmayan yorum sayisi:", cevaplanmayanYorumSayisi);
       setUyarilar([
         { ikon: "🍽️", baslik: `${bekleyenSiparisItems.length} Bekleyen Sipariş`, detay: bekleyenSiparisItems.length ? `En eskisi ${bekleyenSiparisItems[0].sure} önce` : "Bekleyen sipariş yok", renk: "turuncu", href: "/isletme/siparisler" },
-        { ikon: "⭐", baslik: `${yorumItems.filter((y) => !y.pozitif).length} Cevaplanmayan Yorum`, detay: `${yorumItems.filter((y) => !y.pozitif).length} şikayet içeriyor`, renk: "kirmizi", href: "/isletme/yorumlar" },
+        { ikon: "⭐", baslik: `${cevaplanmayanYorumSayisi} Cevaplanmayan Yorum`, detay: `${cevaplanmayanYorumSayisi} yorum yanıt bekliyor`, renk: "kirmizi", href: "/isletme/yorumlar" },
         { ikon: "💰", baslik: `${bakiyeYaklasanCount} Bakiye Sona Eriyor`, detay: `3 gün içinde · ₺${bakiyeRiskToplam.toLocaleString("tr-TR")}`, renk: "sari", href: "/isletme/raporlar" },
         { ikon: "📋", baslik: `Önümüzdeki 3 günde ${yaklasanRezCount} Rezervasyon`, detay: "Yaklaşan rezervasyonlar", renk: "mavi", href: "/isletme/rezervasyonlar" },
       ]);
