@@ -236,12 +236,31 @@ export default function IsletmeSezonPage() {
         .select("id, ad, aciklama, indirim_orani, baslangic_tarihi, bitis_tarihi, durum, tip, gruplar, musteri_goster")
         .eq("tesis_id", tesisId)
         .order("created_at", { ascending: false });
-      if (error || !data) {
-        if (error) console.error("Kampanyalar çekilemedi:", error);
-        setKampanyalar([]);
-        return;
+      console.log("[fetchKampanyalar] primary query result:", { tesisId, error, count: data?.length ?? 0, data });
+
+      let rowsRaw: any[] = data ?? [];
+      if (error) {
+        // Fallback: bazı ortamlarda yeni kolonlar (tip/gruplar/musteri_goster) henüz yok olabilir.
+        const fallback = await supabase
+          .from("kampanyalar")
+          .select("id, ad, aciklama, indirim_orani, baslangic_tarihi, bitis_tarihi, durum")
+          .eq("tesis_id", tesisId)
+          .order("created_at", { ascending: false });
+        console.log("[fetchKampanyalar] fallback query result:", {
+          tesisId,
+          error: fallback.error,
+          count: fallback.data?.length ?? 0,
+          data: fallback.data,
+        });
+        if (fallback.error || !fallback.data) {
+          console.error("Kampanyalar çekilemedi:", fallback.error ?? error);
+          setKampanyalar([]);
+          return;
+        }
+        rowsRaw = fallback.data as any[];
       }
-      const rows = (data as any[]).map((r) => {
+
+      const rows = rowsRaw.map((r) => {
         const bas = (r.baslangic_tarihi as string | null) ?? "";
         const bit = (r.bitis_tarihi as string | null) ?? "";
         const headerBg = `linear-gradient(135deg,${ORANGE},#C2410C)`;
