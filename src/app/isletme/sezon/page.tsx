@@ -427,28 +427,36 @@ export default function IsletmeSezonPage() {
     };
     console.log("[saveKampanya] payload:", payload);
     if (editKamp) {
-      const { error } = await supabase
-        .from("kampanyalar")
-        .update({
+      const res = await fetch("/api/kampanyalar", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editKamp.id,
+          tesis_id: tesisId,
           ad: payload.ad,
           aciklama: payload.aciklama,
           indirim_orani: payload.indirim_orani,
           baslangic_tarihi: payload.baslangic_tarihi,
           bitis_tarihi: payload.bitis_tarihi,
-        })
-        .eq("id", editKamp.id)
-        .eq("tesis_id", tesisId);
-      if (error) {
-        console.error("[saveKampanya] Supabase update error:", error);
+        }),
+      });
+      const result = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error("[saveKampanya] API update error:", result);
         showToast("❌ Kayıt başarısız");
         return;
       }
       console.log("[saveKampanya] update success", { id: editKamp.id, tesisId });
       showToast(`✅ "${kampForm.name}" kampanyası güncellendi`);
     } else {
-      const { error } = await supabase.from("kampanyalar").insert(payload);
-      if (error) {
-        console.error("[saveKampanya] Supabase insert error:", error);
+      const res = await fetch("/api/kampanyalar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error("[saveKampanya] API insert error:", result);
         showToast("❌ Kayıt başarısız");
         return;
       }
