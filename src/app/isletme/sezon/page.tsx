@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -112,8 +111,7 @@ const emptyKampForm  = { name: "", bas: "2026-03-11", bit: "2026-03-31", tip: "o
 
 // â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function IsletmeSezonPage() {
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [sezonlar, setSezonlar]     = useState<SezonItem[]>([]);
@@ -144,6 +142,37 @@ export default function IsletmeSezonPage() {
   // Toast
   const [toast, setToast] = useState<string | null>(null);
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
+
+  useEffect(() => {
+    let cancelled = false;
+    const getTesisId = async () => {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        console.log("[sezon/getTesisId] auth error:", authErr);
+        setTesisId(null);
+        return;
+      }
+      const { data: kullanici, error: kullaniciErr } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (kullaniciErr || !kullanici?.tesis_id) {
+        console.log("[sezon/getTesisId] kullanici error:", kullaniciErr, "row:", kullanici);
+        setTesisId(null);
+        return;
+      }
+      const nextTesisId = String(kullanici.tesis_id);
+      console.log("[sezon/getTesisId] resolved tesisId:", nextTesisId);
+      setTesisId(nextTesisId);
+    };
+    getTesisId();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load sezonlar + sezlong_gruplari from Supabase
   useEffect(() => {
@@ -342,7 +371,9 @@ export default function IsletmeSezonPage() {
   }
 
   async function kaydetGenelAyarlar() {
+    console.log("[kaydetGenelAyarlar] called", { tesisId, genelAyarlar });
     if (!tesisId) {
+      console.log("[kaydetGenelAyarlar] missing tesisId");
       showToast("❌ Kayıt başarısız");
       return;
     }
@@ -362,10 +393,12 @@ export default function IsletmeSezonPage() {
       })
       .eq("id", tesisId);
     if (error) {
-      console.error("Genel ayarlar kaydedilemedi:", error);
+      console.error("[kaydetGenelAyarlar] Supabase update error:", error);
+      console.log("[kaydetGenelAyarlar] update failed for tesisId:", tesisId);
       showToast("❌ Kayıt başarısız");
       return;
     }
+    console.log("[kaydetGenelAyarlar] update success", { tesisId });
     showToast("✅ Kaydedildi!");
   }
 
