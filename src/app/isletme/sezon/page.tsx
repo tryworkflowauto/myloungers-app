@@ -701,30 +701,30 @@ export default function IsletmeSezonPage() {
             ) : kampanyalar.length === 0 ? (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>Henüz kampanya oluşturulmadı</div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
                 {kampanyalar.map((k) => (
-                  <div key={k.id} style={{ border: `1px solid ${GRAY200}`, borderRadius: 14, background: "white", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div key={k.id} style={{ border: `1px solid ${GRAY200}`, borderRadius: 16, background: "white", padding: 16, display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 8px 24px rgba(15,23,42,0.08)" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                      <strong style={{ fontSize: 14, color: NAVY, lineHeight: 1.3 }}>{k.name}</strong>
-                      <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 999, padding: "4px 8px", background: k.durum === "aktif" ? "#DCFCE7" : "#F1F5F9", color: k.durum === "aktif" ? "#166534" : GRAY600, whiteSpace: "nowrap" }}>{chipOf(k.durum)}</span>
+                      <strong style={{ fontSize: 16, color: NAVY, lineHeight: 1.25, fontWeight: 800 }}>{k.name}</strong>
+                      <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 999, padding: "5px 10px", background: k.durum === "aktif" ? "#22C55E" : "#E2E8F0", color: k.durum === "aktif" ? "white" : GRAY600, whiteSpace: "nowrap", letterSpacing: 0.2 }}>{chipOf(k.durum)}</span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       <div style={{ padding: "10px 12px", borderRadius: 10, background: GRAY50, border: `1px solid ${GRAY100}` }}>
                         <div style={{ fontSize: 10, color: GRAY400, fontWeight: 700, marginBottom: 4 }}>Tarih Aralığı</div>
                         <div style={{ fontSize: 12, color: GRAY800 }}>{fmtTarih(k.bas, k.bit)}</div>
                       </div>
-                      <div style={{ padding: "10px 12px", borderRadius: 10, background: GRAY50, border: `1px solid ${GRAY100}` }}>
+                      <div style={{ padding: "10px 12px", borderRadius: 10, background: "#FFF7ED", border: "1px solid #FED7AA" }}>
                         <div style={{ fontSize: 10, color: GRAY400, fontWeight: 700, marginBottom: 4 }}>İndirim</div>
-                        <div style={{ fontSize: 13, color: ORANGE, fontWeight: 800 }}>%{k.indirimOran}</div>
+                        <div style={{ fontSize: 22, color: ORANGE, fontWeight: 900, lineHeight: 1 }}>%{k.indirimOran}</div>
                       </div>
                     </div>
                     <div style={{ fontSize: 12, color: GRAY600 }}>
                       {kalanGun(k.bit) ? `Kalan Süre: ${kalanGun(k.bit)}` : "Kalan Süre: —"}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "auto" }}>
-                      <button onClick={() => openKampDuzenle(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
-                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️</button>
-                      <button onClick={() => (k.durum === "aktif" ? setDurdurModal(k) : setBaslatModal(k))} style={{ marginLeft: "auto", padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: k.durum === "aktif" ? YELLOW : GREEN, color: "white", cursor: "pointer" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "auto auto 1fr", alignItems: "center", gap: 8, marginTop: "auto" }}>
+                      <button onClick={() => openKampDuzenle(k)} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
+                      <button onClick={() => setSilModal(k)} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️</button>
+                      <button onClick={() => (k.durum === "aktif" ? setDurdurModal(k) : setBaslatModal(k))} style={{ justifySelf: "end", padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: "none", background: k.durum === "aktif" ? YELLOW : GREEN, color: "white", cursor: "pointer" }}>
                         {k.durum === "aktif" ? "⏸ Durdur" : "▶ Başlat"}
                       </button>
                     </div>
