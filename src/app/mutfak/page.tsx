@@ -36,6 +36,7 @@ export default function MutfakPage() {
   const [onayModal,    setOnayModal]    = useState<SiparisKart | null>(null);
   const [detayModal,   setDetayModal]   = useState<SiparisKart | null>(null);
   const [tesisId,      setTesisId]      = useState<string | null>(null);
+  const [tesisAd,      setTesisAd]      = useState("Tesis");
 
   // Real-time clock (1-second interval)
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function MutfakPage() {
       setYeni([]);
       setHazirlaniyor([]);
       setTamamlandi([]);
+      setTesisAd("Tesis");
       return;
     }
 
@@ -163,6 +165,20 @@ export default function MutfakPage() {
 
     fetchSiparisler();
 
+    supabase
+      .from("tesisler")
+      .select("ad")
+      .eq("id", tesisId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("mutfak tesis ad fetch error:", error);
+          setTesisAd("Tesis");
+          return;
+        }
+        setTesisAd(data?.ad || "Tesis");
+      });
+
     const channel = supabase
       .channel(`mutfak-siparisler-${tesisId}`)
       .on(
@@ -231,7 +247,7 @@ export default function MutfakPage() {
           </div>
           <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.1)" }} />
           <div style={{ fontSize: 22, fontWeight: 900, color: TEAL, fontVariantNumeric: "tabular-nums", minWidth: 52 }}>{saat}</div>
-          <div style={{ fontSize: 11, color: GRAY400 }}>Zuzuu Beach Hotel</div>
+          <div style={{ fontSize: 11, color: GRAY400 }}>{tesisAd}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {/* Stat kartlar — gerçek zamanlı */}
