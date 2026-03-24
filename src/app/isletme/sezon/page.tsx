@@ -719,22 +719,46 @@ export default function IsletmeSezonPage() {
             ) : kampanyalar.length === 0 ? (
               <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: GRAY400 }}>Henüz kampanya oluşturulmadı</div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "14px" }}>
                 {kampanyalar.map((k) => (
-                  <div key={k.id} style={{ background: "white", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 16px rgba(0,0,0,0.10)", border: "1px solid #f0f0f0", display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                      <strong style={{ fontSize: "20px", fontWeight: "700", color: "#111", lineHeight: 1.25 }}>{k.name}</strong>
-                      <span style={{ background: "#22c55e", color: "white", borderRadius: "999px", padding: "4px 14px", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" }}>{chipOf(k.durum)}</span>
+                  <div key={k.id} style={{ borderRadius: "14px", overflow: "hidden", border: "1.5px solid #E2E8F0", transition: "all 0.2s" }}>
+                    <div style={{ padding: "14px 16px", background: k.headerBg || "linear-gradient(135deg,#F5821F,#C2410C)", color: "white", position: "relative" }}>
+                      <span style={{ background: "rgba(255,255,255,0.25)", color: "white", borderRadius: "20px", padding: "3px 8px", fontSize: "9px", fontWeight: 700 }}>
+                        {chipOf(k.durum)}
+                      </span>
+                      <div style={{ marginTop: 8, paddingRight: 90 }}>
+                        <div style={{ fontSize: "14px", fontWeight: 800 }}>{k.name}</div>
+                        <div style={{ fontSize: "11px", opacity: 0.85 }}>{fmtTarih(k.bas, k.bit)}</div>
+                      </div>
+                      <span style={{ background: "white", borderRadius: "10px", padding: "6px 12px", fontSize: "16px", fontWeight: 900, color: "#F5821F", position: "absolute", top: 12, right: 12 }}>
+                        %{k.indirimOran}
+                      </span>
                     </div>
-                    <div style={{ fontSize: "13px", color: "#888" }}>{fmtTarih(k.bas, k.bit)}</div>
-                    <div style={{ fontSize: "40px", fontWeight: "800", color: "#0ea5e9", lineHeight: 1 }}>%{k.indirimOran}</div>
-                    <div style={{ fontSize: "13px", color: "#888" }}>
-                      {kalanGun(k.bit) ? `Kalan Süre: ${kalanGun(k.bit)}` : "Kalan Süre: —"}
+                    <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6, background: "white" }}>
+                      <div style={{ fontSize: "12px" }}>
+                        <span style={{ color: "#94A3B8" }}>Kalan Süre: </span>
+                        <span style={{ fontWeight: 700, color: "#1E293B" }}>{kalanGun(k.bit) || "—"}</span>
+                      </div>
+                      <div style={{ fontSize: "12px" }}>
+                        <span style={{ color: "#94A3B8" }}>Uygulanan Gruplar: </span>
+                        <span style={{ fontWeight: 700, color: "#1E293B" }}>
+                          {k.gruplar.length > 0 ? k.gruplar.length : 0}
+                        </span>
+                      </div>
+                      {k.gruplar.length > 0 && (
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                          {k.gruplar.map((gr) => (
+                            <span key={gr} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 12, background: "#EEF2FF", color: "#3730A3" }}>
+                              {gr}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: "auto" }}>
-                      <button onClick={() => openKampDuzenle(k)} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
-                      <button onClick={() => setSilModal(k)} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️</button>
-                      <button onClick={() => (k.durum === "aktif" ? setDurdurModal(k) : setBaslatModal(k))} style={{ padding: "7px 11px", fontSize: 11, fontWeight: 700, borderRadius: 9, border: "none", background: k.durum === "aktif" ? YELLOW : GREEN, color: "white", cursor: "pointer" }}>
+                    <div style={{ padding: "10px 16px", background: "#F8FAFC", borderTop: "1px solid #F1F5F9", display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      <button onClick={() => openKampDuzenle(k)} style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #E2E8F0", background: "white", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>✏️</button>
+                      <button onClick={() => setSilModal(k)} style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #E2E8F0", background: "white", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>🗑️</button>
+                      <button onClick={() => (k.durum === "aktif" ? setDurdurModal(k) : setBaslatModal(k))} style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #E2E8F0", background: "white", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
                         {k.durum === "aktif" ? "⏸ Durdur" : "▶ Başlat"}
                       </button>
                     </div>
@@ -915,7 +939,7 @@ export default function IsletmeSezonPage() {
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setDurdurModal(null)}>
           <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>⏸</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Kampanyayı Durdur</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>⏸ Kampanyayı Durdur</h3>
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu kampanya durdurulacak:</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{durdurModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
@@ -930,8 +954,8 @@ export default function IsletmeSezonPage() {
       {baslatModal && (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setBaslatModal(null)}>
           <div style={{ background: "white", borderRadius: 16, padding: 28, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>â–¶ï¸</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Kampanyayı Başlat</h3>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>▶</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>▶ Kampanyayı Başlat</h3>
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 4 }}>Bu kampanya hemen aktif olacak:</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 20 }}>{baslatModal.name}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
