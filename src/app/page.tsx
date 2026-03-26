@@ -1142,13 +1142,13 @@ export default function Home() {
             <li id="plan-f4">Garson çağırma ve sipariş</li>
           </ul>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <a href="/hotel/slug" className="btn-solid" id="plan-btn1">Tesis planını gör →</a>
+            <a href="/tesis/reklamotv" className="btn-solid" id="plan-btn1">Tesis planını gör →</a>
             <button type="button" className="btn-ghost" id="plan-btn2">Daha fazla bilgi</button>
           </div>
         </div>
         <div className="pww">
           <div className="pwt">
-            <span className="pwn">Zuzuu Beach Hotel</span>
+            <span className="pwn">ReklamoTV</span>
             <span className="pwd">6 Mar 2026</span>
           </div>
           <div className="pwb">
