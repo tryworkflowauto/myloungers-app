@@ -216,6 +216,10 @@ export default function Home() {
   const [popularTesisler, setPopularTesisler] = useState<any[]>([]);
   const [bizUser, setBizUser] = useState<{ name: string; tesisAd?: string } | null>(null);
   const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
+  const [planTesisAd, setPlanTesisAd] = useState("ReklamoTV");
+  const [planTarih, setPlanTarih] = useState("6 Mar 2026");
+  const [planSilverFiyat, setPlanSilverFiyat] = useState(1000);
+  const [planGoldFiyat, setPlanGoldFiyat] = useState(600);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -353,6 +357,49 @@ export default function Home() {
       if (data) setPopularTesisler(data);
     }
     fetchPopular();
+  }, []);
+
+  useEffect(() => {
+    async function fetchPlanCardData() {
+      const { data: tesisRows, error: tesisErr } = await supabase
+        .from("tesisler")
+        .select("id, ad, slug")
+        .or("slug.eq.reklamotv,slug.eq.ReklamoTV")
+        .limit(1);
+
+      let picked = (tesisRows ?? [])[0] as any;
+      if (!picked) {
+        const { data: firstRows, error: firstErr } = await supabase
+          .from("tesisler")
+          .select("id, ad, slug")
+          .limit(1);
+        if (firstErr) console.error("Plan kartı tesis fallback hatası:", firstErr);
+        picked = (firstRows ?? [])[0] as any;
+      }
+      if (tesisErr) console.error("Plan kartı tesis sorgu hatası:", tesisErr);
+      if (!picked?.id) return;
+
+      setPlanTesisAd(picked.ad || "ReklamoTV");
+      const now = new Date();
+      const mon = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"][now.getMonth()];
+      setPlanTarih(`${now.getDate()} ${mon} ${now.getFullYear()}`);
+
+      const { data: gruplar, error: grupErr } = await supabase
+        .from("sezlong_gruplari")
+        .select("ad, fiyat, erken_fiyat, yuksek_fiyat, normal_fiyat")
+        .eq("tesis_id", picked.id);
+      if (grupErr) {
+        console.error("Plan kartı grup sorgu hatası:", grupErr);
+        return;
+      }
+      const getFiyat = (g: any) =>
+        Number(g?.fiyat ?? g?.normal_fiyat ?? g?.erken_fiyat ?? g?.yuksek_fiyat ?? 0);
+      const silver = (gruplar ?? []).find((g: any) => String(g.ad || "").toLowerCase().includes("silver"));
+      const gold = (gruplar ?? []).find((g: any) => String(g.ad || "").toLowerCase().includes("gold"));
+      if (silver) setPlanSilverFiyat(getFiyat(silver));
+      if (gold) setPlanGoldFiyat(getFiyat(gold));
+    }
+    fetchPlanCardData();
   }, []);
 
   useEffect(() => {
@@ -1148,13 +1195,13 @@ export default function Home() {
         </div>
         <div className="pww">
           <div className="pwt">
-            <span className="pwn">ReklamoTV</span>
-            <span className="pwd">6 Mar 2026</span>
+            <span className="pwn">{planTesisAd}</span>
+            <span className="pwd">{planTarih}</span>
           </div>
           <div className="pwb">
             <div className="pw-cat-row">
               <span className="pw-cat-lbl">SILVER</span>
-              <span className="pw-cat-price">₺1.000 / GÜN</span>
+              <span className="pw-cat-price">₺{planSilverFiyat.toLocaleString("tr-TR")} / GÜN</span>
             </div>
             <div className="lrow">
               {[4,5,6,7,8,9,28,30].map((n, i) => (
@@ -1163,7 +1210,7 @@ export default function Home() {
             </div>
             <div className="pw-cat-row" style={{marginTop:"14px"}}>
               <span className="pw-cat-lbl">GOLD</span>
-              <span className="pw-cat-price">₺600 / GÜN</span>
+              <span className="pw-cat-price">₺{planGoldFiyat.toLocaleString("tr-TR")} / GÜN</span>
             </div>
             <div className="lrow">
               {[1,2,3,4,5,6,7,8].map((n, i) => (
