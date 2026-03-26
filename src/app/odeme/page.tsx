@@ -109,7 +109,7 @@ function OdemeContent() {
 
   const szlChips = res.szl.split(", ").filter(Boolean);
   const unitPrice = res.toplam / (res.gun * Math.max(res.kisi, 1));
-  const tesisSlug = searchParams.get("tesis") || "reklamotv";
+  const tesisSlug = (searchParams.get("tesis") || "reklamotv").toLowerCase();
 
   return (
     <>
