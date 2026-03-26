@@ -109,6 +109,7 @@ function OdemeContent() {
 
   const szlChips = res.szl.split(", ").filter(Boolean);
   const unitPrice = res.toplam / (res.gun * Math.max(res.kisi, 1));
+  const tesisSlug = searchParams.get("tesis") || "reklamotv";
 
   return (
     <>
@@ -260,7 +261,7 @@ function OdemeContent() {
         <Link href="/">
           <img className="nav-logo" src="/logo.png" alt="MyLoungers" />
         </Link>
-        <Link href="/hotel/slug" className="nav-back">
+        <Link href={`/tesis/${tesisSlug}`} className="nav-back">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           Tesis Detay
         </Link>
