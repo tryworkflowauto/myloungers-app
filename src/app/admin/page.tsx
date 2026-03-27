@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminToast } from "./AdminToastContext";
+import { createClient } from "@supabase/supabase-js";
 
 const NAVY   = "#0A1628";
 const TEAL   = "#0ABAB5";
@@ -203,8 +204,13 @@ function StatModalContent({ idx, onClose }: { idx: number; onClose: () => void }
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const router = useRouter();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const { showToast } = useAdminToast();
   const tesislerRef   = useRef<HTMLDivElement>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [tesisler,        setTesisler]        = useState<Tesis[]>(INIT_TESISLER);
   const [yorumTalepleri,  setYorumTalepleri]  = useState<YorumTalep[]>(INIT_YORUMLAR);
@@ -219,6 +225,31 @@ export default function AdminPage() {
   const [yorumSilIdx,  setYorumSilIdx]  = useState<number | null>(null);
   const [statDetay,    setStatDetay]    = useState<number | null>(null);
   const [dropdownId,   setDropdownId]   = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkAdmin() {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        router.push('/giris');
+        return;
+      }
+      const { data } = await supabase
+        .from('kullanicilar')
+        .select('rol')
+        .eq('email', authData.user.email)
+        .single();
+      if (cancelled) return;
+      if (data?.rol !== 'admin') {
+        router.push('/');
+        return;
+      }
+      setAuthLoading(false);
+    }
+    checkAdmin();
+    return () => { cancelled = true; };
+  }, []);
 
   // ESC + outside-click to close dropdown
   useEffect(() => {
@@ -235,6 +266,14 @@ export default function AdminPage() {
   const filtrelenmisTesisler = tesisler.filter(t =>
     !tesisAra || t.ad.toLowerCase().includes(tesisAra.toLowerCase())
   );
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
 
   // ── Actions ───────────────────────────────────────────────────────────────
   function onaylaTesis(t: Tesis) {
