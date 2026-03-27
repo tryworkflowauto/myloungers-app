@@ -52,6 +52,7 @@ function OdemeContent() {
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [kvkk, setKvkk] = useState(false);
   const [kvkkErr, setKvkkErr] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     // 1. Try URL query params (preferred — passed from hotel detail page)
@@ -89,6 +90,13 @@ function OdemeContent() {
     } catch (_) {}
   }, [searchParams]);
 
+  useEffect(() => {
+    const sonuc = searchParams.get("sonuc");
+    if (sonuc === "basarili" || sonuc === "hata") {
+      setStep(4);
+    }
+  }, [searchParams]);
+
   function validate() {
     const e: Record<string, boolean> = {};
     if (!form.name.trim()) e.name = true;
@@ -110,6 +118,38 @@ function OdemeContent() {
   const szlChips = res.szl.split(", ").filter(Boolean);
   const unitPrice = res.toplam / (res.gun * Math.max(res.kisi, 1));
   const tesisSlug = (searchParams.get("tesis") || "reklamotv").toLowerCase();
+  const paymentResult = searchParams.get("sonuc");
+
+  async function startParatikaPayment() {
+    try {
+      setPaymentLoading(true);
+      const orderId = "MYL-" + Date.now();
+      const resp = await fetch("/api/paratika/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: res.toplam,
+          orderId,
+          customerName: form.name || "Misafir",
+          customerSurname: form.surname || "",
+          customerEmail: form.email || "",
+          customerPhone: form.phone || "",
+        }),
+      });
+      if (!resp.ok) throw new Error("Session alınamadı");
+      const data = await resp.json();
+      const token = data?.sessionToken;
+      if (!token) throw new Error("Session token boş");
+      const returnUrl = "https://myloungers.com/api/paratika/callback";
+      const payUrl =
+        `https://entegrasyon.paratika.com.tr/payment?SessionToken=${encodeURIComponent(token)}&action=PAYWITHTOKEN&returnUrl=${encodeURIComponent(returnUrl)}`;
+      window.location.href = payUrl;
+    } catch (err) {
+      console.error("Paratika ödeme başlatma hatası:", err);
+      setPaymentLoading(false);
+      alert("Ödeme başlatılamadı. Lütfen tekrar deneyin.");
+    }
+  }
 
   return (
     <>
@@ -512,9 +552,9 @@ function OdemeContent() {
               </div>
               <div className="nav-actions">
                 <button className="btn-secondary" onClick={() => goStep(2)}>← Geri</button>
-                <button className="btn-primary" onClick={() => goStep(4)}>
+                <button className="btn-primary" onClick={startParatikaPayment} disabled={paymentLoading} style={paymentLoading ? { opacity: 0.8, cursor: "not-allowed" } : undefined}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  ₺{res.toplam.toLocaleString("tr-TR")} Öde ve Rezervasyonu Tamamla
+                  {paymentLoading ? "Ödeme başlatılıyor..." : `₺${res.toplam.toLocaleString("tr-TR")} Öde ve Rezervasyonu Tamamla`}
                 </button>
               </div>
             </div>
@@ -525,9 +565,9 @@ function OdemeContent() {
             <div>
               <div className="card">
                 <div className="success-hero">
-                  <div className="success-ic">🎉</div>
-                  <div className="success-title">Rezervasyonunuz Onaylandı!</div>
-                  <div className="success-sub">Tesis girişinde QR kodunuzu gösterin</div>
+                  <div className="success-ic">{paymentResult === "hata" ? "❌" : "🎉"}</div>
+                  <div className="success-title">{paymentResult === "hata" ? "Ödeme Başarısız" : "Rezervasyonunuz Onaylandı!"}</div>
+                  <div className="success-sub">{paymentResult === "hata" ? "Lütfen tekrar deneyin veya farklı bir kart kullanın" : "Tesis girişinde QR kodunuzu gösterin"}</div>
                   <div className="success-code">MYL-2025-7842</div>
                 </div>
 
