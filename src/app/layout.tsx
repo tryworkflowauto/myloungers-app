@@ -5,6 +5,9 @@ import AuthSessionProvider from "@/components/AuthSessionProvider";
 export const metadata: Metadata = {
   title: "Myloungers | Plaj ve Otel Şezlong Rezervasyonu",
   description: "Türkiye'deki beach ve otel tesislerinde şezlong rezervasyonu yapın. Hayalindeki plajı Myloungers ile rezerve et.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
