@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const NAVY   = "#0A1628";
@@ -112,9 +113,17 @@ const INIT_YORUMLAR: Yorum[] = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function IsletmeYorumlarPage() {
+  const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push('/giris'); return; }
+      supabase.from('kullanicilar').select('rol').eq('email', user.email).single().then(({ data }) => {
+        if (data?.rol !== 'isletmeci' && data?.rol !== 'admin') router.push('/');
+      });
+    });
+
     const getTesisId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -126,7 +135,7 @@ export default function IsletmeYorumlarPage() {
       if (data?.tesis_id) setTesisId(data.tesis_id);
     };
     getTesisId();
-  }, []);
+  }, [router]);
 
   const [yorumlar,      setYorumlar]      = useState<Yorum[]>(INIT_YORUMLAR);
   const [activeTab,     setActiveTab]     = useState("tum");
