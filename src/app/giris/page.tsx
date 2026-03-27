@@ -77,11 +77,15 @@ function GirisContent() {
         return;
       }
 
-      const userId = authData.user.id;
+      const userEmail = authData.user.email;
+      if (!userEmail) {
+        router.push("/profil");
+        return;
+      }
       const { data: kullanici, error: kullaniciError } = await supabase
         .from("kullanicilar")
         .select("rol")
-        .eq("id", userId)
+        .eq("email", userEmail)
         .maybeSingle();
 
       const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
@@ -90,7 +94,9 @@ function GirisContent() {
 
       console.log("Kullanıcı rolü (giriş):", rol);
 
-      if (rol === "isletme") {
+      if (rol === "admin") {
+        router.push("/admin");
+      } else if (rol === "isletmeci") {
         router.push("/isletme");
       } else {
         router.push("/profil");
@@ -134,11 +140,15 @@ function GirisContent() {
         return;
       }
 
-      const userId = authData.user.id;
+      const userEmail = authData.user.email;
+      if (!userEmail) {
+        router.push("/profil");
+        return;
+      }
       const { data: kullanici, error: kullaniciError } = await supabase
         .from("kullanicilar")
         .select("rol")
-        .eq("id", userId)
+        .eq("email", userEmail)
         .maybeSingle();
 
       const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
@@ -147,7 +157,9 @@ function GirisContent() {
 
       console.log("Kullanıcı rolü (kayıt):", rol);
 
-      if (rol === "isletme") {
+      if (rol === "admin") {
+        router.push("/admin");
+      } else if (rol === "isletmeci") {
         router.push("/isletme");
       } else {
         router.push("/profil");
