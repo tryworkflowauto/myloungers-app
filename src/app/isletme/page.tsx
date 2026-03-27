@@ -177,6 +177,7 @@ export default function IsletmeDashboardPage() {
       if (authError || !authData?.user || cancelled) {
         setTesisId(null);
         setAuthChecked(true);
+        if (!cancelled) router.push('/giris');
         return;
       }
 
