@@ -150,6 +150,7 @@ export default function IsletmeDashboardPage() {
   const [tarih, setTarih] = useState("");
   const [saat, setSaat] = useState("--:--");
   const [tesisId, setTesisId] = useState<string | null>(null);
+  const [tesisAdi, setTesisAdi] = useState("Tesis");
   const [authChecked, setAuthChecked] = useState(false);
   const [rezervasyonModalOpen, setRezervasyonModalOpen] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", sezlongGrubu: "Gold", sezlongNo: "", tarih: "", kisiSayisi: "" });
@@ -216,6 +217,25 @@ export default function IsletmeDashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (!tesisId) {
+      setTesisAdi("Tesis");
+      return;
+    }
+    supabase
+      .from("tesisler")
+      .select("ad")
+      .eq("id", tesisId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data?.ad) {
+          setTesisAdi("Tesis");
+          return;
+        }
+        setTesisAdi(String(data.ad));
+      });
+  }, [tesisId]);
+
+  useEffect(() => {
     if (!authChecked) return;
     if (!tesisId) {
       setLoading(false);
@@ -262,7 +282,7 @@ export default function IsletmeDashboardPage() {
       if (cancelled) return;
 
       const tesis = (tesisRes.data as { id: string; ad: string } | null) ?? null;
-      const tesisAdi = tesis?.ad ?? "Tesis";
+      const fetchedTesisAdi = tesis?.ad ?? "Tesis";
       const sezon = sezonRes.data as { ad: string; baslangic: string; bitis: string } | null;
       const gruplar = (gruplarRes.data ?? []) as { id: string; ad: string; renk: string }[];
       const sezlonglar = (sezlonglarRes.data ?? []) as { id: string; grup_id: string; durum: string }[];
@@ -307,7 +327,7 @@ export default function IsletmeDashboardPage() {
 
       setSezonData({
         ad: sezon?.ad ?? "Sezon",
-        tesis: tesisAdi,
+        tesis: fetchedTesisAdi,
         baslangic: baslangicStr || "—",
         bitis: bitisStr || "—",
         kalanGun,
@@ -431,6 +451,7 @@ export default function IsletmeDashboardPage() {
     haftalikGelir: "₺—",
     hava: { derece: 24, durum: "Açık", ruzgar: "12 km/s", deniz: "Sakin" },
   };
+  const sezonVar = Boolean(sezonData?.ad && sezonData.ad.trim());
 
   return (
     <div className="flex flex-col min-h-full" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
@@ -473,8 +494,8 @@ export default function IsletmeDashboardPage() {
           }}
         >
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: "white", marginBottom: 3 }}>🌸 {sezon.ad}</h2>
-            <span style={{ fontSize: 12, color: GRAY400 }}>{sezon.tesis} · {sezon.baslangic} — {sezon.bitis}</span>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: "white", marginBottom: 3 }}>🌸 {sezonVar ? sezon.ad : tesisAdi}</h2>
+            <span style={{ fontSize: 12, color: GRAY400 }}>{sezonVar ? `${sezon.tesis} · ${sezon.baslangic} — ${sezon.bitis}` : tesisAdi}</span>
           </div>
           <div className="flex gap-7">
             <div><div style={{ fontSize: 24, fontWeight: 900, color: TEAL }}>{sezon.kalanGun}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Kalan Gün</div></div>
