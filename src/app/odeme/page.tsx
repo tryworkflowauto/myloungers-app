@@ -652,7 +652,13 @@ function OdemeContent() {
 
                 <div style={{ padding: "0 22px 22px", display: "flex", gap: 10 }}>
                   <Link href="/" style={{ flex: 1, background: "var(--bg)", border: "1.5px solid var(--bd)", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--navy)", textDecoration: "none", textAlign: "center" }}>🏠 Ana Sayfaya Dön</Link>
-                  <Link href={`/tesis/${new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('tesis')?.toLowerCase() || 'reklamotv'}`} style={{ flex: 1, background: "var(--tlt)", border: "1.5px solid #B2EBEA", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--tdk)", textDecoration: "none", textAlign: "center" }}>🏖️ Tesise Git</Link>
+                  <button
+                    onClick={() => {
+                      const tesis = new URLSearchParams(window.location.search).get('tesis') || 'reklamotv';
+                      window.location.href = `/tesis/${tesis.toLowerCase()}`;
+                    }}
+                    style={{ flex: 1, background: "var(--tlt)", border: "1.5px solid #B2EBEA", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--tdk)", textDecoration: "none", textAlign: "center", cursor: "pointer" }}
+                  >🏖️ Tesise Git</button>
                 </div>
               </div>
             </div>
