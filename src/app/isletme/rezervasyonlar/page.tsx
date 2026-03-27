@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -182,6 +183,7 @@ const emptyEditForm = {
 };
 
 export default function IsletmeRezervasyonlarPage() {
+  const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [rezervasyonlar, setRezervasyonlar] = useState<Rezervasyon[]>([]);
@@ -222,6 +224,13 @@ export default function IsletmeRezervasyonlarPage() {
 
   // ESC key closes all modals/drawer
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push('/giris'); return; }
+      supabase.from('kullanicilar').select('rol').eq('email', user.email).single().then(({ data }) => {
+        if (data?.rol !== 'isletmeci' && data?.rol !== 'admin') router.push('/');
+      });
+    });
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setDrawerOpen(false); setDrawerRez(null);
@@ -235,7 +244,7 @@ export default function IsletmeRezervasyonlarPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [router]);
 
   // Reset page when filters change
   useEffect(() => { setSayfa(1); }, [aramaMetni, filtreTarih, filtreGrup, filtreTip, filtreDurum, activeTab]);
