@@ -7,20 +7,28 @@ import { supabase } from "@/lib/supabase";
 
 type ResData = {
   tesis: string;
+  tarihBaslangic: string;
+  tarihBitis: string;
   tarih: string;
   gun: number;
+  sezlonglar: string;
   szl: string;
   kisi: number;
+  fiyat: number;
   toplam: number;
 };
 
 const DEFAULT_RES: ResData = {
-  tesis: "Zuzuu Beach Hotel",
-  tarih: "15 – 17 Temmuz 2025",
-  gun: 2,
-  szl: "A3, A4",
-  kisi: 2,
-  toplam: 5000,
+  tesis: "",
+  tarihBaslangic: "",
+  tarihBitis: "",
+  tarih: "",
+  gun: 0,
+  sezlonglar: "",
+  szl: "",
+  kisi: 0,
+  fiyat: 0,
+  toplam: 0,
 };
 
 // Formats "2026-03-12" → "12 Mart 2026"
@@ -68,39 +76,23 @@ function OdemeContent() {
   }, []);
 
   useEffect(() => {
-    // 1. Try URL query params (preferred — passed from hotel detail page)
-    const pTesis   = queryParams?.get("tesis");
-    const pBaslangic = queryParams?.get("tarihBaslangic");
-    const pBitis   = queryParams?.get("tarihBitis");
-    const pGun     = queryParams?.get("gun");
-    const pSzl     = queryParams?.get("sezlonglar");
-    const pKisi    = queryParams?.get("kisi");
-    const pFiyat   = queryParams?.get("fiyat");
-
-    if (pBaslangic && pSzl) {
-      const tarihLabel = pBitis && pBitis !== pBaslangic
-        ? fmtISO(pBaslangic) + " – " + fmtISO(pBitis)
-        : fmtISO(pBaslangic) + " (tek gün)";
-      setRes({
-        tesis:  pTesis  || DEFAULT_RES.tesis,
-        tarih:  tarihLabel,
-        gun:    parseInt(pGun  || "1"),
-        szl:    (pSzl   || "").replace(/,/g, ", "),
-        kisi:   parseInt(pKisi || "1"),
-        toplam: parseInt(pFiyat || "0"),
-      });
-      return;
-    }
-    // 2. Fall back to sessionStorage (legacy)
-    try {
-      const tesis  = sessionStorage.getItem("ml_tesis")  || DEFAULT_RES.tesis;
-      const tarih  = sessionStorage.getItem("ml_tarih")  || DEFAULT_RES.tarih;
-      const gun    = parseInt(sessionStorage.getItem("ml_gun")  || "2");
-      const szl    = sessionStorage.getItem("ml_szl")    || DEFAULT_RES.szl;
-      const kisi   = parseInt(sessionStorage.getItem("ml_kisi") || "2");
-      const toplam = parseInt(sessionStorage.getItem("ml_toplam") || "5000");
-      setRes({ tesis, tarih, gun, szl, kisi, toplam });
-    } catch (_) {}
+    const params = new URLSearchParams(window.location.search);
+    const tarihBaslangic = params.get('tarihBaslangic') || '';
+    const tarihBitis = params.get('tarihBitis') || '';
+    setRes({
+      tesis: params.get('tesis') || '',
+      tarihBaslangic,
+      tarihBitis,
+      tarih: tarihBaslangic
+        ? (tarihBitis && tarihBitis !== tarihBaslangic ? `${fmtISO(tarihBaslangic)} – ${fmtISO(tarihBitis)}` : fmtISO(tarihBaslangic))
+        : '',
+      gun: parseInt(params.get('gun') || '1'),
+      sezlonglar: params.get('sezlonglar') || '',
+      szl: (params.get('sezlonglar') || '').replace(/,/g, ', '),
+      kisi: parseInt(params.get('kisi') || '1'),
+      fiyat: parseInt(params.get('fiyat') || '0'),
+      toplam: parseInt(params.get('fiyat') || '0'),
+    });
   }, []);
 
   useEffect(() => {
