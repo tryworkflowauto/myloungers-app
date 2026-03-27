@@ -46,7 +46,6 @@ const QR_PATTERN = [
 
 function OdemeContent() {
   const router = useRouter();
-  const tesisParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tesis") || "" : "";
   const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [step, setStep] = useState(1);
   const [res, setRes] = useState<ResData>(DEFAULT_RES);
@@ -59,6 +58,7 @@ function OdemeContent() {
   const [user, setUser] = useState<any>(null);
   const [loginError, setLoginError] = useState(false);
   const [cardDate, setCardDate] = useState("");
+  const [tesisParam, setTesisParam] = useState("");
 
   useEffect(() => {
     async function checkUser() {
@@ -66,6 +66,9 @@ function OdemeContent() {
       setUser(data?.user ?? null);
     }
     checkUser();
+    if (typeof window !== "undefined") {
+      setTesisParam(new URLSearchParams(window.location.search).get("tesis") || "");
+    }
   }, []);
 
   useEffect(() => {
