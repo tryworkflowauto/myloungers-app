@@ -80,6 +80,7 @@ export default function TesisDetailPage() {
   const [selEnd, setSelEnd] = useState<Date | null>(null);
   const [paxCount, setPaxCount] = useState(1);
   const [selSzls, setSelSzls] = useState<SelSzl[]>([]);
+  const [loginWarning, setLoginWarning] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
@@ -373,7 +374,12 @@ export default function TesisDetailPage() {
     }
   }
 
-  function pickSzl(no: string, zoneKey: string, status: SzlStatus, pw: number, pe: number) {
+  async function pickSzl(no: string, zoneKey: string, status: SzlStatus, pw: number, pe: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoginWarning(true);
+      return;
+    }
     if (!selStart) {
       alert("Lütfen önce giriş tarihini seçin.");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1159,6 +1165,12 @@ export default function TesisDetailPage() {
             </div>
 
             {/* ŞEZLONG DÜZENİ */}
+            {loginWarning && (
+              <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ fontSize: '.85rem', color: '#92400E' }}>🔒 Şezlong seçmek için giriş yapmanız gerekmektedir.</span>
+                <a href="/giris" style={{ background: '#F97316', color: 'white', borderRadius: 8, padding: '6px 14px', fontSize: '.8rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>Giriş Yap</a>
+              </div>
+            )}
             <div className="panel" ref={szlRef}>
               <div className="ph" onClick={() => togglePanel("szl")}>
                 <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Şezlong Düzeni</div><div className="ph-sub">100 şezlong · İskele · VIP · Silver</div></div></div>
