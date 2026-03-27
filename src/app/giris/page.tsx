@@ -80,7 +80,7 @@ function GirisContent() {
       const { data: kullanici } = await supabase
         .from('kullanicilar')
         .select('rol')
-        .eq('id', authData.user.id)
+        .eq('email', authData.user.email)
         .single();
 
       if ((kullanici as any)?.rol === 'admin') router.push('/admin');
@@ -128,7 +128,7 @@ function GirisContent() {
       const { data: kullanici } = await supabase
         .from('kullanicilar')
         .select('rol')
-        .eq('id', authData.user.id)
+        .eq('email', authData.user.email)
         .single();
 
       if ((kullanici as any)?.rol === 'admin') router.push('/admin');
