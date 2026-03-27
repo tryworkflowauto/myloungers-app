@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -111,6 +112,7 @@ const emptyKampForm  = { name: "", bas: "2026-03-11", bit: "2026-03-31", tip: "o
 
 // â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function IsletmeSezonPage() {
+  const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -144,6 +146,13 @@ export default function IsletmeSezonPage() {
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push('/giris'); return; }
+      supabase.from('kullanicilar').select('rol').eq('email', user.email).single().then(({ data }) => {
+        if (data?.rol !== 'isletmeci' && data?.rol !== 'admin') router.push('/');
+      });
+    });
+
     let cancelled = false;
     const getTesisId = async () => {
       const { data: authData, error: authErr } = await supabase.auth.getUser();
@@ -172,7 +181,7 @@ export default function IsletmeSezonPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   // Load sezonlar + sezlong_gruplari from Supabase
   useEffect(() => {
