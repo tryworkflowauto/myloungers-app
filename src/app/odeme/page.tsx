@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -45,6 +45,7 @@ const QR_PATTERN = [
 ];
 
 function OdemeContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [res, setRes] = useState<ResData>(DEFAULT_RES);
@@ -54,8 +55,17 @@ function OdemeContent() {
   const [kvkk, setKvkk] = useState(false);
   const [kvkkErr, setKvkkErr] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [authWarn, setAuthWarn] = useState(false);
-  const [cardExpiry, setCardExpiry] = useState("");
+  const [user, setUser] = useState<any>(null);
+  const [loginError, setLoginError] = useState(false);
+  const [cardDate, setCardDate] = useState("");
+
+  useEffect(() => {
+    async function checkUser() {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user ?? null);
+    }
+    checkUser();
+  }, []);
 
   useEffect(() => {
     // 1. Try URL query params (preferred — passed from hotel detail page)
@@ -118,15 +128,20 @@ function OdemeContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length >= 2) val = val.slice(0, 2) + "/" + val.slice(2, 4);
+    setCardDate(val);
+  };
+
   async function handleGoPaymentStep() {
     if (!validate()) return;
-    const { data: authData, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !authData?.user) {
-      setAuthWarn(true);
-      window.location.href = "/giris?redirect=/odeme";
+    if (!user) {
+      setLoginError(true);
+      setTimeout(() => router.push("/giris"), 1000);
       return;
     }
-    setAuthWarn(false);
+    setLoginError(false);
     setStep(3);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -491,8 +506,8 @@ function OdemeContent() {
                 </div>
               </div>
               <div className="nav-actions">
-                {authWarn && (
-                  <div style={{ width: "100%", fontSize: ".7rem", color: "#EF4444", fontWeight: 600 }}>
+                {loginError && (
+                  <div style={{ width: "100%", fontSize: ".7rem", color: "#B91C1C", fontWeight: 700, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 10px" }}>
                     Devam etmek için giriş yapmanız gerekmektedir.
                   </div>
                 )}
@@ -538,12 +553,8 @@ function OdemeContent() {
                             type="text"
                             placeholder="AA/YY"
                             maxLength={5}
-                            value={cardExpiry}
-                            onChange={(e) => {
-                              const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
-                              const formatted = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-                              setCardExpiry(formatted);
-                            }}
+                            value={cardDate}
+                            onChange={handleDateChange}
                           />
                           <input className="iyzico-field" type="text" placeholder="CVV" maxLength={3} />
                         </div>
