@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 type ResData = {
   tesis: string;
@@ -53,6 +54,8 @@ function OdemeContent() {
   const [kvkk, setKvkk] = useState(false);
   const [kvkkErr, setKvkkErr] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [authWarn, setAuthWarn] = useState(false);
+  const [cardExpiry, setCardExpiry] = useState("");
 
   useEffect(() => {
     // 1. Try URL query params (preferred — passed from hotel detail page)
@@ -112,6 +115,19 @@ function OdemeContent() {
   function goStep(n: number) {
     if (step === 2 && n === 3) { if (!validate()) return; }
     setStep(n);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleGoPaymentStep() {
+    if (!validate()) return;
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !authData?.user) {
+      setAuthWarn(true);
+      window.location.href = "/giris?redirect=/odeme";
+      return;
+    }
+    setAuthWarn(false);
+    setStep(3);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -475,8 +491,13 @@ function OdemeContent() {
                 </div>
               </div>
               <div className="nav-actions">
+                {authWarn && (
+                  <div style={{ width: "100%", fontSize: ".7rem", color: "#EF4444", fontWeight: 600 }}>
+                    Devam etmek için giriş yapmanız gerekmektedir.
+                  </div>
+                )}
                 <button className="btn-secondary" onClick={() => goStep(1)}>← Geri</button>
-                <button className="btn-primary" onClick={() => goStep(3)}>
+                <button className="btn-primary" onClick={handleGoPaymentStep}>
                   Ödemeye Geç
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
@@ -507,13 +528,23 @@ function OdemeContent() {
                   {payMethod === "pm-card" && (
                     <div className="iyzico-wrap">
                       <div className="iyzico-logo">🔒</div>
-                      <div className="iyzico-title">iyzico Güvenli Ödeme</div>
-                      <div className="iyzico-sub">Ödeme bilgileriniz 256-bit SSL ile korunmaktadır</div>
+                      <div className="iyzico-title">Güvenli Ödeme</div>
                       <div className="iyzico-card-form">
                         <input className="iyzico-field" type="text" placeholder="Kart Üzerindeki İsim" maxLength={40} />
                         <input className="iyzico-field" type="text" placeholder="Kart Numarası" maxLength={19} />
                         <div className="iyzico-row">
-                          <input className="iyzico-field" type="text" placeholder="AA/YY" maxLength={5} />
+                          <input
+                            className="iyzico-field"
+                            type="text"
+                            placeholder="AA/YY"
+                            maxLength={5}
+                            value={cardExpiry}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                              const formatted = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+                              setCardExpiry(formatted);
+                            }}
+                          />
                           <input className="iyzico-field" type="text" placeholder="CVV" maxLength={3} />
                         </div>
                         <div style={{ textAlign: "center" }}>
