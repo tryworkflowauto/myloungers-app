@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const NAVY   = "#0A1628";
@@ -36,6 +37,7 @@ type PerfData = { teslimat: number; ortSure: number; musteri: number; puan: numb
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function GarsonPage() {
+  const router = useRouter();
   const [sayfa,         setSayfa]         = useState<"siparisler"|"bolge"|"performans">("siparisler");
   const [aktif,         setAktif]         = useState(true);
   const [cagriGoster,   setCagriGoster]   = useState(true);
@@ -53,8 +55,40 @@ export default function GarsonPage() {
   const [haftalik,      setHaftalik]      = useState<HaftalikItem[]>([]);
   const [sonTeslimler,  setSonTeslimler]  = useState<SonTeslimItem[]>([]);
   const [perf,          setPerf]          = useState<PerfData>({ teslimat: 0, ortSure: 0, musteri: 0, puan: 0, tip: 0 });
+  const [authLoading,   setAuthLoading]   = useState(true);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
+
+  // Auth + role guard
+  useEffect(() => {
+    let cancelled = false;
+    async function checkAuthRole() {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        router.push("/giris");
+        return;
+      }
+
+      const user = authData.user;
+      const { data } = await supabase
+        .from("kullanicilar")
+        .select("rol")
+        .eq("email", user.email)
+        .single();
+      if (cancelled) return;
+
+      const rol = String((data as any)?.rol || "").toLowerCase();
+      if (rol !== "garson" && rol !== "isletmeci" && rol !== "admin") {
+        router.push("/");
+        return;
+      }
+
+      setAuthLoading(false);
+    }
+    checkAuthRole();
+    return () => { cancelled = true; };
+  }, [router]);
 
   // ESC
   useEffect(() => {
@@ -64,6 +98,14 @@ export default function GarsonPage() {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
 
   useEffect(() => {
     async function loadData() {
