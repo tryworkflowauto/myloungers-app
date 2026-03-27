@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -46,7 +46,8 @@ const QR_PATTERN = [
 
 function OdemeContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const tesisParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tesis") || "" : "";
+  const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const [step, setStep] = useState(1);
   const [res, setRes] = useState<ResData>(DEFAULT_RES);
   const [payMethod, setPayMethod] = useState("pm-card");
@@ -69,13 +70,13 @@ function OdemeContent() {
 
   useEffect(() => {
     // 1. Try URL query params (preferred — passed from hotel detail page)
-    const pTesis   = searchParams.get("tesis");
-    const pBaslangic = searchParams.get("tarihBaslangic");
-    const pBitis   = searchParams.get("tarihBitis");
-    const pGun     = searchParams.get("gun");
-    const pSzl     = searchParams.get("sezlonglar");
-    const pKisi    = searchParams.get("kisi");
-    const pFiyat   = searchParams.get("fiyat");
+    const pTesis   = queryParams?.get("tesis");
+    const pBaslangic = queryParams?.get("tarihBaslangic");
+    const pBitis   = queryParams?.get("tarihBitis");
+    const pGun     = queryParams?.get("gun");
+    const pSzl     = queryParams?.get("sezlonglar");
+    const pKisi    = queryParams?.get("kisi");
+    const pFiyat   = queryParams?.get("fiyat");
 
     if (pBaslangic && pSzl) {
       const tarihLabel = pBitis && pBitis !== pBaslangic
@@ -101,14 +102,14 @@ function OdemeContent() {
       const toplam = parseInt(sessionStorage.getItem("ml_toplam") || "5000");
       setRes({ tesis, tarih, gun, szl, kisi, toplam });
     } catch (_) {}
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
-    const sonuc = searchParams.get("sonuc");
+    const sonuc = queryParams?.get("sonuc");
     if (sonuc === "basarili" || sonuc === "hata") {
       setStep(4);
     }
-  }, [searchParams]);
+  }, []);
 
   function validate() {
     const e: Record<string, boolean> = {};
@@ -148,8 +149,8 @@ function OdemeContent() {
 
   const szlChips = res.szl.split(", ").filter(Boolean);
   const unitPrice = res.toplam / (res.gun * Math.max(res.kisi, 1));
-  const tesisSlug = (searchParams.get("tesis") || "reklamotv").toLowerCase();
-  const paymentResult = searchParams.get("sonuc");
+  const tesisSlug = (queryParams?.get("tesis") || "reklamotv").toLowerCase();
+  const paymentResult = queryParams?.get("sonuc");
 
   async function startParatikaPayment() {
     try {
@@ -652,7 +653,7 @@ function OdemeContent() {
 
                 <div style={{ padding: "0 22px 22px", display: "flex", gap: 10 }}>
                   <Link href="/" style={{ flex: 1, background: "var(--bg)", border: "1.5px solid var(--bd)", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--navy)", textDecoration: "none", textAlign: "center" }}>🏠 Ana Sayfaya Dön</Link>
-                  <Link href={`/tesis/${(searchParams.get('tesis') || '').toLowerCase()}`} style={{ flex: 1, background: "var(--tlt)", border: "1.5px solid #B2EBEA", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--tdk)", textDecoration: "none", textAlign: "center" }}>🏖️ Tesise Git</Link>
+                  <Link href={`/tesis/${tesisParam.toLowerCase()}`} style={{ flex: 1, background: "var(--tlt)", border: "1.5px solid #B2EBEA", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--tdk)", textDecoration: "none", textAlign: "center" }}>🏖️ Tesise Git</Link>
                 </div>
               </div>
             </div>
