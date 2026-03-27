@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -233,7 +234,9 @@ function PersonelKart({ p, onEdit, onYetki, onToggle, onSil, sezlongOptions }: {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function IsletmePersonelPage() {
+  const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [personeller, setPersoneller] = useState<Personel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -288,10 +291,22 @@ export default function IsletmePersonelPage() {
       const { data: authData, error: authErr } = await supabase.auth.getUser();
       if (cancelled) return;
       if (authErr || !authData?.user) {
-        console.log("personel/getTesisId auth error:", authErr);
-        setTesisId(null);
+        router.push("/giris");
         return;
       }
+
+      const { data } = await supabase
+        .from("kullanicilar")
+        .select("rol")
+        .eq("email", authData.user.email)
+        .single();
+      if (cancelled) return;
+      const rol = String((data as any)?.rol || "").toLowerCase();
+      if (rol !== "isletmeci" && rol !== "admin") {
+        router.push("/");
+        return;
+      }
+
       const { data: kullanici, error: kullaniciErr } = await supabase
         .from("kullanicilar")
         .select("tesis_id")
@@ -304,12 +319,13 @@ export default function IsletmePersonelPage() {
         return;
       }
       setTesisId(String(kullanici.tesis_id));
+      setAuthLoading(false);
     };
     getTesisId();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   // Sezlong list (for Atanan Şezlonglar checkbox list)
   useEffect(() => {
@@ -367,6 +383,14 @@ export default function IsletmePersonelPage() {
     });
     return () => { cancelled = true; };
   }, [tesisId]);
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
 
   // ── Actions ────────────────────────────────────────────────────────────
   async function toggleAktif(id: string) {
