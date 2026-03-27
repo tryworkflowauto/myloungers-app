@@ -77,30 +77,15 @@ function GirisContent() {
         return;
       }
 
-      const userEmail = authData.user.email;
-      if (!userEmail) {
-        router.push("/profil");
-        return;
-      }
-      const { data: kullanici, error: kullaniciError } = await supabase
-        .from("kullanicilar")
-        .select("rol")
-        .eq("email", userEmail)
-        .maybeSingle();
+      const { data: kullanici } = await supabase
+        .from('kullanicilar')
+        .select('rol')
+        .eq('id', authData.user.id)
+        .single();
 
-      const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
-        ? String((kullanici as any).rol)
-        : null;
-
-      console.log("Kullanıcı rolü (giriş):", rol);
-
-      if (rol === "admin") {
-        router.push("/admin");
-      } else if (rol === "isletmeci") {
-        router.push("/isletme");
-      } else {
-        router.push("/profil");
-      }
+      if ((kullanici as any)?.rol === 'admin') router.push('/admin');
+      else if ((kullanici as any)?.rol === 'isletmeci') router.push('/isletme');
+      else router.push('/profil');
     }
   }
 
@@ -140,30 +125,15 @@ function GirisContent() {
         return;
       }
 
-      const userEmail = authData.user.email;
-      if (!userEmail) {
-        router.push("/profil");
-        return;
-      }
-      const { data: kullanici, error: kullaniciError } = await supabase
-        .from("kullanicilar")
-        .select("rol")
-        .eq("email", userEmail)
-        .maybeSingle();
+      const { data: kullanici } = await supabase
+        .from('kullanicilar')
+        .select('rol')
+        .eq('id', authData.user.id)
+        .single();
 
-      const rol = (!kullaniciError && kullanici && (kullanici as any).rol)
-        ? String((kullanici as any).rol)
-        : null;
-
-      console.log("Kullanıcı rolü (kayıt):", rol);
-
-      if (rol === "admin") {
-        router.push("/admin");
-      } else if (rol === "isletmeci") {
-        router.push("/isletme");
-      } else {
-        router.push("/profil");
-      }
+      if ((kullanici as any)?.rol === 'admin') router.push('/admin');
+      else if ((kullanici as any)?.rol === 'isletmeci') router.push('/isletme');
+      else router.push('/profil');
     } catch (e) {
       console.error("Register error:", e);
       setErrorMsg("Sunucu hatası. Lütfen tekrar deneyin.");
