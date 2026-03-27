@@ -523,7 +523,7 @@ function OdemeContent() {
                 <div className="card-body">
                   <div style={{ fontSize: ".7rem", fontWeight: 800, color: "var(--i3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Ödeme Yöntemi</div>
                   <div className="pay-methods">
-                    {[["pm-card","💳","Kredi / Banka Kartı","Visa, MC, Troy"],["pm-taksit","📅","Taksit","3–12 taksit"],["pm-eft","🏦","EFT / Havale","Banka transferi"]].map(([id,ic,t,s]) => (
+                    {[["pm-card","💳","Kredi / Banka Kartı","Visa, MC, Troy"]].map(([id,ic,t,s]) => (
                       <div key={id} className={`pay-method${payMethod === id ? " on" : ""}`} onClick={() => setPayMethod(id as string)}>
                         <div className="pay-method-ic">{ic}</div>
                         <div className="pay-method-t">{t}</div>
