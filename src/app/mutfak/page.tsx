@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const NAVY   = "#0A1628";
@@ -27,6 +28,7 @@ type SiparisKart  = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function MutfakPage() {
+  const router = useRouter();
   const [yeni,         setYeni]         = useState<SiparisKart[]>([]);
   const [hazirlaniyor, setHazirlaniyor] = useState<SiparisKart[]>([]);
   const [tamamlandi,   setTamamlandi]   = useState<SiparisKart[]>([]);
@@ -37,6 +39,33 @@ export default function MutfakPage() {
   const [detayModal,   setDetayModal]   = useState<SiparisKart | null>(null);
   const [tesisId,      setTesisId]      = useState<string | null>(null);
   const [tesisAd,      setTesisAd]      = useState("Tesis");
+  const [authLoading,  setAuthLoading]  = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkAuthRole() {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authErr || !authData?.user) {
+        router.push('/giris');
+        return;
+      }
+      const { data } = await supabase
+        .from('kullanicilar')
+        .select('rol')
+        .eq('email', authData.user.email)
+        .single();
+      if (cancelled) return;
+      const rol = String(data?.rol || "").toLowerCase();
+      if (rol !== 'mutfak' && rol !== 'isletmeci' && rol !== 'admin') {
+        router.push('/');
+        return;
+      }
+      setAuthLoading(false);
+    }
+    checkAuthRole();
+    return () => { cancelled = true; };
+  }, []);
 
   // Real-time clock (1-second interval)
   useEffect(() => {
@@ -234,6 +263,14 @@ export default function MutfakPage() {
   }
 
   const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 };
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#0f1923", color: GRAY800, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
