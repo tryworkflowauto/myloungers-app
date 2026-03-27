@@ -652,7 +652,7 @@ function OdemeContent() {
 
                 <div style={{ padding: "0 22px 22px", display: "flex", gap: 10 }}>
                   <Link href="/" style={{ flex: 1, background: "var(--bg)", border: "1.5px solid var(--bd)", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--navy)", textDecoration: "none", textAlign: "center" }}>🏠 Ana Sayfaya Dön</Link>
-                  <Link href="/hotel/slug" style={{ flex: 1, background: "var(--tlt)", border: "1.5px solid #B2EBEA", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--tdk)", textDecoration: "none", textAlign: "center" }}>🏖️ Tesise Git</Link>
+                  <Link href={`/tesis/${tesisSlug}`} style={{ flex: 1, background: "var(--tlt)", border: "1.5px solid #B2EBEA", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--tdk)", textDecoration: "none", textAlign: "center" }}>🏖️ Tesise Git</Link>
                 </div>
               </div>
             </div>
