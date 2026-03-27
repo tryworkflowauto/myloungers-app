@@ -277,6 +277,13 @@ export default function IsletmeSezlongPage() {
 
   // Supabase Auth ile tesis_id yükle
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push('/giris'); return; }
+      supabase.from('kullanicilar').select('rol').eq('email', user.email).single().then(({ data }) => {
+        if (data?.rol !== 'isletmeci' && data?.rol !== 'admin') router.push('/');
+      });
+    });
+
     let cancelled = false;
 
     async function loadTesisId() {
