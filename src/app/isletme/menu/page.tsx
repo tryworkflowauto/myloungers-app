@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
@@ -119,7 +120,9 @@ function ProductCard({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function IsletmeMenuPage() {
+  const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [urunler, setUrunler] = useState<Urun[]>([]);
   const [kategoriler, setKategoriler] = useState<KategoriItem[]>([]);
@@ -131,18 +134,46 @@ export default function IsletmeMenuPage() {
   const [siralama, setSiralama] = useState("default");
 
   useEffect(() => {
+    let cancelled = false;
     const getTesisId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (cancelled) return;
+      if (!user) {
+        router.push("/giris");
+        return;
+      }
+
+      const { data: rolRow } = await supabase
+        .from("kullanicilar")
+        .select("rol")
+        .eq("email", user.email)
+        .single();
+      if (cancelled) return;
+      const rol = String((rolRow as any)?.rol || "").toLowerCase();
+      if (rol !== "isletmeci" && rol !== "admin") {
+        router.push("/");
+        return;
+      }
+
       const { data } = await supabase
         .from("kullanicilar")
         .select("tesis_id")
         .eq("id", user.id)
         .single();
       if (data?.tesis_id) setTesisId(data.tesis_id);
+      setAuthLoading(false);
     };
     getTesisId();
-  }, []);
+    return () => { cancelled = true; };
+  }, [router]);
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
 
   // Modals
   const [urunModalOpen, setUrunModalOpen] = useState(false);
