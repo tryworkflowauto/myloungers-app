@@ -160,10 +160,17 @@ export default function IsletmeTesisPage() {
 
   // ESC closes modals
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push('/giris'); return; }
+      supabase.from('kullanicilar').select('rol').eq('email', user.email).single().then(({ data }) => {
+        if (data?.rol !== 'isletmeci' && data?.rol !== 'admin') router.push('/');
+      });
+    });
+
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") { setTesisAktifModal(false); setOnizlemeModal(false); } };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, []);
+  }, [router]);
 
   // Load tesis from Supabase (current user's tesis_id)
   useEffect(() => {
