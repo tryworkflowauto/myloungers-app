@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
@@ -220,6 +221,7 @@ function SiparisKartComp({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function IsletmeSiparislerPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
 
@@ -251,6 +253,13 @@ export default function IsletmeSiparislerPage() {
 
   // ESC closes all modals
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push('/giris'); return; }
+      supabase.from('kullanicilar').select('rol').eq('email', user.email).single().then(({ data }) => {
+        if (data?.rol !== 'isletmeci' && data?.rol !== 'admin') router.push('/');
+      });
+    });
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIptalModal(null); setGarsonModal(null); setDetayModal(null);
@@ -258,7 +267,7 @@ export default function IsletmeSiparislerPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [router]);
 
   // Personel (garsonlar)
   useEffect(() => {
