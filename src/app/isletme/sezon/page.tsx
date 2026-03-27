@@ -394,6 +394,33 @@ export default function IsletmeSezonPage() {
     }
     setSezonModal(false);
   }
+  async function handleSezonSil(s: SezonItem) {
+    const ok = window.confirm("Bu sezonu silmek istediğinize emin misiniz?");
+    if (!ok) return;
+    const { error } = await supabase.from("sezonlar").delete().eq("id", s.id);
+    if (error) {
+      showToast("❌ Sezon silinemedi");
+      return;
+    }
+    const { data } = await supabase
+      .from("sezonlar")
+      .select("id, ad, baslangic, bitis, aktif")
+      .eq("tesis_id", tesisId)
+      .order("baslangic", { ascending: true });
+    const sezonRows = (data ?? []) as { id: string; ad: string; baslangic: string; bitis: string; aktif: boolean }[];
+    setSezonlar(sezonRows.map((r, i) => {
+      const b = sezonBadge(r.baslangic || "", r.bitis || "", r.aktif);
+      return {
+        id: r.id,
+        name: r.ad,
+        bas: r.baslangic || "",
+        bit: r.bitis || "",
+        dot: SEZON_RENK_PALETI[i % SEZON_RENK_PALETI.length],
+        ...b,
+      };
+    }));
+    showToast(`🗑️ "${s.name}" sezonu silindi`);
+  }
 
   // â”€â”€ Fiyat / Genel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function updateFiyat(id: string, key: keyof FiyatRow, value: number) {
@@ -626,6 +653,7 @@ export default function IsletmeSezonPage() {
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: s.badgeBg, color: s.badgeColor }}>{s.badge}</span>
                     <button onClick={() => openSezonDuzenle(s)} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>✏️</button>
+                    <button onClick={() => handleSezonSil(s)} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>🗑️</button>
                   </div>
                 ))}
               </div>
