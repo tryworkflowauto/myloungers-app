@@ -75,6 +75,7 @@ type GarsonRow = {
 export default function IsletmeRaporlarPage() {
   const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [activeTab, setActiveTab]     = useState<TabKey>("gelir");
   const [donemGelir, setDonemGelir]   = useState("hafta");
@@ -135,9 +136,22 @@ export default function IsletmeRaporlarPage() {
       const { data: authData, error: authErr } = await supabase.auth.getUser();
       if (cancelled) return;
       if (authErr || !authData?.user) {
-        setTesisId(null);
+        router.push("/giris");
         return;
       }
+
+      const { data } = await supabase
+        .from("kullanicilar")
+        .select("rol")
+        .eq("email", authData.user.email)
+        .single();
+      if (cancelled) return;
+      const rol = String((data as any)?.rol || "").toLowerCase();
+      if (rol !== "isletmeci" && rol !== "admin") {
+        router.push("/");
+        return;
+      }
+
       const { data: kullanici, error: kullaniciErr } = await supabase
         .from("kullanicilar")
         .select("tesis_id")
@@ -149,12 +163,21 @@ export default function IsletmeRaporlarPage() {
         return;
       }
       setTesisId(String(kullanici.tesis_id));
+      setAuthLoading(false);
     };
     getTesisId();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
 
   // Supabase: rezervasyonlar + siparisler (toplamlar)
   useEffect(() => {
