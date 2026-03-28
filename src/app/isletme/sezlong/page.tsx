@@ -239,6 +239,8 @@ export default function IsletmeSezlongPage() {
   const [grupDropTargetId, setGrupDropTargetId] = useState<string | null>(null);
   const [seciliTarih, setSeciliTarih] = useState(() => new Date().toISOString().slice(0, 10));
   const [mod, setMod] = useState<"duzenleme" | "goruntulem" | "musteri">("duzenleme");
+  const [bugunGelirTutar, setBugunGelirTutar] = useState(0);
+  const [bugunSiparisAdet, setBugunSiparisAdet] = useState(0);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -424,6 +426,46 @@ export default function IsletmeSezlongPage() {
     });
     return () => { cancelled = true; };
   }, [tesisId, authChecked, supabase]);
+
+  useEffect(() => {
+    if (!authChecked || !tesisId) {
+      setBugunGelirTutar(0);
+      setBugunSiparisAdet(0);
+      return;
+    }
+    let cancelled = false;
+    const now = new Date();
+    const bugunBas = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const bugunSon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const basIso = bugunBas.toISOString();
+    const sonIso = bugunSon.toISOString();
+
+    Promise.all([
+      supabase
+        .from("rezervasyonlar")
+        .select("toplam_tutar")
+        .eq("tesis_id", tesisId)
+        .gte("created_at", basIso)
+        .lte("created_at", sonIso),
+      supabase
+        .from("siparisler")
+        .select("id", { count: "exact", head: true })
+        .eq("tesis_id", tesisId)
+        .gte("created_at", basIso)
+        .lte("created_at", sonIso),
+    ]).then(([rezRes, sipRes]) => {
+      if (cancelled) return;
+      const gelir = (rezRes.data ?? []).reduce(
+        (acc: number, r: { toplam_tutar?: unknown }) => acc + Number(r.toplam_tutar ?? 0),
+        0
+      );
+      setBugunGelirTutar(Number.isFinite(gelir) ? gelir : 0);
+      setBugunSiparisAdet(sipRes.count ?? 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tesisId, authChecked]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1486,11 +1528,11 @@ export default function IsletmeSezlongPage() {
                 <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Boş</div>
               </div>
               <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>₺18K</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>₺{bugunGelirTutar.toLocaleString("tr-TR")}</div>
                 <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Gelir</div>
               </div>
               <div style={{ background: GRAY50, borderRadius: 8, padding: 10, textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: TEAL }}>89</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: TEAL }}>{bugunSiparisAdet}</div>
                 <div style={{ fontSize: 9, color: GRAY400, marginTop: 2 }}>Sipariş</div>
               </div>
             </div>
