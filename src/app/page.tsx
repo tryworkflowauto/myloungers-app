@@ -678,7 +678,7 @@ export default function Home() {
               </div>
             ) : supabaseNavUser ? (
               <>
-                <span className="nav-user" style={{ textDecoration: "none" }}>{supabaseNavUser.name}</span>
+                <Link href="/profil" className="nav-user" style={{ textDecoration: "none" }}>{supabaseNavUser.name}</Link>
                 {supabaseNavUser.rol === "admin" && (
                   <Link href="/admin" className="btn-login">Admin Paneli</Link>
                 )}
