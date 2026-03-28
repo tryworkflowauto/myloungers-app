@@ -61,6 +61,7 @@ export default function AdminKullanicilarPage() {
         .from("kullanicilar")
         .select("id, ad, soyad, email, rol, created_at, tesisler(ad)")
         .order("created_at", { ascending: false });
+      console.log("kullanicilar fetch:", { data, error });
       if (cancelled) return;
       if (error) {
         console.error("Kullanicilar fetch error", error);
