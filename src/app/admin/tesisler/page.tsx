@@ -14,14 +14,13 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type TesisDurum = "aktif" | "onay" | "askida";
 type Tesis = {
   id: number;
   ad: string;
   sehir: string;
   emoji: string;
   emojiBg: string;
-  durum: TesisDurum;
+  aktif: boolean;
   sezlong: number;
   ciro?: string;
   komisyon?: string;
@@ -73,9 +72,7 @@ export default function AdminTesislerPage() {
       }
       if (!data) return;
       const mapped: Tesis[] = (data as any[]).map((t) => {
-        const durumRaw = (t.durum as string) || "aktif";
-        const durum: TesisDurum =
-          durumRaw === "onay" || durumRaw === "askida" ? (durumRaw as TesisDurum) : "aktif";
+        const aktif = t.aktif === true;
         const sezlong = typeof t.kapasite === "number" ? t.kapasite : Number(t.kapasite || 0);
         const puan = typeof t.puan === "number" ? t.puan : t.puan ? Number(t.puan) : undefined;
         return {
@@ -84,7 +81,7 @@ export default function AdminTesislerPage() {
           sehir: (t.sehir as string) || "-",
           emoji: "🏖️",
           emojiBg: "#E0F2FE",
-          durum,
+          aktif,
           sezlong,
           ciro: (t.ciro as string) ?? undefined,
           komisyon: (t.komisyon as string) ?? undefined,
@@ -118,13 +115,16 @@ export default function AdminTesislerPage() {
   }, [showToast]);
 
   const goruntulenen = tesisler.filter(t => {
-    const tabOk = tab === "tumu" || t.durum === tab;
+    const tabOk =
+      tab === "tumu" ||
+      (tab === "aktif" && t.aktif) ||
+      (tab === "askida" && !t.aktif);
     const araOk = !ara || t.ad.toLowerCase().includes(ara.toLowerCase()) || t.sehir.toLowerCase().includes(ara.toLowerCase());
     return tabOk && araOk;
   });
 
   function onaylaTesis(t: Tesis) {
-    setTesisler(p => p.map(x => x.id === t.id ? { ...x, durum: "aktif" as TesisDurum } : x));
+    setTesisler(p => p.map(x => x.id === t.id ? { ...x, aktif: true } : x));
     setOnayModal(null); showToast("✅ " + t.ad + " onaylandı!", GREEN);
   }
   function reddetTesis(t: Tesis) {
@@ -136,14 +136,14 @@ export default function AdminTesislerPage() {
       const res = await fetch("/api/admin/tesis-durum", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, durum: "askida" }),
+        body: JSON.stringify({ id, aktif: false }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         showToast((data as { error?: string })?.error || "Tesis güncellenemedi", RED);
         return;
       }
-      setTesisler((p) => p.map((x) => (x.id === id ? { ...x, durum: "askida" as TesisDurum } : x)));
+      setTesisler((p) => p.map((x) => (x.id === id ? { ...x, aktif: false } : x)));
       showToast("⏸ Tesis askıya alındı");
     } catch {
       showToast("Tesis güncellenemedi", RED);
@@ -154,14 +154,14 @@ export default function AdminTesislerPage() {
       const res = await fetch("/api/admin/tesis-durum", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, durum: "aktif" }),
+        body: JSON.stringify({ id, aktif: true }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         showToast((data as { error?: string })?.error || "Tesis güncellenemedi", RED);
         return;
       }
-      setTesisler((p) => p.map((x) => (x.id === id ? { ...x, durum: "aktif" as TesisDurum } : x)));
+      setTesisler((p) => p.map((x) => (x.id === id ? { ...x, aktif: true } : x)));
       showToast("✅ Tesis aktifleştirildi", GREEN);
     } catch {
       showToast("Tesis güncellenemedi", RED);
@@ -192,7 +192,7 @@ export default function AdminTesislerPage() {
           sehir: (inserted.sehir as string) || "-",
           emoji: "🏖️",
           emojiBg: "#E0F2FE",
-          durum: "aktif",
+          aktif: inserted.aktif !== false,
           sezlong,
           ciro: (inserted.ciro as string) ?? undefined,
           komisyon: (inserted.komisyon as string) ?? undefined,
@@ -211,7 +211,7 @@ export default function AdminTesislerPage() {
     }
   }
 
-  const counts = { tumu: tesisler.length, aktif: tesisler.filter(t => t.durum === "aktif").length, onay: tesisler.filter(t => t.durum === "onay").length, askida: tesisler.filter(t => t.durum === "askida").length };
+  const counts = { tumu: tesisler.length, aktif: tesisler.filter(t => t.aktif).length, onay: 0, askida: tesisler.filter(t => !t.aktif).length };
   const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" };
 
   return (
@@ -316,7 +316,7 @@ export default function AdminTesislerPage() {
                 <tr><td colSpan={9} style={{ padding: "40px", textAlign: "center", color: GRAY400, fontSize: 13 }}>Bu filtrede tesis bulunamadı</td></tr>
               )}
               {goruntulenen.map((t, index) => (
-                <tr key={t.id?.toString() ?? index} style={{ background: t.durum === "onay" ? "#FFFBEB" : t.durum === "askida" ? "#FFF1F2" : undefined }}>
+                <tr key={t.id?.toString() ?? index} style={{ background: !t.aktif ? "#FFF1F2" : undefined }}>
                   <td style={{ padding: "12px 14px", borderTop: `1px solid ${GRAY100}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ width: 34, height: 34, borderRadius: 9, background: t.emojiBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>{t.emoji}</div>
@@ -325,8 +325,8 @@ export default function AdminTesislerPage() {
                   </td>
                   <td style={{ padding: "12px 14px", borderTop: `1px solid ${GRAY100}`, color: GRAY600 }}>📍 {t.sehir}</td>
                   <td style={{ padding: "12px 14px", borderTop: `1px solid ${GRAY100}` }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: t.durum === "aktif" ? "#DCFCE7" : t.durum === "askida" ? "#FEE2E2" : "#FEF3C7", color: t.durum === "aktif" ? "#16A34A" : t.durum === "askida" ? RED : "#D97706" }}>
-                      ● {t.durum === "aktif" ? "Aktif" : t.durum === "askida" ? "Askıda" : "Onay Bekliyor"}
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: t.aktif ? "#DCFCE7" : "#FEE2E2", color: t.aktif ? "#16A34A" : RED }}>
+                      ● {t.aktif ? "Aktif" : "Askıda"}
                     </span>
                   </td>
                   <td style={{ padding: "12px 14px", borderTop: `1px solid ${GRAY100}` }}>{t.sezlong} şzl</td>
@@ -338,9 +338,8 @@ export default function AdminTesislerPage() {
                   <td style={{ padding: "12px 14px", borderTop: `1px solid ${GRAY100}`, color: GRAY400 }}>{t.sonAktivite}</td>
                   <td style={{ padding: "12px 14px", borderTop: `1px solid ${GRAY100}` }}>
                     <div style={{ display: "flex", gap: 4, flexWrap: "nowrap" }}>
-                      {t.durum === "onay" && <><button onClick={() => setOnayModal(t)} style={{ padding: "4px 9px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>✓ Onayla</button><button onClick={() => { setReddetModal(t); setRedSebebi(""); }} style={{ padding: "4px 9px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid #FECACA`, background: "#FEF2F2", color: RED, cursor: "pointer" }}>✗ Reddet</button></>}
-                      {t.durum === "aktif" && <button onClick={() => askiyaAl(t.id)} style={{ padding: "4px 9px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>⏸ Askıya Al</button>}
-                      {t.durum === "askida" && <button onClick={() => aktifYap(t.id)} style={{ padding: "4px 9px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: "none", background: GREEN, color: "white", cursor: "pointer" }}>▶ Aktifleştir</button>}
+                      {t.aktif && <button onClick={() => askiyaAl(t.id)} style={{ padding: "4px 9px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>⏸ Askıya Al</button>}
+                      {!t.aktif && <button onClick={() => aktifYap(t.id)} style={{ padding: "4px 9px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: "none", background: GREEN, color: "white", cursor: "pointer" }}>▶ Aktifleştir</button>}
                     </div>
                   </td>
                 </tr>

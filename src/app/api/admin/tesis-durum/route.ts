@@ -16,14 +16,14 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json();
     const id = body.id;
-    const durum = body.durum;
-    if (id == null || (durum !== "askida" && durum !== "aktif")) {
+    const aktif = body.aktif;
+    if (id == null || typeof aktif !== "boolean") {
       return NextResponse.json({ error: "Geçersiz parametre" }, { status: 400 });
     }
 
     const { error } = await supabaseAdmin
       .from("tesisler")
-      .update({ durum })
+      .update({ aktif })
       .eq("id", id);
 
     if (error) {
