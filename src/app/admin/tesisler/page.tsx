@@ -94,10 +94,6 @@ export default function AdminTesislerPage() {
       console.log("supabase tesisler raw data:", JSON.stringify(data?.slice(0,2)));
       setTesisler(mapped);
     }
-    fetchTesisler();
-  }, [showToast]);
-
-  useEffect(() => {
     async function fetchBasvurular() {
       setBasvuruLoading(true);
       const { data, error } = await supabase
@@ -113,8 +109,9 @@ export default function AdminTesislerPage() {
       }
       setBasvuruLoading(false);
     }
+    fetchTesisler();
     fetchBasvurular();
-  }, [showToast]);
+  }, []);
 
   const goruntulenen = tesisler.filter(t => {
     const tabOk =
