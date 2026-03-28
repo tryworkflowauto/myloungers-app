@@ -23,6 +23,54 @@ type ImkanItem = { emoji: string; name: string; active: boolean; custom?: boolea
 type GunItem = { name: string; acilis: string; kapanis: string; kapali: boolean; vurgu?: boolean };
 type ListItem = { emoji: string; text: string };
 
+// ── Initial data (form defaults; Supabase yüklemesiyle üzerine yazılır) ─────
+const INIT_PHOTOS: Photo[] = [
+  { id: 1, mockBg: "linear-gradient(135deg,#0A1628,#0ABAB5)", mockEmoji: "🏖️" },
+  { id: 2, mockBg: "linear-gradient(135deg,#1a3a5c,#2d6a4f)", mockEmoji: "☕" },
+  { id: 3, mockBg: "linear-gradient(135deg,#1e4d8c,#0ABAB5)", mockEmoji: "🏊" },
+  { id: 4, mockBg: "linear-gradient(135deg,#2d1b69,#0A1628)", mockEmoji: "🌙" },
+];
+
+const INIT_IMKANLAR: ImkanItem[] = [
+  { emoji: "🏊", name: "Özel Yüzme Havuzu", active: true },
+  { emoji: "☕", name: "Kahvaltı Dahil", active: true },
+  { emoji: "🍽️", name: "Beach Bar & Restoran", active: true },
+  { emoji: "🚗", name: "Ücretsiz Vale Park", active: true },
+  { emoji: "🎶", name: "Canlı Müzik (Haftasonları)", active: true },
+  { emoji: "🚤", name: "Su Sporları Merkezi", active: true },
+  { emoji: "🌍", name: "TR / EN / RU Personel", active: true },
+  { emoji: "📱", name: "Ücretsiz Wi-Fi", active: true },
+  { emoji: "🅿️", name: "Otopark", active: false },
+  { emoji: "♿", name: "Engelli Erişimi", active: false },
+  { emoji: "🐾", name: "Evcil Hayvan Kabul", active: false },
+  { emoji: "🧖", name: "Spa & Masaj", active: false },
+];
+
+const INIT_GUNLER: GunItem[] = [
+  { name: "Pzt", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Sal", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Çar", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Per", acilis: "09:00", kapanis: "19:00", kapali: false },
+  { name: "Cum", acilis: "09:00", kapanis: "21:00", kapali: false },
+  { name: "Cmt", acilis: "09:00", kapanis: "21:00", kapali: false, vurgu: true },
+  { name: "Paz", acilis: "09:00", kapanis: "21:00", kapali: false, vurgu: true },
+];
+
+const INIT_KURALLAR: ListItem[] = [
+  { emoji: "🚫", text: "Evcil hayvan kabul edilmez" },
+  { emoji: "🚫", text: "Dışarıdan yiyecek/içecek getirilmez" },
+  { emoji: "🚫", text: "18 yaş altı 21:00'dan sonra tesis içinde bulunamaz" },
+  { emoji: "✅", text: "Giriş: 09:00 — Çıkış: 19:00" },
+  { emoji: "✅", text: "İptal: 48 saat öncesine kadar ücretsiz" },
+];
+
+const INIT_KAMPANYA_NOTLARI: ListItem[] = [
+  { emoji: "🌟", text: "Erken Rezervasyon: 30 gün öncesi %10 indirim" },
+  { emoji: "🌟", text: "Grup (5+): %15 indirim" },
+  { emoji: "🌟", text: "Hafta içi 3 gün full: Kahvaltı dahil" },
+  { emoji: "🌟", text: "Sadakat: 5. rezervasyonda %20 indirim" },
+];
+
 const KATEGORILER = [
   { name: "BEACH CLUB", emoji: "🏖️", checked: true },
   { name: "OTEL",       emoji: "🏨", checked: true  },
@@ -49,42 +97,41 @@ export default function IsletmeTesisPage() {
   const toggleSection = (k: string) => setSections(s => ({ ...s, [k]: !s[k] }));
 
   // Content state
-  const [photos, setPhotos]             = useState<Photo[]>([]);
-  const [imkanlar, setImkanlar]         = useState<ImkanItem[]>([]);
-  const [gunler, setGunler]             = useState<GunItem[]>([]);
-  const [kurallar, setKurallar]         = useState<ListItem[]>([]);
-  const [kampanyaNotlari, setKampanyaNotlari] = useState<ListItem[]>([]);
-  const [kisaAciklama, setKisaAciklama] = useState("");
-  const [detayAciklama, setDetayAciklama] = useState("");
-  const [tesisAktif, setTesisAktif]     = useState(false);
-  const [videoUrl, setVideoUrl]         = useState("");
+  const [photos, setPhotos]             = useState<Photo[]>(INIT_PHOTOS);
+  const [imkanlar, setImkanlar]         = useState<ImkanItem[]>(INIT_IMKANLAR);
+  const [gunler, setGunler]             = useState<GunItem[]>(INIT_GUNLER);
+  const [kurallar, setKurallar]         = useState<ListItem[]>(INIT_KURALLAR);
+  const [kampanyaNotlari, setKampanyaNotlari] = useState<ListItem[]>(INIT_KAMPANYA_NOTLARI);
+  const [kisaAciklama, setKisaAciklama] = useState("Bodrum'un en güzel koyunda butik beach club & otel deneyimi");
+  const [detayAciklama, setDetayAciklama] = useState("Zuzuu Beach Hotel, Bodrum'un en güzel koylarından birinde konumlanan butik bir beach club ve oteldir. Kristal berraklığında deniz suyu ve özel iskelesiyle misafirlerine unutulmaz bir deniz deneyimi sunmaktadır.\n\n100 şezlongluk kapasitesiyle İskele, VIP ve Silver olmak üzere üç farklı bölgede hizmet vermekte; sabah kahvaltısından gün batımı kokteyllerine kadar eksiksiz bir beach club deneyimi sağlamaktadır.");
+  const [tesisAktif, setTesisAktif]     = useState(true);
+  const [videoUrl, setVideoUrl]         = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
   const [videoInput, setVideoInput]     = useState("");
-  const [enlem, setEnlem]               = useState("");
-  const [boylam, setBoylam]             = useState("");
+  const [enlem, setEnlem]               = useState("37.032048");
+  const [boylam, setBoylam]             = useState("27.430012");
 
-  const [tesisAdi, setTesisAdi]         = useState("");
-  const [sehir, setSehir]               = useState("");
-  const [ilce, setIlce]                 = useState("");
-  const [sehirIlce, setSehirIlce]       = useState("");
-  const [adres, setAdres]               = useState("");
-  const [telefon, setTelefon]           = useState("");
-  const [email, setEmail]               = useState("");
-  const [webSitesi, setWebSitesi]       = useState("");
-  const [mapsLink, setMapsLink]         = useState("");
+  const [tesisAdi, setTesisAdi]         = useState("Zuzuu Beach Hotel");
+  const [sehir, setSehir]               = useState("Bodrum");
+  const [ilce, setIlce]                 = useState("Muğla");
+  const [sehirIlce, setSehirIlce]       = useState("Bodrum, Muğla");
+  const [adres, setAdres]               = useState("Kumbahçe Mah. Neyzen Tevfik Cad. No:12, Bodrum");
+  const [telefon, setTelefon]           = useState("+90 252 316 XX XX");
+  const [email, setEmail]               = useState("info@zuzuubeach.com");
+  const [webSitesi, setWebSitesi]       = useState("https://zuzuubeach.com");
+  const [mapsLink, setMapsLink]         = useState("https://maps.google.com/?q=Zuzuu+Beach+Hotel+Bodrum");
   const [aciklama, setAciklama]         = useState("");
-  const [kategoriler, setKategoriler]   = useState<string[]>([]);
+  const [kategoriler, setKategoriler]   = useState<string[]>(["BEACH CLUB", "OTEL"]);
   const [tesisId, setTesisId]           = useState<string | null>(null);
-  const [sonGuncellemeMetni, setSonGuncellemeMetni] = useState("");
 
   // Ulaşım Rehberi
-  const [taksiMerkeze, setTaksiMerkeze]       = useState("");
-  const [taksiHavalimanı, setTaksiHavalimanı] = useState("");
-  const [taksiTel1, setTaksiTel1]             = useState("");
+  const [taksiMerkeze, setTaksiMerkeze]       = useState("Bodrum merkeze 7 dk");
+  const [taksiHavalimanı, setTaksiHavalimanı] = useState("Milas-Bodrum Havalimanı 45 dk");
+  const [taksiTel1, setTaksiTel1]             = useState("+90 252 316 XX XX");
   const [taksiTel2, setTaksiTel2]             = useState("");
-  const [dolmusHat, setDolmusHat]             = useState("");
-  const [dolmusDurak, setDolmusDurak]         = useState("");
-  const [dolmusSaatBas, setDolmusSaatBas]     = useState("");
-  const [dolmusSaatBit, setDolmusSaatBit]     = useState("");
+  const [dolmusHat, setDolmusHat]             = useState("Bodrum - Turgutreis hattı");
+  const [dolmusDurak, setDolmusDurak]         = useState("Zuzuu Beach durağı");
+  const [dolmusSaatBas, setDolmusSaatBas]     = useState("07:00");
+  const [dolmusSaatBit, setDolmusSaatBit]     = useState("22:00");
   const [dolmusNot, setDolmusNot]             = useState("");
 
   // Form inputs
@@ -144,26 +191,15 @@ export default function IsletmeTesisPage() {
         .maybeSingle();
 
       if (cancelled) return;
-
-      let tesis_id = (kullanici?.tesis_id as string | null | undefined) ?? null;
-      if (!tesis_id && authData.user.email) {
-        const { data: kEmail } = await supabase
-          .from("kullanicilar")
-          .select("tesis_id")
-          .eq("email", authData.user.email)
-          .maybeSingle();
-        if (cancelled) return;
-        tesis_id = (kEmail?.tesis_id as string | null | undefined) ?? null;
-      }
-
-      if (kullaniciErr || !tesis_id) {
+      if (kullaniciErr || !kullanici || kullanici.tesis_id == null) {
         if (kullaniciErr) console.error("Tesis yüklenemedi:", kullaniciErr);
         return;
       }
+      const tesis_id = kullanici.tesis_id as string;
 
       const { data, error } = await supabase
         .from("tesisler")
-        .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, created_at, updated_at")
+        .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar")
         .eq("id", tesis_id)
         .limit(1)
         .single();
@@ -175,163 +211,96 @@ export default function IsletmeTesisPage() {
       const row: any = data;
       setTesisId(String(row.id));
 
-        const tsRaw = row.updated_at ?? row.created_at;
-        if (tsRaw) {
-          const d = new Date(tsRaw);
-          setSonGuncellemeMetni(
-            Number.isNaN(d.getTime())
-              ? ""
-              : d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
-          );
-        } else {
-          setSonGuncellemeMetni("");
-        }
+      if (row.ad) setTesisAdi(row.ad);
 
-        if (row.ad) setTesisAdi(row.ad);
-
-        const kategoriRaw = row.kategori as string | string[] | null | undefined;
-        if (kategoriRaw) {
-          let parsed: string[] = [];
-          if (Array.isArray(kategoriRaw)) {
-            parsed = kategoriRaw;
-          } else if (typeof kategoriRaw === "string") {
-            try {
-              const maybeArr = JSON.parse(kategoriRaw);
-              if (Array.isArray(maybeArr)) {
-                parsed = maybeArr.map((v) => String(v));
-              } else {
-                parsed = String(kategoriRaw)
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean);
-              }
-            } catch {
-              parsed = kategoriRaw
+      const kategoriRaw = row.kategori as string | string[] | null | undefined;
+      if (kategoriRaw) {
+        let parsed: string[] = [];
+        if (Array.isArray(kategoriRaw)) {
+          parsed = kategoriRaw;
+        } else if (typeof kategoriRaw === "string") {
+          try {
+            const maybeArr = JSON.parse(kategoriRaw);
+            if (Array.isArray(maybeArr)) {
+              parsed = maybeArr.map((v) => String(v));
+            } else {
+              parsed = String(kategoriRaw)
                 .split(",")
                 .map((s) => s.trim())
                 .filter(Boolean);
             }
-          }
-          const normalized = parsed.map((k) => k.toUpperCase());
-          if (normalized.length > 0) setKategoriler(normalized);
-        }
-
-        if (row.sehir) setSehir(row.sehir);
-        if (row.ilce) setIlce(row.ilce);
-        if (row.sehir || row.ilce) {
-          const parts = [row.sehir, row.ilce].filter(Boolean);
-          if (parts.length) setSehirIlce(parts.join(", "));
-        }
-
-        if (row.adres) setAdres(row.adres);
-        if (row.telefon) setTelefon(row.telefon);
-        if (row.email) setEmail(row.email);
-        if (row.web_sitesi) setWebSitesi(row.web_sitesi);
-        if (row.kisa_aciklama) setKisaAciklama(row.kisa_aciklama);
-        if (row.detayli_aciklama) setDetayAciklama(row.detayli_aciklama);
-        if (row.aciklama) setAciklama(row.aciklama);
-        if (row.video_url) setVideoUrl(row.video_url);
-        if (row.enlem) setEnlem(String(row.enlem));
-        if (row.boylam) setBoylam(String(row.boylam));
-        if (row.maps_link) setMapsLink(row.maps_link);
-
-        let imkanlarDb: ImkanItem[] = [];
-        const rawImkan = row.imkanlar;
-        if (Array.isArray(rawImkan)) {
-          imkanlarDb = rawImkan as ImkanItem[];
-        } else if (typeof rawImkan === "string" && rawImkan.trim()) {
-          try {
-            const parsed = JSON.parse(rawImkan);
-            if (Array.isArray(parsed)) imkanlarDb = parsed as ImkanItem[];
           } catch {
-            imkanlarDb = [];
+            parsed = kategoriRaw
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
           }
         }
-        setImkanlar(imkanlarDb);
+        const normalized = parsed.map((k) => k.toUpperCase());
+        if (normalized.length > 0) setKategoriler(normalized);
+      }
 
-        let gunlerDb: GunItem[] = [];
-        const rawGun = row.calisma_saatleri;
-        if (Array.isArray(rawGun)) {
-          gunlerDb = rawGun as GunItem[];
-        } else if (typeof rawGun === "string" && rawGun.trim()) {
-          try {
-            const parsed = JSON.parse(rawGun);
-            if (Array.isArray(parsed)) gunlerDb = parsed as GunItem[];
-          } catch {
-            gunlerDb = [];
+      if (row.sehir) setSehir(row.sehir);
+      if (row.ilce) setIlce(row.ilce);
+      if (row.sehir || row.ilce) {
+        const parts = [row.sehir, row.ilce].filter(Boolean);
+        if (parts.length) setSehirIlce(parts.join(", "));
+      }
+
+      if (row.adres) setAdres(row.adres);
+      if (row.telefon) setTelefon(row.telefon);
+      if (row.email) setEmail(row.email);
+      if (row.web_sitesi) setWebSitesi(row.web_sitesi);
+      if (row.kisa_aciklama) setKisaAciklama(row.kisa_aciklama);
+      if (row.detayli_aciklama) setDetayAciklama(row.detayli_aciklama);
+      if (row.aciklama) setAciklama(row.aciklama);
+      if (row.video_url) setVideoUrl(row.video_url);
+      if (row.enlem) setEnlem(String(row.enlem));
+      if (row.boylam) setBoylam(String(row.boylam));
+      if (row.maps_link) setMapsLink(row.maps_link);
+
+      const imkanlarDb = (row.imkanlar as ImkanItem[] | null | undefined) || [];
+      setImkanlar(imkanlarDb.length ? imkanlarDb : INIT_IMKANLAR);
+
+      const gunlerDb = (row.calisma_saatleri as GunItem[] | null | undefined) || [];
+      setGunler(gunlerDb.length ? gunlerDb : INIT_GUNLER);
+
+      const kurallarDb = row.kurallar as ListItem[] | null | undefined;
+      setKurallar(kurallarDb ?? []);
+
+      const kampanyaDb = row.kampanya_notlari as ListItem[] | null | undefined;
+      setKampanyaNotlari(kampanyaDb ?? []);
+
+      if (typeof row.aktif === "boolean") setTesisAktif(row.aktif);
+
+      const fotosDb = (row.fotograflar as Photo[] | null | undefined) || [];
+      setPhotos(fotosDb.length ? fotosDb : INIT_PHOTOS);
+
+      const ulasim = row.ulasim as
+        | {
+            merkeze?: string;
+            havalimanı?: string;
+            tel1?: string;
+            tel2?: string;
+            hat?: string;
+            durak?: string;
+            saatBas?: string;
+            saatBit?: string;
+            not?: string;
           }
-        }
-        setGunler(gunlerDb);
-
-        let kurallarDb: ListItem[] = [];
-        const rawKurallar = row.kurallar;
-        if (Array.isArray(rawKurallar)) {
-          kurallarDb = rawKurallar as ListItem[];
-        } else if (typeof rawKurallar === "string" && rawKurallar.trim()) {
-          try {
-            const parsed = JSON.parse(rawKurallar);
-            if (Array.isArray(parsed)) kurallarDb = parsed as ListItem[];
-          } catch {
-            kurallarDb = [];
-          }
-        }
-        setKurallar(kurallarDb);
-
-        let kampanyaDb: ListItem[] = [];
-        const rawKamp = row.kampanya_notlari;
-        if (Array.isArray(rawKamp)) {
-          kampanyaDb = rawKamp as ListItem[];
-        } else if (typeof rawKamp === "string" && rawKamp.trim()) {
-          try {
-            const parsed = JSON.parse(rawKamp);
-            if (Array.isArray(parsed)) kampanyaDb = parsed as ListItem[];
-          } catch {
-            kampanyaDb = [];
-          }
-        }
-        setKampanyaNotlari(kampanyaDb);
-
-        if (typeof row.aktif === "boolean") setTesisAktif(row.aktif);
-
-        let fotosDb: Photo[] = [];
-        const rawFoto = row.fotograflar;
-        if (Array.isArray(rawFoto)) {
-          fotosDb = rawFoto as Photo[];
-        } else if (typeof rawFoto === "string" && rawFoto.trim()) {
-          try {
-            const parsed = JSON.parse(rawFoto);
-            if (Array.isArray(parsed)) fotosDb = parsed as Photo[];
-          } catch {
-            fotosDb = [];
-          }
-        }
-        setPhotos(fotosDb);
-
-        const ulasim = row.ulasim as
-          | {
-              merkeze?: string;
-              havalimanı?: string;
-              tel1?: string;
-              tel2?: string;
-              hat?: string;
-              durak?: string;
-              saatBas?: string;
-              saatBit?: string;
-              not?: string;
-            }
-          | null
-          | undefined;
-        if (ulasim) {
-          if (ulasim.merkeze) setTaksiMerkeze(ulasim.merkeze);
-          if (ulasim.havalimanı) setTaksiHavalimanı(ulasim.havalimanı);
-          if (ulasim.tel1) setTaksiTel1(ulasim.tel1);
-          if (ulasim.tel2) setTaksiTel2(ulasim.tel2);
-          if (ulasim.hat) setDolmusHat(ulasim.hat);
-          if (ulasim.durak) setDolmusDurak(ulasim.durak);
-          if (ulasim.saatBas) setDolmusSaatBas(ulasim.saatBas);
-          if (ulasim.saatBit) setDolmusSaatBit(ulasim.saatBit);
-          if (ulasim.not) setDolmusNot(ulasim.not);
-        }
+        | null
+        | undefined;
+      if (ulasim) {
+        if (ulasim.merkeze) setTaksiMerkeze(ulasim.merkeze);
+        if (ulasim.havalimanı) setTaksiHavalimanı(ulasim.havalimanı);
+        if (ulasim.tel1) setTaksiTel1(ulasim.tel1);
+        if (ulasim.tel2) setTaksiTel2(ulasim.tel2);
+        if (ulasim.hat) setDolmusHat(ulasim.hat);
+        if (ulasim.durak) setDolmusDurak(ulasim.durak);
+        if (ulasim.saatBas) setDolmusSaatBas(ulasim.saatBas);
+        if (ulasim.saatBit) setDolmusSaatBit(ulasim.saatBit);
+        if (ulasim.not) setDolmusNot(ulasim.not);
+      }
     })();
     return () => {
       cancelled = true;
@@ -528,8 +497,8 @@ export default function IsletmeTesisPage() {
         {/* ÖNİZLEME BARI */}
         <div style={{ background: "linear-gradient(135deg," + NAVY + ",#1a2f50)", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
-            <p style={{ fontSize: 13, color: "white", fontWeight: 600 }}>{tesisAktif ? "✅ Tesis Yayında" : "⏸ Tesis Yayında Değil"}{tesisAdi.trim() ? ` — ${tesisAdi.trim()}` : ""}</p>
-            <span style={{ fontSize: 11, color: GRAY400 }}>Son güncelleme: {sonGuncellemeMetni.trim() || "—"} · Tüm değişiklikler anında müşteri sayfasına yansır</span>
+            <p style={{ fontSize: 13, color: "white", fontWeight: 600 }}>{tesisAktif ? "✅ Tesis Yayında" : "⏸ Tesis Yayında Değil"} — {tesisAdi}</p>
+            <span style={{ fontSize: 11, color: GRAY400 }}>Tüm değişiklikler anında müşteri sayfasına yansır</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 12, color: GRAY400 }}>Tesis Aktif</span>
@@ -722,7 +691,7 @@ export default function IsletmeTesisPage() {
         </SectionCard>
 
         {/* 5. ÇALIŞMA SAATLERİ */}
-        <SectionCard open={sections.saat} onToggle={() => toggleSection("saat")} icon="🕐" iconBg="#FFFBEB" title="Çalışma Saatleri" sub="Haftalık çalışma programı">
+        <SectionCard open={sections.saat} onToggle={() => toggleSection("saat")} icon="🕐" iconBg="#FFFBEB" title="Çalışma Saatleri" sub="09:00 — 19:00 hafta içi, 09:00 — 21:00 hafta sonu">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
             {gunler.map((g, i) => (
               <div key={i} style={{ background: g.kapali ? GRAY100 : GRAY50, border: `1.5px solid ${g.kapali ? GRAY300 : g.vurgu ? TEAL : GRAY200}`, borderRadius: 10, padding: "10px 8px", textAlign: "center", opacity: g.kapali ? 0.7 : 1, transition: "all 0.2s" }}>
@@ -760,7 +729,7 @@ export default function IsletmeTesisPage() {
         </SectionCard>
 
         {/* 7. KONUM & HARİTA */}
-        <SectionCard open={sections.harita} onToggle={() => toggleSection("harita")} icon="🗺️" iconBg="#F0FDF4" title="Konum & Harita" sub={enlem.trim() && boylam.trim() ? `${enlem.trim()}° K · ${boylam.trim()}° D${sehir.trim() || ilce.trim() ? ` · ${[sehir, ilce].filter((x) => String(x).trim()).join(", ")}` : ""}` : "Koordinat ve konum bilgisi"}>
+        <SectionCard open={sections.harita} onToggle={() => toggleSection("harita")} icon="🗺️" iconBg="#F0FDF4" title="Konum & Harita" sub={`${enlem || "—"}° K · ${boylam || "—"}° D · ${[sehir, ilce].filter((x) => String(x).trim()).join(", ") || "—"}`}>
           <div style={{ width: "100%", height: 260, background: GRAY100, borderRadius: 12, overflow: "hidden", position: "relative", border: `1.5px solid ${GRAY200}` }}>
             <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, color: GRAY400 }}>
               <span style={{ fontSize: 36 }}>🗺️</span>
@@ -773,11 +742,11 @@ export default function IsletmeTesisPage() {
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Enlem (Latitude)</label>
-              <input type="text" value={enlem} onChange={(e) => setEnlem(e.target.value)} placeholder="" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+              <input type="text" value={enlem} onChange={(e) => setEnlem(e.target.value)} placeholder="37.032048" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             </div>
             <div style={{ flex: 1 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Boylam (Longitude)</label>
-              <input type="text" value={boylam} onChange={(e) => setBoylam(e.target.value)} placeholder="" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+              <input type="text" value={boylam} onChange={(e) => setBoylam(e.target.value)} placeholder="27.430012" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             </div>
             <div style={{ display: "flex", alignItems: "flex-end" }}>
               <button onClick={haritadaGoster} disabled={!enlem || !boylam} style={{ height: 42, padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${enlem && boylam ? TEAL : GRAY200}`, background: enlem && boylam ? "rgba(10,186,181,0.08)" : GRAY100, color: enlem && boylam ? TEAL : GRAY400, cursor: enlem && boylam ? "pointer" : "not-allowed" }}>📍 Haritada Göster</button>
@@ -966,16 +935,14 @@ export default function IsletmeTesisPage() {
               <button onClick={() => setOnizlemeModal(false)} style={{ width: 28, height: 28, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
             </div>
             {/* Ana fotoğraf */}
-            <div style={{ width: "100%", height: 200, background: photos[0]?.src ? "transparent" : photos[0]?.mockBg ?? GRAY200, overflow: "hidden", position: "relative" }}>
+            <div style={{ width: "100%", height: 200, background: photos[0]?.src ? "transparent" : photos[0]?.mockBg, overflow: "hidden", position: "relative" }}>
               {photos[0]?.src
                 ? <img src={photos[0].src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : photos[0]?.mockEmoji
-                  ? <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 60, color: "rgba(255,255,255,0.4)" }}>{photos[0].mockEmoji}</div>
-                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, color: GRAY600, background: GRAY100 }}>Fotoğraf ekleyin</div>
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 60, color: "rgba(255,255,255,0.4)" }}>{photos[0]?.mockEmoji}</div>
               }
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 20px 16px", background: "linear-gradient(transparent,rgba(0,0,0,0.7))" }}>
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: "white", margin: 0 }}>{tesisAdi.trim() || "—"}</h2>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: "4px 0 0" }}>{sehirIlce.trim() ? `📍 ${sehirIlce.trim()}` : (sehir.trim() || ilce.trim() ? `📍 ${[sehir, ilce].filter((x) => x.trim()).join(", ")}` : "")}</p>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "white", margin: 0 }}>{tesisAdi}</h2>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: "4px 0 0" }}>📍 {sehirIlce}</p>
               </div>
             </div>
             {/* Mini galeri */}
