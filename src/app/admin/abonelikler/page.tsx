@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628"; const TEAL = "#0ABAB5";
 const GRAY50 = "#F8FAFC"; const GRAY100 = "#F1F5F9"; const GRAY200 = "#E2E8F0";
@@ -9,16 +10,7 @@ const GREEN = "#10B981"; const RED = "#EF4444"; const ORANGE = "#F5821F";
 
 type Plan = "Başlangıç" | "Büyüme" | "Kurumsal";
 type AboDurum = "aktif" | "suresi-dolmus" | "iptal";
-type Abonelik = { id: number; tesis: string; plan: Plan; baslangic: string; bitis: string; tutar: string; durum: AboDurum; emoji: string; emojiBg: string; };
-
-const INIT: Abonelik[] = [
-  { id: 1, tesis: "Zuzuu Beach Hotel",  plan: "Kurumsal",  baslangic: "1 Oca 2025", bitis: "31 Ara 2025", tutar: "₺2.400/ay",  durum: "aktif",          emoji: "🌊", emojiBg: "#E0F2FE" },
-  { id: 2, tesis: "Palmiye Beach Club", plan: "Büyüme",    baslangic: "1 Şub 2025", bitis: "31 Oca 2026", tutar: "₺1.200/ay",  durum: "aktif",          emoji: "☀️", emojiBg: "#FEF3C7" },
-  { id: 3, tesis: "Poseidon Lux",       plan: "Kurumsal",  baslangic: "1 Mar 2025", bitis: "28 Şub 2026", tutar: "₺2.400/ay",  durum: "aktif",          emoji: "🔱", emojiBg: "#EDE9FE" },
-  { id: 4, tesis: "Olimpia Beach",      plan: "Başlangıç", baslangic: "1 Oca 2025", bitis: "31 Mar 2025", tutar: "₺490/ay",    durum: "suresi-dolmus",  emoji: "🌴", emojiBg: "#DCFCE7" },
-  { id: 5, tesis: "Kemer Sea Club",     plan: "Büyüme",    baslangic: "1 Haz 2024", bitis: "31 May 2025", tutar: "₺1.200/ay",  durum: "iptal",          emoji: "⛵", emojiBg: "#FEF9C3" },
-  { id: 6, tesis: "Aqua Park Bodrum",   plan: "Büyüme",    baslangic: "—",          bitis: "—",           tutar: "₺1.200/ay",  durum: "suresi-dolmus",  emoji: "🌊", emojiBg: "#FEE2E2" },
-];
+type Abonelik = { id: string; tesis: string; plan: Plan; baslangic: string; bitis: string; tutar: string; durum: AboDurum; emoji: string; emojiBg: string; };
 
 const PLAN_COLORS: Record<Plan, { bg: string; color: string }> = {
   "Başlangıç": { bg: "#DCFCE7", color: "#15803D" },
@@ -26,20 +18,147 @@ const PLAN_COLORS: Record<Plan, { bg: string; color: string }> = {
   "Kurumsal":  { bg: "#EDE9FE", color: "#7C3AED" },
 };
 
+const EMOJI_ROT = ["🌊", "☀️", "🔱", "🌴", "⛵", "🌊"];
+const BG_ROT = ["#E0F2FE", "#FEF3C7", "#EDE9FE", "#DCFCE7", "#FEF9C3", "#FEE2E2"];
+
+function normalizePlan(v: unknown): Plan {
+  const s = String(v ?? "").toLowerCase();
+  if (s.includes("kurumsal")) return "Kurumsal";
+  if (s.includes("büyüme") || s.includes("buyume")) return "Büyüme";
+  if (s.includes("başlangıç") || s.includes("baslang")) return "Başlangıç";
+  return "Başlangıç";
+}
+
+function normalizeDurum(v: unknown): AboDurum {
+  const s = String(v ?? "").toLowerCase();
+  if (s.includes("iptal")) return "iptal";
+  if (s.includes("süre") || s.includes("dolmuş") || s.includes("doldu") || s.includes("suresi")) return "suresi-dolmus";
+  return "aktif";
+}
+
+function fmtDate(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const d = v instanceof Date ? v : new Date(String(v));
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function fmtTutarField(v: unknown): string {
+  if (v == null || v === "") return "—";
+  if (typeof v === "string" && /₺|tl/i.test(v)) return v.includes("/") ? v : v + "/ay";
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  return "₺" + Math.round(n).toLocaleString("tr-TR") + "/ay";
+}
+
+function mapFromAboneliklerRow(row: Record<string, unknown>, index: number): Abonelik {
+  const nested = row.tesisler as { ad?: string } | null | undefined;
+  const tesis =
+    (typeof row.tesis_adi === "string" && row.tesis_adi) ||
+    (typeof row.tesis_ad === "string" && row.tesis_ad) ||
+    (typeof row.tesis === "string" && row.tesis) ||
+    nested?.ad ||
+    "—";
+  return {
+    id: String(row.id ?? index),
+    tesis,
+    plan: normalizePlan(row.plan ?? row.abonelik_plani),
+    baslangic: fmtDate(row.baslangic ?? row.abonelik_baslangic ?? row.baslangic_tarih),
+    bitis: fmtDate(row.bitis ?? row.abonelik_bitis ?? row.bitis_tarih),
+    tutar: fmtTutarField(row.tutar ?? row.abonelik_tutar ?? row.aylik_tutar),
+    durum: normalizeDurum(row.durum ?? row.abonelik_durum),
+    emoji: EMOJI_ROT[index % EMOJI_ROT.length],
+    emojiBg: BG_ROT[index % BG_ROT.length],
+  };
+}
+
+function mapFromTesisExtended(row: Record<string, unknown>, index: number): Abonelik {
+  const ad = typeof row.ad === "string" ? row.ad : "—";
+  return {
+    id: String(row.id ?? index),
+    tesis: ad,
+    plan: normalizePlan(row.abonelik_plani),
+    baslangic: fmtDate(row.abonelik_baslangic),
+    bitis: fmtDate(row.abonelik_bitis),
+    tutar: fmtTutarField(row.abonelik_tutar),
+    durum: normalizeDurum(row.abonelik_durum),
+    emoji: EMOJI_ROT[index % EMOJI_ROT.length],
+    emojiBg: BG_ROT[index % BG_ROT.length],
+  };
+}
+
+function mapFromTesisMinimal(row: Record<string, unknown>, index: number): Abonelik {
+  const ad = typeof row.ad === "string" ? row.ad : "—";
+  return {
+    id: String(row.id ?? index),
+    tesis: ad,
+    plan: "Başlangıç",
+    baslangic: "—",
+    bitis: "—",
+    tutar: "—",
+    durum: "aktif",
+    emoji: EMOJI_ROT[index % EMOJI_ROT.length],
+    emojiBg: BG_ROT[index % BG_ROT.length],
+  };
+}
+
 export default function AdminAboneliklerPage() {
+  const [rows, setRows] = useState<Abonelik[]>([]);
   const [filtrePlan, setFiltrePlan] = useState("tumu");
   const [filtreDurum, setFiltreDurum] = useState("tumu");
   const [ara, setAra] = useState("");
 
-  const liste = INIT.filter(a => {
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const aboRes = await supabase.from("abonelikler").select("*");
+      if (cancelled) return;
+      if (!aboRes.error && aboRes.data != null) {
+        const rows = (aboRes.data as Record<string, unknown>[]).map((r, i) => mapFromAboneliklerRow(r, i));
+        setRows(rows);
+        return;
+      }
+      if (aboRes.error) console.error("abonelikler fetch", aboRes.error);
+
+      const tesisFull = await supabase
+        .from("tesisler")
+        .select("id, ad, abonelik_plani, abonelik_baslangic, abonelik_bitis, abonelik_tutar, abonelik_durum");
+      if (cancelled) return;
+      if (!tesisFull.error && tesisFull.data != null) {
+        const rows = (tesisFull.data as Record<string, unknown>[]).map((r, i) => mapFromTesisExtended(r, i));
+        setRows(rows);
+        return;
+      }
+      if (tesisFull.error) console.error("tesisler abonelik kolonları", tesisFull.error);
+
+      const tesisMin = await supabase.from("tesisler").select("id, ad");
+      if (cancelled) return;
+      if (!tesisMin.error && tesisMin.data != null) {
+        setRows((tesisMin.data as Record<string, unknown>[]).map((r, i) => mapFromTesisMinimal(r, i)));
+        return;
+      }
+      if (tesisMin.error) console.error("tesisler minimal", tesisMin.error);
+      setRows([]);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const liste = rows.filter(a => {
     const planOk = filtrePlan === "tumu" || a.plan === filtrePlan;
     const durumOk = filtreDurum === "tumu" || a.durum === filtreDurum;
     const araOk = !ara || a.tesis.toLowerCase().includes(ara.toLowerCase());
     return planOk && durumOk && araOk;
   });
 
-  const toplam = INIT.filter(a => a.durum === "aktif").reduce((sum) => sum + 1, 0);
-  const aylikGelir = INIT.filter(a => a.durum === "aktif").map(a => parseInt(a.tutar.replace(/[^0-9]/g, ""))).reduce((s, v) => s + v, 0);
+  const toplam = rows.filter(a => a.durum === "aktif").length;
+  const aylikGelir = rows
+    .filter(a => a.durum === "aktif")
+    .map(a => parseInt(a.tutar.replace(/[^0-9]/g, ""), 10))
+    .filter((v) => !Number.isNaN(v))
+    .reduce((s, v) => s + v, 0);
 
   const selStyle: React.CSSProperties = { padding: "8px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 12, background: "white", cursor: "pointer" };
   const cardStyle: React.CSSProperties = { background: "white", borderRadius: 12, border: `1px solid ${GRAY200}`, padding: "16px 20px", flex: 1 };
@@ -54,8 +173,8 @@ export default function AdminAboneliklerPage() {
       <div style={{ display: "flex", gap: 14, marginBottom: 20 }}>
         <div style={cardStyle}><div style={{ fontSize: 11, fontWeight: 600, color: GRAY400, marginBottom: 4 }}>Aktif Abonelik</div><div style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>{toplam}</div></div>
         <div style={cardStyle}><div style={{ fontSize: 11, fontWeight: 600, color: GRAY400, marginBottom: 4 }}>Aylık Abonelik Geliri</div><div style={{ fontSize: 22, fontWeight: 800, color: GREEN }}>₺{aylikGelir.toLocaleString("tr-TR")}</div></div>
-        <div style={cardStyle}><div style={{ fontSize: 11, fontWeight: 600, color: GRAY400, marginBottom: 4 }}>Süresi Dolan</div><div style={{ fontSize: 22, fontWeight: 800, color: ORANGE }}>{INIT.filter(a => a.durum === "suresi-dolmus").length}</div></div>
-        <div style={cardStyle}><div style={{ fontSize: 11, fontWeight: 600, color: GRAY400, marginBottom: 4 }}>İptal Edilen</div><div style={{ fontSize: 22, fontWeight: 800, color: RED }}>{INIT.filter(a => a.durum === "iptal").length}</div></div>
+        <div style={cardStyle}><div style={{ fontSize: 11, fontWeight: 600, color: GRAY400, marginBottom: 4 }}>Süresi Dolan</div><div style={{ fontSize: 22, fontWeight: 800, color: ORANGE }}>{rows.filter(a => a.durum === "suresi-dolmus").length}</div></div>
+        <div style={cardStyle}><div style={{ fontSize: 11, fontWeight: 600, color: GRAY400, marginBottom: 4 }}>İptal Edilen</div><div style={{ fontSize: 22, fontWeight: 800, color: RED }}>{rows.filter(a => a.durum === "iptal").length}</div></div>
       </div>
 
       {/* Filters */}
