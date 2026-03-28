@@ -107,7 +107,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800, display: "flex", minHeight: "100vh" }}>
       {/* SIDEBAR */}
-      <aside style={{ width: SIDEBAR_W, background: "#060e1a", minHeight: "100vh", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", zIndex: 100 }}>
+      <aside style={{ width: SIDEBAR_W, background: "#060e1a", height: "100vh", overflow: "hidden", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", zIndex: 100 }}>
         <div style={{ padding: "20px 20px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/MyLoungers_Logo-02.png" width={100} height={60} style={{ borderRadius: "10px", objectFit: "contain" }} alt="MyLoungers" />
@@ -118,7 +118,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         <div style={{ margin: "10px 16px", background: "rgba(245,130,31,0.15)", border: "1px solid rgba(245,130,31,0.3)", borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 700, color: ORANGE }}>🔐 Platform Yöneticisi</div>
-        <nav style={{ padding: "4px 0", flex: 1 }}>
+        <nav style={{ padding: "4px 0", flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Platform</div>
           {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Finans</div>
