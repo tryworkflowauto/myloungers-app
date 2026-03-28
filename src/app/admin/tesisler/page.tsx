@@ -90,6 +90,7 @@ export default function AdminTesislerPage() {
           sonAktivite: (t.son_aktivite as string) || "-",
         };
       });
+      console.log("supabase tesisler raw data:", JSON.stringify(data?.slice(0,2)));
       setTesisler(mapped);
     }
     fetchTesisler();
