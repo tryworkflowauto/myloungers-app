@@ -131,8 +131,42 @@ export default function AdminTesislerPage() {
     setTesisler(p => p.filter(x => x.id !== t.id));
     setReddetModal(null); setRedSebebi(""); showToast("✗ " + t.ad + " reddedildi", RED);
   }
-  function askiyaAl(id: number) { setTesisler(p => p.map(x => x.id === id ? { ...x, durum: "askida" as TesisDurum } : x)); showToast("⏸ Tesis askıya alındı"); }
-  function aktifYap(id: number) { setTesisler(p => p.map(x => x.id === id ? { ...x, durum: "aktif" as TesisDurum } : x)); showToast("✅ Tesis aktifleştirildi", GREEN); }
+  async function askiyaAl(id: number) {
+    try {
+      const res = await fetch("/api/admin/tesis-durum", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, durum: "askida" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast((data as { error?: string })?.error || "Tesis güncellenemedi", RED);
+        return;
+      }
+      setTesisler((p) => p.map((x) => (x.id === id ? { ...x, durum: "askida" as TesisDurum } : x)));
+      showToast("⏸ Tesis askıya alındı");
+    } catch {
+      showToast("Tesis güncellenemedi", RED);
+    }
+  }
+  async function aktifYap(id: number) {
+    try {
+      const res = await fetch("/api/admin/tesis-durum", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, durum: "aktif" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast((data as { error?: string })?.error || "Tesis güncellenemedi", RED);
+        return;
+      }
+      setTesisler((p) => p.map((x) => (x.id === id ? { ...x, durum: "aktif" as TesisDurum } : x)));
+      showToast("✅ Tesis aktifleştirildi", GREEN);
+    } catch {
+      showToast("Tesis güncellenemedi", RED);
+    }
+  }
 
   async function onaylaBasvuru(b: Basvuru) {
     try {
