@@ -633,8 +633,44 @@ export default function IsletmeSezlongPage() {
   }
 
   async function handleGrupEkle() {
-    const currentTesisId = tesisId;
-    if (!currentTesisId || !grupEkleForm.ad.trim()) return;
+    if (!grupEkleForm.ad.trim()) return;
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !authData?.user) {
+      showToast("❌ Grup eklenemedi");
+      return;
+    }
+
+    const { data: kById } = await supabase
+      .from("kullanicilar")
+      .select("tesis_id")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+
+    let tesisIdVal = (kById as { tesis_id?: unknown } | null)?.tesis_id;
+    const hasTesis =
+      tesisIdVal != null &&
+      String(tesisIdVal).trim() !== "";
+
+    if (!hasTesis && authData.user.email) {
+      const { data: kByEmail } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("email", authData.user.email)
+        .maybeSingle();
+      const te = (kByEmail as { tesis_id?: unknown } | null)?.tesis_id;
+      if (te != null && String(te).trim() !== "") tesisIdVal = te;
+    }
+
+    const currentTesisId =
+      tesisIdVal != null && String(tesisIdVal).trim() !== ""
+        ? String(tesisIdVal)
+        : null;
+    if (!currentTesisId) {
+      showToast("❌ Grup eklenemedi");
+      return;
+    }
+
     const kapasite = Math.max(1, Math.min(200, Number(grupEkleForm.kapasite) || 10));
     const aciklamaInsert = grupEkleForm.aciklama?.trim() || null;
     const nextSira = gruplar.length === 0 ? 0 : Math.max(...gruplar.map((r) => r.sira ?? 0)) + 1;
