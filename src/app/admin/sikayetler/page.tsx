@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdminToast } from "../AdminToastContext";
+import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628"; const TEAL = "#0ABAB5";
 const GRAY50 = "#F8FAFC"; const GRAY100 = "#F1F5F9"; const GRAY200 = "#E2E8F0";
@@ -9,28 +10,125 @@ const GRAY400 = "#94A3B8"; const GRAY600 = "#475569"; const GRAY800 = "#1E293B";
 const GREEN = "#10B981"; const RED = "#EF4444"; const ORANGE = "#F5821F";
 
 type SikayetDurum = "bekliyor" | "islendi" | "reddedildi";
-type Sikayet = { id: number; tesis: string; musteri: string; yorum: string; sebep: string; tarih: string; durum: SikayetDurum; };
+type Sikayet = { id: string; kaynak: "sikayetler" | "yorumlar"; tesis: string; musteri: string; yorum: string; sebep: string; tarih: string; durum: SikayetDurum; };
 
-const INIT: Sikayet[] = [
-  { id: 1, tesis: "Zuzuu Beach Hotel",  musteri: "Mert Özcan",   yorum: "Beklentimin altındaydı, fiyatlar çok yüksek.",              sebep: "Yanıltıcı fiyat bilgisi", tarih: "6 Mar 2026",  durum: "bekliyor" },
-  { id: 2, tesis: "Palmiye Beach Club", musteri: "Kaan Bulut",   yorum: "Berbat! Rezervasyon iptal edildi son dakikada.",           sebep: "Hizmet kalitesi",          tarih: "3 Mar 2026",  durum: "bekliyor" },
-  { id: 3, tesis: "Olimpia Beach",      musteri: "Deniz Aydın",  yorum: "Personel çok kaba davrandı, şikayet ediyorum.",           sebep: "Personel tutumu",          tarih: "28 Şub 2026", durum: "islendi"  },
-  { id: 4, tesis: "Poseidon Lux",       musteri: "Caner Arslan", yorum: "Temizlik standartları yetersiz, sağlık riski oluşturuyor.",sebep: "Temizlik/hijyen",          tarih: "25 Şub 2026", durum: "reddedildi" },
-];
+function fmtDate(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const d = v instanceof Date ? v : new Date(String(v));
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function normalizeDurum(v: unknown): SikayetDurum {
+  const s = String(v ?? "").toLowerCase();
+  if (s.includes("redd")) return "reddedildi";
+  if (s.includes("islendi") || s.includes("işlendi")) return "islendi";
+  return "bekliyor";
+}
+
+function mapSikayetlerRow(r: Record<string, unknown>): Sikayet {
+  return {
+    id: String(r.id),
+    kaynak: "sikayetler",
+    tesis: String(r.tesis_adi ?? r.tesis ?? r.tesis_ad ?? "—"),
+    musteri: String(r.musteri ?? r.musteri_adi ?? "—"),
+    yorum: String(r.yorum ?? r.metin ?? ""),
+    sebep: String(r.sebep ?? r.sikayet_sebebi ?? "Şikayet"),
+    tarih: fmtDate(r.created_at ?? r.tarih),
+    durum: normalizeDurum(r.durum),
+  };
+}
+
+function mapYorumRow(r: Record<string, unknown>, sebepFromSikayetMetin: boolean): Sikayet {
+  const nested = r.tesisler as { ad?: string } | null | undefined;
+  const sebep =
+    sebepFromSikayetMetin && typeof r.sikayet === "string" && r.sikayet.trim() !== ""
+      ? r.sikayet
+      : "Şikayet";
+  return {
+    id: String(r.id),
+    kaynak: "yorumlar",
+    tesis: nested?.ad ?? "—",
+    musteri: String(r.musteri_adi ?? "Misafir"),
+    yorum: String(r.yorum ?? ""),
+    sebep,
+    tarih: fmtDate(r.created_at),
+    durum: normalizeDurum(r.durum),
+  };
+}
+
+async function adminSikayetAction(action: "delete" | "reddet", kaynak: Sikayet["kaynak"], id: string) {
+  const res = await fetch("/api/admin/sikayetler", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, kaynak, id }),
+  });
+  return res.ok;
+}
 
 export default function AdminSikayetlerPage() {
   const { showToast } = useAdminToast();
-  const [sikayetler, setSikayetler] = useState<Sikayet[]>(INIT);
+  const [sikayetler, setSikayetler] = useState<Sikayet[]>([]);
   const [filtreDurum, setFiltreDurum] = useState("tumu");
   const [silModal, setSilModal] = useState<Sikayet | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const sk = await supabase.from("sikayetler").select("*");
+      if (cancelled) return;
+      if (!sk.error && sk.data != null) {
+        setSikayetler((sk.data as Record<string, unknown>[]).map(mapSikayetlerRow));
+        return;
+      }
+
+      const r1 = await supabase
+        .from("yorumlar")
+        .select("id, tesis_id, musteri_adi, yorum, created_at, durum, sikayet_var, tesisler(ad)")
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (!r1.error && r1.data != null) {
+        const filtered = (r1.data as Record<string, unknown>[]).filter((row) => row.sikayet_var === true);
+        setSikayetler(filtered.map((row) => mapYorumRow(row, false)));
+        return;
+      }
+
+      const r2 = await supabase
+        .from("yorumlar")
+        .select("id, tesis_id, musteri_adi, yorum, created_at, durum, sikayet, tesisler(ad)")
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (!r2.error && r2.data != null) {
+        const filtered = (r2.data as Record<string, unknown>[]).filter((row) => {
+          const s = row.sikayet;
+          if (s == null) return false;
+          if (typeof s === "boolean") return s;
+          return String(s).trim() !== "";
+        });
+        setSikayetler(filtered.map((row) => mapYorumRow(row, true)));
+        return;
+      }
+
+      setSikayetler([]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const liste = sikayetler.filter(s => filtreDurum === "tumu" || s.durum === filtreDurum);
 
-  function isleTalepSil(s: Sikayet) {
+  async function isleTalepSil(s: Sikayet) {
+    const ok = await adminSikayetAction("delete", s.kaynak, s.id);
+    if (!ok) return;
     setSikayetler(p => p.filter(x => x.id !== s.id));
     setSilModal(null); showToast("🗑️ Yorum silindi, şikayet işlendi", RED);
   }
-  function reddetTalep(id: number) {
+  async function reddetTalep(id: string) {
+    const s = sikayetler.find(x => x.id === id);
+    if (!s) return;
+    const ok = await adminSikayetAction("reddet", s.kaynak, id);
+    if (!ok) return;
     setSikayetler(p => p.map(x => x.id === id ? { ...x, durum: "reddedildi" as SikayetDurum } : x));
     showToast("✗ Şikayet talebi reddedildi");
   }
