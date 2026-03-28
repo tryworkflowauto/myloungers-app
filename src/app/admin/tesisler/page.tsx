@@ -61,6 +61,7 @@ export default function AdminTesislerPage() {
 
   useEffect(() => {
     async function fetchTesisler() {
+      console.log("fetchTesisler calisti");
       const { data, error } = await supabase
         .from("tesisler")
         .select("*")
@@ -132,7 +133,7 @@ export default function AdminTesislerPage() {
     setTesisler(p => p.filter(x => x.id !== t.id));
     setReddetModal(null); setRedSebebi(""); showToast("✗ " + t.ad + " reddedildi", RED);
   }
-  async function askiyaAl(id: number) {
+  async function askiyaAl(id: string) {
     if (!id) return;
     try {
       const res = await fetch("/api/admin/tesis-durum", {
