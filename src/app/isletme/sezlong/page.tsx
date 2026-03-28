@@ -277,37 +277,59 @@ export default function IsletmeSezlongPage() {
 
   // Supabase Auth ile tesis_id yükle
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/giris'); return; }
-      supabase.from('kullanicilar').select('rol').eq('email', user.email).single().then(({ data }) => {
-        if (data?.rol !== 'isletmeci' && data?.rol !== 'admin') router.push('/');
-      });
-    });
-
     let cancelled = false;
 
     async function loadTesisId() {
       const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData?.user || cancelled) {
+      if (cancelled) return;
+      if (authError || !authData?.user) {
         setTesisId(null);
         setAuthChecked(true);
+        router.push("/giris");
         return;
       }
 
-      const userId = authData.user.id;
-      const { data: kullanici, error: kullaniciError } = await supabase
+      const { data: kById } = await supabase
         .from("kullanicilar")
-        .select("tesis_id")
-        .eq("id", userId)
+        .select("rol, tesis_id")
+        .eq("id", authData.user.id)
         .maybeSingle();
+      if (cancelled) return;
 
-      if (kullaniciError || !kullanici || !kullanici.tesis_id || cancelled) {
+      let rol = String((kById as { rol?: string } | null)?.rol ?? "").toLowerCase();
+      let tesisIdVal = (kById as { tesis_id?: unknown } | null)?.tesis_id;
+
+      const hasTesis =
+        tesisIdVal != null &&
+        String(tesisIdVal).trim() !== "";
+
+      if (!hasTesis && authData.user.email) {
+        const { data: kByEmail } = await supabase
+          .from("kullanicilar")
+          .select("rol, tesis_id")
+          .eq("email", authData.user.email)
+          .maybeSingle();
+        if (cancelled) return;
+        if (kByEmail) {
+          if (!rol) rol = String((kByEmail as { rol?: string }).rol ?? "").toLowerCase();
+          const te = (kByEmail as { tesis_id?: unknown }).tesis_id;
+          if (te != null && String(te).trim() !== "") tesisIdVal = te;
+        }
+      }
+
+      if (rol !== "isletmeci" && rol !== "admin") {
+        router.push("/");
         setTesisId(null);
         setAuthChecked(true);
         return;
       }
 
-      setTesisId(String(kullanici.tesis_id));
+      if (tesisIdVal == null || String(tesisIdVal).trim() === "") {
+        setTesisId(null);
+        setAuthChecked(true);
+        return;
+      }
+      setTesisId(String(tesisIdVal));
       setAuthChecked(true);
     }
 
@@ -315,11 +337,15 @@ export default function IsletmeSezlongPage() {
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, [router, supabase]);
 
   // Fetch gruplar + sezlonglar
   useEffect(() => {
-    if (!authChecked || !tesisId) return;
+    if (!authChecked) return;
+    if (!tesisId) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     Promise.all([
@@ -664,7 +690,7 @@ export default function IsletmeSezlongPage() {
     showToast("✅ Grup eklendi");
   }
 
-  if (!authChecked || !tesisId || loading) {
+  if (!authChecked || loading) {
     return (
       <div
         style={{
