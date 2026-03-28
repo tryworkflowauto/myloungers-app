@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }]);
 
     const params = new URLSearchParams();
-    params.append('MERCHANT', '10004201');
+    params.append('MERCHANT', '10008941');
     params.append('MERCHANTUSER', 'mail@bgs.io');
     params.append('MERCHANTPASSWORD', '*ReklamotvReklamotv321');
     params.append('ACTION', 'SESSIONTOKEN');
