@@ -180,6 +180,41 @@ type TesisSlugInfo = {
   slug?: string | null;
 };
 
+type HomeReviewCard = {
+  id: string;
+  dest: string;
+  stars: string;
+  text: string;
+  initials: string;
+  name: string;
+  loc: string;
+};
+
+function homeReviewInitials(name: string): string {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return "?";
+  if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
+  return (p[0][0] + p[p.length - 1][0]).toUpperCase();
+}
+
+function homeKategoriEmoji(k: unknown): string {
+  const s = (Array.isArray(k) ? k.join(" ") : String(k ?? "")).toLowerCase();
+  if (s.includes("hotel") || s.includes("otel")) return "🏨";
+  if (s.includes("aqua")) return "💦";
+  return "🏖️";
+}
+
+function homeStarsFromPuan10(puan: number | null | undefined): string {
+  const n = Math.min(5, Math.max(0, Math.round((Number(puan) || 0) / 2)));
+  return "★".repeat(n) + "☆".repeat(5 - n);
+}
+
+function homeShortName(full: string): string {
+  const p = full.trim().split(/\s+/).filter(Boolean);
+  if (p.length <= 1) return full.trim() || "Misafir";
+  return `${p[0]} ${p[p.length - 1][0]}.`;
+}
+
 export default function Home() {
   const router = useRouter();
   const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru">("tr");
@@ -219,6 +254,7 @@ export default function Home() {
   const [planTarih, setPlanTarih] = useState("6 Mar 2026");
   const [planSilverFiyat, setPlanSilverFiyat] = useState(1000);
   const [planGoldFiyat, setPlanGoldFiyat] = useState(600);
+  const [homeReviews, setHomeReviews] = useState<HomeReviewCard[]>([]);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -389,6 +425,52 @@ export default function Home() {
       if (data) setPopularTesisler(data);
     }
     fetchPopular();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("yorumlar")
+        .select("id, yorum, puan, musteri_adi, dogrulanmis, tesisler(ad, sehir, ilce, kategori, aktif)")
+        .eq("durum", "onaylı")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (cancelled) return;
+      if (error) {
+        console.error("Ana sayfa yorumlar:", error);
+        setHomeReviews([]);
+        return;
+      }
+      const cards: HomeReviewCard[] = (data ?? [])
+        .filter((r: any) => {
+          const t = r.tesisler;
+          if (!t?.ad || !String(r.yorum || "").trim()) return false;
+          if (t.aktif === false) return false;
+          return true;
+        })
+        .slice(0, 3)
+        .map((r: any) => {
+          const t = r.tesisler;
+          const sehirStr = String(t.sehir || "").trim() || "—";
+          const adStr = String(t.ad || "").trim();
+          const rawName = String(r.musteri_adi || "").trim() || "Misafir";
+          const verified = Boolean(r.dogrulanmis);
+          return {
+            id: String(r.id),
+            dest: `${homeKategoriEmoji(t.kategori)} ${sehirStr} · ${adStr}`,
+            stars: homeStarsFromPuan10(r.puan),
+            text: String(r.yorum || "").trim(),
+            initials: homeReviewInitials(rawName),
+            name: homeShortName(rawName),
+            loc: verified ? "Doğrulanmış" : "Misafir",
+          };
+        });
+      setHomeReviews(cards);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1311,50 +1393,30 @@ export default function Home() {
       </section>
 
       {/* REVIEWS */}
+      {homeReviews.length > 0 && (
       <section className="rev">
         <div className="sec-row">
           <h2 className="sec-h" id="rev-title">{t.rev_title}</h2>
           <a href="/yorumlar" className="sec-a" id="rev-all">{t.rev_all} →</a>
         </div>
         <div className="rgrid">
-          <div className="rc">
-            <div className="rc-dest" id="rev1-dest">🏖️ Bodrum · Zuzuu Beach Hotel</div>
-            <div className="rc-stars">★★★★★</div>
-            <p className="rc-text" id="rev1-text">Bodrum tatilinde şezlong için saatlerce beklemek zorunda kalmadık!</p>
-            <div className="rc-auth">
-              <div className="rc-av">AY</div>
-              <div>
-                <div className="rc-name">Ayşe Y.</div>
-                <div className="rc-loc" id="rev1-loc">İstanbul · Doğrulanmış</div>
+          {homeReviews.map((r) => (
+            <div key={r.id} className="rc">
+              <div className="rc-dest">{r.dest}</div>
+              <div className="rc-stars">{r.stars}</div>
+              <p className="rc-text">{r.text}</p>
+              <div className="rc-auth">
+                <div className="rc-av">{r.initials}</div>
+                <div>
+                  <div className="rc-name">{r.name}</div>
+                  <div className="rc-loc">{r.loc}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="rc">
-            <div className="rc-dest" id="rev2-dest">🏊 Marmaris · Aqua Resort</div>
-            <div className="rc-stars">★★★★★</div>
-            <p className="rc-text" id="rev2-text">QR kod ile giriş süper. Kasaya uğramak yok, kuyruk yok!</p>
-            <div className="rc-auth">
-              <div className="rc-av">MK</div>
-              <div>
-                <div className="rc-name">Mehmet K.</div>
-                <div className="rc-loc" id="rev2-loc">Ankara · Doğrulanmış</div>
-              </div>
-            </div>
-          </div>
-          <div className="rc">
-            <div className="rc-dest" id="rev3-dest">🌊 Fethiye · Paradise Beach</div>
-            <div className="rc-stars">★★★★★</div>
-            <p className="rc-text" id="rev3-text">Denize en yakın şezlongu seçebildim. Uygulama çok kolay!</p>
-            <div className="rc-auth">
-              <div className="rc-av">ZD</div>
-              <div>
-                <div className="rc-name">Zeynep D.</div>
-                <div className="rc-loc" id="rev3-loc">İzmir · Doğrulanmış</div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
+      )}
 
       {/* FOOTER */}
       <footer>
