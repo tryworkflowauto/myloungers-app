@@ -130,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Finans</div>
           {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Moderasyon</div>
-          {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
+          {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Sistem</div>
           <NavLink item={NAV_ITEMS[7]} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />
         </nav>
