@@ -215,6 +215,7 @@ export default function Home() {
   const [tesisSlugMap, setTesisSlugMap] = useState<Record<string, TesisSlugInfo>>({});
   const [popularTesisler, setPopularTesisler] = useState<any[]>([]);
   const [bizUser, setBizUser] = useState<{ name: string; tesisAd?: string } | null>(null);
+  const [supabaseNavUser, setSupabaseNavUser] = useState<{ name: string; rol: string } | null>(null);
   const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
   const [planTesisAd, setPlanTesisAd] = useState("ReklamoTV");
   const [planTarih, setPlanTarih] = useState("6 Mar 2026");
@@ -264,58 +265,79 @@ export default function Home() {
         console.log("auth user:", authData?.user?.email);
         if (authError || !authData?.user || cancelled) {
           setBizUser(null);
+          setSupabaseNavUser(null);
           return;
         }
 
         const userId = authData.user.id;
-        const { data: kullanici } = await supabase
+        let { data: kullanici } = await supabase
           .from("kullanicilar")
           .select("rol, ad, soyad, email, tesis_id")
           .eq("id", userId)
           .maybeSingle();
+        if (!kullanici && authData.user.email) {
+          const { data: kEmail } = await supabase
+            .from("kullanicilar")
+            .select("rol, ad, soyad, email, tesis_id")
+            .eq("email", authData.user.email)
+            .maybeSingle();
+          kullanici = kEmail;
+        }
 
         console.log("kullanici rol:", (kullanici as any)?.rol);
 
         const rol = (kullanici as any)?.rol as string | null | undefined;
         const rolLower = (rol || "").toLowerCase();
-        if (
-          !kullanici ||
-          (
-            rolLower !== "işletme" &&
-            rolLower !== "işletmeci" &&
-            rolLower !== "isletme" &&
-            rolLower !== "isletmeci"
-          ) ||
-          cancelled
-        ) {
-          setBizUser(null);
+        const isIsletmeci =
+          rolLower === "işletme" ||
+          rolLower === "işletmeci" ||
+          rolLower === "isletme" ||
+          rolLower === "isletmeci";
+
+        const fullName =
+          kullanici &&
+          (kullanici as any).ad &&
+          (kullanici as any).soyad
+            ? `${(kullanici as any).ad} ${(kullanici as any).soyad}`
+            : kullanici
+              ? ((kullanici as any).ad || (kullanici as any).soyad || (kullanici as any).email || authData.user.email)
+              : authData.user.email?.split("@")[0] || "Kullanıcı";
+
+        if (isIsletmeci && kullanici) {
+          let tesisAd: string | undefined;
+          const tesisId = (kullanici as any).tesis_id as string | null | undefined;
+          if (tesisId) {
+            const { data: tesis } = await supabase
+              .from("tesisler")
+              .select("ad")
+              .eq("id", tesisId)
+              .maybeSingle();
+            if (tesis && typeof (tesis as any).ad === "string") {
+              tesisAd = (tesis as any).ad as string;
+            }
+          }
+
+          if (!cancelled) {
+            console.log("bizUser set ediliyor:", fullName, tesisAd);
+            setBizUser({ name: fullName as string, tesisAd });
+            setSupabaseNavUser(null);
+          }
           return;
         }
 
-        let tesisAd: string | undefined;
-        const tesisId = (kullanici as any).tesis_id as string | null | undefined;
-        if (tesisId) {
-          const { data: tesis } = await supabase
-            .from("tesisler")
-            .select("ad")
-            .eq("id", tesisId)
-            .maybeSingle();
-          if (tesis && typeof (tesis as any).ad === "string") {
-            tesisAd = (tesis as any).ad as string;
-          }
-        }
-
-        const fullName =
-          (kullanici as any).ad && (kullanici as any).soyad
-            ? `${(kullanici as any).ad} ${(kullanici as any).soyad}`
-            : (kullanici as any).ad || (kullanici as any).soyad || (kullanici as any).email || authData.user.email;
-
         if (!cancelled) {
-          console.log("bizUser set ediliyor:", fullName, tesisAd);
-          setBizUser({ name: fullName as string, tesisAd });
+          setBizUser(null);
+          setSupabaseNavUser(
+            kullanici
+              ? { name: fullName as string, rol: rolLower }
+              : { name: fullName as string, rol: "" }
+          );
         }
       } catch {
-        if (!cancelled) setBizUser(null);
+        if (!cancelled) {
+          setBizUser(null);
+          setSupabaseNavUser(null);
+        }
       }
     }
 
@@ -326,6 +348,7 @@ export default function Home() {
         loadBizUser();
       } else {
         setBizUser(null);
+        setSupabaseNavUser(null);
       }
     });
 
@@ -343,6 +366,17 @@ export default function Home() {
       setBizUser(null);
       setBizDropdownOpen(false);
       router.push("/");
+    }
+  };
+
+  const handleSupabaseNavLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setSupabaseNavUser(null);
+      setBizUser(null);
+      setBizDropdownOpen(false);
+      window.location.reload();
     }
   };
 
@@ -644,6 +678,16 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            ) : supabaseNavUser ? (
+              <>
+                <span className="nav-user" style={{ textDecoration: "none" }}>{supabaseNavUser.name}</span>
+                {supabaseNavUser.rol === "admin" && (
+                  <Link href="/admin" className="btn-login">Admin Paneli</Link>
+                )}
+                <button type="button" className="btn-login" onClick={handleSupabaseNavLogout}>
+                  Çıkış Yap
+                </button>
+              </>
             ) : session ? (
               <>
                 <Link href="/profil" className="nav-user" style={{ textDecoration: "none" }}>
@@ -704,7 +748,39 @@ export default function Home() {
             ))}
           </div>
           <div className="mob-btns">
-            {session ? (
+            {bizUser ? (
+              <>
+                <div className="mob-user">{bizUser.tesisAd || bizUser.name}</div>
+                <Link href="/isletme" className="mob-btn-login" onClick={() => setMenuOpen(false)}>İşletme Paneli</Link>
+                <button
+                  type="button"
+                  className="mob-btn-login"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void handleBizLogout();
+                  }}
+                >
+                  Çıkış Yap
+                </button>
+              </>
+            ) : supabaseNavUser ? (
+              <>
+                <div className="mob-user">{supabaseNavUser.name}</div>
+                {supabaseNavUser.rol === "admin" && (
+                  <Link href="/admin" className="mob-btn-login" onClick={() => setMenuOpen(false)}>Admin Paneli</Link>
+                )}
+                <button
+                  type="button"
+                  className="mob-btn-login"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void handleSupabaseNavLogout();
+                  }}
+                >
+                  Çıkış Yap
+                </button>
+              </>
+            ) : session ? (
               <>
                 <div className="mob-user">
                   {session.user?.name || session.user?.email}
