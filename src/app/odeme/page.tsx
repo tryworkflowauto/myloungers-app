@@ -167,7 +167,7 @@ function OdemeContent() {
       if (!token) throw new Error("Session token boş");
       const returnUrl = "https://myloungers.com/api/paratika/callback";
       const payUrl =
-        `https://entegrasyon.paratika.com.tr/payment?SessionToken=${encodeURIComponent(token)}&action=PAYWITHTOKEN&returnUrl=${encodeURIComponent(returnUrl)}`;
+        `https://vpos.paratika.com.tr/payment?SessionToken=${encodeURIComponent(token)}&action=PAYWITHTOKEN&returnUrl=${encodeURIComponent(returnUrl)}`;
       window.location.href = payUrl;
     } catch (err) {
       console.error("Paratika ödeme başlatma hatası:", err);

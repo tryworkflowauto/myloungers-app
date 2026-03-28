@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     params.append('SHIPTOPOSTALCODE', '48400');
     params.append('SHIPTOPHONE', customerPhone);
 
-    const response = await fetch('https://entegrasyon.paratika.com.tr/paratika/api/v2', {
+    const response = await fetch('https://vpos.paratika.com.tr/paratika/api/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()
