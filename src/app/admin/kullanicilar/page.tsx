@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { useAdminToast } from "../AdminToastContext";
 
 const NAVY = "#0A1628"; const TEAL = "#0ABAB5";
@@ -10,26 +11,69 @@ const GREEN = "#10B981"; const RED = "#EF4444";
 
 type Rol = "müşteri" | "işletme" | "admin";
 type Durum = "aktif" | "pasif";
-type Kullanici = { id: number; ad: string; email: string; tesis: string; rol: Rol; kayit: string; durum: Durum; avatarBg: string; inits: string; siparisler?: number; };
+type Kullanici = { id: string; ad: string; email: string; tesis: string; rol: Rol; kayit: string; durum: Durum; avatarBg: string; inits: string; siparisler?: number; };
 
-const INIT: Kullanici[] = [
-  { id: 1, ad: "Zafer Bakır",    email: "zafer@zuzuu.com",     tesis: "Zuzuu Beach Hotel",  rol: "işletme", kayit: "12 Oca 2025", durum: "aktif", avatarBg: "#DBEAFE", inits: "ZB", siparisler: 0 },
-  { id: 2, ad: "Ahmet Yılmaz",  email: "ahmet@palmiye.com",   tesis: "Palmiye Beach Club", rol: "işletme", kayit: "3 Şub 2025",  durum: "aktif", avatarBg: "#FEF3C7", inits: "AY" },
-  { id: 3, ad: "Emre Kaya",     email: "emre.kaya@gmail.com", tesis: "—",                  rol: "müşteri", kayit: "20 Şub 2025", durum: "aktif", avatarBg: "#DCFCE7", inits: "EK", siparisler: 14 },
-  { id: 4, ad: "Selin Çelik",   email: "selin.c@gmail.com",   tesis: "—",                  rol: "müşteri", kayit: "5 Mar 2025",  durum: "aktif", avatarBg: "#EDE9FE", inits: "SÇ", siparisler: 7 },
-  { id: 5, ad: "Berk Doğan",    email: "berk.d@hotmail.com",  tesis: "—",                  rol: "müşteri", kayit: "10 Mar 2025", durum: "pasif", avatarBg: "#FEE2E2", inits: "BD", siparisler: 2 },
-  { id: 6, ad: "Caner Arslan",  email: "caner@poseidon.com",  tesis: "Poseidon Lux",       rol: "işletme", kayit: "15 Mar 2025", durum: "aktif", avatarBg: "#F0FDF4", inits: "CA" },
-  { id: 7, ad: "Superadmin",    email: "admin@myloungers.com","tesis": "—",                rol: "admin",   kayit: "1 Oca 2025",  durum: "aktif", avatarBg: "#FFF7ED", inits: "SA" },
-  { id: 8, ad: "Mert Özcan",    email: "mert.o@gmail.com",    tesis: "—",                  rol: "müşteri", kayit: "1 Mar 2025",  durum: "aktif", avatarBg: "#CFFAFE", inits: "MÖ", siparisler: 22 },
-  { id: 9, ad: "Elif Şahin",   email: "elif.s@gmail.com",    tesis: "—",                  rol: "müşteri", kayit: "22 Şub 2025", durum: "aktif", avatarBg: "#FCE7F3", inits: "EŞ", siparisler: 5 },
-];
+const AVATAR_BGS = ["#DBEAFE", "#FEF3C7", "#DCFCE7", "#EDE9FE", "#FEE2E2", "#F0FDF4", "#FFF7ED", "#CFFAFE", "#FCE7F3"];
+
+function mapKullaniciRow(row: Record<string, unknown>, index: number): Kullanici {
+  const ad = typeof row.ad === "string" ? row.ad : "";
+  const soyad = typeof row.soyad === "string" ? row.soyad : "";
+  const fullName = [ad, soyad].filter(Boolean).join(" ").trim() || ad || "—";
+  const tesisler = row.tesisler as { ad?: string | null } | null | undefined;
+  const tesisAd = tesisler?.ad && String(tesisler.ad).trim() !== "" ? String(tesisler.ad) : "—";
+  const rolRaw = String(row.rol ?? "").toLowerCase();
+  let rol: Rol = "müşteri";
+  if (rolRaw === "admin") rol = "admin";
+  else if (rolRaw === "işletme" || rolRaw === "isletme" || rolRaw === "isletmeci") rol = "işletme";
+  const created = row.created_at ? new Date(String(row.created_at)) : null;
+  const kayit = created && !Number.isNaN(created.getTime())
+    ? created.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })
+    : "—";
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  const inits =
+    parts.length >= 2
+      ? ((parts[0][0] ?? "") + (parts[parts.length - 1][0] ?? "")).toUpperCase().slice(0, 2)
+      : fullName.slice(0, 2).toUpperCase() || "?";
+  return {
+    id: String(row.id),
+    ad: fullName,
+    email: typeof row.email === "string" ? row.email : "",
+    tesis: tesisAd,
+    rol,
+    kayit,
+    durum: "aktif",
+    avatarBg: AVATAR_BGS[index % AVATAR_BGS.length],
+    inits,
+  };
+}
 
 export default function AdminKullanicilarPage() {
   const { showToast } = useAdminToast();
-  const [kullanicilar, setKullanicilar] = useState<Kullanici[]>(INIT);
+  const [kullanicilar, setKullanicilar] = useState<Kullanici[]>([]);
   const [ara, setAra] = useState("");
   const [filtreRol, setFiltreRol] = useState("tumu");
   const [filtreDurum, setFiltreDurum] = useState("tumu");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const { data, error } = await supabase
+        .from("kullanicilar")
+        .select("id, ad, soyad, email, rol, created_at, tesisler(ad)")
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (error) {
+        console.error("Kullanicilar fetch error", error);
+        return;
+      }
+      const rows = (data ?? []) as Record<string, unknown>[];
+      setKullanicilar(rows.map((r, i) => mapKullaniciRow(r, i)));
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const liste = kullanicilar.filter(k => {
     const araOk = !ara || k.ad.toLowerCase().includes(ara.toLowerCase()) || k.email.toLowerCase().includes(ara.toLowerCase());
@@ -38,13 +82,11 @@ export default function AdminKullanicilarPage() {
     return araOk && rolOk && durumOk;
   });
 
-  function toggleDurum(id: number) {
-    setKullanicilar(p => p.map(k => {
-      if (k.id !== id) return k;
-      const next = k.durum === "aktif" ? "pasif" : "aktif";
-      showToast((next === "aktif" ? "✅ " : "⏸ ") + k.ad + " " + (next === "aktif" ? "aktifleştirildi" : "pasife alındı"), next === "aktif" ? GREEN : undefined);
-      return { ...k, durum: next as Durum };
-    }));
+  function toggleDurum(id: string) {
+    const k = kullanicilar.find((x) => x.id === id);
+    if (!k) return;
+    const next = k.durum === "aktif" ? "pasif" : "aktif";
+    showToast((next === "aktif" ? "✅ " : "⏸ ") + k.ad + " " + (next === "aktif" ? "aktifleştirildi" : "pasife alındı"), next === "aktif" ? GREEN : undefined);
   }
 
   const ROL_COLORS: Record<Rol, { bg: string; color: string }> = {
