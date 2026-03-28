@@ -75,7 +75,7 @@ export default function AdminKomisyonPage() {
       const label = monthLong.charAt(0).toUpperCase() + monthLong.slice(1) + " " + y;
       if (!cancelled) setDonemLabel(label);
 
-      const { data: tesisData, error: tesisErr } = await supabase.from("tesisler").select("id, ad");
+      const { data: tesisData, error: tesisErr } = await supabase.from("tesisler").select("id, ad, komisyon_orani");
       const { data: rezData, error: rezErr } = await supabase
         .from("rezervasyonlar")
         .select("tesis_id, toplam_tutar, created_at")
@@ -95,12 +95,15 @@ export default function AdminKomisyonPage() {
         byTesis.set(tid, (byTesis.get(tid) ?? 0) + (Number.isFinite(amt) ? amt : 0));
       }
 
-      const tesisList = (tesisData ?? []) as { id: unknown; ad: unknown }[];
+      const tesisList = (tesisData ?? []) as { id: unknown; ad: unknown; komisyon_orani?: unknown }[];
       const seen = new Set<string>();
       const mapped: MutabakatRow[] = tesisList.map((t) => {
         const tid = String(t.id);
         seen.add(tid);
         const hacimVal = byTesis.get(tid) ?? 0;
+        const koRaw = t.komisyon_orani;
+        const ko = typeof koRaw === "number" ? koRaw : koRaw != null ? Number(koRaw) : NaN;
+        const ozelOranVal = Number.isFinite(ko) && ko >= 0 ? ko : 5;
         return {
           id: tid,
           tesis: typeof t.ad === "string" && t.ad.trim() ? t.ad : "—",
@@ -108,7 +111,7 @@ export default function AdminKomisyonPage() {
           hacimVal,
           iyzicoOran: 3,
           mlOran: 5,
-          ozelOran: 5,
+          ozelOran: ozelOranVal,
           ozelOranEdit: false,
           durum: "bekliyor",
         };
