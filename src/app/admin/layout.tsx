@@ -42,17 +42,19 @@ const NAV_ITEMS = [
   { href: "/admin/komisyon",      label: "Komisyon Takibi",   icon: "💰", activePath: "/admin/komisyon"  },
   { href: "/admin/abonelikler",   label: "Abonelikler",       icon: "📄"                                 },
   { href: "/admin/yorumlar",      label: "Yorum Yönetimi",    icon: "⭐", badgeColor: RED                },
-  { href: "/admin/sikayetler",    label: "Şikayetler",        icon: "🚨", badge: 1, badgeColor: RED      },
+  { href: "/admin/sikayetler",    label: "Şikayetler",        icon: "🚨", badgeColor: RED      },
   { href: "/admin/ayarlar",       label: "Platform Ayarları", icon: "⚙️"                                 },
 ];
 
-function NavLink({ item, bekleyenYorumSayisi }: { item: (typeof NAV_ITEMS)[0]; bekleyenYorumSayisi: number }) {
+function NavLink({ item, bekleyenYorumSayisi, bekleyenSikayetSayisi }: { item: (typeof NAV_ITEMS)[0]; bekleyenYorumSayisi: number; bekleyenSikayetSayisi: number | null }) {
   const pathname = usePathname();
   const isActive = item.activePath ? pathname === item.activePath : pathname.startsWith(item.href) && (item.href === "/admin" ? pathname === "/admin" : true);
   const badgeToShow =
     item.href === "/admin/yorumlar"
       ? (bekleyenYorumSayisi > 0 ? bekleyenYorumSayisi : null)
-      : item.badge;
+      : item.href === "/admin/sikayetler"
+        ? (bekleyenSikayetSayisi != null && bekleyenSikayetSayisi > 0 ? bekleyenSikayetSayisi : null)
+        : item.badge;
 
   return (
     <Link
@@ -76,6 +78,7 @@ function NavLink({ item, bekleyenYorumSayisi }: { item: (typeof NAV_ITEMS)[0]; b
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [bekleyenYorumSayisi, setBekleyenYorumSayisi] = useState(0);
+  const [bekleyenSikayetSayisi, setBekleyenSikayetSayisi] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; color: string } | null>(null);
   const [sifre, setSifre] = useState("MyL2026beach");
@@ -123,13 +126,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{ margin: "10px 16px", background: "rgba(245,130,31,0.15)", border: "1px solid rgba(245,130,31,0.3)", borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 700, color: ORANGE }}>🔐 Platform Yöneticisi</div>
         <nav style={{ padding: "4px 0", flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Platform</div>
-          {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
+          {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Finans</div>
-          {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
+          {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Moderasyon</div>
           {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Sistem</div>
-          <NavLink item={NAV_ITEMS[7]} bekleyenYorumSayisi={bekleyenYorumSayisi} />
+          <NavLink item={NAV_ITEMS[7]} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />
         </nav>
         <div style={{ padding: 14, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
