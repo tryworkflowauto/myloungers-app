@@ -183,6 +183,19 @@ export default function AdminKomisyonPage() {
   function toggleOzelEdit(id: string) {
     setRows(p => p.map(r => r.id === id ? { ...r, ozelOranEdit: !r.ozelOranEdit } : r));
   }
+  async function kaydetOzelOran(m: MutabakatRow) {
+    const res = await fetch("/api/admin/tesis-komisyon-orani", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: m.id, oran: m.ozelOran }),
+    });
+    if (!res.ok) {
+      showToast("Oran kaydedilemedi", RED);
+      return;
+    }
+    toggleOzelEdit(m.id);
+    showToast("✅ Oran güncellendi", GREEN);
+  }
   function onayla(r: MutabakatRow) {
     setRows(p => p.map(x => x.id === r.id ? { ...x, durum: "onaylandi" as Durum } : x));
     setItirazModal(null);
@@ -385,7 +398,7 @@ export default function AdminKomisyonPage() {
                             autoFocus
                           />
                           <span style={{ fontSize: 11, color: GRAY400 }}>%</span>
-                          <button onClick={() => { toggleOzelEdit(m.id); showToast("✅ Oran güncellendi", GREEN); }} style={{ padding: "2px 7px", fontSize: 10, fontWeight: 700, borderRadius: 5, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>✓</button>
+                          <button onClick={() => void kaydetOzelOran(m)} style={{ padding: "2px 7px", fontSize: 10, fontWeight: 700, borderRadius: 5, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>✓</button>
                         </div>
                       ) : (
                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
