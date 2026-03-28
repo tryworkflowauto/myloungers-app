@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
 import { useAdminToast } from "../AdminToastContext";
 
 const NAVY    = "#0A1628";
@@ -19,7 +20,7 @@ const BLUE    = "#3B82F6";
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Durum = "onaylandi" | "bekliyor" | "itiraz";
 type MutabakatRow = {
-  id: number; tesis: string; donem: string;
+  id: string; tesis: string; donem: string;
   hacimVal: number;   // raw number
   iyzicoOran: number; // e.g. 3
   mlOran: number;     // e.g. 5 (gross)
@@ -41,14 +42,6 @@ function fmt(n: number) {
   return "₺" + n.toLocaleString("tr-TR");
 }
 
-// ── Init data ─────────────────────────────────────────────────────────────────
-const INIT_ROWS: MutabakatRow[] = [
-  { id: 1, tesis: "Zuzuu Beach Hotel",  donem: "Mart 2026",  hacimVal: 148000, iyzicoOran: 3, mlOran: 5, ozelOran: 5, ozelOranEdit: false, durum: "onaylandi" },
-  { id: 2, tesis: "Palmiye Beach Club", donem: "Mart 2026",  hacimVal: 68000,  iyzicoOran: 3, mlOran: 5, ozelOran: 5, ozelOranEdit: false, durum: "bekliyor"  },
-  { id: 3, tesis: "Poseidon Lux",       donem: "Mart 2026",  hacimVal: 41000,  iyzicoOran: 3, mlOran: 5, ozelOran: 4, ozelOranEdit: false, durum: "bekliyor"  },
-  { id: 4, tesis: "Aqua Blue",          donem: "Şubat 2026", hacimVal: 27000,  iyzicoOran: 3, mlOran: 5, ozelOran: 5, ozelOranEdit: false, durum: "itiraz"    },
-];
-
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AdminKomisyonPage() {
   const { showToast } = useAdminToast();
@@ -64,10 +57,85 @@ export default function AdminKomisyonPage() {
   const [oranDirty,    setOranDirty]    = useState(false);
 
   // Mutabakatlar
-  const [rows,         setRows]         = useState<MutabakatRow[]>(INIT_ROWS);
+  const [rows,         setRows]         = useState<MutabakatRow[]>([]);
+  const [donemLabel,   setDonemLabel]   = useState("");
   const [gondModal,    setGondModal]    = useState(false);
   const [gorModal,     setGorModal]     = useState<MutabakatRow | null>(null);
   const [itirazModal,  setItirazModal]  = useState<MutabakatRow | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMutabakat() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const mo = now.getMonth();
+      const start = new Date(y, mo, 1, 0, 0, 0, 0);
+      const end = new Date(y, mo + 1, 0, 23, 59, 59, 999);
+      const monthLong = start.toLocaleDateString("tr-TR", { month: "long" });
+      const label = monthLong.charAt(0).toUpperCase() + monthLong.slice(1) + " " + y;
+      if (!cancelled) setDonemLabel(label);
+
+      const { data: tesisData, error: tesisErr } = await supabase.from("tesisler").select("id, ad");
+      const { data: rezData, error: rezErr } = await supabase
+        .from("rezervasyonlar")
+        .select("tesis_id, toplam_tutar, created_at")
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString());
+
+      if (cancelled) return;
+      if (tesisErr) console.error("komisyon tesisler", tesisErr);
+      if (rezErr) console.error("komisyon rezervasyonlar", rezErr);
+
+      const byTesis = new Map<string, number>();
+      for (const r of rezData ?? []) {
+        const raw = (r as { tesis_id?: unknown; toplam_tutar?: unknown }).tesis_id;
+        if (raw == null) continue;
+        const tid = String(raw);
+        const amt = Number((r as { toplam_tutar?: unknown }).toplam_tutar ?? 0);
+        byTesis.set(tid, (byTesis.get(tid) ?? 0) + (Number.isFinite(amt) ? amt : 0));
+      }
+
+      const tesisList = (tesisData ?? []) as { id: unknown; ad: unknown }[];
+      const seen = new Set<string>();
+      const mapped: MutabakatRow[] = tesisList.map((t) => {
+        const tid = String(t.id);
+        seen.add(tid);
+        const hacimVal = byTesis.get(tid) ?? 0;
+        return {
+          id: tid,
+          tesis: typeof t.ad === "string" && t.ad.trim() ? t.ad : "—",
+          donem: label,
+          hacimVal,
+          iyzicoOran: 3,
+          mlOran: 5,
+          ozelOran: 5,
+          ozelOranEdit: false,
+          durum: "bekliyor",
+        };
+      });
+
+      for (const [tid, hacimVal] of byTesis) {
+        if (seen.has(tid)) continue;
+        mapped.push({
+          id: tid,
+          tesis: "—",
+          donem: label,
+          hacimVal,
+          iyzicoOran: 3,
+          mlOran: 5,
+          ozelOran: 5,
+          ozelOranEdit: false,
+          durum: "bekliyor",
+        });
+      }
+
+      setRows(mapped);
+    }
+    loadMutabakat();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ESC
   useEffect(() => {
@@ -93,11 +161,26 @@ export default function AdminKomisyonPage() {
     showToast("✅ Oranlar kaydedildi!", GREEN);
   }
 
+  const ozetTotals = useMemo(() => {
+    let hacim = 0;
+    let iyzico = 0;
+    let mlNet = 0;
+    let isletme = 0;
+    for (const r of rows) {
+      const c = calcRow(r);
+      hacim += r.hacimVal;
+      iyzico += c.iyzicoAmt;
+      mlNet += c.mlNetAmt;
+      isletme += c.isletmeAmt;
+    }
+    return { hacim, iyzico, mlNet, isletme };
+  }, [rows]);
+
   // ── Row helpers
-  function setOzelOran(id: number, val: string) {
+  function setOzelOran(id: string, val: string) {
     setRows(p => p.map(r => r.id === id ? { ...r, ozelOran: parseFloat(val) || 0 } : r));
   }
-  function toggleOzelEdit(id: number) {
+  function toggleOzelEdit(id: string) {
     setRows(p => p.map(r => r.id === id ? { ...r, ozelOranEdit: !r.ozelOranEdit } : r));
   }
   function onayla(r: MutabakatRow) {
@@ -243,10 +326,10 @@ export default function AdminKomisyonPage() {
       {/* ── FİNANSAL ÖZET KARTLARI ────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
         {[
-          { val: "₺42.6K", label: "Platform Net Geliri — Mart", sub: "↑ %18 geçen ay",          subColor: GREEN,  topColor: GREEN  },
-          { val: "₺8.5K",  label: "iyzico Toplam Gideri — Mart", sub: "İşlem hacminin %3'ü",     subColor: RED,    topColor: RED    },
-          { val: "₺284K",  label: "Toplam İşlem Hacmi — Mart",   sub: "Tüm tesisler birleşik",   subColor: TEAL,   topColor: TEAL   },
-          { val: "₺261K",  label: "Toplam İşletme Aktarımı",     sub: "%92 otomatik aktarıldı",  subColor: ORANGE, topColor: ORANGE },
+          { val: fmt(ozetTotals.mlNet), label: "Platform Net Geliri — " + (donemLabel || "—"), sub: "ML net komisyon toplamı",          subColor: GREEN,  topColor: GREEN  },
+          { val: fmt(ozetTotals.iyzico), label: "iyzico Toplam Gideri — " + (donemLabel || "—"), sub: "İşlem hacminin %3'ü",     subColor: RED,    topColor: RED    },
+          { val: fmt(ozetTotals.hacim), label: "Toplam İşlem Hacmi — " + (donemLabel || "—"), sub: "Tüm tesisler birleşik",   subColor: TEAL,   topColor: TEAL   },
+          { val: fmt(ozetTotals.isletme), label: "Toplam İşletme Aktarımı",     sub: ozetTotals.hacim > 0 ? "%" + Math.round((ozetTotals.isletme / ozetTotals.hacim) * 100) + " işletme payı" : "—",  subColor: ORANGE, topColor: ORANGE },
         ].map((f, i) => (
           <div key={i} style={{ background: "white", borderRadius: 12, border: `1px solid ${GRAY200}`, padding: 16, position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: f.topColor }} />
@@ -434,7 +517,7 @@ export default function AdminKomisyonPage() {
             <div style={{ fontSize: 44, marginBottom: 12 }}>📨</div>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: NAVY, marginBottom: 8 }}>Mutabakat E-postası Gönder</h3>
             <p style={{ fontSize: 13, color: GRAY600, marginBottom: 20 }}>
-              <strong>{rows.length} işletmeye</strong> Mart 2026 dönemi mutabakat özeti gönderilecek. Emin misiniz?
+              <strong>{rows.length} işletmeye</strong> {donemLabel || "—"} dönemi mutabakat özeti gönderilecek. Emin misiniz?
             </p>
             <div style={{ background: GRAY50, borderRadius: 9, padding: "10px 14px", marginBottom: 20, textAlign: "left" }}>
               {rows.map(r => (
