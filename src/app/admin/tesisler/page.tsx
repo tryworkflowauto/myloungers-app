@@ -15,7 +15,7 @@ const supabase = createClient(
 );
 
 type Tesis = {
-  id: number;
+  id: string;
   ad: string;
   sehir: string;
   emoji: string;
@@ -76,7 +76,7 @@ export default function AdminTesislerPage() {
         const sezlong = typeof t.kapasite === "number" ? t.kapasite : Number(t.kapasite || 0);
         const puan = typeof t.puan === "number" ? t.puan : t.puan ? Number(t.puan) : undefined;
         return {
-          id: Number(t.id),
+          id: String(t.id),
           ad: (t.ad as string) || "İsimsiz Tesis",
           sehir: (t.sehir as string) || "-",
           emoji: "🏖️",
@@ -149,7 +149,7 @@ export default function AdminTesislerPage() {
       showToast("Tesis güncellenemedi", RED);
     }
   }
-  async function aktifYap(id: number) {
+  async function aktifYap(id: string) {
     try {
       const res = await fetch("/api/admin/tesis-durum", {
         method: "PATCH",
@@ -187,7 +187,7 @@ export default function AdminTesislerPage() {
         const sezlong = typeof inserted.kapasite === "number" ? inserted.kapasite : Number(inserted.kapasite || 0);
         const puan = typeof inserted.puan === "number" ? inserted.puan : inserted.puan ? Number(inserted.puan) : undefined;
         const yeni: Tesis = {
-          id: Number(inserted.id),
+          id: String(inserted.id),
           ad: (inserted.ad as string) || "İsimsiz Tesis",
           sehir: (inserted.sehir as string) || "-",
           emoji: "🏖️",

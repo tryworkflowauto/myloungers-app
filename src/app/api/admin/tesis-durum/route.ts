@@ -17,7 +17,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const id = body.id;
     const aktif = body.aktif;
-    if (id == null || typeof aktif !== "boolean") {
+    if (typeof id !== "string" || typeof aktif !== "boolean") {
       return NextResponse.json({ error: "Geçersiz parametre" }, { status: 400 });
     }
 
