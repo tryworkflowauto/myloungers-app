@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       const { error: insertErr } = await supabaseAdmin
         .from("kullanicilar")
         .insert({
+          id: userId,
           email,
           ad: ad || null,
           rol: "isletme",
