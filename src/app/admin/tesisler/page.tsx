@@ -132,6 +132,7 @@ export default function AdminTesislerPage() {
     setReddetModal(null); setRedSebebi(""); showToast("✗ " + t.ad + " reddedildi", RED);
   }
   async function askiyaAl(id: number) {
+    if (!id) return;
     try {
       const res = await fetch("/api/admin/tesis-durum", {
         method: "PATCH",
@@ -150,6 +151,7 @@ export default function AdminTesislerPage() {
     }
   }
   async function aktifYap(id: string) {
+    if (!id) return;
     try {
       const res = await fetch("/api/admin/tesis-durum", {
         method: "PATCH",
