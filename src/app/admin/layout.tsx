@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AdminToastProvider } from "./AdminToastContext";
 import { supabase } from "@/lib/supabase";
 
@@ -74,6 +74,7 @@ function NavLink({ item, bekleyenYorumSayisi }: { item: (typeof NAV_ITEMS)[0]; b
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [bekleyenYorumSayisi, setBekleyenYorumSayisi] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; color: string } | null>(null);
@@ -110,7 +111,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside style={{ width: SIDEBAR_W, background: "#060e1a", height: "100vh", overflow: "hidden", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", zIndex: 100 }}>
         <div style={{ padding: "20px 20px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src="/MyLoungers_Logo-02.png" width={100} height={60} style={{ borderRadius: "10px", objectFit: "contain" }} alt="MyLoungers" />
+            <Link href="/" style={{ display: "inline-flex", lineHeight: 0, flexShrink: 0 }}>
+              <img src="/MyLoungers_Logo-02.png" width={100} height={60} style={{ borderRadius: "10px", objectFit: "contain" }} alt="MyLoungers" />
+            </Link>
             <div>
               <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#fff" }}>MY LOUNGERS</span>
               <span style={{ display: "block", fontSize: 10, color: ORANGE }}>Süper Admin</span>
@@ -132,6 +135,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 34, height: 34, background: ORANGE, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "white" }}>ZB</div>
             <div><span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "white" }}>Zafer Bakır</span><span style={{ display: "block", fontSize: 10, color: GRAY400 }}>Süper Admin</span></div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            <Link href="/" style={{ fontSize: 11, fontWeight: 600, color: "#CBD5E1", textDecoration: "none" }}>← Ana Sayfa</Link>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push("/");
+              }}
+              style={{ alignSelf: "flex-start", padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#CBD5E1", cursor: "pointer" }}
+            >
+              Çıkış Yap
+            </button>
           </div>
         </div>
       </aside>
