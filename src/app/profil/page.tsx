@@ -641,6 +641,19 @@ export default function ProfilPage() {
 
       {/* HERO */}
       <div className="phero">
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "flex-end", gap: 12, alignItems: "center", paddingBottom: 8 }}>
+          <Link href="/" style={{ color: "rgba(255,255,255,.9)", fontSize: ".85rem", fontWeight: 700, textDecoration: "none" }}>← Ana Sayfa</Link>
+          <button
+            type="button"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/");
+            }}
+            style={{ fontSize: ".78rem", fontWeight: 700, padding: "6px 12px", borderRadius: 8, border: "none", background: "rgba(255,255,255,.15)", color: "#fff", cursor: "pointer" }}
+          >
+            Çıkış Yap
+          </button>
+        </div>
         <div className="phero-inner">
           <div style={{ position: "relative" }}>
             <div
