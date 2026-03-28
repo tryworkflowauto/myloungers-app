@@ -295,30 +295,47 @@ export default function IsletmePersonelPage() {
         return;
       }
 
-      const { data } = await supabase
+      const { data: kById } = await supabase
         .from("kullanicilar")
-        .select("rol")
-        .eq("email", authData.user.email)
-        .single();
-      if (cancelled) return;
-      const rol = String((data as any)?.rol || "").toLowerCase();
-      if (rol !== "isletmeci" && rol !== "admin") {
-        router.push("/");
-        return;
-      }
-
-      const { data: kullanici, error: kullaniciErr } = await supabase
-        .from("kullanicilar")
-        .select("tesis_id")
+        .select("rol, tesis_id")
         .eq("id", authData.user.id)
         .maybeSingle();
       if (cancelled) return;
-      if (kullaniciErr || !kullanici?.tesis_id) {
-        console.log("personel/getTesisId kullanici error:", kullaniciErr, "row:", kullanici);
-        setTesisId(null);
+
+      let rol = String((kById as { rol?: string } | null)?.rol ?? "").toLowerCase();
+      let tesisIdVal = (kById as { tesis_id?: unknown } | null)?.tesis_id;
+
+      const hasTesis =
+        tesisIdVal != null &&
+        String(tesisIdVal).trim() !== "";
+
+      if (!hasTesis && authData.user.email) {
+        const { data: kByEmail } = await supabase
+          .from("kullanicilar")
+          .select("rol, tesis_id")
+          .eq("email", authData.user.email)
+          .maybeSingle();
+        if (cancelled) return;
+        if (kByEmail) {
+          if (!rol) rol = String((kByEmail as { rol?: string }).rol ?? "").toLowerCase();
+          const te = (kByEmail as { tesis_id?: unknown }).tesis_id;
+          if (te != null && String(te).trim() !== "") tesisIdVal = te;
+        }
+      }
+
+      if (rol !== "isletmeci" && rol !== "admin") {
+        router.push("/");
+        setAuthLoading(false);
         return;
       }
-      setTesisId(String(kullanici.tesis_id));
+
+      if (tesisIdVal == null || String(tesisIdVal).trim() === "") {
+        console.log("personel/getTesisId: tesis_id yok", { kById });
+        setTesisId(null);
+        setAuthLoading(false);
+        return;
+      }
+      setTesisId(String(tesisIdVal));
       setAuthLoading(false);
     };
     getTesisId();
