@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
 import "../myloungers.css";
 import "./hotel.css";
+import { supabase } from "@/lib/supabase";
 
 const LANG_OPTS = [
   { code: "TR", flag: "🇹🇷", name: "Türkçe" },
@@ -33,10 +33,50 @@ const HOTEL_CARDS = [
 ];
 
 export default function HotelPage() {
-  const { data: session } = useSession();
+  const [navUser, setNavUser] = useState<{ name: string } | null>(null);
   const [langOpen, setLangOpen] = useState(false);
   const [lang, setLang] = useState(LANG_OPTS[0]);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNavUser() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) {
+        if (!cancelled) setNavUser(null);
+        return;
+      }
+      let { data: k } = await supabase
+        .from("kullanicilar")
+        .select("ad, soyad, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!k && user.email) {
+        const r = await supabase
+          .from("kullanicilar")
+          .select("ad, soyad, email")
+          .eq("email", user.email)
+          .maybeSingle();
+        k = r.data;
+      }
+      const name =
+        k?.ad && k?.soyad
+          ? `${k.ad} ${k.soyad}`
+          : k?.ad || k?.email || user.email?.split("@")[0] || "Kullanıcı";
+      if (!cancelled) setNavUser({ name });
+    }
+    loadNavUser();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadNavUser();
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const prevScrollRestoration = history.scrollRestoration;
@@ -129,15 +169,15 @@ export default function HotelPage() {
                 ))}
               </div>
             </div>
-            {session ? (
+            {navUser ? (
               <>
                 <Link href="/profil" className="nav-user" style={{ textDecoration: "none" }}>
-                  {session.user?.name || session.user?.email}
+                  {navUser.name}
                 </Link>
                 <button
                   type="button"
                   className="btn-login"
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  onClick={() => void supabase.auth.signOut()}
                 >
                   Çıkış Yap
                 </button>
@@ -180,10 +220,10 @@ export default function HotelPage() {
             <button type="button" className="mob-close" onClick={() => setMenuOpen(false)}>×</button>
           </div>
           <div className="mob-btns">
-            {session ? (
+            {navUser ? (
               <>
                 <div className="mob-user">
-                  {session.user?.name || session.user?.email}
+                  {navUser.name}
                 </div>
                 <button
                   type="button"
@@ -191,7 +231,7 @@ export default function HotelPage() {
                   style={{ textDecoration: "none", flex: 1, textAlign: "center" }}
                   onClick={() => {
                     setMenuOpen(false);
-                    signOut({ callbackUrl: "/" });
+                    void supabase.auth.signOut();
                   }}
                 >
                   Çıkış Yap

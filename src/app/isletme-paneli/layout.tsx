@@ -2,7 +2,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function IsletmePaneliLayout({
   children,
@@ -10,8 +11,44 @@ export default function IsletmePaneliLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const userName = (session?.user as any)?.name || session?.user?.email || "Kullanıcı";
+  const [userName, setUserName] = useState("Kullanıcı");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) return;
+      let { data: k } = await supabase
+        .from("kullanicilar")
+        .select("ad, soyad, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!k && user.email) {
+        const r = await supabase
+          .from("kullanicilar")
+          .select("ad, soyad, email")
+          .eq("email", user.email)
+          .maybeSingle();
+        k = r.data;
+      }
+      const name =
+        k?.ad && k?.soyad
+          ? `${k.ad} ${k.soyad}`
+          : k?.ad || k?.email || user.email || "Kullanıcı";
+      if (!cancelled) setUserName(name);
+    }
+    load();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      load();
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
   const userInitials = userName
     .split(" ")
     .map((n: string) => n[0])

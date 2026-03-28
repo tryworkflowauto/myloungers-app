@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 const NAVY = "#0A1628";
@@ -222,8 +221,7 @@ function SiparisKartComp({
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function IsletmeSiparislerPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const tesisId = (session?.user as { tesis_id?: string } | undefined)?.tesis_id ?? null;
+  const [tesisId, setTesisId] = useState<string | null>(null);
 
   const [yeniList, setYeniList] = useState<SiparisItem[]>([]);
   const [hazirList, setHazirList] = useState<SiparisItem[]>([]);
@@ -250,6 +248,43 @@ export default function IsletmeSiparislerPage() {
   const [gecmisTarih, setGecmisTarih] = useState(() => new Date().toISOString().slice(0, 10));
   const [gecmisGarson, setGecmisGarson] = useState("");
   const [gecmisDurum, setGecmisDurum] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTesis() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) {
+        if (!cancelled) setTesisId(null);
+        return;
+      }
+      let { data: k } = await supabase
+        .from("kullanicilar")
+        .select("tesis_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!k && user.email) {
+        const r = await supabase
+          .from("kullanicilar")
+          .select("tesis_id")
+          .eq("email", user.email)
+          .maybeSingle();
+        k = r.data;
+      }
+      const tid = k?.tesis_id != null ? String(k.tesis_id) : null;
+      if (!cancelled) setTesisId(tid);
+    }
+    loadTesis();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadTesis();
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // ESC closes all modals
   useEffect(() => {

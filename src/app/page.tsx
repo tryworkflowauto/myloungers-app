@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
-import { useSession, signOut } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 import "./myloungers.css";
 
@@ -183,7 +182,6 @@ type TesisSlugInfo = {
 
 export default function Home() {
   const router = useRouter();
-  const { data: session } = useSession();
   const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru">("tr");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [slideIdx, setSlideIdx] = useState(0);
@@ -688,19 +686,6 @@ export default function Home() {
                   Çıkış Yap
                 </button>
               </>
-            ) : session ? (
-              <>
-                <Link href="/profil" className="nav-user" style={{ textDecoration: "none" }}>
-                  {session.user?.name || session.user?.email}
-                </Link>
-                <button
-                  type="button"
-                  className="btn-login"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                >
-                  Çıkış Yap
-                </button>
-              </>
             ) : (
               <>
                 <Link href="/giris" className="btn-login" id="btnLogin">{t.btn_login}</Link>
@@ -775,22 +760,6 @@ export default function Home() {
                   onClick={() => {
                     setMenuOpen(false);
                     void handleSupabaseNavLogout();
-                  }}
-                >
-                  Çıkış Yap
-                </button>
-              </>
-            ) : session ? (
-              <>
-                <div className="mob-user">
-                  {session.user?.name || session.user?.email}
-                </div>
-                <button
-                  type="button"
-                  className="mob-btn-login"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    signOut({ callbackUrl: "/" });
                   }}
                 >
                   Çıkış Yap

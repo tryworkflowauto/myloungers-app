@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 function formatDateLabel(d: Date) {
   const gunler = [
@@ -47,10 +47,62 @@ function formatTimeLabel(d: Date) {
 }
 
 export default function IsletmePaneliPage() {
-  const { data: session, status } = useSession();
+  const [authLoading, setAuthLoading] = useState(true);
+  const [panelOk, setPanelOk] = useState(false);
+  const [displayName, setDisplayName] = useState("İşletme Kullanıcısı");
   const [timeLabel, setTimeLabel] = useState("--:--");
   const [dateLabel, setDateLabel] = useState("");
   const pathname = usePathname();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAuth() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) {
+        if (!cancelled) {
+          setPanelOk(false);
+          setAuthLoading(false);
+        }
+        return;
+      }
+      let { data: k } = await supabase
+        .from("kullanicilar")
+        .select("rol, ad, soyad, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!k && user.email) {
+        const r = await supabase
+          .from("kullanicilar")
+          .select("rol, ad, soyad, email")
+          .eq("email", user.email)
+          .maybeSingle();
+        k = r.data;
+      }
+      const rol = ((k as { rol?: string } | null)?.rol || "").toLowerCase();
+      const isIsletme = rol === "işletme" || rol === "isletme";
+      const row = k as { ad?: string; soyad?: string; email?: string } | null;
+      const fullName =
+        row?.ad && row?.soyad
+          ? `${row.ad} ${row.soyad}`
+          : row?.ad || row?.email || user.email?.split("@")[0] || "İşletme Kullanıcısı";
+      if (!cancelled) {
+        setDisplayName(fullName);
+        setPanelOk(isIsletme);
+        setAuthLoading(false);
+      }
+    }
+    loadAuth();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadAuth();
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const now = new Date();
@@ -63,15 +115,6 @@ export default function IsletmePaneliPage() {
     return () => clearInterval(id);
   }, []);
 
-  const isLoading = status === "loading";
-  const userRole = (session?.user as any)?.role?.toLowerCase?.() as
-    | string
-    | undefined;
-  const isIsletme = userRole === "işletme" || userRole === "isletme";
-
-  const displayName =
-    (session?.user as any)?.name || session?.user?.email || "İşletme Kullanıcısı";
-
   const initials =
     displayName
       .split(" ")
@@ -81,7 +124,7 @@ export default function IsletmePaneliPage() {
       .join("")
       .toUpperCase() || "İP";
 
-  if (isLoading) {
+  if (authLoading) {
     return (
       <div
         style={{
@@ -99,7 +142,7 @@ export default function IsletmePaneliPage() {
     );
   }
 
-  if (!session || !isIsletme) {
+  if (!panelOk) {
     return (
       <div
         style={{

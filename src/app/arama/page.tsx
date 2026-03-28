@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useSession, signOut } from "next-auth/react";
 import "./arama.css";
 import { supabase } from "@/lib/supabase";
 
@@ -31,7 +30,7 @@ type Card = {
 
 function AramaContent() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const [navUser, setNavUser] = useState<{ name: string } | null>(null);
 
   const [locInput, setLocInput] = useState("");
   const [gpsOn, setGpsOn] = useState(false);
@@ -89,6 +88,46 @@ function AramaContent() {
     }
 
     fetchTesisler();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNavUser() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) {
+        if (!cancelled) setNavUser(null);
+        return;
+      }
+      let { data: k } = await supabase
+        .from("kullanicilar")
+        .select("ad, soyad, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!k && user.email) {
+        const r = await supabase
+          .from("kullanicilar")
+          .select("ad, soyad, email")
+          .eq("email", user.email)
+          .maybeSingle();
+        k = r.data;
+      }
+      const name =
+        k?.ad && k?.soyad
+          ? `${k.ad} ${k.soyad}`
+          : k?.ad || k?.email || user.email?.split("@")[0] || "Kullanıcı";
+      if (!cancelled) setNavUser({ name });
+    }
+    loadNavUser();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadNavUser();
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -157,7 +196,7 @@ function AramaContent() {
         </Link>
         <span style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {session ? (
+          {navUser ? (
             <>
               <Link
                 href="/profil"
@@ -168,11 +207,11 @@ function AramaContent() {
                   textDecoration: "none",
                 }}
               >
-                {session.user?.name || session.user?.email}
+                {navUser.name}
               </Link>
               <button
                 style={{ padding: "7px 16px", border: "none", borderRadius: 50, fontSize: ".78rem", fontWeight: 700, color: "#fff", background: "var(--or)", cursor: "pointer" }}
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={() => void supabase.auth.signOut()}
               >
                 Çıkış Yap
               </button>

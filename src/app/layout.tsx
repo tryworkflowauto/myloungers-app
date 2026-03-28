@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import AuthSessionProvider from "@/components/AuthSessionProvider";
 
 export const metadata: Metadata = {
   title: "Myloungers | Plaj ve Otel Şezlong Rezervasyonu",
@@ -29,11 +28,7 @@ export default function RootLayout({
           body { font-family: 'Gotham Rounded', 'Inter', sans-serif; background: #fff; color: #111; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
         `}</style>
       </head>
-      <body>
-        <AuthSessionProvider>
-          {children}
-        </AuthSessionProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
