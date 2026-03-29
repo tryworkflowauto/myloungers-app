@@ -53,6 +53,7 @@ export default function TesisDetailPage() {
 
   const [fav, setFav] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
+  const [toast, setToast] = useState<{msg:string;icon:string}|null>(null);
   const [lbIdx, setLbIdx] = useState(0);
   const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
     about: true, feats: true, plan: true, szl: true,
@@ -84,6 +85,7 @@ export default function TesisDetailPage() {
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
   const szlRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLDivElement>(null);
 
   function mapDbDurumToStatus(durum: string | null | undefined): SzlStatus {
     switch ((durum || "").toLowerCase()) {
@@ -373,6 +375,11 @@ export default function TesisDetailPage() {
     }
   }
 
+  function showToast(msg:string, icon:string="ℹ️") {
+    setToast({msg,icon});
+    setTimeout(()=>setToast(null),3000);
+  }
+
   async function pickSzl(no: string, zoneKey: string, status: SzlStatus, pw: number, pe: number) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -380,8 +387,11 @@ export default function TesisDetailPage() {
       return;
     }
     if (!selStart) {
-      alert("Lütfen önce giriş tarihini seçin.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const el = dateInputRef.current;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => el.focus(), 400);
+      }
       return;
     }
     if (status !== "avail") return;
@@ -392,7 +402,7 @@ export default function TesisDetailPage() {
       return;
     }
     if (selSzls.length >= paxCount) {
-      alert("Maksimum " + paxCount + " şezlong seçebilirsiniz.\nKişi sayısını artırmak için + butonunu kullanın.");
+      showToast("Maksimum "+paxCount+" şezlong seçebilirsiniz. Kişi sayısını artırmak için + butonunu kullanın.","⚠️");
       return;
     }
     setSelSzls((prev) => [...prev, { no, zoneKey, price }]);
@@ -945,6 +955,8 @@ export default function TesisDetailPage() {
         .lb-inner{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:90vw}
         .lb-inner img{max-width:88vw;max-height:80vh;object-fit:contain;border-radius:12px;display:block}
         .lb-cnt{font-size:.75rem;font-weight:700;color:rgba(255,255,255,.45)}
+        .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:12px 20px;border-radius:14px;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:8px;z-index:999;box-shadow:0 4px 24px rgba(0,0,0,.25);animation:toastIn .22s ease;white-space:nowrap}
+        @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         @media(max-width:1100px){.layout{grid-template-columns:1fr}.sidebar{position:static}}
         @media(max-width:768px){
           .nav{padding:0 12px;height:56px}
@@ -1669,7 +1681,7 @@ export default function TesisDetailPage() {
                   <span className="calm">{MN[calMonth]} {calYear}</span>
                   <button className="calnb" onClick={() => { const d = new Date(calDt); d.setMonth(d.getMonth() + 1); setCalDt(d); }}>›</button>
                 </div>
-                <div className="calg">
+                <div className="calg" ref={dateInputRef}>
                   {["Pt","Sa","Ça","Pe","Cu","Ct","Pz"].map((d) => <div key={d} className="caldl">{d}</div>)}
                   {Array.from({ length: firstDay }, (_, i) => <button key={"e" + i} className="cald" disabled />)}
                   {Array.from({ length: dim }, (_, i) => {
@@ -1772,6 +1784,8 @@ export default function TesisDetailPage() {
           <button className="bb-btn" onClick={goRes}>Rezervasyonu Tamamla →</button>
         </div>
       )}
+
+      {toast && <div className="toast"><span>{toast.icon}</span>{toast.msg}</div>}
 
       {/* LİGHTBOX */}
       {lbOpen && (
