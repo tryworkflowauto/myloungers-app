@@ -1,9 +1,10 @@
 "use client";
+import { Suspense } from "react";
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
-export default function AuthExchange() {
+function AuthExchangeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient(
@@ -28,11 +29,19 @@ export default function AuthExchange() {
       }
       const { data: kullanici } = await supabase.from("kullanicilar").select("rol").eq("email", data.user.email).single();
       const rol = (kullanici as any)?.rol;
-      if (rol === "admin") router.push("/admin");
-      else if (rol === "isletmeci") router.push("/isletme");
-      else router.push("/profil");
+      if (rol === "admin") window.location.href = "/admin";
+      else if (rol === "isletmeci") window.location.href = "/isletme";
+      else window.location.href = "/profil";
     });
   }, []);
 
   return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontSize:"1.2rem"}}>Giriş yapılıyor...</div>;
+}
+
+export default function AuthExchange() {
+  return (
+    <Suspense fallback={<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh"}}>Yükleniyor...</div>}>
+      <AuthExchangeInner />
+    </Suspense>
+  );
 }
