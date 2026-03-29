@@ -1,13 +1,30 @@
-/** Supabase `tesisler.kategori`: string veya string[]; sekme/token ile case-insensitive eşleşme */
+/** Supabase `tesisler.kategori`: string[], JSON string ("[\"HOTEL\",\"BEACH CLUB\"]") veya tek string */
 
 export type KategoriToken = "HOTEL" | "BEACH CLUB" | "AQUA PARK";
 
-export function normalizeKategoriList(k: unknown): string[] {
-  if (Array.isArray(k)) {
-    return k.map((x) => String(x).trim()).filter(Boolean);
+function unwrapKategoriRaw(k: unknown): unknown {
+  if (Array.isArray(k)) return k;
+  if (typeof k === "string") {
+    const t = k.trim();
+    if (t.startsWith("[")) {
+      try {
+        const parsed: unknown = JSON.parse(t);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        /* tek satır string olarak devam */
+      }
+    }
   }
-  if (k == null || k === "") return [];
-  return [String(k).trim()].filter(Boolean);
+  return k;
+}
+
+export function normalizeKategoriList(k: unknown): string[] {
+  const v = unwrapKategoriRaw(k);
+  if (Array.isArray(v)) {
+    return v.map((x) => String(x).trim()).filter(Boolean);
+  }
+  if (v == null || v === "") return [];
+  return [String(v).trim()].filter(Boolean);
 }
 
 export function tesisMatchesKategoriToken(k: unknown, token: KategoriToken): boolean {

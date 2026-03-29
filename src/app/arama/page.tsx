@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -21,22 +21,45 @@ type Card = {
   id: string;
   name: string;
   slug?: string;
-  score: number;
+  score: number | null;
   /** Ham `tesisler.kategori` (string | string[]) — filtre için */
   kategoriRaw: unknown;
   cat: string;
+  sehir: string;
   stars: number;
-  rev: number;
+  rev: number | null;
   loc: string;
   dist: string;
   feats: string[];
-  price: number;
+  price: number | null;
   avail: string;
   availTxt: string;
   badge: string;
   badgeTxt: string;
   img: string;
+  aktif: boolean | null;
 };
+
+function tesisRowImage(t: Record<string, unknown>): string {
+  const fotos = t.fotograflar;
+  if (Array.isArray(fotos) && fotos.length > 0 && fotos[0] && typeof fotos[0] === "object" && fotos[0] !== null) {
+    const src = (fotos[0] as { src?: string }).src;
+    if (typeof src === "string" && src.trim()) return src;
+  }
+  return "/logo.png";
+}
+
+function tesisRowPrice(t: Record<string, unknown>): number | null {
+  for (const k of ["gunluk_fiyat", "baslangic_fiyat", "min_fiyat", "fiyat", "sezlong_fiyat"] as const) {
+    const v = t[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim() !== "") {
+      const n = parseFloat(String(v).replace(",", "."));
+      if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+}
 
 function AramaContent() {
   const router = useRouter();
@@ -74,25 +97,42 @@ function AramaContent() {
 
       if (data) {
         setCards(
-          data.map((t: Record<string, unknown>) => ({
-            id: String(t.id),
-            name: String(t.ad),
-            slug: typeof t.slug === "string" ? t.slug : undefined,
-            score: Number(t.puan) || 9.0,
-            kategoriRaw: t.kategori,
-            cat: normalizeKategoriList(t.kategori).join(", ") || "—",
-            stars: 4,
-            rev: 0,
-            loc: `${t.ilce ?? ""}, ${t.sehir ?? ""}`,
-            dist: "–",
-            feats: [],
-            price: 1000,
-            avail: "ok",
-            availTxt: "Müsait",
-            badge: "",
-            badgeTxt: "",
-            img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
-          }))
+          data.map((t: Record<string, unknown>) => {
+            const puanNum = Number(t.puan);
+            const score = Number.isFinite(puanNum) ? puanNum : null;
+            const stars = score !== null ? Math.min(5, Math.max(0, Math.round(score / 2))) : 0;
+            const yorumRaw = t.yorum_sayisi;
+            const rev =
+              typeof yorumRaw === "number" && Number.isFinite(yorumRaw)
+                ? yorumRaw
+                : null;
+            const aktif = typeof t.aktif === "boolean" ? t.aktif : null;
+            const ilce = String(t.ilce ?? "").trim();
+            const sehir = String(t.sehir ?? "").trim();
+            const loc = [ilce, sehir].filter(Boolean).join(", ") || "";
+            const price = tesisRowPrice(t);
+            return {
+              id: String(t.id),
+              name: String(t.ad ?? ""),
+              slug: typeof t.slug === "string" ? t.slug : undefined,
+              score,
+              kategoriRaw: t.kategori,
+              cat: normalizeKategoriList(t.kategori).join(", ") || "—",
+              sehir,
+              stars,
+              rev,
+              loc,
+              dist: "",
+              feats: [],
+              price,
+              avail: aktif === false ? "full" : "ok",
+              availTxt: aktif === false ? "Kapalı" : "—",
+              badge: "",
+              badgeTxt: "",
+              img: tesisRowImage(t),
+              aktif,
+            };
+          })
         );
       }
 
@@ -178,22 +218,42 @@ function AramaContent() {
 
   function getFilteredCards(): Card[] {
     let result = cards.filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw));
-    result = result.filter((c) => c.price <= priceMax);
+    result = result.filter((c) => c.price == null || c.price <= priceMax);
     return result;
   }
 
   const filtered = cards
     .filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw))
-    .filter((c) => c.price <= priceMax);
+    .filter((c) => c.price == null || c.price <= priceMax);
 
-  const TABS = [
-    { label: "🏖️ Tümü", key: "Tümü", count: 8 },
-    { label: "🌊 Beach Club", key: "Beach Club", count: 5 },
-    { label: "🏨 Hotel", key: "Hotel", count: 2 },
-    { label: "💦 Aqua Park", key: "Aqua Park", count: 1 },
-    { label: "🏕️ Tatil Köyü", key: "Tatil Köyü", count: 0 },
-    { label: "🗺️ Harita", key: "Harita", count: null },
-  ];
+  const tabCounts = useMemo(() => {
+    if (!cards.length) return { all: 0, beach: 0, hotel: 0, aqua: 0 };
+    return {
+      all: cards.length,
+      beach: cards.filter((c) => aramaTabMatchesKategori("Beach Club", c.kategoriRaw)).length,
+      hotel: cards.filter((c) => aramaTabMatchesKategori("Hotel", c.kategoriRaw)).length,
+      aqua: cards.filter((c) => aramaTabMatchesKategori("Aqua Park", c.kategoriRaw)).length,
+    };
+  }, [cards]);
+
+  const TABS = useMemo(
+    () => [
+      { label: "🏖️ Tümü", key: "Tümü", count: tabCounts.all },
+      { label: "🌊 Beach Club", key: "Beach Club", count: tabCounts.beach },
+      { label: "🏨 Hotel", key: "Hotel", count: tabCounts.hotel },
+      { label: "💦 Aqua Park", key: "Aqua Park", count: tabCounts.aqua },
+      { label: "🗺️ Harita", key: "Harita", count: null as number | null },
+    ],
+    [tabCounts]
+  );
+
+  const uniqueCities = useMemo(() => {
+    const s = new Set<string>();
+    cards.forEach((c) => {
+      if (c.sehir.trim()) s.add(c.sehir.trim());
+    });
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "tr"));
+  }, [cards]);
 
   return (
     <>
@@ -334,39 +394,44 @@ function AramaContent() {
               <div className="card-body">
                 <div className="card-top">
                   <div className="card-name">{c.name}</div>
-                  <div className="card-score">{c.score}</div>
+                  <div className="card-score">{c.score !== null ? c.score.toFixed(1) : "—"}</div>
                 </div>
                 <div className="card-meta">
                   <span className="card-cat">{c.cat}</span>
-                  <span className="card-stars">{"★".repeat(c.stars)}{"☆".repeat(5-c.stars)}</span>
-                  <span className="card-rev">{c.rev} yorum</span>
+                  {c.score !== null && (
+                    <span className="card-stars">{"★".repeat(c.stars)}{"☆".repeat(5 - c.stars)}</span>
+                  )}
+                  {c.rev !== null && c.rev > 0 && <span className="card-rev">{c.rev} yorum</span>}
                 </div>
                 <div className="card-loc">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  {c.loc}<span className="card-dist">📍 {c.dist} km</span>
+                  {c.loc || "—"}
+                  {c.dist ? <span className="card-dist">📍 {c.dist} km</span> : null}
                 </div>
                 <div className="card-feats">{c.feats.map(f => <span key={f} className="card-feat">{f}</span>)}</div>
                 <div className="card-footer">
                   <div>
                     <div className="card-price-from">başlangıç</div>
-                    <div className="card-price-val">₺{c.price.toLocaleString("tr-TR")}</div>
+                    <div className="card-price-val">{c.price !== null ? `₺${c.price.toLocaleString("tr-TR")}` : "—"}</div>
                     <div className="card-price-unit">/ şezlong / gün</div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                    <div className={`avail ${c.avail}`}>
-                      <div className={`avail-dot dot-${c.avail}`} />
-                      {c.avail==="ok" ? "✓" : c.avail==="few" ? "⚡" : "✗"} {c.availTxt}
-                    </div>
+                    {typeof c.aktif === "boolean" && (
+                      <div className={`avail ${c.avail}`}>
+                        <div className={`avail-dot dot-${c.avail}`} />
+                        {c.avail === "ok" ? "✓" : c.avail === "few" ? "⚡" : "✗"} {c.availTxt}
+                      </div>
+                    )}
                     <button
                       className="card-btn"
-                      disabled={c.avail==="full"}
+                      disabled={c.avail === "full"}
                       onClick={e => {
                         e.stopPropagation();
                         const targetSlug = c.slug || c.id;
                         router.push(`/tesis/${targetSlug}`);
                       }}
                     >
-                      {c.avail==="full" ? "Dolu" : "Şezlong Seç →"}
+                      {c.avail === "full" ? "Dolu" : "Şezlong Seç →"}
                     </button>
                   </div>
                 </div>
@@ -375,13 +440,6 @@ function AramaContent() {
           ))}
         </div>
 
-        <div className="pagination">
-          <button className="pg-btn">&#8249;</button>
-          {[1,2,3].map(n => <button key={n} className={`pg-btn${n===1?" on":""}`}>{n}</button>)}
-          <span style={{ color: "var(--i3)", fontSize: ".8rem", padding: "0 6px" }}>...</span>
-          <button className="pg-btn">12</button>
-          <button className="pg-btn">&#8250;</button>
-        </div>
       </div>
 
       {/* FİLTRE PANELİ */}
@@ -398,39 +456,36 @@ function AramaContent() {
           <div className="fp-body">
             <div className="fg">
               <div className="fg-title">🏙️ Şehir</div>
-              {[["Bodrum","3"],["Marmaris","1"],["Fethiye","1"],["Antalya","1"],["Çeşme","1"],["Kuşadası","1"]].map(([city, cnt]) => (
-                <label key={city} className="fc"><input type="checkbox" /><span className="fc-lbl">{city}</span><span className="fc-cnt">{cnt}</span></label>
-              ))}
+              {uniqueCities.length === 0 ? (
+                <div style={{ fontSize: ".78rem", color: "var(--i3)" }}>Liste yüklenince şehirler burada görünür.</div>
+              ) : (
+                uniqueCities.map((city) => (
+                  <label key={city} className="fc">
+                    <input type="checkbox" readOnly />
+                    <span className="fc-lbl">{city}</span>
+                    <span className="fc-cnt">{cards.filter((c) => c.sehir === city).length}</span>
+                  </label>
+                ))
+              )}
             </div>
             <div className="fg">
               <div className="fg-title">🏖️ Tesis Tipi</div>
-              {[["Beach Club","5"],["Hotel","2"],["Aqua Park","1"],["Tatil Köyü","0"]].map(([t,c]) => (
-                <label key={t} className="fc"><input type="checkbox" /><span className="fc-lbl">{t}</span><span className="fc-cnt">{c}</span></label>
+              {[
+                ["Beach Club", tabCounts.beach],
+                ["Hotel", tabCounts.hotel],
+                ["Aqua Park", tabCounts.aqua],
+              ].map(([label, cnt]) => (
+                <label key={label} className="fc">
+                  <input type="checkbox" readOnly />
+                  <span className="fc-lbl">{label}</span>
+                  <span className="fc-cnt">{cnt}</span>
+                </label>
               ))}
-            </div>
-            <div className="fg">
-              <div className="fg-title">✅ Müsaitlik</div>
-              <label className="fc"><input type="checkbox" /><span className="fc-lbl">Müsait</span><span className="fc-cnt">5</span></label>
-              <label className="fc"><input type="checkbox" /><span className="fc-lbl">Az yer kaldı</span><span className="fc-cnt">3</span></label>
             </div>
             <div className="fg">
               <div className="fg-title">💰 Max Fiyat / Gün</div>
               <input type="range" className="frange" min={200} max={5000} step={100} value={priceMax} onChange={e => setPriceMax(+e.target.value)} />
               <div className="frange-vals"><span>₺200</span><span>₺{priceMax.toLocaleString("tr-TR")}</span></div>
-            </div>
-            <div className="fg">
-              <div className="fg-title">⭐ Min Puan</div>
-              <div className="ftags">
-                {["8.0+","8.5+","9.0+","9.5+"].map(p => <button key={p} className="ftag">{p}</button>)}
-              </div>
-            </div>
-            <div className="fg">
-              <div className="fg-title">🏊 Özellikler</div>
-              <div className="ftags">
-                {["📶 Wi-Fi","🏊 Havuz","🍽️ Restoran","⛱️ Şemsiye","🌊 Denize sıfır","🍹 Bar","💆 Spa","🚗 Vale Park","🤿 Su Sporları","✈️ HVL Transfer"].map(f => (
-                  <button key={f} className="ftag">{f}</button>
-                ))}
-              </div>
             </div>
           </div>
           <div className="fp-footer">
