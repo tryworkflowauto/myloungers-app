@@ -761,3 +761,8 @@ footer{background:var(--navy);padding:48px 24px 22px}
 
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .cat-card{transition:opacity .25s, transform .25s, transform .22s, box-shadow .22s !important}
+
+@media(max-width:768px){
+  #cat-title{font-size:1.2rem;letter-spacing:-.02em}
+  #cat-all{font-size:.7rem}
+}
