@@ -947,16 +947,29 @@ export default function TesisDetailPage() {
         .lb-cnt{font-size:.75rem;font-weight:700;color:rgba(255,255,255,.45)}
         @media(max-width:1100px){.layout{grid-template-columns:1fr}.sidebar{position:static}}
         @media(max-width:768px){
+          .nav{padding:0 12px;height:56px}
+          .nav-back,.nav-profil,.fav-btn{font-size:.72rem;padding:5px 10px}
+          .nav > a:first-of-type{order:0}
+          .nav-sp{order:1}
+          .nav-back{order:2}
+          .fav-btn{order:3}
+          .nav-profil{order:4}
+          .nav-back{font-size:.68rem;padding:4px 8px;gap:4px;white-space:nowrap}
+          .nav-profil{font-size:.68rem;padding:4px 8px;white-space:nowrap}
+          .fav-btn{font-size:.68rem;padding:4px 8px;gap:3px;white-space:nowrap}
+          .nav-logo{height:32px}
           .th-name{font-size:1.4rem}
-          .gall{grid-template-columns:1fr 1fr;grid-template-rows:170px 170px}
-          .gp-main{grid-row:1;grid-column:1/3}
-          .gp-bl,.gp-br{display:none}
+          .gall{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;gap:8px;border-radius:12px;margin-bottom:0;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;height:180px}
+          .gall::-webkit-scrollbar{display:none}
+          .gp{scroll-snap-align:start;flex-shrink:0;border-radius:10px;overflow:hidden}
+          .gp-main{width:260px;height:180px}
+          .gp-tr,.gp-mr,.gp-bl,.gp-br{width:120px;height:180px;display:block}
           .review-grid,.rules-grid,.feat-grid{grid-template-columns:1fr}
           .srows{display:flex;flex-direction:column;gap:8px}
           .su{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
           .schema{overflow-x:auto;-webkit-overflow-scrolling:touch}
         }
-        @media(max-width:480px){.wrap{padding:0 12px}.gall{grid-template-rows:140px 140px}}
+        @media(max-width:480px){.wrap{padding:0 12px}.gall{height:150px}.gp-main{width:220px;height:150px}.gp-tr,.gp-mr,.gp-bl,.gp-br{width:100px;height:150px}}
       `}</style>
 
       {/* NAV */}
