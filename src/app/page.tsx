@@ -540,7 +540,7 @@ export default function Home() {
   }, [isLangOpen]);
 
   useEffect(() => {
-    const onClose = (e: MouseEvent) => {
+    const onClose = (e: Event) => {
       const target = e.target as HTMLElement;
       if (target.closest(".sf") || target.closest(".region-dropdown") || target.closest(".type-dropdown") || target.closest(".date-dropdown") || target.closest(".name-dropdown") || target.closest(".filter-panel")) return;
       setPanelRegion(false);
