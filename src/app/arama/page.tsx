@@ -6,6 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import "./arama.css";
 import { supabase } from "@/lib/supabase";
+import { aramaTabMatchesKategori, normalizeKategoriList } from "@/lib/tesisKategori";
 
 const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 
@@ -21,6 +22,8 @@ type Card = {
   name: string;
   slug?: string;
   score: number;
+  /** Ham `tesisler.kategori` (string | string[]) — filtre için */
+  kategoriRaw: unknown;
   cat: string;
   stars: number;
   rev: number;
@@ -76,7 +79,8 @@ function AramaContent() {
             name: String(t.ad),
             slug: typeof t.slug === "string" ? t.slug : undefined,
             score: Number(t.puan) || 9.0,
-            cat: String(t.kategori || "Beach Club"),
+            kategoriRaw: t.kategori,
+            cat: normalizeKategoriList(t.kategori).join(", ") || "—",
             stars: 4,
             rev: 0,
             loc: `${t.ilce ?? ""}, ${t.sehir ?? ""}`,
@@ -173,20 +177,14 @@ function AramaContent() {
   }
 
   function getFilteredCards(): Card[] {
-    let result = [...cards];
-    if (activeTab === "Beach Club") result = result.filter(c => c.cat === "Beach Club");
-    else if (activeTab === "Hotel") result = result.filter(c => c.cat === "Hotel");
-    else if (activeTab === "Aqua Park") result = result.filter(c => c.cat === "Aqua Park");
-    result = result.filter(c => c.price <= priceMax);
+    let result = cards.filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw));
+    result = result.filter((c) => c.price <= priceMax);
     return result;
   }
 
-  const filtered = cards.filter(c => {
-    if (activeTab === "Beach Club") return c.cat === "Beach Club";
-    if (activeTab === "Hotel") return c.cat === "Hotel";
-    if (activeTab === "Aqua Park") return c.cat === "Aqua Park";
-    return true;
-  }).filter(c => c.price <= priceMax);
+  const filtered = cards
+    .filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw))
+    .filter((c) => c.price <= priceMax);
 
   const TABS = [
     { label: "🏖️ Tümü", key: "Tümü", count: 8 },

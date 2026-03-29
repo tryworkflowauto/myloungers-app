@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, type MouseEvent } from "react";
 import { supabase } from "@/lib/supabase";
+import { homeActiveCategoryMatchesKategori } from "@/lib/tesisKategori";
 import "./myloungers.css";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -419,9 +420,9 @@ export default function Home() {
     async function fetchPopular() {
       const { data } = await supabase
         .from("tesisler")
-        .select("id, ad, slug, ilce, sehir, puan, fotograflar")
+        .select("id, ad, slug, ilce, sehir, puan, fotograflar, kategori")
         .order("puan", { ascending: false })
-        .limit(4);
+        .limit(120);
       if (data) setPopularTesisler(data);
     }
     fetchPopular();
@@ -1199,7 +1200,10 @@ export default function Home() {
           <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="pgrid" id="tesisGrid">
-          {popularTesisler?.map((t) => {
+          {popularTesisler
+            ?.filter((t) => homeActiveCategoryMatchesKategori(activeCategory, (t as { kategori?: unknown }).kategori))
+            ?.slice(0, 4)
+            ?.map((t) => {
             const name = t.ad as string;
             const ilce = (t.ilce as string) || "";
             const sehir = (t.sehir as string) || "";
