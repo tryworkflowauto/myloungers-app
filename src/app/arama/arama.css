@@ -137,15 +137,17 @@ body{font-family:sans-serif;background:var(--bg);color:var(--navy);font-size:15p
 .map-fab{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;border:none;border-radius:50px;padding:12px 20px;font-size:.78rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 4px 20px rgba(10,22,40,.3);transition:all .15s;z-index:200}
 .map-fab:hover{background:var(--tdk);transform:translateY(-2px)}
 @media(max-width:768px){
-  .nav{height:50px;padding:0 6px;gap:3px;min-width:0}
-  .nav > a:first-of-type{flex-shrink:0}
+  .nav{height:50px;padding:0 6px;gap:4px;min-width:0}
+  .nav > a:first-of-type{flex-shrink:0;order:1}
+  .nav > span[style]{order:2;flex:1 1 auto!important;min-width:0!important}
+  .nav .nav-back{order:3;flex-shrink:0}
+  .nav > div:last-child[style]{order:4;gap:4px!important;flex-shrink:1;min-width:0;justify-content:flex-end}
   .nav > a:first-of-type img{height:42px!important;width:auto!important}
-  .nav .nav-back{font-size:.54rem!important;padding:2px 5px!important;gap:2px!important;border-radius:6px!important;line-height:1.2!important;max-width:min-content}
-  .nav .nav-back svg{width:9px!important;height:9px!important;flex-shrink:0}
-  .nav > div:last-child[style]{gap:2px!important;flex-shrink:1;min-width:0;justify-content:flex-end}
-  .nav > div:last-child a[href="/profil"]{font-size:.54rem!important;font-weight:600!important;line-height:1.2!important}
-  .nav > div:last-child a[href="/profil"][style*="1.5px solid"]{padding:2px 6px!important;border-radius:14px!important;border-width:1px!important}
-  .nav > div:last-child button{padding:2px 6px!important;font-size:.54rem!important;font-weight:700!important;border-radius:14px!important;line-height:1.2!important;white-space:nowrap}
+  .nav .nav-back{font-size:.6rem!important;padding:3px 7px!important;gap:3px!important;border-radius:7px!important;line-height:1.25!important;max-width:min-content}
+  .nav .nav-back svg{width:10px!important;height:10px!important;flex-shrink:0}
+  .nav > div:last-child a[href="/profil"]{font-size:.6rem!important;font-weight:600!important;line-height:1.25!important}
+  .nav > div:last-child a[href="/profil"][style*="1.5px solid"]{padding:3px 8px!important;border-radius:16px!important;border-width:1px!important}
+  .nav > div:last-child button{padding:3px 8px!important;font-size:.6rem!important;font-weight:700!important;border-radius:16px!important;line-height:1.25!important;white-space:nowrap}
   .fp{width:100%}
   .sbox{flex-direction:column}
   .hero{padding:14px 16px 0}
