@@ -1371,8 +1371,7 @@ export default function Home() {
             <h2 id="b2b-title">{t.b2b_title}</h2>
             <p className="desc" id="b2b-desc">Otel, beach club veya plaj işletmenizi platforma ekleyin.</p>
             <div className="b2b-acts">
-              <button type="button" className="btn-solid" id="b2b-btn1" onClick={() => setBasvuruOpen(true)}>Başvuru Formu →</button>
-              <button type="button" className="btn-ghost" id="b2b-btn2">Demo İzle</button>
+              <Link href="/basvuru" className="btn-solid" id="b2b-btn1">Başvuru Formu →</Link>
             </div>
           </div>
           <div className="b2bcards">

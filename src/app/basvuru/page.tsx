@@ -255,7 +255,7 @@ export default function BasvuruPage() {
                       <textarea id="f-address" className="bav-ftxt bav-ftxt-address" placeholder="Tesisin tam adresi..." value={tamAdres} onChange={(e) => setTamAdres(e.target.value)} rows={3} />
                     </div>
                     <div className="bav-form-nav">
-                      <div />
+                      <Link href="/" className="bav-btn-prev">← Ana Sayfa</Link>
                       <button type="button" className="bav-btn-next" onClick={() => goStep(2)}>İleri →</button>
                     </div>
                   </div>
