@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import "./arama.css";
 import { supabase } from "@/lib/supabase";
 
 const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
+
+/** Ana sayfa `data-cat` / arama `tip` sorgusu → sekme; `tesisler.kategori` ile eşleşir */
+const TIP_QUERY_TO_TAB: Record<string, string> = {
+  hotel: "Hotel",
+  beach: "Beach Club",
+  aqua: "Aqua Park",
+};
 
 type Card = {
   id: string;
@@ -30,6 +37,7 @@ type Card = {
 
 function AramaContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [navUser, setNavUser] = useState<{ name: string } | null>(null);
 
   const [locInput, setLocInput] = useState("");
@@ -131,11 +139,10 @@ function AramaContent() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const konum = params.get("konum");
-    const tip = params.get("tip");
-    const tarih = params.get("tarih");
-    const gps = params.get("gps");
+    const konum = searchParams.get("konum");
+    const tip = searchParams.get("tip");
+    const tarih = searchParams.get("tarih");
+    const gps = searchParams.get("gps");
 
     if (gps === "1") {
       setGpsOn(true);
@@ -145,8 +152,15 @@ function AramaContent() {
       setActiveTags([`📍 ${konum}`]);
     }
     if (tarih) setDateVal(tarih);
-    if (tip) setTypeVal(tip);
-  }, []);
+    if (tip) {
+      setTypeVal(tip);
+      const tab = TIP_QUERY_TO_TAB[tip.toLowerCase()];
+      if (tab) setActiveTab(tab);
+    } else {
+      setTypeVal("");
+      setActiveTab("Tümü");
+    }
+  }, [searchParams]);
 
   function toggleGPS() {
     setGpsOn(!gpsOn);
@@ -303,7 +317,7 @@ function AramaContent() {
 
         <div className={`cards${viewMode==="grid"?" grid":""}`}>
           {loading && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesisler yükleniyor…</div>}
-          {!loading && filtered.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Sonuç bulunamadı.</div>}
+          {!loading && filtered.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesis bulunamadı</div>}
           {filtered.map(c => (
             <div
               key={c.id}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type MouseEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import "./myloungers.css";
 
@@ -622,6 +622,11 @@ export default function Home() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
+  const goToCategoryListing = (e: MouseEvent<HTMLElement>) => {
+    const cat = e.currentTarget.dataset.cat;
+    if (cat) router.push(`/arama?tip=${encodeURIComponent(cat)}`);
+  };
+
   return (
     <div className="home-page">
       {/* NAV */}
@@ -1161,7 +1166,7 @@ export default function Home() {
         <button type="button" className="sec-a" id="cat-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="cat-grid">
-          <div id="oteller" className="cat-card" data-cat="hotel" onClick={() => setActiveCategory("hotel")}>
+          <div id="oteller" className="cat-card" data-cat="hotel" onClick={goToCategoryListing}>
             <img src={CAT_IMGS[0]} alt="Hotel" />
             <div className="cat-ov">
 <div className="cat-name" id="cat1-name">{t.cat_hotel}</div>
@@ -1169,14 +1174,14 @@ export default function Home() {
             </div>
             <div className="cat-badge ct" id="cat1-badge">{t.badge_popular}</div>
           </div>
-          <div id="beach-club" className="cat-card" data-cat="beach" onClick={() => setActiveCategory("beach")}>
+          <div id="beach-club" className="cat-card" data-cat="beach" onClick={goToCategoryListing}>
             <img src={CAT_IMGS[1]} alt="Beach Club" />
             <div className="cat-ov">
               <div className="cat-name" id="cat2-name">{t.cat_beach}</div>
               <div className="cat-sub" id="cat2-sub">{t.cat_beach_sub}</div>
             </div>
           </div>
-          <div id="aqua-park" className="cat-card" data-cat="aqua" onClick={() => setActiveCategory("aqua")}>
+          <div id="aqua-park" className="cat-card" data-cat="aqua" onClick={goToCategoryListing}>
             <img src={CAT_IMGS[2]} alt="Aqua Park" />
             <div className="cat-ov">
               <div className="cat-name" id="cat3-name">{t.cat_aqua}</div>
