@@ -5,14 +5,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { amount, orderId, customerName, customerSurname, customerEmail, customerPhone } = body;
 
-    const orderItems = JSON.stringify([{
-      productCode: orderId,
-      name: "Şezlong Rezervasyonu",
-      description: "Myloungers şezlong rezervasyonu",
-      quantity: 1,
-      amount: parseFloat(amount)
-    }]);
-
     const params = new URLSearchParams();
     params.append('MERCHANT', '10004201');
     params.append('MERCHANTUSER', 'myloungers.info@gmail.com');
@@ -23,7 +15,6 @@ export async function POST(req: NextRequest) {
     params.append('MERCHANTPAYMENTID', orderId);
     params.append('AMOUNT', parseFloat(amount).toFixed(2));
     params.append('CURRENCY', 'TRY');
-    params.append('ORDERITEMS', encodeURIComponent(orderItems));
     params.append('CUSTOMER', customerEmail);
     params.append('CUSTOMERNAME', `${customerName} ${customerSurname}`);
     params.append('CUSTOMEREMAIL', customerEmail);
