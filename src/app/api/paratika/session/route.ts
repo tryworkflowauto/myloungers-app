@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
     }]);
 
     const params = new URLSearchParams();
-    params.append('MERCHANT', '10008941');
-    params.append('MERCHANTUSER', 'mail@bgs.io');
+    params.append('MERCHANT', '10004201');
+    params.append('MERCHANTUSER', 'myloungers.info@gmail.com');
     params.append('MERCHANTPASSWORD', '*ReklamotvReklamotv321');
     params.append('ACTION', 'SESSIONTOKEN');
     params.append('SESSIONTYPE', 'PAYMENTSESSION');
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     params.append('SHIPTOPOSTALCODE', '48400');
     params.append('SHIPTOPHONE', customerPhone);
 
-    const response = await fetch('https://vpos.paratika.com.tr/paratika/api/v2', {
+    const response = await fetch('https://entegrasyon.paratika.com.tr/paratika/api/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString()

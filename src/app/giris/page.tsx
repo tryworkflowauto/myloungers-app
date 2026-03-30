@@ -130,6 +130,7 @@ function GirisContent() {
       setLoading(false);
       if (loginError) {
         console.log("Supabase login hatası (register sonrası):", loginError);
+        console.log(loginError);
         router.push("/giris?tab=login");
         return;
       }

@@ -13,22 +13,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Geçersiz alanlar" }, { status: 400 });
     }
 
-    // Email zaten kullanicilar tablosunda var mı?
-    const { data: existing, error: existingErr } = await supabase
-      .from("kullanicilar")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (existingErr) {
-      console.error("Supabase kullanıcı kontrol hatası:", existingErr);
-      return NextResponse.json({ ok: false, error: "Sunucu hatası" }, { status: 500 });
-    }
-
-    if (existing) {
-      return NextResponse.json({ ok: false, error: "Bu e-posta ile kullanıcı zaten kayıtlı" }, { status: 409 });
-    }
-
     // Supabase Auth tarafında kullanıcı oluştur
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
