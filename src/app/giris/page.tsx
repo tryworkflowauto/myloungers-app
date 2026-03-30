@@ -65,7 +65,6 @@ function GirisContent() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        flowType: "pkce",
         redirectTo: redirectBase + "/auth/callback",
       },
     });
