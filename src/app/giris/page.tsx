@@ -61,7 +61,7 @@ function GirisContent() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin + "/auth/callback",
+        redirectTo: "https://myloungers.com/auth/callback",
       },
     });
     if (error) {
