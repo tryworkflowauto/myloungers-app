@@ -14,6 +14,14 @@ export async function POST(req: NextRequest) {
     params.append('RETURNURL', 'https://myloungers.com/api/paratika/callback');
     params.append('MERCHANTPAYMENTID', orderId);
     params.append('AMOUNT', parseFloat(amount).toFixed(2));
+    const orderItems = JSON.stringify([{
+      productCode: orderId,
+      name: "Şezlong Rezervasyonu",
+      description: "Myloungers şezlong rezervasyonu",
+      quantity: 1,
+      amount: parseFloat(amount).toFixed(2)
+    }]);
+    params.append('ORDERITEMS', orderItems);
     params.append('CURRENCY', 'TRY');
     params.append('CUSTOMER', customerEmail);
     params.append('CUSTOMERNAME', `${customerName} ${customerSurname}`);
