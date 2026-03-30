@@ -58,14 +58,10 @@ function GirisContent() {
   async function handleGoogleLogin() {
     setErrorMsg(null);
     setLoading(true);
-    const redirectBase =
-      typeof window !== "undefined" && window.location.hostname === "localhost"
-        ? "http://localhost:3000"
-        : "https://myloungers.com";
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: redirectBase + "/auth/callback",
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
       },
     });
     if (error) {
