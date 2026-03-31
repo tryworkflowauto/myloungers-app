@@ -23,6 +23,15 @@ type Reservation = {
   review?: boolean;
 };
 
+type UserReview = {
+  id: number;
+  yorum: string;
+  puan: number;
+  durum: string;
+  created_at: string;
+  tesis: { ad: string } | null;
+};
+
 const STATUS_META: Record<
   "upcoming" | "active" | "past" | "cancel",
   { txt: string; css: string }
@@ -61,6 +70,8 @@ export default function ProfilPage() {
   const [resFilter, setResFilter] = useState("all");
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [resLoading, setResLoading] = useState(false);
+  const [userReviews, setUserReviews] = useState<UserReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewModal, setReviewModal] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<number|null>(null);
   const [reviewStars, setReviewStars] = useState(0);
@@ -293,6 +304,32 @@ export default function ProfilPage() {
     }
 
     loadReservations();
+  }, [user]);
+
+  useEffect(() => {
+    async function loadUserReviews() {
+      if (!user) return;
+      try {
+        setReviewsLoading(true);
+        const { data, error } = await supabase
+          .from("yorumlar")
+          .select("id, yorum, puan, durum, created_at, tesis:tesisler(ad)")
+          .eq("kullanici_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Profil yorumlar sorgu hatası:", error);
+          setReviewsLoading(false);
+          return;
+        }
+
+        setUserReviews((data ?? []) as UserReview[]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    }
+
+    loadUserReviews();
   }, [user]);
 
   const filteredRes = reservations.filter(
@@ -800,6 +837,7 @@ export default function ProfilPage() {
           <div className="sm-head">Hesabım</div>
           {[
             {id:"reservations", ic:"🏖️", label:"Rezervasyonlarım", cnt:reservations.length, cntColor:"var(--or)"},
+            {id:"reviews", ic:"💬", label:"Yorumlarım", cnt:userReviews.length, cntColor:"var(--teal)"},
             {id:"favorites", ic:"❤️", label:"Favorilerim", cnt:0, cntColor:"var(--teal)"},
             {id:"notifications", ic:"🔔", label:"Bildirimler", cnt:0, cntColor:"var(--or)"},
           ].map(item => (
@@ -904,6 +942,45 @@ export default function ProfilPage() {
                 <div style={{fontSize:".85rem",marginTop:8}}>Henüz bildiriminiz yok.</div>
                 <div style={{fontSize:".78rem",marginTop:4}}>Rezervasyonlarınız ve kampanyalarla ilgili güncellemeler burada görünecek.</div>
               </div>
+            </div>
+          )}
+
+          {/* YORUMLARIM */}
+          {activeTab === "reviews" && (
+            <div>
+              <div className="sec-head"><div><div className="sec-title">💬 Yorumlarım</div><div className="sec-sub">Yaptığınız yorumlar ve onay durumları</div></div></div>
+              {reviewsLoading ? (
+                <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,color:"var(--i3)",fontSize:".85rem"}}>
+                  Yorumlar yükleniyor...
+                </div>
+              ) : userReviews.length === 0 ? (
+                <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,textAlign:"center",color:"var(--i3)"}}>
+                  <div style={{fontSize:"2rem",opacity:.4}}>💬</div>
+                  <div style={{fontSize:".85rem",marginTop:8}}>Henüz yorumunuz yok.</div>
+                </div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {userReviews.map((item) => (
+                    <div key={item.id} style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:16}}>
+                      <div style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:8}}>
+                        <div style={{fontSize:".9rem",fontWeight:700,color:"var(--navy)"}}>
+                          {item.tesis?.ad || "Tesis"}
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:".75rem",fontWeight:700,color:"#F59E0B"}}>{"★".repeat(item.puan || 0)}</span>
+                          <span style={{fontSize:".7rem",fontWeight:700,padding:"2px 8px",borderRadius:999,background:item.durum === "onaylı" ? "#DCFCE7" : "#FEF3C7",color:item.durum === "onaylı" ? "#15803D" : "#92400E"}}>
+                            {item.durum}
+                          </span>
+                        </div>
+                      </div>
+                      <p style={{fontSize:".82rem",color:"var(--i2)",margin:0,lineHeight:1.55}}>{item.yorum}</p>
+                      <div style={{marginTop:8,fontSize:".72rem",color:"var(--i3)"}}>
+                        {new Date(item.created_at).toLocaleDateString("tr-TR")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
