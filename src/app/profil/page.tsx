@@ -447,7 +447,7 @@ export default function ProfilPage() {
     for (const k of ["gunluk_fiyat", "baslangic_fiyat", "min_fiyat", "fiyat", "sezlong_fiyat"] as const) {
       const v = t[k];
       if (typeof v === "number" && Number.isFinite(v)) return v;
-      if (typeof v === "string" && v.trim() !== "") {
+      if (typeof v === "string" && (v as string).trim() !== "") {
         const n = parseFloat(String(v).replace(",", "."));
         if (!Number.isNaN(n) && Number.isFinite(n)) return n;
       }
