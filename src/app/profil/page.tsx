@@ -964,7 +964,7 @@ export default function ProfilPage() {
                     <div key={item.id} style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:16}}>
                       <div style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:8}}>
                         <div style={{fontSize:".9rem",fontWeight:700,color:"var(--navy)"}}>
-                          {item.tesis?.ad || "Tesis"}
+                          {Array.isArray(item.tesis) ? item.tesis[0]?.ad : item.tesis?.ad || "Tesis"}
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <span style={{fontSize:".75rem",fontWeight:700,color:"#F59E0B"}}>{"★".repeat(item.puan || 0)}</span>
