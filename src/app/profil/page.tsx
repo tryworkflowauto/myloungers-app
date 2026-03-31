@@ -338,7 +338,7 @@ export default function ProfilPage() {
         ad: profile.ad,
         soyad: profile.soyad,
         telefon: profile.tel,
-        dogum_tarihi: profile.dogum,
+        dogum_tarihi: profile.dogum || null,
         sehir: profile.sehir,
       })
       .eq("id", user.id);
