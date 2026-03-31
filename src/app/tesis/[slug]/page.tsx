@@ -266,6 +266,24 @@ export default function TesisDetailPage() {
 
   useEffect(() => {
     if (!row?.id) return;
+    const fetchFavoriteStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setFav(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("favoriler")
+        .select("*")
+        .eq("kullanici_id", user.id)
+        .eq("tesis_id", row.id);
+      setFav((data ?? []).length > 0);
+    };
+    fetchFavoriteStatus();
+  }, [row?.id]);
+
+  useEffect(() => {
+    if (!row?.id) return;
     const fetchMenu = async () => {
       const { data: katlar } = await supabase
         .from("menu_kategorileri")
@@ -378,6 +396,31 @@ export default function TesisDetailPage() {
   function showToast(msg:string, icon:string="ℹ️") {
     setToast({msg,icon});
     setTimeout(()=>setToast(null),3000);
+  }
+
+  async function toggleFav() {
+    if (!row?.id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push("/giris");
+      return;
+    }
+
+    if (!fav) {
+      const { error } = await supabase.from("favoriler").insert({
+        kullanici_id: user.id,
+        tesis_id: row.id,
+      });
+      if (!error) setFav(true);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("favoriler")
+      .delete()
+      .eq("kullanici_id", user.id)
+      .eq("tesis_id", row.id);
+    if (!error) setFav(false);
   }
 
   async function pickSzl(no: string, zoneKey: string, status: SzlStatus, pw: number, pe: number) {
@@ -995,7 +1038,7 @@ export default function TesisDetailPage() {
         </Link>
         <span className="nav-sp" />
         <Link href="/profil" className="nav-profil">Profilim</Link>
-        <button className={`fav-btn${fav ? " on" : ""}`} onClick={() => setFav(!fav)}>
+        <button className={`fav-btn${fav ? " on" : ""}`} onClick={toggleFav}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill={fav ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
           {fav ? "Kaydedildi" : "Kaydet"}
         </button>

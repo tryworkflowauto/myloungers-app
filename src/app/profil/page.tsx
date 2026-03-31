@@ -32,6 +32,27 @@ type UserReview = {
   tesis: { ad: string } | { ad: string }[] | null;
 };
 
+type FavoriteItem = {
+  id: number;
+  tesis: {
+    id: number;
+    ad: string;
+    slug: string;
+    fotograflar: any;
+    kategori?: unknown;
+    ilce?: string;
+    sehir?: string;
+    puan?: number;
+    yorum_sayisi?: number;
+    gunluk_fiyat?: number;
+    baslangic_fiyat?: number;
+    min_fiyat?: number;
+    fiyat?: number;
+    sezlong_fiyat?: number;
+    aktif?: boolean;
+  } | null;
+};
+
 const STATUS_META: Record<
   "upcoming" | "active" | "past" | "cancel",
   { txt: string; css: string }
@@ -72,6 +93,7 @@ export default function ProfilPage() {
   const [resLoading, setResLoading] = useState(false);
   const [userReviews, setUserReviews] = useState<UserReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [reviewModal, setReviewModal] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<number|null>(null);
   const [reviewStars, setReviewStars] = useState(0);
@@ -332,6 +354,25 @@ export default function ProfilPage() {
     loadUserReviews();
   }, [user]);
 
+  useEffect(() => {
+    async function loadFavorites() {
+      if (!user) return;
+      const userId = user.id;
+      const { data, error } = await supabase
+        .from("favoriler")
+        .select("*, tesis:tesisler(*)")
+        .eq("kullanici_id", userId);
+
+      if (error) {
+        console.error("Profil favoriler sorgu hatası:", error);
+        return;
+      }
+      setFavorites((data ?? []) as FavoriteItem[]);
+    }
+
+    loadFavorites();
+  }, [user]);
+
   const filteredRes = reservations.filter(
     (r) => resFilter === "all" || r.status === resFilter
   );
@@ -391,6 +432,34 @@ export default function ProfilPage() {
 
   const statusCount = (s: string) =>
     reservations.filter((r) => r.status === s).length;
+
+  function favoriteImage(t: FavoriteItem["tesis"]) {
+    const fotos = t?.fotograflar;
+    if (Array.isArray(fotos) && fotos.length > 0 && fotos[0] && typeof fotos[0] === "object") {
+      const src = (fotos[0] as { src?: string }).src;
+      if (typeof src === "string" && src.trim()) return src;
+    }
+    return "/logo.png";
+  }
+
+  function favoritePrice(t: FavoriteItem["tesis"]) {
+    if (!t) return null;
+    for (const k of ["gunluk_fiyat", "baslangic_fiyat", "min_fiyat", "fiyat", "sezlong_fiyat"] as const) {
+      const v = t[k];
+      if (typeof v === "number" && Number.isFinite(v)) return v;
+      if (typeof v === "string" && v.trim() !== "") {
+        const n = parseFloat(String(v).replace(",", "."));
+        if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+      }
+    }
+    return null;
+  }
+
+  function favoriteCategory(kategori: unknown) {
+    if (Array.isArray(kategori)) return kategori.map(String).filter(Boolean).join(", ") || "—";
+    if (typeof kategori === "string" && kategori.trim()) return kategori;
+    return "—";
+  }
 
   const avatarLetter =
     (profile.ad?.trim()?.[0] ||
@@ -925,11 +994,42 @@ export default function ProfilPage() {
           {activeTab === "favorites" && (
             <div>
               <div className="sec-head"><div><div className="sec-title">❤️ Favorilerim</div><div className="sec-sub">Kaydettiğiniz tesisler</div></div></div>
-              <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,textAlign:"center",color:"var(--i3)"}}>
-                <div style={{fontSize:"2rem",opacity:.4}}>🤍</div>
-                <div style={{fontSize:".85rem",marginTop:8}}>Henüz favori tesisiniz yok.</div>
-                <div style={{fontSize:".78rem",marginTop:4}}>Beğendiğiniz tesislerde kalp ikonuna tıklayarak favorilere ekleyebilirsiniz.</div>
-              </div>
+              {favorites.length === 0 ? (
+                <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,textAlign:"center",color:"var(--i3)"}}>
+                  <div style={{fontSize:"2rem",opacity:.4}}>🤍</div>
+                  <div style={{fontSize:".85rem",marginTop:8}}>Henüz favori tesisiniz yok.</div>
+                  <div style={{fontSize:".78rem",marginTop:4}}>Beğendiğiniz tesislerde kalp ikonuna tıklayarak favorilere ekleyebilirsiniz.</div>
+                </div>
+              ) : (
+                <div>
+                  {favorites.map((item) => (
+                    <div key={item.id} style={{display:"flex",flexDirection:"row",border:"1px solid #eee",borderRadius:12,overflow:"hidden",marginBottom:16,background:"#fff",position:"relative"}}>
+                      <img
+                        src={Array.isArray(item.tesis?.fotograflar) && item.tesis.fotograflar[0]?.src ? item.tesis.fotograflar[0].src : "/logo.png"}
+                        alt={item.tesis?.ad}
+                        style={{width:140,height:110,objectFit:"cover",flexShrink:0}}
+                      />
+                      <div style={{padding:"12px 16px",flex:1,display:"flex",flexDirection:"column",justifyContent:"space-between",minWidth:"120px"}}>
+                        <div>
+                          <div style={{fontWeight:700,fontSize:"1rem",color:"var(--navy)"}}>{item.tesis?.ad}</div>
+                          <div style={{fontSize:"0.8rem",color:"#666",marginTop:4}}>{item.tesis?.ilce} / {item.tesis?.sehir}</div>
+                          <div style={{fontSize:"0.8rem",color:"#F59E0B",marginTop:2}}>
+                            {"★".repeat(Math.round(item.tesis?.puan || 0))} {item.tesis?.puan}
+                          </div>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"flex-end"}}>
+                          <a
+                            href={`/tesis/${item.tesis?.slug}`}
+                            style={{position:"absolute",right:16,bottom:12,background:"var(--orange)",color:"#1a1a1a",padding:"8px 16px",borderRadius:8,fontSize:"0.85rem",fontWeight:600,textDecoration:"none",whiteSpace:"nowrap",zIndex:10,opacity:1,visibility:"visible"}}
+                          >
+                            Şezlong Seç →
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
