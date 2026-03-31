@@ -29,7 +29,7 @@ type UserReview = {
   puan: number;
   durum: string;
   created_at: string;
-  tesis: { ad: string } | null;
+  tesis: { ad: string } | { ad: string }[] | null;
 };
 
 const STATUS_META: Record<
