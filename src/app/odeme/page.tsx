@@ -58,7 +58,15 @@ function OdemeContent() {
   const [step, setStep] = useState(1);
   const [res, setRes] = useState<ResData>(DEFAULT_RES);
   const [payMethod, setPayMethod] = useState("pm-card");
-  const [form, setForm] = useState({ name: "", surname: "", phone: "", email: "", tc: "", guest2name: "", guest2surname: "", note: "" });
+  const [form, setForm] = useState({
+    name: "",
+    surname: "",
+    phone: "",
+    email: "",
+    tc: "",
+    extraGuests: [] as { name: string; surname: string }[],
+    note: "",
+  });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [kvkk, setKvkk] = useState(false);
   const [kvkkErr, setKvkkErr] = useState(false);
@@ -95,6 +103,23 @@ function OdemeContent() {
       toplam: parseInt(params.get('fiyat') || '0'),
     });
   }, []);
+
+  const guestCount = Math.max(1, Number.isFinite(res.kisi) && res.kisi >= 1 ? Math.floor(res.kisi) : 1);
+
+  useEffect(() => {
+    const need = Math.max(0, guestCount - 1);
+    setForm((f) => {
+      const eg = f.extraGuests;
+      if (eg.length === need) return f;
+      if (eg.length < need) {
+        return {
+          ...f,
+          extraGuests: [...eg, ...Array.from({ length: need - eg.length }, () => ({ name: "", surname: "" }))],
+        };
+      }
+      return { ...f, extraGuests: eg.slice(0, need) };
+    });
+  }, [guestCount]);
 
   useEffect(() => {
     const sonuc = queryParams?.get("sonuc");
@@ -467,21 +492,46 @@ function OdemeContent() {
                       </div>
                     </div>
 
-                    {res.kisi >= 2 && (
-                      <div className="guest-block">
-                        <div className="guest-title"><span className="guest-num">2</span> 2. Misafir</div>
-                        <div className="form-grid">
-                          <div className="fg">
-                            <label>Ad</label>
-                            <input type="text" value={form.guest2name} onChange={(e) => setForm({...form, guest2name: e.target.value})} placeholder="Adı" />
+                    {guestCount >= 2 &&
+                      Array.from({ length: guestCount - 1 }, (_, idx) => {
+                        const num = idx + 2;
+                        const g = form.extraGuests[idx] ?? { name: "", surname: "" };
+                        return (
+                          <div key={num} className="guest-block">
+                            <div className="guest-title">
+                              <span className="guest-num">{num}</span> {num}. Misafir
+                            </div>
+                            <div className="form-grid">
+                              <div className="fg">
+                                <label>Ad</label>
+                                <input
+                                  type="text"
+                                  value={g.name}
+                                  onChange={(e) => {
+                                    const next = [...form.extraGuests];
+                                    next[idx] = { ...g, name: e.target.value };
+                                    setForm({ ...form, extraGuests: next });
+                                  }}
+                                  placeholder="Adı"
+                                />
+                              </div>
+                              <div className="fg">
+                                <label>Soyad</label>
+                                <input
+                                  type="text"
+                                  value={g.surname}
+                                  onChange={(e) => {
+                                    const next = [...form.extraGuests];
+                                    next[idx] = { ...g, surname: e.target.value };
+                                    setForm({ ...form, extraGuests: next });
+                                  }}
+                                  placeholder="Soyadı"
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div className="fg">
-                            <label>Soyad</label>
-                            <input type="text" value={form.guest2surname} onChange={(e) => setForm({...form, guest2surname: e.target.value})} placeholder="Soyadı" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                        );
+                      })}
                   </div>
 
                   <div style={{ marginTop: 16 }}>
