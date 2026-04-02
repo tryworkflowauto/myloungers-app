@@ -7,8 +7,8 @@ export async function POST(req: NextRequest) {
 
     const params = new URLSearchParams();
     params.append('MERCHANT', '10008941');
-    params.append('MERCHANTUSER', 'mail@bgs.io');
-    params.append('MERCHANTPASSWORD', '*ReklamotvReklamotv321');
+    params.append('MERCHANTUSER', 'myloungers.info@gmail.com');
+    params.append('MERCHANTPASSWORD', process.env.PARATIKA_PASSWORD!);
     params.append('ACTION', 'SESSIONTOKEN');
     params.append('SESSIONTYPE', 'PAYMENTSESSION');
     params.append('RETURNURL', 'https://myloungers.com/api/paratika/callback');
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     params.append('AMOUNT', parseFloat(amount).toFixed(2));
     const orderItems = JSON.stringify([{
       productCode: orderId,
+      sellerId: "10008941",
       name: "Şezlong Rezervasyonu",
       description: "Myloungers şezlong rezervasyonu",
       quantity: 1,
