@@ -375,6 +375,7 @@ export default function TesisDetailPage() {
     }
 
     async function loadAvailFromRez() {
+      if (!row) return;
       const tesisId = row.id as string | number;
       const [rezRes, sezCountRes] = await Promise.all([
         supabase
