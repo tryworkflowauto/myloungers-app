@@ -29,7 +29,14 @@ type GrupRow = {
   doluluk: string;
   aciklama?: string;
   sira?: number;
+  deniz_sirasi?: number;
 };
+
+function clampDenizSirasi(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(1, Math.min(20, Math.floor(n)));
+}
 
 // Harita bloğu + şezlong listesi (key = grup id)
 type SezlongSlot = { id: string; numara: number; durum: string };
@@ -225,9 +232,9 @@ export default function IsletmeSezlongPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [kilitliToastNo, setKilitliToastNo] = useState<string | null>(null);
   const [seciliRenk, setSeciliRenk] = useState("#0ABAB5");
-  const [grupEkleForm, setGrupEkleForm] = useState({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "" });
+  const [grupEkleForm, setGrupEkleForm] = useState({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "", deniz_sirasi: "1" });
   const [duzenleModal, setDuzenleModal] = useState<GrupRow | null>(null);
-  const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "", aciklama: "" });
+  const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "", aciklama: "", deniz_sirasi: "1" });
   const [silModal, setSilModal] = useState<GrupRow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [cikisModal, setCikisModal] = useState(false);
@@ -351,7 +358,7 @@ export default function IsletmeSezlongPage() {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, aciklama, sira").eq("tesis_id", tesisId),
+      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, aciklama, sira, deniz_sirasi").eq("tesis_id", tesisId),
       supabase.from("sezlonglar").select("id, grup_id, numara, durum").eq("tesis_id", tesisId),
     ]).then(([gRes, sRes]) => {
       if (cancelled) return;
@@ -363,8 +370,12 @@ export default function IsletmeSezlongPage() {
         fiyat: number | null;
         aciklama?: string | null;
         sira?: number | null;
+        deniz_sirasi?: number | null;
       }[];
       grupRows.sort((a, b) => {
+        const da = clampDenizSirasi(a.deniz_sirasi);
+        const db = clampDenizSirasi(b.deniz_sirasi);
+        if (da !== db) return da - db;
         const sa = Number(a.sira ?? 0);
         const sb = Number(b.sira ?? 0);
         if (sa !== sb) return sa - sb;
@@ -395,6 +406,7 @@ export default function IsletmeSezlongPage() {
         const fiyatNum = Number(g.fiyat) || 0;
         const aciklama = (g as { aciklama?: string | null }).aciklama?.trim() || "";
         const siraVal = Number(g.sira ?? 0);
+        const denizVal = clampDenizSirasi(g.deniz_sirasi);
         grList.push({
           id: g.id,
           name: g.ad,
@@ -406,6 +418,7 @@ export default function IsletmeSezlongPage() {
           doluluk: `${dolulukPct}%`,
           aciklama: aciklama || undefined,
           sira: siraVal,
+          deniz_sirasi: denizVal,
         });
         harita[g.id] = {
           id: g.id,
@@ -491,9 +504,25 @@ export default function IsletmeSezlongPage() {
   const toplamSezlong = gruplar.reduce((a, g) => a + g.count, 0);
   const toplamDolu = gruplar.reduce((a, g) => a + g.dolu, 0);
   const toplamBos = gruplar.reduce((a, g) => a + g.bos, 0);
+  const haritaGruplarSorted = [...gruplar].sort((a, b) => {
+    const da = clampDenizSirasi(a.deniz_sirasi);
+    const db = clampDenizSirasi(b.deniz_sirasi);
+    if (da !== db) return da - db;
+    const sa = Number(a.sira ?? 0);
+    const sb = Number(b.sira ?? 0);
+    if (sa !== sb) return sa - sb;
+    return String(a.id).localeCompare(String(b.id));
+  });
 
   function openDuzenle(g: GrupRow) {
-    setDuzenleForm({ name: g.name, count: String(g.count), color: g.color, fiyat: g.fiyat, aciklama: g.aciklama ?? "" });
+    setDuzenleForm({
+      name: g.name,
+      count: String(g.count),
+      color: g.color,
+      fiyat: g.fiyat,
+      aciklama: g.aciklama ?? "",
+      deniz_sirasi: String(clampDenizSirasi(g.deniz_sirasi)),
+    });
     setDuzenleModal(g);
   }
 
@@ -509,6 +538,7 @@ export default function IsletmeSezlongPage() {
         fiyat: Number(fiyatNum),
         aciklama: aciklamaVal,
         kapasite: Number(duzenleForm.count),
+        deniz_sirasi: clampDenizSirasi(duzenleForm.deniz_sirasi),
       })
       .eq("id", duzenleModal.id);
     if (error) { showToast("❌ Güncellenemedi"); return; }
@@ -523,6 +553,7 @@ export default function IsletmeSezlongPage() {
               fiyat: duzenleForm.fiyat,
               aciklama: aciklamaVal ?? undefined,
               count: Number(duzenleForm.count),
+              deniz_sirasi: clampDenizSirasi(duzenleForm.deniz_sirasi),
             }
           : g
       )
@@ -716,6 +747,7 @@ export default function IsletmeSezlongPage() {
     const kapasite = Math.max(1, Math.min(200, Number(grupEkleForm.kapasite) || 10));
     const aciklamaInsert = grupEkleForm.aciklama?.trim() || null;
     const nextSira = gruplar.length === 0 ? 0 : Math.max(...gruplar.map((r) => r.sira ?? 0)) + 1;
+    const denizInsert = clampDenizSirasi(grupEkleForm.deniz_sirasi);
     const { data: grup, error: gErr } = await supabase
       .from("sezlong_gruplari")
       .insert({
@@ -726,14 +758,15 @@ export default function IsletmeSezlongPage() {
         fiyat: Number(grupEkleForm.fiyat) || 0,
         aciklama: aciklamaInsert,
         sira: nextSira,
+        deniz_sirasi: denizInsert,
       })
-      .select("id, ad, renk, kapasite, fiyat")
+      .select("id, ad, renk, kapasite, fiyat, deniz_sirasi")
       .single();
     if (gErr || !grup) {
       showToast("❌ Grup eklenemedi");
       return;
     }
-    const g = grup as { id: string; ad: string; renk: string; kapasite: number; fiyat: number };
+    const g = grup as { id: string; ad: string; renk: string; kapasite: number; fiyat: number; deniz_sirasi?: number | null };
     const sezlongInserts = Array.from({ length: kapasite }, (_, i) => ({
       grup_id: g.id,
       tesis_id: currentTesisId,
@@ -764,7 +797,7 @@ export default function IsletmeSezlongPage() {
       },
     }));
     setModalOpen(false);
-    setGrupEkleForm({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "" });
+    setGrupEkleForm({ ad: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "", deniz_sirasi: "1" });
     showToast("✅ Grup eklendi");
   }
 
@@ -1031,6 +1064,7 @@ export default function IsletmeSezlongPage() {
                             color: g.color,
                             fiyat: g.fiyat || "",
                             aciklama: g.aciklama || "",
+                            deniz_sirasi: String(clampDenizSirasi(g.deniz_sirasi)),
                           });
                           setDuzenleModal(g);
                         }}
@@ -1204,7 +1238,7 @@ export default function IsletmeSezlongPage() {
             {loading ? (
               <div style={{ padding: 40, textAlign: "center", color: GRAY400, fontSize: 13 }}>Yükleniyor...</div>
             ) : (
-              gruplar.map((row) => {
+              haritaGruplarSorted.map((row) => {
                 const key = row.id;
                 const mb = haritaGruplari[key];
                 if (!mb) return null;
@@ -1227,28 +1261,24 @@ export default function IsletmeSezlongPage() {
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: 10,
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 12,
                         padding: "10px 16px",
                         color: "white",
                         background: g.gradient,
+                        boxSizing: "border-box",
                       }}
                     >
-                      <strong style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>
-                        {g.icon} {g.title}{g.sub && g.sub !== g.title ? ` — ${g.sub}` : ""}
-                      </strong>
-                      <span style={{ fontSize: 11, opacity: 0.8 }}>{g.count} şezlong</span>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          background: "rgba(255,255,255,0.2)",
-                          padding: "3px 10px",
-                          borderRadius: 20,
-                        }}
-                      >
-                        {g.dolulukYuzde}
-                      </span>
+                      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <strong style={{ fontSize: 13, fontWeight: 700 }}>{g.icon} {g.title}</strong>
+                        {g.sub && g.sub !== g.title ? (
+                          <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.9, whiteSpace: "pre-line", lineHeight: 1.45 }}>{g.sub}</div>
+                        ) : null}
+                      </div>
+                      <div style={{ flexShrink: 0, textAlign: "right", fontSize: 12, fontWeight: 800, whiteSpace: "nowrap", alignSelf: "flex-start", maxWidth: "48%", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {row.fiyat} / gün · {row.count} Şezlong · {row.doluluk} Dolu
+                      </div>
                     </div>
                     <div style={{ background: "white", padding: 16 }}>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -1626,12 +1656,12 @@ export default function IsletmeSezlongPage() {
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Konum / Açıklama</label>
-              <input
-                type="text"
+              <textarea
                 value={grupEkleForm.aciklama}
                 onChange={(e) => setGrupEkleForm((f) => ({ ...f, aciklama: e.target.value }))}
                 placeholder="örn: Denize sıfır, Gölgelik alan..."
-                style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
+                rows={3}
+                style={{ width: "100%", minHeight: 72, padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, resize: "vertical", fontFamily: "inherit", lineHeight: 1.45, boxSizing: "border-box" }}
               />
             </div>
             <div style={{ marginBottom: 12 }}>
@@ -1898,12 +1928,12 @@ export default function IsletmeSezlongPage() {
               </div>
               <div>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Konum / Açıklama</label>
-                <input
-                  type="text"
+                <textarea
                   value={duzenleForm.aciklama}
                   onChange={(e) => setDuzenleForm((f) => ({ ...f, aciklama: e.target.value }))}
                   placeholder="örn: Denize sıfır, 1. Sıra..."
-                  style={{ width: "100%", padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}
+                  rows={3}
+                  style={{ width: "100%", minHeight: 72, padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, resize: "vertical", fontFamily: "inherit", lineHeight: 1.45, boxSizing: "border-box" }}
                 />
               </div>
             </div>

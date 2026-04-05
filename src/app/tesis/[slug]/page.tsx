@@ -20,8 +20,10 @@ type ZoneDef = {
   pe: number;
   gradient: string;
   statuses: SzlStatus[];
-  color?: string;
-  count?: number;
+  color: string;
+  count: number;
+  aciklama?: string;
+  dolulukPct: number;
 };
 
 function isWE(dt: Date) {
@@ -178,7 +180,7 @@ export default function TesisDetailPage() {
 
       const { data: grupRows, error: grupErr } = await supabase
         .from("sezlong_gruplari")
-        .select("id, ad, renk, kapasite, fiyat")
+        .select("id, ad, renk, kapasite, fiyat, aciklama")
         .eq("tesis_id", tesisId);
 
       const { data: sezRows, error: sezErr } = await supabase
@@ -207,6 +209,8 @@ export default function TesisDetailPage() {
         const prefix = ad.charAt(0).toUpperCase() || "S";
         const icon = "🏖️";
         const gradient = `linear-gradient(135deg,${renk},${renk}CC)`;
+        const aciklamaRaw = (g as { aciklama?: string | null }).aciklama;
+        const aciklama = typeof aciklamaRaw === "string" ? aciklamaRaw.trim() : "";
 
         const list = (byGrup.get(key) ?? []).sort((a, b) => a.numara - b.numara);
         const statuses: SzlStatus[] = [];
@@ -214,6 +218,8 @@ export default function TesisDetailPage() {
           const rec = list.find((s) => s.numara === i);
           statuses.push(mapDbDurumToStatus(rec?.durum));
         }
+        const doluCount = statuses.filter((s) => s === "full").length;
+        const dolulukPct = statuses.length > 0 ? Math.round((doluCount / statuses.length) * 100) : 0;
 
         return {
           key,
@@ -224,6 +230,10 @@ export default function TesisDetailPage() {
           pe: fiyatNum,
           gradient,
           statuses,
+          color: renk,
+          count: kapasite,
+          aciklama: aciklama || undefined,
+          dolulukPct,
         };
       });
 
@@ -1245,11 +1255,15 @@ export default function TesisDetailPage() {
                   </div>
                   {zones.map((z, zi) => (
                     <div key={z.key} style={{ borderTop: zi > 0 ? "1px solid #E5E7EB" : undefined }}>
-                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 18px", background:z.gradient }}>
-                        <div style={{ fontWeight:800, fontSize:13, color:"white" }}>{z.icon} {z.label} — {z.prefix}1–{z.prefix}{z.statuses.length}</div>
-                        <div style={{ textAlign:"right" }}>
-                          <div style={{ fontSize:10, color:"rgba(255,255,255,.7)" }}>Hafta içi / Hafta sonu</div>
-                          <div style={{ fontSize:12, fontWeight:800, color:"white" }}>₺{z.pw.toLocaleString("tr-TR")} / ₺{z.pe.toLocaleString("tr-TR")}</div>
+                      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, padding:"10px 18px", background:z.gradient, flexWrap:"nowrap", boxSizing:"border-box" }}>
+                        <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:6 }}>
+                          <div style={{ fontWeight:800, fontSize:13, color:"white" }}>{z.icon} {z.label}</div>
+                          {z.aciklama ? (
+                            <div style={{ fontSize:10, color:"rgba(255,255,255,.88)", fontWeight:500, whiteSpace:"pre-line", lineHeight:1.45 }}>{z.aciklama}</div>
+                          ) : null}
+                        </div>
+                        <div style={{ flexShrink:0, textAlign:"right", fontSize:12, fontWeight:800, color:"white", whiteSpace:"nowrap", alignSelf:"flex-start", maxWidth:"48%", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          ₺{z.pw.toLocaleString("tr-TR")} / gün · {z.count} Şezlong · %{z.dolulukPct} Dolu
                         </div>
                       </div>
                       <div style={{ background:"white" }}>
