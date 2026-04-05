@@ -254,6 +254,22 @@ export default function IsletmeSezlongPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
+  async function persistGrupSiraToSupabase(ordered: GrupRow[]): Promise<boolean> {
+    const tid = tesisId;
+    if (!tid || ordered.length === 0) return true;
+    const results = await Promise.all(
+      ordered.map((row, idx) =>
+        supabase.from("sezlong_gruplari").update({ sira: idx }).eq("id", row.id).eq("tesis_id", tid)
+      )
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      console.error("sezlong_gruplari sira güncelleme:", failed.error);
+      return false;
+    }
+    return true;
+  }
+
   function handleGrupReorderDrop(e: DragEvent, targetId: string) {
     e.preventDefault();
     e.stopPropagation();
@@ -268,17 +284,10 @@ export default function IsletmeSezlongPage() {
       const [removed] = next.splice(dragIdx, 1);
       next.splice(dropIdx, 0, removed);
       const withSira = next.map((row, idx) => ({ ...row, sira: idx }));
-      const tid = tesisId;
-      if (tid) {
-        void (async () => {
-          const results = await Promise.all(
-            withSira.map((row, idx) =>
-              supabase.from("sezlong_gruplari").update({ sira: idx }).eq("id", row.id).eq("tesis_id", tid)
-            )
-          );
-          const err = results.find((r) => r.error);
-          if (err?.error) showToast("❌ Sıra kaydedilemedi");
-        })();
+      if (tesisId) {
+        void persistGrupSiraToSupabase(withSira).then((ok) => {
+          if (!ok) showToast("❌ Sıra kaydedilemedi");
+        });
       }
       return withSira;
     });
@@ -358,7 +367,7 @@ export default function IsletmeSezlongPage() {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, aciklama, sira, deniz_sirasi").eq("tesis_id", tesisId),
+      supabase.from("sezlong_gruplari").select("id, ad, renk, kapasite, fiyat, aciklama, sira, deniz_sirasi").eq("tesis_id", tesisId).order("sira", { ascending: true }),
       supabase.from("sezlonglar").select("id, grup_id, numara, durum").eq("tesis_id", tesisId),
     ]).then(([gRes, sRes]) => {
       if (cancelled) return;
@@ -373,9 +382,6 @@ export default function IsletmeSezlongPage() {
         deniz_sirasi?: number | null;
       }[];
       grupRows.sort((a, b) => {
-        const da = clampDenizSirasi(a.deniz_sirasi);
-        const db = clampDenizSirasi(b.deniz_sirasi);
-        if (da !== db) return da - db;
         const sa = Number(a.sira ?? 0);
         const sb = Number(b.sira ?? 0);
         if (sa !== sb) return sa - sb;
@@ -504,15 +510,6 @@ export default function IsletmeSezlongPage() {
   const toplamSezlong = gruplar.reduce((a, g) => a + g.count, 0);
   const toplamDolu = gruplar.reduce((a, g) => a + g.dolu, 0);
   const toplamBos = gruplar.reduce((a, g) => a + g.bos, 0);
-  const haritaGruplarSorted = [...gruplar].sort((a, b) => {
-    const da = clampDenizSirasi(a.deniz_sirasi);
-    const db = clampDenizSirasi(b.deniz_sirasi);
-    if (da !== db) return da - db;
-    const sa = Number(a.sira ?? 0);
-    const sb = Number(b.sira ?? 0);
-    if (sa !== sb) return sa - sb;
-    return String(a.id).localeCompare(String(b.id));
-  });
 
   function openDuzenle(g: GrupRow) {
     setDuzenleForm({
@@ -641,6 +638,13 @@ export default function IsletmeSezlongPage() {
   }
 
   async function handleKaydetDegisiklikler() {
+    if (tesisId && gruplar.length > 0) {
+      const siraOk = await persistGrupSiraToSupabase(gruplar);
+      if (!siraOk) {
+        showToast("❌ Grup sırası kaydedilemedi");
+        return;
+      }
+    }
     if (seciliSezlongId && seciliDurum && seciliGrup) {
       const { error } = await supabase.from("sezlonglar").update({ durum: seciliDurum }).eq("id", seciliSezlongId);
       if (!error) {
@@ -1238,7 +1242,7 @@ export default function IsletmeSezlongPage() {
             {loading ? (
               <div style={{ padding: 40, textAlign: "center", color: GRAY400, fontSize: 13 }}>Yükleniyor...</div>
             ) : (
-              haritaGruplarSorted.map((row) => {
+              gruplar.map((row) => {
                 const key = row.id;
                 const mb = haritaGruplari[key];
                 if (!mb) return null;

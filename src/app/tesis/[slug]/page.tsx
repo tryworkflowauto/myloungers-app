@@ -181,7 +181,8 @@ export default function TesisDetailPage() {
       const { data: grupRows, error: grupErr } = await supabase
         .from("sezlong_gruplari")
         .select("id, ad, renk, kapasite, fiyat, aciklama")
-        .eq("tesis_id", tesisId);
+        .eq("tesis_id", tesisId)
+        .order("sira", { ascending: true });
 
       const { data: sezRows, error: sezErr } = await supabase
         .from("sezlonglar")
