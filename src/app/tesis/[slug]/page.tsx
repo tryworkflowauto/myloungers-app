@@ -358,21 +358,87 @@ export default function TesisDetailPage() {
     setYorumForm({ yorum: "", puan: 0, konum_puan: 0, temizlik_puan: 0, hizmet_puan: 0, fiyat_puan: 0 });
   };
 
-  // Mock müsaitlik üret
   useEffect(() => {
-    const a: Record<string, string> = {};
-    for (let mo = 0; mo < 3; mo++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() + mo);
-      const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      for (let day = 1; day <= dim; day++) {
-        const k = d.getFullYear() + "-" + d.getMonth() + "-" + day;
-        const r = Math.random();
-        a[k] = r < 0.07 ? "full" : r < 0.2 ? "few" : "ok";
-      }
+    if (!row?.id) return;
+    let cancelled = false;
+
+    function dayKey(y: number, m: number, day: number) {
+      return y + "-" + m + "-" + day;
     }
-    setAvail(a);
-  }, []);
+
+    function parseLocalDate(s: string | null | undefined): Date | null {
+      if (!s || typeof s !== "string") return null;
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    async function loadAvailFromRez() {
+      const tesisId = row.id as string | number;
+      const [rezRes, sezCountRes] = await Promise.all([
+        supabase
+          .from("rezervasyonlar")
+          .select("baslangic_tarih, bitis_tarih, kisi_sayisi, durum")
+          .eq("tesis_id", tesisId),
+        supabase.from("sezlonglar").select("id", { count: "exact", head: true }).eq("tesis_id", tesisId),
+      ]);
+      if (cancelled) return;
+      if (rezRes.error) {
+        console.error("Takvim müsaitlik (rezervasyonlar) hatası:", rezRes.error);
+      }
+      if (sezCountRes.error) {
+        console.error("Takvim müsaitlik (şezlong sayısı) hatası:", sezCountRes.error);
+      }
+      const totalSez = sezCountRes.count ?? 0;
+      const rows = rezRes.data ?? [];
+      const active = rows.filter((r: { durum?: string | null }) => {
+        const d = String(r.durum ?? "").toLowerCase();
+        return d !== "iptal" && d !== "cancelled";
+      });
+
+      const bookedByDay: Record<string, number> = {};
+      for (const r of active) {
+        const start = parseLocalDate((r as { baslangic_tarih?: string | null }).baslangic_tarih);
+        const endRaw = (r as { bitis_tarih?: string | null }).bitis_tarih;
+        const end = parseLocalDate(endRaw) || start;
+        if (!start) continue;
+        const kisi = Math.max(0, Number((r as { kisi_sayisi?: unknown }).kisi_sayisi) || 0);
+        const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        if (cur > last) continue;
+        const x = new Date(cur);
+        while (x <= last) {
+          const key = dayKey(x.getFullYear(), x.getMonth(), x.getDate());
+          bookedByDay[key] = (bookedByDay[key] || 0) + kisi;
+          x.setDate(x.getDate() + 1);
+        }
+      }
+
+      const a: Record<string, string> = {};
+      for (let mo = 0; mo < 3; mo++) {
+        const d = new Date();
+        d.setMonth(d.getMonth() + mo);
+        const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        for (let day = 1; day <= dim; day++) {
+          const k = dayKey(d.getFullYear(), d.getMonth(), day);
+          const booked = bookedByDay[k] || 0;
+          if (totalSez <= 0) {
+            a[k] = "ok";
+            continue;
+          }
+          const ratio = booked / totalSez;
+          a[k] = ratio >= 1 ? "full" : ratio >= 0.2 ? "few" : "ok";
+        }
+      }
+      setAvail(a);
+    }
+
+    loadAvailFromRez();
+    return () => {
+      cancelled = true;
+    };
+  }, [row?.id]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
