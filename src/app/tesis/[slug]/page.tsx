@@ -664,8 +664,8 @@ export default function TesisDetailPage() {
               onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.transform="scale(1)")}
             >
               <div style={{ position:"absolute", top:-9, left:"50%", transform:"translateX(-50%)", width:28, height:11, borderRadius:"5px 5px 0 0", background:ss.pillow, zIndex:0 }} />
-              <div style={{ width:42, height:33, borderRadius:"5px 5px 4px 4px", background:ss.bg, border:`2px ${ss.dsh?"dashed":"solid"} ${ss.bdr}`, position:"relative", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isSel?"0 0 0 2px rgba(245,130,31,.5)":undefined, zIndex:1 }}>
-                <span style={{ fontSize:9, fontWeight:800, color:ss.nc, zIndex:2, position:"relative" }}>
+              <div style={{ width:50, height:34, borderRadius:"5px 5px 4px 4px", background:ss.bg, border:`2px ${ss.dsh?"dashed":"solid"} ${ss.bdr}`, position:"relative", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isSel?"0 0 0 2px rgba(245,130,31,.5)":undefined, zIndex:1 }}>
+                <span style={{ fontSize:11, fontWeight:800, color:ss.nc, zIndex:2, position:"relative" }}>
                   {status==="lock" ? "🔒" : no}
                 </span>
                 {status === "full" && (
@@ -1063,7 +1063,7 @@ export default function TesisDetailPage() {
         .bcard-t{font-size:.85rem;font-weight:800;color:var(--tdk);line-height:1.3}
         .bcard-s{font-size:.67rem;color:var(--i3);margin-top:3px;line-height:1.5}
         .bb{position:fixed;bottom:0;left:0;right:0;background:var(--navy);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;z-index:300;box-shadow:0 -4px 20px rgba(0,0,0,.2)}
-        .bb-i{flex:1;font-size:.78rem;color:rgba(255,255,255,.75)}
+        .bb-i{flex:1;font-size:.9rem;color:rgba(255,255,255,.75)}
         .bb-i b{color:#fff}
         .bb-p{font-size:1.1rem;font-weight:900;color:var(--or)}
         .bb-btn{background:var(--or);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.82rem;font-weight:800;cursor:pointer;white-space:nowrap}
