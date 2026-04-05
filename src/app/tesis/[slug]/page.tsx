@@ -406,6 +406,7 @@ export default function TesisDetailPage() {
         if (!start) continue;
         const kisi = Math.max(0, Number((r as { kisi_sayisi?: unknown }).kisi_sayisi) || 0);
         const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        if (!end) continue;
         const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
         if (cur > last) continue;
         const x = new Date(cur);
