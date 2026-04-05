@@ -39,6 +39,31 @@ function fmtISO(iso: string) {
   return parseInt(d) + " " + TR_MONTHS[parseInt(m) - 1] + " " + y;
 }
 
+function firstPhotoFromFotograflar(raw: unknown): string {
+  let arr: unknown = raw;
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const p = JSON.parse(raw);
+      if (Array.isArray(p)) arr = p;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!Array.isArray(arr) || arr.length === 0) return "/logo.png";
+  const first = arr[0];
+  if (first && typeof first === "object" && typeof (first as { src?: string }).src === "string") {
+    const src = (first as { src: string }).src.trim();
+    if (src) return src;
+  }
+  return "/logo.png";
+}
+
+function addressFromTesisRow(row: { adres?: string | null; ilce?: string | null; sehir?: string | null }): string {
+  const a = (row.adres as string | undefined)?.trim();
+  if (a) return a;
+  return [row.ilce, row.sehir].filter(Boolean).join(", ");
+}
+
 const QR_PATTERN = [
   1,1,1,1,1,1,1,0,1,0,
   1,0,0,0,0,0,1,0,0,1,
@@ -75,6 +100,8 @@ function OdemeContent() {
   const [user, setUser] = useState<any>(null);
   const [loginError, setLoginError] = useState(false);
   const [cardDate, setCardDate] = useState("");
+  const [tesisCover, setTesisCover] = useState("/logo.png");
+  const [tesisAddress, setTesisAddress] = useState("");
 
   useEffect(() => {
     async function checkUser() {
@@ -103,6 +130,51 @@ function OdemeContent() {
       toplam: parseInt(params.get('fiyat') || '0'),
     });
   }, []);
+
+  useEffect(() => {
+    const tesisParam = res.tesis?.trim();
+    if (!tesisParam) {
+      setTesisCover("/logo.png");
+      setTesisAddress("");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const slugKey = tesisParam.toLowerCase();
+      const sel = "fotograflar, adres, ilce, sehir";
+      const { data: bySlug } = await supabase
+        .from("tesisler")
+        .select(sel)
+        .eq("slug", slugKey)
+        .maybeSingle();
+      let row = bySlug;
+      if (!row) {
+        const { data: byAd } = await supabase
+          .from("tesisler")
+          .select(sel)
+          .eq("ad", tesisParam)
+          .maybeSingle();
+        row = byAd ?? null;
+      }
+      if (!row) {
+        const { data: byIlike } = await supabase
+          .from("tesisler")
+          .select(sel)
+          .ilike("ad", tesisParam)
+          .maybeSingle();
+        row = byIlike ?? null;
+      }
+      if (cancelled) return;
+      if (!row) {
+        setTesisCover("/logo.png");
+        setTesisAddress("");
+        return;
+      }
+      setTesisCover(firstPhotoFromFotograflar(row.fotograflar));
+      setTesisAddress(addressFromTesisRow(row));
+    })();
+    return () => { cancelled = true; };
+  }, [res.tesis]);
 
   const guestCount = Math.max(1, Number.isFinite(res.kisi) && res.kisi >= 1 ? Math.floor(res.kisi) : 1);
 
@@ -394,13 +466,13 @@ function OdemeContent() {
                 </div>
                 <div className="card-body">
                   <div className="res-hotel">
-                    <img className="res-hotel-img" src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=200&fit=crop" alt="Zuzuu" />
+                    <img className="res-hotel-img" src={tesisCover} alt={res.tesis || "Tesis"} />
                     <div>
                       <div className="res-hotel-name">{res.tesis}</div>
                       <span className="res-hotel-cat">Beach Club</span>
                       <div className="res-hotel-loc">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                        Yalıkavak, Bodrum
+                        {tesisAddress}
                       </div>
                     </div>
                   </div>
@@ -716,12 +788,12 @@ function OdemeContent() {
         {/* SIDEBAR */}
         <div className="sidebar">
           <div className="sum-card">
-            <img className="sum-img" src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&fit=crop" alt="Zuzuu" />
+            <img className="sum-img" src={tesisCover} alt={res.tesis || "Tesis"} />
             <div className="sum-body">
               <div className="sum-name">{res.tesis}</div>
               <div className="sum-meta">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                Yalıkavak, Bodrum · Beach Club
+                {tesisAddress ? `${tesisAddress} · Beach Club` : "Beach Club"}
               </div>
               <div className="sum-rows">
                 <div className="sum-row"><span className="sum-row-l">📅 Tarih</span><span className="sum-row-v">{res.tarih}</span></div>
