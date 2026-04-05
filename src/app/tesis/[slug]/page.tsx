@@ -1836,7 +1836,31 @@ export default function TesisDetailPage() {
       {/* BOTTOM BANNER */}
       {selSzls.length > 0 && selStart && (
         <div className="bb">
-          <div className="bb-i">Seçilen: <b>{szlNames}</b> &nbsp;·&nbsp; <b>{days} gün</b>{!selEnd ? " (tek gün)" : ""}</div>
+          <div
+            className="bb-i"
+            style={
+              days >= 2
+                ? {
+                    background: "rgba(255,255,255,0.1)",
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                  }
+                : undefined
+            }
+          >
+            Seçilen: <b>{szlNames}</b> &nbsp;·&nbsp;{" "}
+            {days >= 2 ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: "0.95rem", color: "#fff" }}>
+                <span aria-hidden>📅</span>
+                <span>{days} gün</span>
+              </span>
+            ) : (
+              <>
+                <b>{days} gün</b>{!selEnd ? " (tek gün)" : ""}
+              </>
+            )}
+          </div>
           <div className="bb-p">₺{total.toLocaleString("tr-TR")}</div>
           <button className="bb-btn" onClick={goRes}>Rezervasyonu Tamamla →</button>
         </div>
