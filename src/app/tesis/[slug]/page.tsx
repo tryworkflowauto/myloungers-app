@@ -549,6 +549,31 @@ export default function TesisDetailPage() {
     const sezlonglar = selSzls.map(s => s.no).join(",");
     const toplamFiyat = total;
 
+    const { data: authRez } = await supabase.auth.getUser();
+    const kullaniciId = authRez?.user?.id ?? null;
+
+    let sezlongIdVal: string | null = null;
+    const tesisIdForSez = row?.id as string | undefined;
+    if (tesisIdForSez) {
+      for (const s of selSzls) {
+        const z = zones.find((zn) => zn.key === s.zoneKey);
+        const prefix = z?.prefix ?? "";
+        const numara = prefix ? parseInt(s.no.slice(prefix.length), 10) : NaN;
+        if (!Number.isFinite(numara)) continue;
+        const { data: szRow } = await supabase
+          .from("sezlonglar")
+          .select("id")
+          .eq("grup_id", s.zoneKey)
+          .eq("numara", numara)
+          .eq("tesis_id", tesisIdForSez)
+          .maybeSingle();
+        if (szRow?.id) {
+          sezlongIdVal = String(szRow.id);
+          break;
+        }
+      }
+    }
+
     // Supabase üzerinde rezervasyon kaydı oluştur
     let rezervasyonIdParam: string | null = null;
     try {
@@ -556,8 +581,8 @@ export default function TesisDetailPage() {
         .from("rezervasyonlar")
         .insert({
           tesis_id: row?.id ?? null,
-          kullanici_id: null,           // (isteğe göre giriş yapan kullanıcı id'si ile doldurulabilir)
-          sezlong_id: null,             // çoklu seçimde ayrı tabloya taşınabilir; şimdilik boş
+          kullanici_id: kullaniciId,
+          sezlong_id: sezlongIdVal,
           baslangic_tarih: startStr,
           bitis_tarih: endStr,
           kisi_sayisi: selSzls.length,
