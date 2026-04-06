@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-function redirectForResponseCode(req: Request, responseCode: string) {
+function redirectForResponseCode(responseCode: string) {
   const ok = responseCode === "00";
-  const path = ok ? "/profil" : "/odeme?sonuc=hata";
-  return NextResponse.redirect(new URL(path, req.url));
+  if (ok) return NextResponse.redirect("https://myloungers.com/profil");
+  return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
 }
 
 export async function GET(req: Request) {
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
       u.searchParams.get("responseCode") ||
       u.searchParams.get("RESPONSECODE") ||
       "";
-    return redirectForResponseCode(req, responseCode);
+    return redirectForResponseCode(responseCode);
   } catch (err) {
     console.error("[paratika/callback] GET error:", err);
     return NextResponse.redirect(new URL("/odeme?sonuc=hata", req.url));
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         String(form.get("responseCode") || form.get("RESPONSECODE") || "");
     }
 
-    return redirectForResponseCode(req, responseCode);
+    return redirectForResponseCode(responseCode);
   } catch (err) {
     console.error("[paratika/callback] route error:", err);
     const url = new URL("/odeme?sonuc=hata", req.url);

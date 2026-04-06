@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     params.append('MERCHANTUSER', 'myloungers.info@gmail.com');
     params.append('MERCHANTPASSWORD', process.env.PARATIKA_PASSWORD!);
     params.append('ACTION', 'SESSIONTOKEN');
-    params.append('SESSIONTYPE', 'PAYMENTSESSION');
+    params.append('SESSIONTYPE', 'PAYMENTSESSION3D');
     params.append('RETURNURL', 'https://myloungers.com/api/paratika/callback');
     params.append('MERCHANTPAYMENTID', orderId);
     params.append('AMOUNT', parseFloat(amount).toFixed(2));
