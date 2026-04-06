@@ -550,19 +550,26 @@ export default function TesisDetailPage() {
     const toplamFiyat = total;
 
     // Supabase üzerinde rezervasyon kaydı oluştur
+    let rezervasyonIdParam: string | null = null;
     try {
-      const { error: rezError } = await supabase.from("rezervasyonlar").insert({
-        tesis_id: row?.id ?? null,
-        kullanici_id: null,           // (isteğe göre giriş yapan kullanıcı id'si ile doldurulabilir)
-        sezlong_id: null,             // çoklu seçimde ayrı tabloya taşınabilir; şimdilik boş
-        baslangic_tarih: startStr,
-        bitis_tarih: endStr,
-        kisi_sayisi: selSzls.length,
-        toplam_tutar: toplamFiyat,
-        durum: "bekliyor",
-      });
+      const { data: rezData, error: rezError } = await supabase
+        .from("rezervasyonlar")
+        .insert({
+          tesis_id: row?.id ?? null,
+          kullanici_id: null,           // (isteğe göre giriş yapan kullanıcı id'si ile doldurulabilir)
+          sezlong_id: null,             // çoklu seçimde ayrı tabloya taşınabilir; şimdilik boş
+          baslangic_tarih: startStr,
+          bitis_tarih: endStr,
+          kisi_sayisi: selSzls.length,
+          toplam_tutar: toplamFiyat,
+          durum: "bekliyor",
+        })
+        .select("id")
+        .single();
       if (rezError) {
         console.error("Rezervasyon oluşturma hatası:", rezError);
+      } else if (rezData?.id) {
+        rezervasyonIdParam = String(rezData.id);
       }
     } catch (e) {
       console.error("Rezervasyon oluşturma beklenmeyen hata:", e);
@@ -577,6 +584,7 @@ export default function TesisDetailPage() {
       kisi: String(selSzls.length),
       fiyat: String(toplamFiyat),
     });
+    if (rezervasyonIdParam) params.set("rezervasyonId", rezervasyonIdParam);
     router.push("/odeme?" + params.toString());
   }
 

@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-function redirectForResponseCode(responseCode: string) {
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+async function redirectForResponseCode(responseCode: string, merchantPaymentId: string | null) {
   const ok = responseCode === "00";
+  if (ok && merchantPaymentId) {
+    const { error } = await supabaseAdmin
+      .from("rezervasyonlar")
+      .update({ durum: "onaylandi" })
+      .eq("id", merchantPaymentId);
+    if (error) console.error("[paratika/callback] rezervasyon güncelleme:", error);
+  }
   if (ok) return NextResponse.redirect("https://myloungers.com/profil");
   return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
 }
@@ -13,7 +27,11 @@ export async function GET(req: Request) {
       u.searchParams.get("responseCode") ||
       u.searchParams.get("RESPONSECODE") ||
       "";
-    return redirectForResponseCode(responseCode);
+    const merchantPaymentId =
+      u.searchParams.get("MERCHANTPAYMENTID") ||
+      u.searchParams.get("merchantPaymentId") ||
+      null;
+    return await redirectForResponseCode(responseCode, merchantPaymentId);
   } catch (err) {
     console.error("[paratika/callback] GET error:", err);
     return NextResponse.redirect(new URL("/odeme?sonuc=hata", req.url));
@@ -24,6 +42,7 @@ export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") || "";
     let responseCode = "";
+    let merchantPaymentId: string | null = null;
 
     if (contentType.includes("application/x-www-form-urlencoded")) {
       const raw = await req.text();
@@ -32,13 +51,20 @@ export async function POST(req: Request) {
         params.get("responseCode") ||
         params.get("RESPONSECODE") ||
         "";
+      merchantPaymentId =
+        params.get("MERCHANTPAYMENTID") ||
+        params.get("merchantPaymentId") ||
+        null;
     } else {
       const form = await req.formData();
       responseCode =
         String(form.get("responseCode") || form.get("RESPONSECODE") || "");
+      const mp =
+        form.get("MERCHANTPAYMENTID") || form.get("merchantPaymentId");
+      merchantPaymentId = mp != null && String(mp).trim() !== "" ? String(mp) : null;
     }
 
-    return redirectForResponseCode(responseCode);
+    return await redirectForResponseCode(responseCode, merchantPaymentId);
   } catch (err) {
     console.error("[paratika/callback] route error:", err);
     const url = new URL("/odeme?sonuc=hata", req.url);
