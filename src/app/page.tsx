@@ -1433,17 +1433,21 @@ export default function Home() {
             <img src="/logo.png" alt="MyLoungers" className="fl-logo" />
             <p className="fd" id="footer-desc">{t.footer_desc}</p>
             <div className="fa">
-              <a href="#" className="fapp">🍎 App Store</a>
-              <a href="#" className="fapp">🤖 Google Play</a>
+              <a href="#" className="fapp">
+                <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style={{ width: 140, height: 42 }} />
+              </a>
+              <a href="#" className="fapp">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play'den edinin" style={{ width: 140, height: 42 }} />
+              </a>
             </div>
           </div>
           <div className="fcol">
             <h5 id="ft-p">Platform</h5>
             <ul>
               <li><a href="/arama" id="ft-p1">Tesisleri Keşfet</a></li>
-              <li><a href="/harita" id="ft-p2">Harita ile Ara</a></li>
               <li><a href="/nasil-calisir" id="ft-p3">Nasıl Çalışır?</a></li>
               <li><a href="/rezervasyonlarim" id="ft-p4">Rezervasyon Takibi</a></li>
+              <li><a href="/sss" id="ft-p2">SSS</a></li>
             </ul>
           </div>
           <div className="fcol">
@@ -1460,6 +1464,8 @@ export default function Home() {
               <li><a href="/kvkk" id="ft-s1">KVKK Metni</a></li>
               <li><a href="/gizlilik" id="ft-s2">Gizlilik</a></li>
               <li><a href="/iptal-iade" id="ft-s3">İptal &amp; İade</a></li>
+              <li><a href="/kullanim-kosullari" id="ft-s4">Kullanım Koşulları</a></li>
+              <li><a href="/cerez-politikasi" id="ft-s5">Çerez Politikası</a></li>
             </ul>
           </div>
         </div>

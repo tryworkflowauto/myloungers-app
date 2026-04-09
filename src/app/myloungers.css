@@ -309,7 +309,7 @@ a.pc,a.pc-link{text-decoration:none;color:inherit;display:block}
 .rc-loc{font-size:.65rem;color:var(--ink3);margin-top:1px}
 footer{background:var(--navy);padding:48px 24px 22px}
 .ft{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:14px}
-.fl-logo{height:52px;width:auto;margin-bottom:11px;display:block;filter:brightness(0) invert(1)}
+.fl-logo{height:104px;width:auto;margin-bottom:11px;display:block;filter:brightness(0) invert(1)}
 .fd{font-size:.74rem;color:rgba(255,255,255,.4);line-height:1.75;max-width:200px;margin-bottom:12px}
 .fa{display:flex;gap:6px;flex-wrap:wrap}
 .fapp{display:flex;align-items:center;gap:5px;font-size:.68rem;font-weight:700;color:rgba(255,255,255,.7);border:1.5px solid rgba(255,255,255,.15);border-radius:var(--r);padding:5px 9px;text-decoration:none}
