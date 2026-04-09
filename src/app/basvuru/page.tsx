@@ -130,68 +130,12 @@ export default function BasvuruPage() {
         <span className="bav-hero-tag">✦ PARTNER PROGRAMI</span>
         <h1 className="bav-hero-ttl">Tesisinizi MyLoungers&apos;a <span>Ekleyin</span></h1>
         <p className="bav-hero-desc">Bodrum&apos;un en büyük dijital rezervasyon platformunda yerinizi alın. Kurulum ücretsiz, ilk ay komisyon yok.</p>
-        <div className="bav-hero-stats">
-          <div className="bav-hstat"><span className="bav-hstat-n">500+</span><span className="bav-hstat-l">Aktif Kullanıcı</span></div>
-          <div className="bav-hstat"><span className="bav-hstat-n">₺0</span><span className="bav-hstat-l">Kurulum Ücreti</span></div>
-          <div className="bav-hstat"><span className="bav-hstat-n">24s</span><span className="bav-hstat-l">Onay Süresi</span></div>
-        </div>
       </div>
 
       {/* MAIN */}
-      <div className="bav-main">
-        {/* SOL */}
-        <div className="bav-left">
-          <h2 className="bav-why-ttl">Neden MyLoungers?</h2>
-          <div className="bav-feat-list">
-            <div className="bav-feat">
-              <div className="bav-feat-icon">📊</div>
-              <div>
-                <div className="bav-feat-title">Daha Fazla Rezervasyon</div>
-                <div className="bav-feat-desc">Günlük yüzlerce kullanıcıya ulaşın, doluluk oranınızı artırın.</div>
-              </div>
-            </div>
-            <div className="bav-feat">
-              <div className="bav-feat-icon">💳</div>
-              <div>
-                <div className="bav-feat-title">Kolay Ödeme</div>
-                <div className="bav-feat-desc">Anlık rezervasyon bildirimleri ve otomatik ödeme takibi.</div>
-              </div>
-            </div>
-            <div className="bav-feat">
-              <div className="bav-feat-icon">📱</div>
-              <div>
-                <div className="bav-feat-title">Mobil Yönetim</div>
-                <div className="bav-feat-desc">Tüm rezervasyonlarınızı telefonunuzdan yönetin.</div>
-              </div>
-            </div>
-            <div className="bav-feat">
-              <div className="bav-feat-icon">🎯</div>
-              <div>
-                <div className="bav-feat-title">Ücretsiz Başlangıç</div>
-                <div className="bav-feat-desc">İlk ay tamamen ücretsiz, komisyon yok.</div>
-              </div>
-            </div>
-          </div>
-          <div className="bav-ref-card">
-            <div className="bav-ref-stars">★★★★★</div>
-            <p className="bav-ref-text">MyLoungers sayesinde rezervasyonlarımız %40 arttı. Kurulum çok kolaydı.</p>
-            <div className="bav-ref-auth">
-              <div className="bav-ref-av">MK</div>
-              <div>
-                <div className="bav-ref-name">Mehmet K.</div>
-                <div className="bav-ref-role">Zuzuu Beach Hotel, Bodrum</div>
-              </div>
-            </div>
-          </div>
-          <div className="bav-trust-bar">
-            <span>🔒 SSL Güvenli</span>
-            <span>✓ Ücretsiz Kurulum</span>
-            <span>⚡ 24s Onay</span>
-          </div>
-        </div>
-
+      <div className="bav-main" style={{ gridTemplateColumns: "1fr", justifyItems: "center" }}>
         {/* SAĞ - FORM */}
-        <div className="bav-form-card">
+        <div className="bav-form-card" style={{ width: "100%", maxWidth: 760 }}>
           {!submitted ? (
             <>
               <div className="bav-steps">

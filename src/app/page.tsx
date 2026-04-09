@@ -1312,57 +1312,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PLAN */}
-      <section className="plan-sec">
-        <div>
-          <div className="plan-k" id="plan-tag">Şezlong Planı</div>
-          <h2 id="plan-title">Tam istediğin şezlongu harita üzerinden seç</h2>
-          <p className="pdesc" id="plan-desc">Tesis planında müsait şezlongları anlık görürsün.</p>
-          <ul className="cl">
-            <li id="plan-f1">Anlık müsaitlik durumu</li>
-            <li id="plan-f2">Silver, Gold, VIP kategori fiyatları</li>
-            <li id="plan-f3">İleri tarihli rezervasyon imkânı</li>
-            <li id="plan-f4">Garson çağırma ve sipariş</li>
-          </ul>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <a href="/tesis/reklamotv" className="btn-solid" id="plan-btn1">Tesis planını gör →</a>
-            <button type="button" className="btn-ghost" id="plan-btn2">Daha fazla bilgi</button>
-          </div>
-        </div>
-        <div className="pww">
-          <div className="pwt">
-            <span className="pwn">{planTesisAd}</span>
-            <span className="pwd">{planTarih}</span>
-          </div>
-          <div className="pwb">
-            <div className="pw-cat-row">
-              <span className="pw-cat-lbl">SILVER</span>
-              <span className="pw-cat-price">₺{planSilverFiyat.toLocaleString("tr-TR")} / GÜN</span>
-            </div>
-            <div className="lrow">
-              {[4,5,6,7,8,9,28,30].map((n, i) => (
-                <div key={n} className={`l ${i === 7 ? "lsel" : i === 6 ? "lno" : "lok"}`}>{n}</div>
-              ))}
-            </div>
-            <div className="pw-cat-row" style={{marginTop:"14px"}}>
-              <span className="pw-cat-lbl">GOLD</span>
-              <span className="pw-cat-price">₺{planGoldFiyat.toLocaleString("tr-TR")} / GÜN</span>
-            </div>
-            <div className="lrow">
-              {[1,2,3,4,5,6,7,8].map((n, i) => (
-                <div key={n} className={`l lgold ${i === 2 ? "lno" : i === 5 ? "lpnd" : "lok"}`}>{n}</div>
-              ))}
-            </div>
-          </div>
-          <div className="pwleg">
-            <div className="pwl"><div className="pwld lok" /><span>Müsait</span></div>
-            <div className="pwl"><div className="pwld lno" /><span>Rezerve</span></div>
-            <div className="pwl"><div className="pwld lpnd" /><span>Tadilat</span></div>
-            <div className="pwl"><div className="pwld lsel" /><span>Seçimim</span></div>
-          </div>
-        </div>
-      </section>
-
       {/* B2B */}
       <section className="b2b">
         <div className="b2b-in">
@@ -1446,14 +1395,14 @@ export default function Home() {
             <ul>
               <li><a href="/arama" id="ft-p1">Tesisleri Keşfet</a></li>
               <li><a href="/nasil-calisir" id="ft-p3">Nasıl Çalışır?</a></li>
-              <li><a href="/rezervasyonlarim" id="ft-p4">Rezervasyon Takibi</a></li>
+              <li><a href="/profil" id="ft-p4">Rezervasyon Takibi</a></li>
               <li><a href="/sss" id="ft-p2">SSS</a></li>
             </ul>
           </div>
           <div className="fcol">
             <h5 id="ft-c">Kurumsal</h5>
             <ul>
-              <li><a href="/b2b/basvuru" id="ft-c1">Tesis Başvurusu</a></li>
+              <li><a href="/basvuru" id="ft-c1">Tesis Başvurusu</a></li>
               <li><a href="/hakkimizda" id="ft-c2">Hakkımızda</a></li>
               <li><a href="/iletisim" id="ft-c3">İletişim</a></li>
             </ul>
