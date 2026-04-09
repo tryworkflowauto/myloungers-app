@@ -377,10 +377,29 @@ export default function ProfilPage() {
     (r) => resFilter === "all" || r.status === resFilter
   );
 
-  function cancelRes(id: number) {
-    if (confirm("Rezervasyonu iptal etmek istediğinize emin misiniz?")) {
-      setReservations(prev => prev.map(r => r.id === id ? { ...r, status:"cancel", statusTxt:"✗ İptal", statusCss:"background:#FEF2F2;color:#DC2626;border-color:#FECACA" } : r));
+  async function cancelRes(id: number | string) {
+    if (!confirm("Rezervasyonu iptal etmek istediğinize emin misiniz?")) return;
+    const { error } = await supabase
+      .from("rezervasyonlar")
+      .update({ durum: "iptal" })
+      .eq("id", id);
+    if (error) {
+      alert("Rezervasyon iptal edilemedi: " + (error.message || "Bilinmeyen hata"));
+      return;
     }
+    setReservations((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: "cancel",
+              statusTxt: "✗ İptal",
+              statusCss:
+                "background:#FEF2F2;color:#DC2626;border-color:#FECACA",
+            }
+          : r
+      )
+    );
   }
 
   function submitReview() {
