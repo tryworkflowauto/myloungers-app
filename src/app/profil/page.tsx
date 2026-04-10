@@ -317,6 +317,12 @@ export default function ProfilPage() {
             szlLabel = grupAd;
           }
 
+          const idForCode = String(r.id ?? "");
+          const resCode =
+            grupAd && hasNum
+              ? `MYL-${grupAd.charAt(0).toUpperCase()}${String(sezlongNum).trim()}`
+              : idForCode.replace(/-/g, "").slice(0, 8);
+
           const slugDb = tesisInfo?.slug?.trim();
           const slugFromAd = tesisInfo?.ad
             ? tesisInfo.ad.trim().toLowerCase().replace(/\s+/g, "-")
@@ -331,7 +337,7 @@ export default function ProfilPage() {
             name: tesisInfo?.ad || `Tesis #${r.tesis_id ?? ""}`,
             cat: "Beach Club",
             loc: tesisInfo?.loc || "-",
-            code: `MYL-${String(r.id).padStart(4, "0")}`,
+            code: resCode,
             dates,
             szl: szlLabel,
             gun,
@@ -1029,7 +1035,7 @@ export default function ProfilPage() {
                           <span className="rc-loc">📍 {r.loc}</span>
                         </div>
                       </div>
-                      <div className="rc-code">{r.code}</div>
+                      <div className="rc-code" title={String(r.id)}>{r.code}</div>
                     </div>
                     <div className="rc-rows">
                       <div className="rc-row"><span>📅</span><span className="rc-row-t">Tarih</span><span className="rc-row-v">{r.dates}</span></div>
