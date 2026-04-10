@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -96,6 +96,7 @@ function OdemeContent() {
   const [kvkk, setKvkk] = useState(false);
   const [kvkkErr, setKvkkErr] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const paymentInFlightRef = useRef(false);
   const [paymentError, setPaymentError] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loginError, setLoginError] = useState(false);
@@ -241,6 +242,8 @@ function OdemeContent() {
   const paymentResult = queryParams?.get("sonuc");
 
   async function startParatikaPayment() {
+    if (paymentInFlightRef.current) return;
+    paymentInFlightRef.current = true;
     try {
       setPaymentError(false);
       setPaymentLoading(true);
@@ -266,6 +269,7 @@ function OdemeContent() {
       window.location.href = payUrl;
     } catch (err) {
       console.error("Paratika ödeme başlatma hatası:", err);
+      paymentInFlightRef.current = false;
       setPaymentLoading(false);
       setPaymentError(true);
     }
@@ -715,7 +719,7 @@ function OdemeContent() {
                 <button className="btn-secondary" onClick={() => goStep(2)}>← Geri</button>
                 <button className="btn-primary" onClick={startParatikaPayment} disabled={paymentLoading} style={paymentLoading ? { opacity: 0.8, cursor: "not-allowed" } : undefined}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  {paymentLoading ? "Ödeme başlatılıyor..." : `₺${res.toplam.toLocaleString("tr-TR")} Öde ve Rezervasyonu Tamamla`}
+                  {paymentLoading ? "İşleniyor..." : `₺${res.toplam.toLocaleString("tr-TR")} Öde ve Rezervasyonu Tamamla`}
                 </button>
               </div>
             </div>
