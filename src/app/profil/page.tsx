@@ -196,7 +196,7 @@ export default function ProfilPage() {
             "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
-          .eq("durum", "onaylandi")
+          .in("durum", ["onaylandi", "iptal"])
           .order("baslangic_tarih", { ascending: false });
 
         if (rezError) {
