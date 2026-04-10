@@ -109,8 +109,6 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
 const LANG_OPTS = [
   { code: "tr", flag: "🇹🇷", label: "TR", name: "Türkçe" },
   { code: "en", flag: "🇬🇧", label: "EN", name: "English" },
-  { code: "de", flag: "🇩🇪", label: "DE", name: "Deutsch" },
-  { code: "ru", flag: "🇷🇺", label: "RU", name: "Русский" },
 ];
 
 const SLIDER_IMGS = [
@@ -218,7 +216,7 @@ function homeShortName(full: string): string {
 
 export default function Home() {
   const router = useRouter();
-  const [currentLang, setCurrentLang] = useState<"tr" | "en" | "de" | "ru">("tr");
+  const [currentLang, setCurrentLang] = useState<"tr" | "en">("tr");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [slideIdx, setSlideIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -688,7 +686,7 @@ export default function Home() {
                       role="option"
                       aria-selected={currentLang === opt.code}
                       className={`lang-drop-item ${currentLang === opt.code ? "active" : ""}`}
-                      onClick={(e) => { e.stopPropagation(); setCurrentLang(opt.code as "tr" | "en" | "de" | "ru"); setIsLangOpen(false); }}
+                      onClick={(e) => { e.stopPropagation(); setCurrentLang(opt.code as "tr" | "en"); setIsLangOpen(false); }}
                     >
                       <span>{opt.flag}</span>
                       <span className="lang-drop-name">{opt.name}</span>
@@ -813,7 +811,7 @@ export default function Home() {
           </div>
           <div className="mob-lang-dropdown">
             {LANG_OPTS.map((opt) => (
-              <button key={opt.code} type="button" className={`mob-lang-item ${currentLang === opt.code ? "active" : ""}`} onClick={() => setCurrentLang(opt.code as "tr" | "en" | "de" | "ru")}>
+              <button key={opt.code} type="button" className={`mob-lang-item ${currentLang === opt.code ? "active" : ""}`} onClick={() => setCurrentLang(opt.code as "tr" | "en")}>
                 <span>{opt.flag}</span>
                 <span>{opt.name}</span>
                 {currentLang === opt.code && <span className="lang-check">✓</span>}
