@@ -19,6 +19,7 @@ type Reservation = {
   statusTxt: string;
   statusCss: string;
   img: string;
+  slug?: string;
   stars?: number;
   review?: boolean;
 };
@@ -192,7 +193,7 @@ export default function ProfilPage() {
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .select(
-            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum"
+            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
           .eq("durum", "onaylandi")
@@ -212,12 +213,12 @@ export default function ProfilPage() {
           )
         );
 
-        const tesisMap: Record<number, { ad: string; loc: string }> = {};
+        const tesisMap: Record<number, { ad: string; loc: string; slug: string | null }> = {};
 
         if (tesisIds.length) {
           const { data: tesisData, error: tesisError } = await supabase
             .from("tesisler")
-            .select("id, ad, sehir, ilce")
+            .select("id, ad, sehir, ilce, slug")
             .in("id", tesisIds);
 
           if (tesisError) {
@@ -228,6 +229,7 @@ export default function ProfilPage() {
               tesisMap[t.id] = {
                 ad: t.ad || `Tesis #${t.id}`,
                 loc: locParts || "-",
+                slug: typeof t.slug === "string" && t.slug.trim() ? t.slug.trim() : null,
               };
             });
           }
@@ -296,6 +298,33 @@ export default function ProfilPage() {
 
           const meta = STATUS_META[statusKey];
           const tesisInfo = r.tesis_id ? tesisMap[r.tesis_id] : undefined;
+          const sl = (r as {
+            sezlong?: {
+              numara?: number | string | null;
+              grup?: { ad?: string | null } | null;
+            } | null;
+          }).sezlong;
+          const grupAd = sl?.grup?.ad?.trim();
+          const sezlongNum = sl?.numara;
+          const hasNum = sezlongNum != null && String(sezlongNum).trim() !== "";
+          let szlLabel = "-";
+          if (grupAd && hasNum) {
+            const prefix = grupAd.charAt(0).toUpperCase();
+            szlLabel = `${grupAd} - ${prefix}${sezlongNum}`;
+          } else if (hasNum) {
+            szlLabel = `No: ${sezlongNum}`;
+          } else if (grupAd) {
+            szlLabel = grupAd;
+          }
+
+          const slugDb = tesisInfo?.slug?.trim();
+          const slugFromAd = tesisInfo?.ad
+            ? tesisInfo.ad.trim().toLowerCase().replace(/\s+/g, "-")
+            : "";
+          const tesisSlug =
+            slugDb ||
+            slugFromAd ||
+            (r.tesis_id != null ? `tesis-${r.tesis_id}` : "");
 
           return {
             id: r.id,
@@ -304,13 +333,14 @@ export default function ProfilPage() {
             loc: tesisInfo?.loc || "-",
             code: `MYL-${String(r.id).padStart(4, "0")}`,
             dates,
-            szl: "-",
+            szl: szlLabel,
             gun,
             odenen: `₺${Number(r.toplam_tutar || 0).toLocaleString("tr-TR")}`,
             status: statusKey,
             statusTxt: meta.txt,
             statusCss: meta.css,
             img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
+            slug: tesisSlug,
             stars: undefined,
             review: false,
           };
@@ -676,9 +706,20 @@ export default function ProfilPage() {
           .phero{padding:20px 14px}
           .phero-inner{flex-wrap:wrap;gap:14px}
           .ppage{padding:14px 12px 80px}
-          .res-card{flex-direction:column}
-          .rc-img-wrap{width:100%;height:160px}
+          .res-card{flex-direction:column;width:100%;max-width:100%;min-width:0;overflow:hidden}
+          .res-card,.res-card *{box-sizing:border-box;max-width:100%}
+          .rc-img-wrap{width:100%;height:160px;max-width:100%;min-width:0}
+          .rc-body{min-width:0}
+          .rc-top{min-width:0;align-items:flex-start}
+          .rc-top > div:first-child{flex:1;min-width:0}
+          .rc-code{flex-shrink:1;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
           .rc-rows{grid-template-columns:1fr}
+          .rc-row{min-width:0;max-width:100%;flex-direction:row;overflow:hidden;flex-wrap:nowrap}
+          .rc-row-v{min-width:0;flex-shrink:1;margin-left:0;text-align:left}
+          .rc-footer{flex-wrap:wrap;min-width:0;max-width:100%}
+          .rc-footer > div:last-child{width:100%;margin-left:0;display:flex;flex-direction:column;gap:8px}
+          .rc-footer > div:last-child > button{width:100%}
+          .btn-cancel, .btn-detail{width:100%}
           .profile-grid{grid-template-columns:1fr}
           .pf-group.full{grid-column:auto}
           .fav-grid{grid-template-columns:1fr}
@@ -1001,7 +1042,7 @@ export default function ProfilPage() {
                       {"review" in r && r.review && <button className="btn-review" onClick={() => { setReviewTarget(r.id); setReviewModal(true); }}>⭐ Değerlendir</button>}
                       <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
                         {r.status !== "cancel" && r.status !== "past" && <button className="btn-cancel" onClick={() => cancelRes(r.id)}>İptal Et</button>}
-                        <button className="btn-detail" onClick={() => router.push("/hotel/zuzuu-beach-hotel")}>Tesise Git →</button>
+                        <button className="btn-detail" onClick={() => router.push("/tesis/" + (r.slug || r.name.trim().toLowerCase().replace(/\s+/g, "-")))}>Tesise Git →</button>
                       </div>
                     </div>
                   </div>
