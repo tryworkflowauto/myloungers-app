@@ -844,6 +844,17 @@ export default function Home() {
                 )}
                 <button
                   type="button"
+                  className="mob-link"
+                  style={{ display: "block", padding: "12px 0" }}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push("/profil");
+                  }}
+                >
+                  Profilim
+                </button>
+                <button
+                  type="button"
                   className="mob-btn-login"
                   onClick={() => {
                     setMenuOpen(false);
