@@ -31,6 +31,7 @@ async function redirectForResponseCode(
 export async function GET(req: Request) {
   try {
     const u = new URL(req.url);
+    console.log("[callback GET]", Object.fromEntries(u.searchParams));
     const responseCode =
       u.searchParams.get("responseCode") ||
       u.searchParams.get("RESPONSECODE") ||
@@ -58,6 +59,7 @@ export async function POST(req: Request) {
     if (contentType.includes("application/x-www-form-urlencoded")) {
       const raw = await req.text();
       const params = new URLSearchParams(raw);
+      console.log("[callback POST]", Object.fromEntries(params));
       responseCode =
         params.get("responseCode") ||
         params.get("RESPONSECODE") ||
@@ -69,6 +71,7 @@ export async function POST(req: Request) {
       pgtranid = params.get("PGTRANID") || params.get("pgtranid") || null;
     } else {
       const form = await req.formData();
+      console.log("[callback POST]", Object.fromEntries(form));
       responseCode =
         String(form.get("responseCode") || form.get("RESPONSECODE") || "");
       const mp =
