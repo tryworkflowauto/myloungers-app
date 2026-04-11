@@ -41,7 +41,10 @@ export async function GET(req: Request) {
       u.searchParams.get("merchantPaymentId") ||
       null;
     const pgtranid =
-      u.searchParams.get("PGTRANID") || u.searchParams.get("pgtranid") || null;
+      u.searchParams.get("pgTranId") ||
+      u.searchParams.get("PGTRANID") ||
+      u.searchParams.get("pgtranid") ||
+      null;
     return await redirectForResponseCode(responseCode, merchantPaymentId, pgtranid);
   } catch (err) {
     console.error("[paratika/callback] GET error:", err);
@@ -78,7 +81,9 @@ export async function POST(req: Request) {
         form.get("MERCHANTPAYMENTID") || form.get("merchantPaymentId");
       merchantPaymentId = mp != null && String(mp).trim() !== "" ? String(mp) : null;
       const pg =
-        form.get("PGTRANID") || form.get("pgtranid");
+        form.get("pgTranId") ||
+        form.get("PGTRANID") ||
+        form.get("pgtranid");
       pgtranid =
         pg != null && String(pg).trim() !== "" ? String(pg).trim() : null;
     }
