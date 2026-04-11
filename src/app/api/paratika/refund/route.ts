@@ -47,24 +47,17 @@ export async function POST(req: NextRequest) {
     params.append("CURRENCY", "TRY");
     params.append("PGTRANID", String(pgtranid).trim());
 
-    const res = await fetch("https://vpos.paratika.com.tr/paratika/api/v2", {
+    const paratResponse = await fetch("https://vpos.paratika.com.tr/paratika/api/v2", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
     });
 
-    const text = await res.text();
-    let data: Record<string, unknown>;
-    try {
-      data = JSON.parse(text) as Record<string, unknown>;
-    } catch {
-      return NextResponse.json(
-        { error: "Paratika yanıtı çözülemedi", raw: text },
-        { status: 502 }
-      );
-    }
+    const rawText = await paratResponse.text();
+    console.log("[refund] paratika response:", rawText);
+    const parsed = new URLSearchParams(rawText);
 
-    if (data.responseCode === "00") {
+    if (parsed.get("responseCode") === "00") {
       const { error: updateError } = await supabaseAdmin
         .from("rezervasyonlar")
         .update({ durum: "iptal" })
@@ -77,10 +70,13 @@ export async function POST(req: NextRequest) {
     }
 
     const errMsg =
-      (typeof data.errorMsg === "string" && data.errorMsg) ||
-      (typeof data.message === "string" && data.message) ||
+      parsed.get("errorMsg") ||
+      parsed.get("message") ||
       "İade başarısız";
-    return NextResponse.json({ error: errMsg, raw: data }, { status: 400 });
+    return NextResponse.json(
+      { error: errMsg, raw: Object.fromEntries(parsed) },
+      { status: 400 }
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Sunucu hatası";
     console.error("[paratika/refund]", err);
