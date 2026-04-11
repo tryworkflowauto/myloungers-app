@@ -71,7 +71,11 @@ export async function POST(req: Request) {
         params.get("MERCHANTPAYMENTID") ||
         params.get("merchantPaymentId") ||
         null;
-      pgtranid = params.get("PGTRANID") || params.get("pgtranid") || null;
+      pgtranid =
+        params.get("pgTranId") ||
+        params.get("PGTRANID") ||
+        params.get("pgtranid") ||
+        null;
     } else {
       const form = await req.formData();
       console.log("[callback POST]", Object.fromEntries(form));
