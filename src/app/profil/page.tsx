@@ -416,6 +416,25 @@ export default function ProfilPage() {
 
   async function cancelRes(id: number | string) {
     if (!confirm("Rezervasyonu iptal etmek istediğinize emin misiniz?")) return;
+    try {
+      const refundRes = await fetch("/api/paratika/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rezervasyonId: id }),
+      });
+      const refundData = (await refundRes.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!refundRes.ok || !refundData.success) {
+        alert(refundData.error || "İade işlemi başarısız.");
+        return;
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "İade işlemi başarısız.";
+      alert(msg);
+      return;
+    }
     const { error } = await supabase
       .from("rezervasyonlar")
       .update({ durum: "iptal" })
