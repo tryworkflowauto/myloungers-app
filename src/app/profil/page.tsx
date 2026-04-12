@@ -193,7 +193,7 @@ export default function ProfilPage() {
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .select(
-            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
+            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
           .in("durum", ["onaylandi", "iptal"])
@@ -317,11 +317,8 @@ export default function ProfilPage() {
             szlLabel = grupAd;
           }
 
-          const idForCode = String(r.id ?? "");
-          const resCode =
-            grupAd && hasNum
-              ? `MYL-${grupAd.charAt(0).toUpperCase()}${String(sezlongNum).trim()}`
-              : idForCode.replace(/-/g, "").slice(0, 8);
+          const codeStr =
+            r.rezervasyon_kodu == null ? "" : String(r.rezervasyon_kodu);
 
           const slugDb = tesisInfo?.slug?.trim();
           const slugFromAd = tesisInfo?.ad
@@ -337,7 +334,7 @@ export default function ProfilPage() {
             name: tesisInfo?.ad || `Tesis #${r.tesis_id ?? ""}`,
             cat: "Beach Club",
             loc: tesisInfo?.loc || "-",
-            code: resCode,
+            code: codeStr,
             dates,
             szl: szlLabel,
             gun,
