@@ -432,14 +432,6 @@ export default function ProfilPage() {
       alert(msg);
       return;
     }
-    const { error } = await supabase
-      .from("rezervasyonlar")
-      .update({ durum: "iptal" })
-      .eq("id", id);
-    if (error) {
-      alert("Rezervasyon iptal edilemedi: " + (error.message || "Bilinmeyen hata"));
-      return;
-    }
     setReservations((prev) =>
       prev.map((r) =>
         r.id === id

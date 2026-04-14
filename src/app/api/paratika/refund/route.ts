@@ -7,6 +7,17 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+/** YYYY-MM-DD in Europe/Istanbul (UTC+3) for calendar-day comparison */
+function istanbulDateKey(d: Date | string): string {
+  const date = typeof d === "string" ? new Date(d) : d;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -18,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const { data: row, error: fetchError } = await supabaseAdmin
       .from("rezervasyonlar")
-      .select("pgtranid, toplam_tutar")
+      .select("pgtranid, toplam_tutar, created_at")
       .eq("id", rezervasyonId)
       .maybeSingle();
 
@@ -39,13 +50,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PARATIKA_PASSWORD tanımlı değil" }, { status: 500 });
     }
 
+    const createdAt = row.created_at as string | null | undefined;
+    const sameDay =
+      createdAt != null &&
+      istanbulDateKey(createdAt) === istanbulDateKey(new Date());
+
     const params = new URLSearchParams();
-    params.append("ACTION", "REFUND");
+    if (sameDay) {
+      params.append("ACTION", "VOID");
+    } else {
+      params.append("ACTION", "REFUND");
+    }
     params.append("MERCHANTUSER", "myloungers.info@gmail.com");
     params.append("MERCHANTPASSWORD", merchantPassword);
     params.append("MERCHANT", "10008941");
-    params.append("CURRENCY", "TRY");
     params.append("PGTRANID", String(pgtranid).trim());
+    if (!sameDay) {
+      params.append("CURRENCY", "TRY");
+      params.append(
+        "ORDERITEMS",
+        JSON.stringify([
+          { productCode: "REZ-" + String(rezervasyonId), quantity: "1" },
+        ])
+      );
+    }
 
     const paratResponse = await fetch("https://vpos.paratika.com.tr/paratika/api/v2", {
       method: "POST",
