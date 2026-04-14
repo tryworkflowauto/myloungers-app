@@ -121,6 +121,9 @@ export default function ProfilPage() {
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [avatarDropdown, setAvatarDropdown] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
+  const [cancelModal, setCancelModal] = useState<{ id: string | number } | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -411,8 +414,16 @@ export default function ProfilPage() {
     (r) => resFilter === "all" || r.status === resFilter
   );
 
-  async function cancelRes(id: number | string) {
-    if (!confirm("Rezervasyonu iptal etmek istediğinize emin misiniz?")) return;
+  function cancelRes(id: number | string) {
+    setCancelError(null);
+    setCancelModal({ id });
+  }
+
+  async function confirmCancel() {
+    if (!cancelModal) return;
+    const id = cancelModal.id;
+    setCancelLoading(true);
+    setCancelError(null);
     try {
       const refundRes = await fetch("/api/paratika/refund", {
         method: "POST",
@@ -424,27 +435,31 @@ export default function ProfilPage() {
         error?: string;
       };
       if (!refundRes.ok || !refundData.success) {
-        alert(refundData.error || "İade işlemi başarısız.");
+        setCancelModal(null);
+        setCancelError(refundData.error || "İade işlemi başarısız.");
         return;
       }
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                status: "cancel",
+                statusTxt: "✗ İptal",
+                statusCss:
+                  "background:#FEF2F2;color:#DC2626;border-color:#FECACA",
+              }
+            : r
+        )
+      );
+      setCancelModal(null);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "İade işlemi başarısız.";
-      alert(msg);
-      return;
+      setCancelModal(null);
+      setCancelError(msg);
+    } finally {
+      setCancelLoading(false);
     }
-    setReservations((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: "cancel",
-              statusTxt: "✗ İptal",
-              statusCss:
-                "background:#FEF2F2;color:#DC2626;border-color:#FECACA",
-            }
-          : r
-      )
-    );
   }
 
   function submitReview() {
@@ -1342,6 +1357,31 @@ export default function ProfilPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {cancelModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16,backdropFilter:"blur(4px)"}}>
+          <div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:280,boxShadow:"0 8px 40px rgba(0,0,0,0.2)",overflow:"hidden"}}>
+            <div style={{padding:"16px 18px 0",textAlign:"center"}}>
+              <div style={{fontSize:"1.4rem",marginBottom:6}}>⚠️</div>
+              <div style={{fontSize:".82rem",fontWeight:900,color:"#0A1628",marginBottom:4}}>Rezervasyonu İptal Et</div>
+              <div style={{fontSize:".72rem",color:"#6B7280",lineHeight:1.6}}>Bu rezervasyonu iptal etmek istediğinize emin misiniz? İptal işlemi geri alınamaz ve ücret iadeniz başlatılır.</div>
+            </div>
+            <div style={{padding:"12px 18px 16px",display:"flex",gap:8}}>
+              <button type="button" onClick={() => setCancelModal(null)} style={{flex:1,padding:"9px",border:"1.5px solid #E5E7EB",borderRadius:9,background:"#fff",fontSize:".75rem",fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#6B7280"}}>Vazgeç</button>
+              <button type="button" onClick={confirmCancel} disabled={cancelLoading} style={{flex:1,padding:"9px",border:"none",borderRadius:9,background:cancelLoading?"#9CA3AF":"#DC2626",color:"#fff",fontSize:".75rem",fontWeight:700,cursor:cancelLoading?"not-allowed":"pointer",fontFamily:"inherit"}}>
+                {cancelLoading ? "İptal ediliyor..." : "Evet, İptal Et"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelError && (
+        <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#DC2626",color:"#fff",padding:"12px 24px",borderRadius:12,fontSize:".85rem",fontWeight:700,zIndex:700,boxShadow:"0 4px 20px rgba(0,0,0,0.2)"}}>
+          ❌ {cancelError}
+          <button type="button" onClick={() => setCancelError(null)} style={{marginLeft:12,background:"none",border:"none",color:"#fff",cursor:"pointer",fontWeight:900}}>✕</button>
         </div>
       )}
     </>
