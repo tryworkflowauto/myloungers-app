@@ -14,9 +14,36 @@ async function redirectForResponseCode(
 ) {
   const ok = responseCode === "00";
   if (ok && merchantPaymentId) {
-    const updatePayload: { durum: string; pgtranid?: string } = { durum: "onaylandi" };
+    const { data: rezRow, error: rezFetchErr } = await supabaseAdmin
+      .from("rezervasyonlar")
+      .select("toplam_tutar")
+      .eq("id", merchantPaymentId)
+      .maybeSingle();
+    if (rezFetchErr) {
+      console.error("[paratika/callback] toplam_tutar çekme:", rezFetchErr);
+    }
+    const rawTt = rezRow?.toplam_tutar;
+    const toplamTutar =
+      typeof rawTt === "number"
+        ? rawTt
+        : rawTt != null
+          ? Number(rawTt)
+          : NaN;
+
+    const updatePayload: {
+      durum: string;
+      pgtranid?: string;
+      bakiye_yuklenen?: number;
+      bakiye_kalan?: number;
+      bakiye_harcanan?: number;
+    } = { durum: "onaylandi" };
     if (pgtranid != null && String(pgtranid).trim() !== "") {
       updatePayload.pgtranid = String(pgtranid).trim();
+    }
+    if (!Number.isNaN(toplamTutar)) {
+      updatePayload.bakiye_yuklenen = toplamTutar;
+      updatePayload.bakiye_kalan = toplamTutar;
+      updatePayload.bakiye_harcanan = 0;
     }
     const { error } = await supabaseAdmin
       .from("rezervasyonlar")
