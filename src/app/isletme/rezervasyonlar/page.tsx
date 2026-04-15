@@ -99,7 +99,11 @@ function mapRowToRezervasyon(
 ): Rezervasyon {
   const idStr = String(r.id);
   const rawAd = r.musteri_adi ?? (r as { musteriAdi?: string | null }).musteriAdi;
-  const musteri = (rawAd != null && String(rawAd).trim() !== "") ? String(rawAd).trim() : (r.kullanicilar as { ad?: string } | null)?.ad?.trim() || "Misafir";
+  const kullAd = (r.kullanicilar as { ad?: string; soyad?: string; email?: string } | null)?.ad?.trim() || "";
+  const kullSoyad = (r.kullanicilar as { ad?: string; soyad?: string; email?: string } | null)?.soyad?.trim() || "";
+  const kullEmail = (r.kullanicilar as { ad?: string; soyad?: string; email?: string } | null)?.email?.trim() || "";
+  const rawAdStr = (rawAd != null && String(rawAd).trim() !== "") ? String(rawAd).trim() : "";
+  const musteri = rawAdStr || (kullAd && kullSoyad ? `${kullAd} ${kullSoyad}` : kullAd) || kullEmail || "Misafir";
   const telefon = r.telefon?.trim() || "—";
   const inits = musteri !== "Misafir" ? musteri.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") : "??";
   const startStr = r.baslangic_tarih ?? "";
@@ -305,7 +309,7 @@ export default function IsletmeRezervasyonlarPage() {
     setLoading(true);
     supabase
       .from("rezervasyonlar")
-      .select("id, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, kullanicilar(ad), sezlonglar(numara, sezlong_gruplari(ad))")
+      .select("id, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
       .eq("tesis_id", tesisId)
       .order("baslangic_tarih", { ascending: false })
       .then(({ data, error }) => {

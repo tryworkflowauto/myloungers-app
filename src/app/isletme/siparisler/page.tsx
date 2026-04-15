@@ -71,10 +71,10 @@ function mapSiparisToItem(
   if (diffM > 10) timerClass = "late";
   else if (diffM > 5) timerClass = "warn";
   const saat = created.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-  const grupAd = s.sezlonglar?.sezlong_gruplari?.ad?.trim() ?? "";
-  const numara = s.sezlonglar?.numara;
+  const grupAd = "";
+  const numara = s.sezlong_no;
   const sezlongStr = grupAd && numara != null ? `${grupAd.charAt(0)}${numara}` : numara != null ? String(numara) : "—";
-  const bg = s.sezlonglar?.sezlong_gruplari?.renk?.trim() || TEAL;
+  const bg = TEAL;
   const kalemler = (s.siparis_kalemleri ?? []) as { ad?: string; fiyat?: number; adet?: number }[];
   const urunler = kalemler.map((k) => ({
     adet: Number(k.adet ?? 1),
@@ -110,8 +110,8 @@ function mapSiparisToItem(
 
 function mapSiparisToGecmis(s: any, garsonMap: Map<string, Garson>, no: string): GecmisItem {
   const created = s.created_at ? new Date(s.created_at) : new Date();
-  const grupAd = s.sezlonglar?.sezlong_gruplari?.ad?.trim() ?? "";
-  const numara = s.sezlonglar?.numara;
+  const grupAd = "";
+  const numara = s.sezlong_no;
   const sezlongStr = grupAd && numara != null ? `${grupAd}-${numara} (${grupAd})` : numara != null ? String(numara) : "—";
   const kalemler = (s.siparis_kalemleri ?? []) as { ad?: string; adet?: number }[];
   const urunlerStr = kalemler.map((k) => `${k.adet ?? 1}x ${k.ad ?? "—"}`).join(", ");
@@ -344,8 +344,7 @@ export default function IsletmeSiparislerPage() {
     supabase
       .from("siparisler")
       .select(`
-        id, tesis_id, garson_id, durum, toplam, created_at,
-        sezlonglar(numara, sezlong_gruplari(ad, renk)),
+        id, tesis_id, garson_id, durum, toplam, created_at, sezlong_no, musteri_adi,
         rezervasyonlar(musteri_adi),
         siparis_kalemleri(ad, fiyat, adet)
       `)
