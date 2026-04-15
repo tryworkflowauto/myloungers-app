@@ -73,7 +73,7 @@ function mapSiparisToItem(
   const saat = created.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
   const grupAd = "";
   const numara = s.sezlong_no;
-  const sezlongStr = grupAd && numara != null ? `${grupAd.charAt(0)}${numara}` : numara != null ? String(numara) : "—";
+  const sezlongStr = numara != null ? String(numara) : "—";
   const bg = TEAL;
   const kalemler = (s.siparis_kalemleri ?? []) as { ad?: string; fiyat?: number; adet?: number }[];
   const urunler = kalemler.map((k) => ({
