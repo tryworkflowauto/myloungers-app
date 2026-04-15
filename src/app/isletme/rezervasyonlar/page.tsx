@@ -39,8 +39,11 @@ type Rezervasyon = {
   tutarSub: string;
   tutarColor: string;
   status: string;
+  durum?: string;
   statusLabel: string;
   disabled: boolean;
+  baslangicTarih?: string;
+  bitisTarih?: string;
   sezlongId?: string | null;
   toplamTutarRaw?: number;
   kisiSayisi?: number;
@@ -138,12 +141,15 @@ function mapRowToRezervasyon(
     tarih,
     tarihISO,
     tarihSub,
+    baslangicTarih: startStr,
+    bitisTarih: endStr,
     tip: "on",
     tipLabel: "💰 Ön Ödemeli",
     tutar,
     tutarSub,
     tutarColor,
     status,
+    durum: r.durum ?? "bekliyor",
     statusLabel,
     disabled,
     sezlongId: r.sezlong_id != null ? String(r.sezlong_id) : null,
@@ -270,9 +276,10 @@ export default function IsletmeRezervasyonlarPage() {
         setTesisId(null);
         return;
       }
-      const { data: kullanici, error: kullaniciErr } = await supabase
+      const query = supabase
         .from("kullanicilar")
-        .select("tesis_id")
+        .select("tesis_id");
+      const { data: kullanici, error: kullaniciErr } = await query
         .eq("id", authData.user.id)
         .maybeSingle();
       if (cancelled) return;
@@ -344,7 +351,10 @@ export default function IsletmeRezervasyonlarPage() {
   // ── FILTERING ──────────────────────────────────────────────────────────────
   const filtrelenmis = rezervasyonlar.filter((r) => {
     // Tab
-    if (activeTab === "aktif" && r.status !== "aktif") return false;
+    if (activeTab === "aktif") {
+      const bugun = new Date().toISOString().split('T')[0];
+      if (r.durum !== "onaylandi" || !r.baslangicTarih || !r.bitisTarih || r.baslangicTarih.split('T')[0] > bugun || r.bitisTarih.split('T')[0] < bugun) return false;
+    }
     if (activeTab === "yaklasan" && r.status !== "rezerve" && r.status !== "bekliyor") return false;
     if (activeTab === "tamamlandi" && r.status !== "tamamlandi") return false;
     if (activeTab === "iptal" && r.status !== "iptal") return false;
@@ -372,7 +382,10 @@ export default function IsletmeRezervasyonlarPage() {
   // Tab counts (from full list, not filtered)
   const tabCounts = {
     tumu: rezervasyonlar.length,
-    aktif: rezervasyonlar.filter((r) => r.status === "aktif").length,
+    aktif: rezervasyonlar.filter((r) => {
+      const bugun = new Date().toISOString().split('T')[0];
+      return r.durum === "onaylandi" && r.baslangicTarih && r.bitisTarih && r.baslangicTarih.split('T')[0] <= bugun && r.bitisTarih.split('T')[0] >= bugun;
+    }).length,
     yaklasan: rezervasyonlar.filter((r) => r.status === "rezerve" || r.status === "bekliyor").length,
     tamamlandi: rezervasyonlar.filter((r) => r.status === "tamamlandi").length,
     iptal: rezervasyonlar.filter((r) => r.status === "iptal").length,

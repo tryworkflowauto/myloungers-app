@@ -21,6 +21,8 @@ type SiparisDurum = "yeni" | "hazirlaniyor" | "tamamlandi";
 type UrunSatir    = { emoji: string; isim: string; adet: number; hazirlandi?: boolean };
 type SiparisKart  = {
   id: string; barColor: string; sezlong: string; musteri: string;
+  sezlong_no?: string;
+  tarih?: string;
   sure: number; sureLabel: "Bekleniyor" | "Hazırlanıyor" | "Hazırlandı";
   sureClass: "ok" | "warn" | "danger"; oncelikli?: boolean;
   urunler: UrunSatir[]; not?: string; teslimSaat?: string; durum: SiparisDurum;
@@ -129,7 +131,7 @@ export default function MutfakPage() {
       const sureClass: "ok" | "warn" | "danger" = sure >= 15 ? "danger" : sure >= 8 ? "warn" : "ok";
       const durumDb = s?.durum;
       const durum: SiparisDurum = durumDb === "bekliyor" ? "yeni" : (durumDb === "hazirlaniyor" ? "hazirlaniyor" : "tamamlandi");
-      const musteri = "Misafir";
+      const musteri = s?.musteri_adi || "Misafir";
       const urunler: UrunSatir[] = (s?.siparis_kalemleri ?? []).map((k: any) => ({
         emoji: "🍽️",
         isim: k?.ad || "Ürün",
@@ -142,8 +144,10 @@ export default function MutfakPage() {
       return {
         id: String(s?.id ?? ""),
         barColor: durum === "yeni" ? RED : durum === "hazirlaniyor" ? YELLOW : GRAY400,
-        sezlong: s?.sezlong_no ? String(s.sezlong_no) : "-",
+        sezlong: s?.sezlong_no != null && s.sezlong_no !== '' ? String(s.sezlong_no) : "-",
+        sezlong_no: s?.sezlong_no || "",
         musteri,
+        tarih: s?.created_at ? new Date(s.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
         sure,
         sureLabel: durum === "yeni" ? "Bekleniyor" : durum === "hazirlaniyor" ? "Hazırlanıyor" : "Hazırlandı",
         sureClass,
@@ -159,19 +163,19 @@ export default function MutfakPage() {
       const [yeniRes, hazRes, tamRes] = await Promise.all([
         supabase
           .from("siparisler")
-          .select("id, created_at, durum, notlar, sezlong_no, siparis_kalemleri(adet, ad)")
+          .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "bekliyor")
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
-          .select("id, created_at, durum, notlar, sezlong_no, siparis_kalemleri(adet, ad)")
+          .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "hazirlaniyor")
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
-          .select("id, created_at, durum, notlar, sezlong_no, siparis_kalemleri(adet, ad)")
+          .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "teslim")
           .order("created_at", { ascending: false }),
@@ -516,8 +520,8 @@ function SiparisKartComp({
       <div style={{ height: 4, background: kart.barColor }} />
       <div style={{ padding: "10px 14px 8px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: isTamamlandi ? GRAY400 : NAVY }}>{kart.sezlong}</div>
-          <div style={{ fontSize: 11, color: GRAY600, marginTop: 1 }}>{kart.musteri}</div>
+          <div style={{ fontSize: 13, fontWeight: 900, color: isTamamlandi ? GRAY400 : NAVY, overflow: "hidden", textOverflow: "ellipsis" }}>{kart.sezlong}</div>
+          <div style={{ fontSize: 11, color: GRAY600, marginTop: 1 }}>{kart.musteri} · {kart.tarih}</div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <span style={{ fontSize: 16, fontWeight: 900, display: "block", color: isTamamlandi ? GRAY400 : sureColor }}>{kart.sure}dk</span>
@@ -554,6 +558,8 @@ function SiparisKartComp({
       {isTamamlandi && kart.teslimSaat && (
         <div style={{ padding: "6px 14px 10px", fontSize: 11, color: GRAY600, fontWeight: 600 }}>✓ {kart.teslimSaat}</div>
       )}
+
+      <div style={{ padding: "4px 14px", fontSize: 11, color: GRAY400 }}>📋 Sipariş alındı: {kart.tarih}</div>
 
       {/* Aksiyon butonu — stop propagation so card click doesn't also fire */}
       {!isTamamlandi && (
