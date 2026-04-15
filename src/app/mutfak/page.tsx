@@ -129,8 +129,7 @@ export default function MutfakPage() {
       const sureClass: "ok" | "warn" | "danger" = sure >= 15 ? "danger" : sure >= 8 ? "warn" : "ok";
       const durumDb = s?.durum;
       const durum: SiparisDurum = durumDb === "bekliyor" ? "yeni" : (durumDb === "hazirlaniyor" ? "hazirlaniyor" : "tamamlandi");
-      const grup = s?.sezlonglar?.sezlong_gruplari?.ad ? ` · ${s.sezlonglar.sezlong_gruplari.ad}` : "";
-      const musteri = `${"Misafir"}${grup}`;
+      const musteri = "Misafir";
       const urunler: UrunSatir[] = (s?.siparis_kalemleri ?? []).map((k: any) => ({
         emoji: "🍽️",
         isim: k?.ad || "Ürün",
@@ -143,7 +142,7 @@ export default function MutfakPage() {
       return {
         id: String(s?.id ?? ""),
         barColor: durum === "yeni" ? RED : durum === "hazirlaniyor" ? YELLOW : GRAY400,
-        sezlong: "-",
+        sezlong: s?.sezlong_no ? String(s.sezlong_no) : "-",
         musteri,
         sure,
         sureLabel: durum === "yeni" ? "Bekleniyor" : durum === "hazirlaniyor" ? "Hazırlanıyor" : "Hazırlandı",
@@ -160,19 +159,19 @@ export default function MutfakPage() {
       const [yeniRes, hazRes, tamRes] = await Promise.all([
         supabase
           .from("siparisler")
-          .select("id, created_at, durum, notlar, siparis_kalemleri(adet, ad)")
+          .select("id, created_at, durum, notlar, sezlong_no, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "bekliyor")
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
-          .select("id, created_at, durum, notlar, siparis_kalemleri(adet, ad)")
+          .select("id, created_at, durum, notlar, sezlong_no, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "hazirlaniyor")
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
-          .select("id, created_at, durum, notlar, siparis_kalemleri(adet, ad)")
+          .select("id, created_at, durum, notlar, sezlong_no, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "teslim")
           .order("created_at", { ascending: false }),
