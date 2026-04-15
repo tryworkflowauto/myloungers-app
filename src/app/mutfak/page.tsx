@@ -130,27 +130,27 @@ export default function MutfakPage() {
       const durumDb = s?.durum;
       const durum: SiparisDurum = durumDb === "bekliyor" ? "yeni" : (durumDb === "hazirlaniyor" ? "hazirlaniyor" : "tamamlandi");
       const grup = s?.sezlonglar?.sezlong_gruplari?.ad ? ` · ${s.sezlonglar.sezlong_gruplari.ad}` : "";
-      const musteri = `${s?.musteri_adi || "Misafir"}${grup}`;
+      const musteri = `${"Misafir"}${grup}`;
       const urunler: UrunSatir[] = (s?.siparis_kalemleri ?? []).map((k: any) => ({
         emoji: "🍽️",
-        isim: k?.urun_adi || "Ürün",
+        isim: k?.ad || "Ürün",
         adet: Number(k?.adet ?? 1),
-        hazirlandi: Boolean(k?.hazirlandi) || durum === "tamamlandi",
+        hazirlandi: false,
       }));
-      const teslimSaat = s?.updated_at
-        ? `${new Date(s.updated_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}'de teslim edildi`
+      const teslimSaat = s?.created_at
+        ? `${new Date(s.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}'de teslim edildi`
         : undefined;
       return {
         id: String(s?.id ?? ""),
         barColor: durum === "yeni" ? RED : durum === "hazirlaniyor" ? YELLOW : GRAY400,
-        sezlong: s?.sezlonglar?.numara ? String(s.sezlonglar.numara) : "—",
+        sezlong: "-",
         musteri,
         sure,
         sureLabel: durum === "yeni" ? "Bekleniyor" : durum === "hazirlaniyor" ? "Hazırlanıyor" : "Hazırlandı",
         sureClass,
         oncelikli: sure >= 15,
         urunler: urunler.length ? urunler : [{ emoji: "🍽️", isim: "Sipariş", adet: 1, hazirlandi: durum === "tamamlandi" }],
-        not: s?.not || undefined,
+        not: s?.notlar || undefined,
         teslimSaat,
         durum,
       };
@@ -160,24 +160,22 @@ export default function MutfakPage() {
       const [yeniRes, hazRes, tamRes] = await Promise.all([
         supabase
           .from("siparisler")
-          .select("id, created_at, updated_at, durum, not, musteri_adi, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi, hazirlandi)")
+          .select("id, created_at, durum, notlar, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "bekliyor")
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
-          .select("id, created_at, updated_at, durum, not, musteri_adi, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi, hazirlandi)")
+          .select("id, created_at, durum, notlar, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "hazirlaniyor")
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
-          .select("id, created_at, updated_at, durum, not, musteri_adi, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi, hazirlandi)")
+          .select("id, created_at, durum, notlar, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
           .eq("durum", "teslim")
-          .gte("updated_at", startToday)
-          .lte("updated_at", endToday)
-          .order("updated_at", { ascending: false }),
+          .order("created_at", { ascending: false }),
       ]);
 
       if (yeniRes.error || hazRes.error || tamRes.error) {
@@ -235,7 +233,7 @@ export default function MutfakPage() {
       .eq("id", kart.id);
     if (error) {
       console.error("mutfak hazirlaBasla update error:", error);
-      showToast("❌ Sipariş güncellenemedi");
+    showToast("❌ Hata oluştu.");
       return;
     }
     setOnayModal(null);
