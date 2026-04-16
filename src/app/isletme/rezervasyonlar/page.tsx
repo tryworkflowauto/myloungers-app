@@ -23,6 +23,7 @@ const SAYFA_BASINA = 7;
 
 type Rezervasyon = {
   id: string;
+  rezervasyonKodu?: string;
   no: string;
   musteri: string;
   telefon: string;
@@ -44,6 +45,7 @@ type Rezervasyon = {
   disabled: boolean;
   baslangicTarih?: string;
   bitisTarih?: string;
+  girisYapildi?: boolean;
   sezlongId?: string | null;
   toplamTutarRaw?: number;
   kisiSayisi?: number;
@@ -94,6 +96,8 @@ function mapRowToRezervasyon(
     kisi_sayisi?: number | null;
     toplam_tutar?: number | null;
     durum?: string | null;
+    giris_yapildi?: boolean | null;
+    rezervasyon_kodu?: string | null;
   },
   index: number
 ): Rezervasyon {
@@ -135,6 +139,7 @@ function mapRowToRezervasyon(
 
   return {
     id: idStr,
+    rezervasyonKodu: r.rezervasyon_kodu?.trim() || undefined,
     no: "#" + String(index + 1).padStart(3, "0"),
     musteri,
     telefon,
@@ -156,6 +161,7 @@ function mapRowToRezervasyon(
     durum: r.durum ?? "bekliyor",
     statusLabel,
     disabled,
+    girisYapildi: r.giris_yapildi ?? false,
     sezlongId: r.sezlong_id != null ? String(r.sezlong_id) : null,
     toplamTutarRaw: tutarNum,
     kisiSayisi: kisi,
@@ -309,7 +315,7 @@ export default function IsletmeRezervasyonlarPage() {
     setLoading(true);
     supabase
       .from("rezervasyonlar")
-      .select("id, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
+      .select("id, rezervasyon_kodu, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, giris_yapildi, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
       .eq("tesis_id", tesisId)
       .order("baslangic_tarih", { ascending: false })
       .then(({ data, error }) => {
@@ -561,6 +567,23 @@ export default function IsletmeRezervasyonlarPage() {
     );
     setDrawerRez((prev) => prev && prev.id === rezId ? { ...prev, status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false, tutarSub: "Tamamlandı" } : prev);
     setCikisYaptirModal(false);
+  }
+
+  async function girisYaptir(rezId: string) {
+    const { error } = await supabase
+      .from("rezervasyonlar")
+      .update({ giris_yapildi: true })
+      .eq("id", rezId);
+    if (error) {
+      console.error("Giriş yaptır update error:", error);
+      return;
+    }
+    setRezervasyonlar((prev) =>
+      prev.map((r) => (r.id === rezId ? { ...r, girisYapildi: true } : r))
+    );
+    setDrawerRez((prev) =>
+      prev && prev.id === rezId ? { ...prev, girisYapildi: true } : prev
+    );
   }
 
   async function fisYazdir() {
@@ -833,6 +856,16 @@ export default function IsletmeRezervasyonlarPage() {
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                  {r.girisYapildi === false && (
+                    <button
+                      className="rez-action-btn"
+                      onClick={(e) => { e.stopPropagation(); girisYaptir(r.id); }}
+                      title="Giriş Yaptır"
+                      style={{ width: 28, height: 28, border: `1px solid ${GRAY200}`, background: "white", borderRadius: 7, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      🚪
+                    </button>
+                  )}
                   {/* Detay */}
                   <button
                     className="rez-action-btn"
@@ -907,8 +940,8 @@ export default function IsletmeRezervasyonlarPage() {
           <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: 420, background: "white", zIndex: 201, overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)" }}>
             <div style={{ background: NAVY, padding: "20px 24px", color: "white", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700 }}>Rezervasyon {drawerRez?.id}</h3>
-                <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>#{drawerRez?.id} • {drawerRez?.musteri}</div>
+                <h3 style={{ fontSize: 16, fontWeight: 700 }}>Rezervasyon {drawerRez?.rezervasyonKodu || drawerRez?.id}</h3>
+                <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>#{drawerRez?.rezervasyonKodu || drawerRez?.id} • {drawerRez?.musteri}</div>
               </div>
               <button onClick={closeDrawer} style={{ width: 32, height: 32, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 8, color: "white", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
@@ -986,6 +1019,11 @@ export default function IsletmeRezervasyonlarPage() {
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>İşlemler</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {!drawerRez.girisYapildi && (
+                        <button onClick={() => girisYaptir(drawerRez.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
+                          🚪 Giriş Yaptır
+                        </button>
+                      )}
                       <button onClick={() => setBakiyeYukleModal(true)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
                         💰 Bakiye Yükle
                       </button>

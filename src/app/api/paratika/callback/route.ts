@@ -33,10 +33,12 @@ async function redirectForResponseCode(
     const updatePayload: {
       durum: string;
       pgtranid?: string;
+      giris_yapildi?: boolean;
       bakiye_yuklenen?: number;
       bakiye_kalan?: number;
       bakiye_harcanan?: number;
     } = { durum: "onaylandi" };
+    updatePayload.giris_yapildi = false;
     if (pgtranid != null && String(pgtranid).trim() !== "") {
       updatePayload.pgtranid = String(pgtranid).trim();
     }
