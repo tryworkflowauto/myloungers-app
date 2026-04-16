@@ -12,6 +12,9 @@ type Reservation = {
   loc: string;
   code: string;
   dates: string;
+  tarihBaslangic?: string;
+  tarihBitis?: string;
+  durum?: string;
   szl: string;
   gun: string;
   odenen: string;
@@ -339,6 +342,9 @@ export default function ProfilPage() {
             loc: tesisInfo?.loc || "-",
             code: codeStr,
             dates,
+            tarihBaslangic: startStr || undefined,
+            tarihBitis: endStr || undefined,
+            durum: r.durum ?? undefined,
             szl: szlLabel,
             gun,
             odenen: `₺${Number(r.toplam_tutar || 0).toLocaleString("tr-TR")}`,
@@ -410,8 +416,19 @@ export default function ProfilPage() {
     loadFavorites();
   }, [user]);
 
-  const filteredRes = reservations.filter(
-    (r) => resFilter === "all" || r.status === resFilter
+  const filteredRes = reservations.filter((r) =>
+    resFilter === "all"
+      ? true
+      : resFilter === "active"
+        ? (() => {
+            const bugun = new Date().toISOString().slice(0, 10);
+            return (
+              (r.durum === "onaylandi" || r.durum === "bekliyor") &&
+              (r.tarihBaslangic || "").slice(0, 10) <= bugun &&
+              (r.tarihBitis || "").slice(0, 10) >= bugun
+            );
+          })()
+        : r.status === resFilter
   );
 
   function cancelRes(id: number | string) {
