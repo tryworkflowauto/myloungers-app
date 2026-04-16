@@ -369,7 +369,10 @@ export default function IsletmeRezervasyonlarPage() {
       if (r.durum !== "onaylandi" || !r.baslangicTarih || !r.bitisTarih || r.baslangicTarih.split('T')[0] > bugun || r.bitisTarih.split('T')[0] < bugun) return false;
     }
     if (activeTab === "yaklasan" && r.status !== "rezerve" && r.status !== "bekliyor") return false;
-    if (activeTab === "tamamlandi" && r.status !== "tamamlandi") return false;
+    if (activeTab === "tamamlandi") {
+      const bugun = new Date().toISOString().split('T')[0];
+      if (!(r.status === "tamamlandi" || (r.durum === "onaylandi" && !!r.bitisTarih && r.bitisTarih.split('T')[0] < bugun))) return false;
+    }
     if (activeTab === "iptal" && r.status !== "iptal") return false;
     // Search
     if (aramaMetni) {
@@ -397,10 +400,13 @@ export default function IsletmeRezervasyonlarPage() {
     tumu: rezervasyonlar.length,
     aktif: rezervasyonlar.filter((r) => {
       const bugun = new Date().toISOString().split('T')[0];
-      return r.durum === "onaylandi" && r.baslangicTarih && r.bitisTarih && r.baslangicTarih.split('T')[0] <= bugun && r.bitisTarih.split('T')[0] >= bugun;
+      return r.girisYapildi === true && !!r.baslangicTarih && r.baslangicTarih.split('T')[0] === bugun;
     }).length,
     yaklasan: rezervasyonlar.filter((r) => r.status === "rezerve" || r.status === "bekliyor").length,
-    tamamlandi: rezervasyonlar.filter((r) => r.status === "tamamlandi").length,
+    tamamlandi: rezervasyonlar.filter((r) => {
+      const bugun = new Date().toISOString().split('T')[0];
+      return r.durum === "onaylandi" && !!r.bitisTarih && r.bitisTarih.split('T')[0] < bugun;
+    }).length,
     iptal: rezervasyonlar.filter((r) => r.status === "iptal").length,
   };
 
