@@ -222,6 +222,7 @@ export default function IsletmeRezervasyonlarPage() {
   const [selectedSezlongId, setSelectedSezlongId] = useState("");
   const [cikisYaptirModal, setCikisYaptirModal] = useState(false);
   const [printReceipt, setPrintReceipt] = useState<{ rez: Rezervasyon; tesisAd: string } | null>(null);
+  const [girisToast, setGirisToast] = useState<string | null>(null);
   const [sezlonglarForForm, setSezlonglarForForm] = useState<{ id: string; numara: number; grupAd: string }[]>([]);
   const gruplarForForm = useMemo(() => [...new Set(sezlonglarForForm.map((s) => s.grupAd).filter((ad) => ad !== ""))], [sezlonglarForForm]);
 
@@ -586,7 +587,8 @@ export default function IsletmeRezervasyonlarPage() {
     setDrawerRez((prev) =>
       prev && prev.id === rezId ? { ...prev, girisYapildi: true } : prev
     );
-  alert("✅ Giriş yapıldı! Müşteri sipariş verebilir.")
+  setGirisToast("✅ Giriş yapıldı! Müşteri sipariş verebilir.");
+  setTimeout(() => setGirisToast(null), 3000);
   }
 
   async function fisYazdir() {
@@ -1052,6 +1054,12 @@ export default function IsletmeRezervasyonlarPage() {
             </div>
           </div>
         </>
+      )}
+
+      {girisToast && (
+        <div style={{ position: "fixed", top: 20, right: 20, background: "#16A34A", color: "white", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, zIndex: 400, boxShadow: "0 8px 24px rgba(0,0,0,0.18)" }}>
+          {girisToast}
+        </div>
       )}
 
       {/* YENİ REZERVASYON MODAL */}
