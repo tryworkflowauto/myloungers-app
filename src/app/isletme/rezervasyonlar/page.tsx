@@ -584,6 +584,7 @@ export default function IsletmeRezervasyonlarPage() {
     setDrawerRez((prev) =>
       prev && prev.id === rezId ? { ...prev, girisYapildi: true } : prev
     );
+  alert("✅ Giriş yapıldı! Müşteri sipariş verebilir.")
   }
 
   async function fisYazdir() {
