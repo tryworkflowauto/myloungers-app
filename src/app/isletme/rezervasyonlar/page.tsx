@@ -116,7 +116,9 @@ function mapRowToRezervasyon(
   const tarih = start ? start.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }) : "—";
   const tarihISO = startStr.slice(0, 10) || "";
   const saatPart = start ? start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "";
-  const { status, statusLabel, disabled } = durumToStatus(r.durum ?? null);
+  const { status, statusLabel, disabled } = r.giris_yapildi
+    ? { status: "aktif", statusLabel: "● Aktif", disabled: false }
+    : durumToStatus(r.durum ?? null);
   const tutarNum = Number(r.toplam_tutar ?? 0);
   const tutar = `₺${tutarNum.toLocaleString("tr-TR")}`;
   let tarihSub = saatPart ? `${saatPart} — ${statusLabel.replace(/^[●◔◷✓✖]\s*/, "")}` : (disabled ? "İptal edildi" : "—");
