@@ -36,7 +36,7 @@ async function redirectForResponseCode(
       bakiye_yuklenen?: number;
       bakiye_kalan?: number;
       bakiye_harcanan?: number;
-    } = { durum: "onaylandi" };
+    } = { durum: "bekliyor" };
     if (pgtranid != null && String(pgtranid).trim() !== "") {
       updatePayload.pgtranid = String(pgtranid).trim();
     }
