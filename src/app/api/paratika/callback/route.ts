@@ -7,20 +7,49 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+function isUuid(v: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+}
+
 async function redirectForResponseCode(
   responseCode: string,
   merchantPaymentId: string | null,
   pgtranid: string | null
 ) {
   const ok = responseCode === "00";
-  if (ok && merchantPaymentId) {
+  const normalizedMerchantPaymentId =
+    merchantPaymentId != null && String(merchantPaymentId).trim() !== ""
+      ? String(merchantPaymentId).trim()
+      : null;
+  const normalizedPgtranid =
+    pgtranid != null && String(pgtranid).trim() !== "" ? String(pgtranid).trim() : null;
+  console.log("[paratika/callback] parsed:", {
+    responseCode,
+    ok,
+    merchantPaymentId: normalizedMerchantPaymentId,
+    pgtranid: normalizedPgtranid,
+  });
+
+  if (ok && normalizedMerchantPaymentId) {
+    const lookupColumn =
+      normalizedMerchantPaymentId && isUuid(normalizedMerchantPaymentId)
+        ? "id"
+        : "rezervasyon_kodu";
+    const lookupValue = normalizedMerchantPaymentId!;
     const { data: rezRow, error: rezFetchErr } = await supabaseAdmin
       .from("rezervasyonlar")
-      .select("toplam_tutar")
-      .eq("id", merchantPaymentId)
+      .select("id, toplam_tutar, rezervasyon_kodu")
+      .eq(lookupColumn, lookupValue)
       .maybeSingle();
     if (rezFetchErr) {
       console.error("[paratika/callback] toplam_tutar çekme:", rezFetchErr);
+    }
+    if (!rezRow?.id) {
+      console.error("[paratika/callback] rezervasyon bulunamadı:", {
+        lookupColumn,
+        lookupValue,
+      });
+      return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
     }
     const rawTt = rezRow?.toplam_tutar;
     const toplamTutar =
@@ -39,19 +68,35 @@ async function redirectForResponseCode(
       bakiye_harcanan?: number;
     } = { durum: "onaylandi" };
     updatePayload.giris_yapildi = false;
-    if (pgtranid != null && String(pgtranid).trim() !== "") {
-      updatePayload.pgtranid = String(pgtranid).trim();
+    if (normalizedPgtranid != null) {
+      updatePayload.pgtranid = normalizedPgtranid;
     }
     if (!Number.isNaN(toplamTutar)) {
       updatePayload.bakiye_yuklenen = toplamTutar;
       updatePayload.bakiye_kalan = toplamTutar;
       updatePayload.bakiye_harcanan = 0;
     }
-    const { error } = await supabaseAdmin
+    const { data: updatedRows, error } = await supabaseAdmin
       .from("rezervasyonlar")
       .update(updatePayload)
-      .eq("id", merchantPaymentId);
-    if (error) console.error("[paratika/callback] rezervasyon güncelleme:", error);
+      .eq("id", rezRow.id)
+      .select("id, durum, pgtranid");
+    if (error) {
+      console.error("[paratika/callback] rezervasyon güncelleme:", {
+        error,
+        rezervasyonId: rezRow.id,
+        updatePayload,
+      });
+      return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
+    }
+    if (!updatedRows || updatedRows.length === 0) {
+      console.error("[paratika/callback] update 0 satır döndü:", {
+        rezervasyonId: rezRow.id,
+        updatePayload,
+      });
+      return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
+    }
+    console.log("[paratika/callback] update success:", updatedRows[0]);
   }
   if (ok) return NextResponse.redirect("https://myloungers.com/profil");
   return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");

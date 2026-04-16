@@ -320,6 +320,7 @@ export default function IsletmeRezervasyonlarPage() {
       .from("rezervasyonlar")
       .select("id, rezervasyon_kodu, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, giris_yapildi, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
       .eq("tesis_id", tesisId)
+      .not("pgtranid", "is", null)
       .order("baslangic_tarih", { ascending: false })
       .then(({ data, error }) => {
         if (cancelled) return;
@@ -409,6 +410,28 @@ export default function IsletmeRezervasyonlarPage() {
     }).length,
     iptal: rezervasyonlar.filter((r) => r.status === "iptal").length,
   };
+
+  const summaryCounts = (() => {
+    const bugun = new Date().toISOString().split('T')[0];
+    const iptal = rezervasyonlar.filter((r) => r.durum === "iptal").length;
+    const tamamlandi = rezervasyonlar.filter(
+      (r) => r.durum !== "iptal" && !!r.bitisTarih && r.bitisTarih.split('T')[0] < bugun
+    ).length;
+    const aktif = rezervasyonlar.filter(
+      (r) =>
+        r.durum !== "iptal" &&
+        !!r.baslangicTarih &&
+        !!r.bitisTarih &&
+        r.baslangicTarih.split('T')[0] <= bugun &&
+        r.bitisTarih.split('T')[0] >= bugun
+    ).length;
+    return {
+      tumu: aktif + tamamlandi + iptal,
+      aktif,
+      tamamlandi,
+      iptal,
+    };
+  })();
 
   // Pagination
   const toplamSayfa = Math.max(1, Math.ceil(filtrelenmis.length / SAYFA_BASINA));
@@ -719,10 +742,10 @@ export default function IsletmeRezervasyonlarPage() {
         {/* STATS */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
           {[
-            { icon: "📋", val: String(tabCounts.tumu), lbl: "Toplam Bugün", valColor: NAVY },
-            { icon: "✅", val: String(tabCounts.aktif), lbl: "Aktif", valColor: GREEN },
-            { icon: "🔵", val: String(tabCounts.yaklasan), lbl: "Yaklaşan", valColor: BLUE },
-            { icon: "❌", val: String(tabCounts.iptal), lbl: "İptal", valColor: RED },
+            { icon: "📋", val: String(summaryCounts.tumu), lbl: "Toplam", valColor: NAVY },
+            { icon: "✅", val: String(summaryCounts.aktif), lbl: "Aktif", valColor: GREEN },
+            { icon: "✓", val: String(summaryCounts.tamamlandi), lbl: "Tamamlanan", valColor: BLUE },
+            { icon: "❌", val: String(summaryCounts.iptal), lbl: "İptal", valColor: RED },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 12, padding: "16px 18px", border: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ width: 42, height: 42, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: i === 0 || i === 1 ? "#DCFCE7" : i === 2 ? "#DBEAFE" : "#FEE2E2" }}>
