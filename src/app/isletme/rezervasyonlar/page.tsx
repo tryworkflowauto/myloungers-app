@@ -63,6 +63,8 @@ type Rezervasyon = {
   };
 };
 
+type RezKategori = "aktif" | "yaklasan" | "tamamlandi" | "iptal";
+
 const GRUP_COLORS: Record<string, string> = {
   Silver: "linear-gradient(135deg,#0ABAB5,#0A1628)",
   VIP: "linear-gradient(135deg,#F5821F,#0A1628)",
@@ -116,9 +118,12 @@ function mapRowToRezervasyon(
   const tarih = start ? start.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }) : "—";
   const tarihISO = startStr.slice(0, 10) || "";
   const saatPart = start ? start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "";
-  const { status, statusLabel, disabled } = r.giris_yapildi
-    ? { status: "aktif", statusLabel: "● Aktif", disabled: false }
-    : durumToStatus(r.durum ?? null);
+  const { status, statusLabel, disabled } =
+    (r.durum ?? "").toLowerCase() === "iptal"
+      ? { status: "iptal", statusLabel: "✖ İptal", disabled: true }
+      : r.giris_yapildi
+        ? { status: "aktif", statusLabel: "● Aktif", disabled: false }
+        : { status: "bekliyor", statusLabel: "◷ Bekliyor", disabled: false };
   const tutarNum = Number(r.toplam_tutar ?? 0);
   const tutar = `₺${tutarNum.toLocaleString("tr-TR")}`;
   let tarihSub = saatPart ? `${saatPart} — ${statusLabel.replace(/^[●◔◷✓✖]\s*/, "")}` : (disabled ? "İptal edildi" : "—");
@@ -363,18 +368,25 @@ export default function IsletmeRezervasyonlarPage() {
   }, [tesisId]);
 
   // ── FILTERING ──────────────────────────────────────────────────────────────
+  const bugun = new Date().toISOString().slice(0, 10);
+  const rezKategori = (r: Rezervasyon): RezKategori => {
+    if (r.durum === "iptal") return "iptal";
+    const bas = (r.baslangicTarih || "").slice(0, 10);
+    const bit = (r.bitisTarih || "").slice(0, 10);
+    if (bit && bit < bugun) return "tamamlandi";
+    if (bas && bit && bas <= bugun && bit >= bugun) return "aktif";
+    if (bas && bas > bugun) return "yaklasan";
+    // Tarih verisi eksik/bozuk olsa bile kaydı kategorisiz bırakma.
+    return "yaklasan";
+  };
+
   const filtrelenmis = rezervasyonlar.filter((r) => {
     // Tab
-    if (activeTab === "aktif") {
-      const bugun = new Date().toISOString().split('T')[0];
-      if (r.durum !== "onaylandi" || !r.baslangicTarih || !r.bitisTarih || r.baslangicTarih.split('T')[0] > bugun || r.bitisTarih.split('T')[0] < bugun) return false;
-    }
-    if (activeTab === "yaklasan" && r.status !== "rezerve" && r.status !== "bekliyor") return false;
-    if (activeTab === "tamamlandi") {
-      const bugun = new Date().toISOString().split('T')[0];
-      if (!(r.status === "tamamlandi" || (r.durum === "onaylandi" && !!r.bitisTarih && r.bitisTarih.split('T')[0] < bugun))) return false;
-    }
-    if (activeTab === "iptal" && r.status !== "iptal") return false;
+    const kategori = rezKategori(r);
+    if (activeTab === "aktif" && kategori !== "aktif") return false;
+    if (activeTab === "yaklasan" && kategori !== "yaklasan") return false;
+    if (activeTab === "tamamlandi" && kategori !== "tamamlandi") return false;
+    if (activeTab === "iptal" && kategori !== "iptal") return false;
     // Search
     if (aramaMetni) {
       const q = aramaMetni.toLowerCase();
@@ -399,39 +411,11 @@ export default function IsletmeRezervasyonlarPage() {
   // Tab counts (from full list, not filtered)
   const tabCounts = {
     tumu: rezervasyonlar.length,
-    aktif: rezervasyonlar.filter((r) => {
-      const bugun = new Date().toISOString().split('T')[0];
-      return r.girisYapildi === true && !!r.baslangicTarih && r.baslangicTarih.split('T')[0] === bugun;
-    }).length,
-    yaklasan: rezervasyonlar.filter((r) => r.status === "rezerve" || r.status === "bekliyor").length,
-    tamamlandi: rezervasyonlar.filter((r) => {
-      const bugun = new Date().toISOString().split('T')[0];
-      return r.durum === "onaylandi" && !!r.bitisTarih && r.bitisTarih.split('T')[0] < bugun;
-    }).length,
-    iptal: rezervasyonlar.filter((r) => r.status === "iptal").length,
+    aktif: rezervasyonlar.filter((r) => rezKategori(r) === "aktif").length,
+    yaklasan: rezervasyonlar.filter((r) => rezKategori(r) === "yaklasan").length,
+    tamamlandi: rezervasyonlar.filter((r) => rezKategori(r) === "tamamlandi").length,
+    iptal: rezervasyonlar.filter((r) => rezKategori(r) === "iptal").length,
   };
-
-  const summaryCounts = (() => {
-    const bugun = new Date().toISOString().split('T')[0];
-    const iptal = rezervasyonlar.filter((r) => r.durum === "iptal").length;
-    const tamamlandi = rezervasyonlar.filter(
-      (r) => r.durum !== "iptal" && !!r.bitisTarih && r.bitisTarih.split('T')[0] < bugun
-    ).length;
-    const aktif = rezervasyonlar.filter(
-      (r) =>
-        r.durum !== "iptal" &&
-        !!r.baslangicTarih &&
-        !!r.bitisTarih &&
-        r.baslangicTarih.split('T')[0] <= bugun &&
-        r.bitisTarih.split('T')[0] >= bugun
-    ).length;
-    return {
-      tumu: aktif + tamamlandi + iptal,
-      aktif,
-      tamamlandi,
-      iptal,
-    };
-  })();
 
   // Pagination
   const toplamSayfa = Math.max(1, Math.ceil(filtrelenmis.length / SAYFA_BASINA));
@@ -740,15 +724,16 @@ export default function IsletmeRezervasyonlarPage() {
       {/* CONTENT */}
       <div style={{ padding: 24, flex: 1 }}>
         {/* STATS */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14, marginBottom: 20 }}>
           {[
-            { icon: "📋", val: String(summaryCounts.tumu), lbl: "Toplam", valColor: NAVY },
-            { icon: "✅", val: String(summaryCounts.aktif), lbl: "Aktif", valColor: GREEN },
-            { icon: "✓", val: String(summaryCounts.tamamlandi), lbl: "Tamamlanan", valColor: BLUE },
-            { icon: "❌", val: String(summaryCounts.iptal), lbl: "İptal", valColor: RED },
+            { icon: "📋", val: String(tabCounts.tumu), lbl: "Toplam", valColor: NAVY },
+            { icon: "✅", val: String(tabCounts.aktif), lbl: "Aktif", valColor: GREEN },
+            { icon: "◔", val: String(tabCounts.yaklasan), lbl: "Yaklaşan", valColor: BLUE },
+            { icon: "✓", val: String(tabCounts.tamamlandi), lbl: "Tamamlanan", valColor: BLUE },
+            { icon: "❌", val: String(tabCounts.iptal), lbl: "İptal", valColor: RED },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 12, padding: "16px 18px", border: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: i === 0 || i === 1 ? "#DCFCE7" : i === 2 ? "#DBEAFE" : "#FEE2E2" }}>
+              <div style={{ width: 42, height: 42, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: i === 0 || i === 1 ? "#DCFCE7" : i === 2 || i === 3 ? "#DBEAFE" : "#FEE2E2" }}>
                 {s.icon}
               </div>
               <div>

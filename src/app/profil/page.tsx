@@ -23,6 +23,7 @@ type Reservation = {
   statusCss: string;
   img: string;
   slug?: string;
+  girisYapildi?: boolean;
   stars?: number;
   review?: boolean;
 };
@@ -199,7 +200,7 @@ export default function ProfilPage() {
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .select(
-            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
+            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
           .in("durum", ["onaylandi", "iptal"])
@@ -294,10 +295,12 @@ export default function ProfilPage() {
             durumRaw === "cancelled"
           ) {
             statusKey = "cancel";
+          } else if (r.giris_yapildi === true) {
+            statusKey = "active";
           } else if (startStr && startStr > today) {
             statusKey = "upcoming";
           } else if (startStr && startStr <= today && (!endStr || endStr >= today)) {
-            statusKey = "active";
+            statusKey = "upcoming";
           } else {
             statusKey = "past";
           }
@@ -353,6 +356,7 @@ export default function ProfilPage() {
             statusCss: meta.css,
             img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop",
             slug: tesisSlug,
+            girisYapildi: r.giris_yapildi === true,
             stars: undefined,
             review: false,
           };
@@ -487,11 +491,56 @@ export default function ProfilPage() {
     setReviewText("");
   }
 
-  function submitKod() {
-    if (kodVal.trim().length < 3) { alert("Lütfen geçerli bir kod girin."); return; }
+  async function activateReservationByCode(rawCode: string, source: "qr" | "kod") {
+    if (!user?.id) {
+      alert("Lütfen önce giriş yapın.");
+      return;
+    }
+    const code = rawCode.trim().toUpperCase();
+    if (code.length < 3) {
+      alert("Lütfen geçerli bir kod girin.");
+      return;
+    }
+
+    const { data: row, error } = await supabase
+      .from("rezervasyonlar")
+      .update({ giris_yapildi: true })
+      .eq("kullanici_id", user.id)
+      .eq("rezervasyon_kodu", code)
+      .neq("durum", "iptal")
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error(`[profil] ${source} aktivasyon update hatası:`, error);
+      alert("Aktivasyon sırasında hata oluştu.");
+      return;
+    }
+    if (!row?.id) {
+      alert("Kod ile eşleşen aktif rezervasyon bulunamadı.");
+      return;
+    }
+
+    setReservations((prev) =>
+      prev.map((r) =>
+        String(r.id) === String(row.id)
+          ? {
+              ...r,
+              girisYapildi: true,
+              status: "active",
+              statusTxt: STATUS_META.active.txt,
+              statusCss: STATUS_META.active.css,
+            }
+          : r
+      )
+    );
     setKodModal(false);
     setKodVal("");
-    alert("✅ Kod doğrulandı! Şezlong aktif edildi.");
+    alert("✅ Rezervasyon aktif edildi. Sipariş verebilirsiniz.");
+  }
+
+  async function submitKod() {
+    await activateReservationByCode(kodVal, "kod");
   }
 
   async function saveProfile() {
@@ -981,7 +1030,14 @@ export default function ProfilPage() {
               Şezlong Girişi
             </div>
             <div className="qr-btns">
-              <button className="qr-btn qr-btn-primary" onClick={() => alert("📷 QR okuyucu mobil uygulamada aktif olacak!\n\nWeb'de Kod Gir seçeneğini kullanın.")}>
+              <button
+                className="qr-btn qr-btn-primary"
+                onClick={async () => {
+                  const scanned = window.prompt("QR kodu okutun / kodu girin:");
+                  if (!scanned) return;
+                  await activateReservationByCode(scanned, "qr");
+                }}
+              >
                 <span className="qr-btn-ico">📷</span>
                 <span><span className="qr-btn-title">QR Oku</span><span className="qr-btn-sub">Kameranı kullanarak okutun</span></span>
               </button>
@@ -1088,7 +1144,18 @@ export default function ProfilPage() {
                       {"review" in r && r.review && <button className="btn-review" onClick={() => { setReviewTarget(r.id); setReviewModal(true); }}>⭐ Değerlendir</button>}
                       <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
                         {r.status !== "cancel" && r.status !== "past" && <button className="btn-cancel" onClick={() => cancelRes(r.id)}>İptal Et</button>}
-                        <button className="btn-detail" onClick={() => router.push("/tesis/" + (r.slug || r.name.trim().toLowerCase().replace(/\s+/g, "-")))}>Tesise Git →</button>
+                        <button
+                          className="btn-detail"
+                          onClick={() => {
+                            if (r.girisYapildi !== true) {
+                              alert("Sipariş verebilmek için önce QR/Kod ile giriş yapmalısınız.");
+                              return;
+                            }
+                            router.push("/tesis/" + (r.slug || r.name.trim().toLowerCase().replace(/\s+/g, "-")));
+                          }}
+                        >
+                          Tesise Git →
+                        </button>
                       </div>
                     </div>
                   </div>
