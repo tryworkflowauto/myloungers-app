@@ -242,7 +242,6 @@ function AramaContent() {
       { label: "🌊 Beach Club", key: "Beach Club", count: tabCounts.beach },
       { label: "🏨 Hotel", key: "Hotel", count: tabCounts.hotel },
       { label: "💦 Aqua Park", key: "Aqua Park", count: tabCounts.aqua },
-      { label: "🗺️ Harita", key: "Harita", count: null as number | null },
     ],
     [tabCounts]
   );
@@ -494,12 +493,6 @@ function AramaContent() {
           </div>
         </div>
       )}
-
-      {/* HARİTA FAB */}
-      <button className="map-fab" onClick={() => alert("🗺️ Harita görünümü yakında!")}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-        Harita Görünümü
-      </button>
     </>
   );
 }
