@@ -229,6 +229,15 @@ export default function IsletmeSezlongPage() {
   const [seciliGrup, setSeciliGrup] = useState<string | null>(null);
   const [seciliSezlongId, setSeciliSezlongId] = useState<string | null>(null);
   const [seciliDurum, setSeciliDurum] = useState<string>("bos");
+  // İşletme manuel rezervasyonu için tarih aralığı
+  const [seciliRezerveBaslangic, setSeciliRezerveBaslangic] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [seciliRezerveBitis, setSeciliRezerveBitis] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [kilitliToastNo, setKilitliToastNo] = useState<string | null>(null);
   const [seciliRenk, setSeciliRenk] = useState("#0ABAB5");
@@ -697,8 +706,82 @@ export default function IsletmeSezlongPage() {
       }
     }
     if (seciliSezlongId && seciliDurum && seciliGrup) {
-      const { error } = await supabase.from("sezlonglar").update({ durum: seciliDurum }).eq("id", seciliSezlongId);
+      // sezlonglar.durum sadece "bos" veya "dolu" için güncellensin
+      // Rezerve/Bakım/Kilit kayıtları rezervasyonlar tablosuna gidecek (tarihli)
+      let error = null;
+      if (seciliDurum === "bos" || seciliDurum === "dolu") {
+        const { error: updateError } = await supabase.from("sezlonglar").update({ durum: seciliDurum }).eq("id", seciliSezlongId);
+        error = updateError;
+      }
       if (!error) {
+        // İşletme manuel rezervasyonu - rezervasyonlar tablosuna kayıt at
+        if (seciliDurum === "rezerve" || seciliDurum === "bakim" || seciliDurum === "kilitli") {
+          // Tarih validasyonu
+          if (!seciliRezerveBaslangic || !seciliRezerveBitis) {
+            showToast("⚠️ Lütfen tarih aralığı seçin");
+            return;
+          }
+          if (seciliRezerveBaslangic > seciliRezerveBitis) {
+            showToast("⚠️ Bitiş tarihi başlangıçtan önce olamaz");
+            return;
+          }
+          
+          const musteriAdiMap: Record<string, string> = {
+            rezerve: "İŞLETME REZERVİ",
+            bakim: "BAKIM",
+            kilitli: "İŞLETME KİLİDİ",
+          };
+          
+          const { error: rezError } = await supabase.from("rezervasyonlar").insert({
+            tesis_id: tesisId,
+            kullanici_id: null,
+            sezlong_id: seciliSezlongId,
+            sezlong_ids: [seciliSezlongId],
+            baslangic_tarih: seciliRezerveBaslangic,
+            bitis_tarih: seciliRezerveBitis,
+            kisi_sayisi: 1,
+            toplam_tutar: 0,
+            durum: "onaylandi",
+            musteri_adi: musteriAdiMap[seciliDurum] ?? "İŞLETME",
+            rezervasyon_kodu: `ISL-${Date.now()}`,
+          });
+          
+          if (rezError) {
+            console.error("İşletme manuel rezervasyon hatası:", rezError);
+            showToast("❌ Rezervasyon kaydı hatası: " + rezError.message);
+            return;
+          }
+          
+          // rezervedSezlongIds state'ini güncelle (seçili tarih kapsam içindeyse)
+          if (selectedDate >= seciliRezerveBaslangic && selectedDate <= seciliRezerveBitis) {
+            setRezervedSezlongIds((prev) => {
+              const next = new Set(prev);
+              next.add(seciliSezlongId);
+              return next;
+            });
+          }
+        } else if (seciliDurum === "bos") {
+          // "Boş" seçilince bu şezlongun aktif işletme rezervelerini iptal et
+          const { error: cancelError } = await supabase
+            .from("rezervasyonlar")
+            .update({ durum: "iptal" })
+            .eq("tesis_id", tesisId)
+            .is("kullanici_id", null)
+            .eq("durum", "onaylandi")
+            .contains("sezlong_ids", [seciliSezlongId]);
+          
+          if (cancelError) {
+            console.error("İşletme rezerve iptali hatası:", cancelError);
+          }
+          
+          // rezervedSezlongIds state'inden çıkar
+          setRezervedSezlongIds((prev) => {
+            const next = new Set(prev);
+            next.delete(seciliSezlongId);
+            return next;
+          });
+        }
+
         setHaritaGruplari((prev) => {
           const gid = seciliGrup;
           if (!gid || !prev[gid]) return prev;
@@ -1523,6 +1606,32 @@ export default function IsletmeSezlongPage() {
                     <option value="bakim">⚪ Bakımda</option>
                     <option value="kilitli">🔒 İşletme Rezervi</option>
                   </select>
+                  {(seciliDurum === "rezerve" || seciliDurum === "bakim" || seciliDurum === "kilitli") && (
+                    <div style={{ marginTop: 12, padding: 10, background: "#F9FAFB", borderRadius: 6, border: "1px solid #E5E7EB" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                        📅 Tarih Aralığı Seçin:
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, color: "#6B7280" }}>Başlangıç:</label>
+                        <input
+                          type="date"
+                          value={seciliRezerveBaslangic}
+                          onChange={(e) => setSeciliRezerveBaslangic(e.target.value)}
+                          style={{ padding: 6, border: "1px solid #D1D5DB", borderRadius: 4, fontSize: 13 }}
+                        />
+                        <label style={{ fontSize: 11, color: "#6B7280" }}>Bitiş:</label>
+                        <input
+                          type="date"
+                          value={seciliRezerveBitis}
+                          onChange={(e) => setSeciliRezerveBitis(e.target.value)}
+                          style={{ padding: 6, border: "1px solid #D1D5DB", borderRadius: 4, fontSize: 13 }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>
+                        Bu şezlong seçilen tarihlerde dolu görünecek
+                      </div>
+                    </div>
+                  )}
                   {mod === "duzenleme" && (
                     <button
                       onClick={handleKaydetDegisiklikler}
