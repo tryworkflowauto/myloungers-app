@@ -86,7 +86,18 @@ export default function TesisDetailPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
-  const [rezervedSezlongIds, setRezervedSezlongIds] = useState<Set<string>>(new Set());
+  // Tarih bazlı rezervasyonlar - tipine göre ayrılmış
+  const [rezervedByType, setRezervedByType] = useState<{
+    rezerve: Set<string>;
+    bakim: Set<string>;
+    kilitli: Set<string>;
+    dolu: Set<string>;  // müşteri rezervasyonu
+  }>({
+    rezerve: new Set(),
+    bakim: new Set(),
+    kilitli: new Set(),
+    dolu: new Set(),
+  });
   const szlRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLDivElement>(null);
 
@@ -219,13 +230,19 @@ export default function TesisDetailPage() {
         for (let i = 1; i <= kapasite; i++) {
           const rec = list.find((s) => s.numara === i);
           const recId = rec?.id;
-          if (recId && rezervedSezlongIds.has(recId)) {
-            statuses.push("full");
+          let st: SzlStatus;
+          if (recId) {
+            if (rezervedByType.rezerve.has(recId)) st = "rsv";
+            else if (rezervedByType.bakim.has(recId)) st = "maint";
+            else if (rezervedByType.kilitli.has(recId)) st = "lock";
+            else if (rezervedByType.dolu.has(recId)) st = "full";
+            else st = mapDbDurumToStatus(rec?.durum);
           } else {
-            statuses.push(mapDbDurumToStatus(rec?.durum));
+            st = mapDbDurumToStatus(rec?.durum);
           }
+          statuses.push(st);
         }
-        const doluCount = statuses.filter((s) => s === "full").length;
+        const doluCount = statuses.filter((s) => s !== "avail").length;
         const dolulukPct = statuses.length > 0 ? Math.round((doluCount / statuses.length) * 100) : 0;
 
         return {
@@ -254,7 +271,7 @@ export default function TesisDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [row?.id, rezervedSezlongIds]);
+  }, [row?.id, rezervedByType]);
 
   useEffect(() => {
     if (!row?.id) return;
@@ -453,7 +470,12 @@ export default function TesisDetailPage() {
     let cancelled = false;
     async function loadRezervedSezlongs() {
       if (!row || !selStart) {
-        setRezervedSezlongIds(new Set());
+        setRezervedByType({ 
+          rezerve: new Set(), 
+          bakim: new Set(), 
+          kilitli: new Set(), 
+          dolu: new Set() 
+        });
         return;
       }
       const tesisId = (row as { id?: string | number }).id;
@@ -472,7 +494,7 @@ export default function TesisDetailPage() {
       // Seçilen tarih aralığında onaylı rezervasyonları çek
       const { data: rezData, error: rezErr } = await supabase
         .from("rezervasyonlar")
-        .select("sezlong_ids, baslangic_tarih, bitis_tarih")
+        .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
         .eq("tesis_id", tesisId)
         .eq("durum", "onaylandi")
         .lte("baslangic_tarih", endStr)
@@ -484,18 +506,26 @@ export default function TesisDetailPage() {
         return;
       }
       
-      const idSet = new Set<string>();
+      const newByType = {
+        rezerve: new Set<string>(),
+        bakim: new Set<string>(),
+        kilitli: new Set<string>(),
+        dolu: new Set<string>(),
+      };
       (rezData ?? []).forEach((r: any) => {
         const ids = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
+        const musteriAdi = (r.musteri_adi || "").toUpperCase();
+        let tip: "rezerve" | "bakim" | "kilitli" | "dolu" = "dolu";
+        if (musteriAdi === "İŞLETME REZERVİ") tip = "rezerve";
+        else if (musteriAdi === "BAKIM") tip = "bakim";
+        else if (musteriAdi === "İŞLETME KİLİDİ") tip = "kilitli";
         ids.forEach((id: string) => {
-          if (typeof id === "string" && id.trim()) {
-            idSet.add(id);
-          }
+          if (typeof id === "string" && id.trim()) newByType[tip].add(id);
         });
       });
       
       if (!cancelled) {
-        setRezervedSezlongIds(idSet);
+        setRezervedByType(newByType);
       }
     }
     loadRezervedSezlongs();

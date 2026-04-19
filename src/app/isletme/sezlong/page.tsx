@@ -254,7 +254,18 @@ export default function IsletmeSezlongPage() {
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   });
-  const [rezervedSezlongIds, setRezervedSezlongIds] = useState<Set<string>>(new Set());
+  // Tarih bazlı rezervasyonlar - tipine göre ayrılmış
+  const [rezervedByType, setRezervedByType] = useState<{
+    rezerve: Set<string>;
+    bakim: Set<string>;
+    kilitli: Set<string>;
+    dolu: Set<string>;  // müşteri rezervasyonu (musteri_adi "İŞLETME" içermiyor)
+  }>({
+    rezerve: new Set(),
+    bakim: new Set(),
+    kilitli: new Set(),
+    dolu: new Set(),
+  });
   const [cikisModal, setCikisModal] = useState(false);
   const [rezModal, setRezModal] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
@@ -413,8 +424,14 @@ export default function IsletmeSezlongPage() {
       }
       const counts = { bos: 0, dolu: 0, rezerve: 0, bakim: 0, kilitli: 0 };
       for (const s of sezRows) {
-        // Eğer online onaylı rezervasyonda varsa "dolu" say
-        if (rezervedSezlongIds.has(s.id)) {
+        // Tipine göre say
+        if (rezervedByType.rezerve.has(s.id)) {
+          counts.rezerve++;
+        } else if (rezervedByType.bakim.has(s.id)) {
+          counts.bakim++;
+        } else if (rezervedByType.kilitli.has(s.id)) {
+          counts.kilitli++;
+        } else if (rezervedByType.dolu.has(s.id)) {
           counts.dolu++;
         } else {
           const d = (s.durum || "bos") as keyof typeof counts;
@@ -454,11 +471,14 @@ export default function IsletmeSezlongPage() {
           prefix,
           count: cap,
           color: g.renk || TEAL,
-          durumlar: list.map((s) => ({
-            id: s.id,
-            numara: s.numara,
-            durum: rezervedSezlongIds.has(s.id) ? "dolu" : (s.durum || "bos"),
-          })),
+          durumlar: list.map((s) => {
+            let durum = s.durum || "bos";
+            if (rezervedByType.rezerve.has(s.id)) durum = "rezerve";
+            else if (rezervedByType.bakim.has(s.id)) durum = "bakim";
+            else if (rezervedByType.kilitli.has(s.id)) durum = "kilitli";
+            else if (rezervedByType.dolu.has(s.id)) durum = "dolu";
+            return { id: s.id, numara: s.numara, durum };
+          }),
           title: g.ad,
           sub: aciklama || g.ad,
           icon: grupIcon(g.ad),
@@ -471,19 +491,24 @@ export default function IsletmeSezlongPage() {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [tesisId, authChecked, supabase, selectedDate, rezervedSezlongIds]);
+  }, [tesisId, authChecked, supabase, selectedDate, rezervedByType]);
 
   // Seçilen tarihte onaylı rezervasyonlardaki sezlong_ids'leri çek
   useEffect(() => {
     if (!tesisId || !selectedDate) {
-      setRezervedSezlongIds(new Set());
+      setRezervedByType({
+        rezerve: new Set(),
+        bakim: new Set(),
+        kilitli: new Set(),
+        dolu: new Set(),
+      });
       return;
     }
     let cancelled = false;
     async function loadRezervedIds() {
       const { data, error } = await supabase
         .from("rezervasyonlar")
-        .select("sezlong_ids, baslangic_tarih, bitis_tarih")
+        .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
         .eq("tesis_id", tesisId)
         .eq("durum", "onaylandi")
         .lte("baslangic_tarih", selectedDate)
@@ -493,14 +518,24 @@ export default function IsletmeSezlongPage() {
         console.error("İşletme paneli rezerveli şezlong çekme hatası:", error);
         return;
       }
-      const idSet = new Set<string>();
+      const newByType = {
+        rezerve: new Set<string>(),
+        bakim: new Set<string>(),
+        kilitli: new Set<string>(),
+        dolu: new Set<string>(),
+      };
       (data ?? []).forEach((r: any) => {
         const ids = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
+        const musteriAdi = (r.musteri_adi || "").toUpperCase();
+        let tip: "rezerve" | "bakim" | "kilitli" | "dolu" = "dolu";
+        if (musteriAdi === "İŞLETME REZERVİ") tip = "rezerve";
+        else if (musteriAdi === "BAKIM") tip = "bakim";
+        else if (musteriAdi === "İŞLETME KİLİDİ") tip = "kilitli";
         ids.forEach((id: string) => {
-          if (typeof id === "string" && id.trim()) idSet.add(id);
+          if (typeof id === "string" && id.trim()) newByType[tip].add(id);
         });
       });
-      if (!cancelled) setRezervedSezlongIds(idSet);
+      if (!cancelled) setRezervedByType(newByType);
     }
     loadRezervedIds();
     return () => { cancelled = true; };
@@ -752,11 +787,17 @@ export default function IsletmeSezlongPage() {
             return;
           }
           
-          // rezervedSezlongIds state'ini güncelle (seçili tarih kapsam içindeyse)
+          // rezervedByType state'ini güncelle (seçili tarih kapsam içindeyse)
           if (selectedDate >= seciliRezerveBaslangic && selectedDate <= seciliRezerveBitis) {
-            setRezervedSezlongIds((prev) => {
-              const next = new Set(prev);
-              next.add(seciliSezlongId);
+            setRezervedByType((prev) => {
+              const next = { 
+                rezerve: new Set(prev.rezerve), 
+                bakim: new Set(prev.bakim), 
+                kilitli: new Set(prev.kilitli), 
+                dolu: new Set(prev.dolu) 
+              };
+              const tip = seciliDurum as "rezerve" | "bakim" | "kilitli";
+              if (next[tip]) next[tip].add(seciliSezlongId);
               return next;
             });
           }
@@ -774,10 +815,18 @@ export default function IsletmeSezlongPage() {
             console.error("İşletme rezerve iptali hatası:", cancelError);
           }
           
-          // rezervedSezlongIds state'inden çıkar
-          setRezervedSezlongIds((prev) => {
-            const next = new Set(prev);
-            next.delete(seciliSezlongId);
+          // rezervedByType state'inden çıkar
+          setRezervedByType((prev) => {
+            const next = { 
+              rezerve: new Set(prev.rezerve), 
+              bakim: new Set(prev.bakim), 
+              kilitli: new Set(prev.kilitli), 
+              dolu: new Set(prev.dolu) 
+            };
+            next.rezerve.delete(seciliSezlongId);
+            next.bakim.delete(seciliSezlongId);
+            next.kilitli.delete(seciliSezlongId);
+            next.dolu.delete(seciliSezlongId);
             return next;
           });
         }
