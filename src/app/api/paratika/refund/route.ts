@@ -81,9 +81,21 @@ export async function POST(req: NextRequest) {
 
     const rawText = await paratResponse.text();
     console.log("[refund] paratika response:", rawText);
-    const parsed = new URLSearchParams(rawText);
-
-    if (parsed.get("responseCode") === "00" || parsed.get("pgTranReturnCode") === "00") {
+    let responseCode = "";
+    let pgTranReturnCode = "";
+    let errMsg = "İade başarısız";
+    try {
+      const json = JSON.parse(rawText);
+      responseCode = json.responseCode || "";
+      pgTranReturnCode = json.pgTranReturnCode || "";
+      errMsg = json.errorMsg || json.message || "İade başarısız";
+    } catch {
+      const parsed = new URLSearchParams(rawText);
+      responseCode = parsed.get("responseCode") || "";
+      pgTranReturnCode = parsed.get("pgTranReturnCode") || "";
+      errMsg = parsed.get("errorMsg") || parsed.get("message") || "İade başarısız";
+    }
+    if (responseCode === "00" || pgTranReturnCode === "00") {
       const { error: updateError } = await supabaseAdmin
         .from("rezervasyonlar")
         .update({ durum: "iptal" })
@@ -95,12 +107,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    const errMsg =
-      parsed.get("errorMsg") ||
-      parsed.get("message") ||
-      "İade başarısız";
     return NextResponse.json(
-      { error: errMsg, raw: Object.fromEntries(parsed) },
+      { error: errMsg, raw: rawText },
       { status: 400 }
     );
   } catch (err: unknown) {
