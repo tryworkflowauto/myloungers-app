@@ -103,6 +103,10 @@ function OdemeContent() {
   const [cardDate, setCardDate] = useState("");
   const [tesisCover, setTesisCover] = useState("/logo.png");
   const [tesisAddress, setTesisAddress] = useState("");
+  // Rezervasyon tutma süresi sayacı
+  const [rezerveliKadar, setRezerveliKadar] = useState<Date | null>(null);
+  const [kalanSure, setKalanSure] = useState<number>(0); // saniye cinsinden
+  const [sureDoldu, setSureDoldu] = useState<boolean>(false);
 
   useEffect(() => {
     async function checkUser() {
@@ -200,6 +204,77 @@ function OdemeContent() {
       setStep(4);
     }
   }, []);
+
+  // Rezervasyon rezerveli_kadar'ı DB'den çek
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const rezId = params.get("rezervasyonId") || params.get("id");
+    if (!rezId) return;
+    
+    async function fetchRezerveliKadar() {
+      const { data, error } = await supabase
+        .from("rezervasyonlar")
+        .select("rezerveli_kadar, durum")
+        .eq("id", rezId)
+        .maybeSingle();
+      
+      if (error || !data) return;
+      
+      // Eğer rezervasyon zaten onaylandı/iptal ise timer gerek yok
+      if (data.durum !== "bekliyor") {
+        setRezerveliKadar(null);
+        return;
+      }
+      
+      if (data.rezerveli_kadar) {
+        setRezerveliKadar(new Date(data.rezerveli_kadar));
+      }
+    }
+    
+    fetchRezerveliKadar();
+  }, []);
+
+  // Geri sayım - her saniye güncelle
+  useEffect(() => {
+    if (!rezerveliKadar) return;
+    
+    const updateSayac = () => {
+      const diff = rezerveliKadar.getTime() - Date.now();
+      if (diff <= 0) {
+        setKalanSure(0);
+        setSureDoldu(true);
+        return;
+      }
+      setKalanSure(Math.floor(diff / 1000));
+    };
+    
+    updateSayac(); // hemen ilk çalıştır
+    const interval = setInterval(updateSayac, 1000);
+    
+    return () => clearInterval(interval);
+  }, [rezerveliKadar]);
+
+  // Süre bitince rezervasyonu iptal et ve yönlendir
+  useEffect(() => {
+    if (!sureDoldu) return;
+    
+    async function iptalEt() {
+      const params = new URLSearchParams(window.location.search);
+      const rezId = params.get("rezervasyonId") || params.get("id");
+      if (!rezId) return;
+      
+      await supabase
+        .from("rezervasyonlar")
+        .update({ durum: "iptal" })
+        .eq("id", rezId)
+        .eq("durum", "bekliyor");
+      
+      alert("⏰ Rezervasyon tutma süreniz doldu. Şezlong yeniden müsait. Ana sayfaya yönlendiriliyorsunuz.");
+      window.location.href = "/";
+    }
+    
+    iptalEt();
+  }, [sureDoldu]);
 
   function validate() {
     const e: Record<string, boolean> = {};
@@ -436,6 +511,35 @@ function OdemeContent() {
           <span>Güvenli Ödeme</span>
         </div>
       </nav>
+
+        {rezerveliKadar && kalanSure > 0 && (
+          <div style={{
+            margin: "16px auto",
+            maxWidth: 800,
+            padding: "12px 20px",
+            background: kalanSure < 120 ? "#FEE2E2" : "#FEF3C7",
+            border: `2px solid ${kalanSure < 120 ? "#DC2626" : "#F59E0B"}`,
+            borderRadius: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            fontWeight: 700,
+            fontSize: 16,
+            color: kalanSure < 120 ? "#991B1B" : "#92400E",
+          }}>
+            <span style={{ fontSize: 24 }}>⏱️</span>
+            <span>
+              Şezlongunuz tutuluyor: {" "}
+              <span style={{ fontFamily: "monospace", fontSize: 20 }}>
+                {String(Math.floor(kalanSure / 60)).padStart(2, "0")}:{String(kalanSure % 60).padStart(2, "0")}
+              </span>
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.8 }}>
+              Süre bitmeden ödemeyi tamamlayın
+            </span>
+          </div>
+        )}
 
       {/* PROGRESS */}
       <div className="progress-wrap">

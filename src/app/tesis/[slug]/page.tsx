@@ -491,8 +491,8 @@ export default function TesisDetailPage() {
       const startStr = fmtDate(selStart);
       const endStr = selEnd ? fmtDate(selEnd) : startStr;
       
-      // Seçilen tarih aralığında onaylı rezervasyonları çek
-      const { data: rezData, error: rezErr } = await supabase
+      // 1) Onaylı rezervasyonlar
+      const { data: onayliData, error: onayliErr } = await supabase
         .from("rezervasyonlar")
         .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
         .eq("tesis_id", tesisId)
@@ -500,11 +500,30 @@ export default function TesisDetailPage() {
         .lte("baslangic_tarih", endStr)
         .gte("bitis_tarih", startStr);
       
+      // 2) Aktif bekleyen rezervasyonlar (süresi dolmamış)
+      const nowIso = new Date().toISOString();
+      const { data: bekleyenData, error: bekleyenErr } = await supabase
+        .from("rezervasyonlar")
+        .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
+        .eq("tesis_id", tesisId)
+        .eq("durum", "bekliyor")
+        .gt("rezerveli_kadar", nowIso)
+        .lte("baslangic_tarih", endStr)
+        .gte("bitis_tarih", startStr);
+      
       if (cancelled) return;
-      if (rezErr) {
-        console.error("Rezerveli şezlonglar çekme hatası:", rezErr);
-        return;
+      if (onayliErr) {
+        console.error("Onaylı rezerveli şezlonglar hatası:", onayliErr);
       }
+      if (bekleyenErr) {
+        console.error("Bekleyen rezerveli şezlonglar hatası:", bekleyenErr);
+      }
+      
+      // İki listeyi birleştir
+      const rezData = [
+        ...(onayliData ?? []),
+        ...(bekleyenData ?? []).map((b: any) => ({ ...b, _isBeklemede: true })),
+      ];
       
       const newByType = {
         rezerve: new Set<string>(),
@@ -512,15 +531,20 @@ export default function TesisDetailPage() {
         kilitli: new Set<string>(),
         dolu: new Set<string>(),
       };
-      (rezData ?? []).forEach((r: any) => {
+      rezData.forEach((r: any) => {
         const ids = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
         const musteriAdi = (r.musteri_adi || "").toUpperCase();
         let tip: "rezerve" | "bakim" | "kilitli" | "dolu" = "dolu";
-        if (musteriAdi === "İŞLETME REZERVİ") tip = "rezerve";
+        // Bekleyen rezervasyon → zorla "dolu" (başka müşteri için kilit)
+        if (r._isBeklemede) {
+          tip = "dolu";
+        } else if (musteriAdi === "İŞLETME REZERVİ") tip = "rezerve";
         else if (musteriAdi === "BAKIM") tip = "bakim";
         else if (musteriAdi === "İŞLETME KİLİDİ") tip = "kilitli";
         ids.forEach((id: string) => {
-          if (typeof id === "string" && id.trim()) newByType[tip].add(id);
+          if (typeof id === "string" && id.trim()) {
+            newByType[tip].add(id);
+          }
         });
       });
       
@@ -678,6 +702,7 @@ export default function TesisDetailPage() {
           kisi_sayisi: selSzls.length,
           toplam_tutar: toplamFiyat,
           durum: "bekliyor",
+          rezerveli_kadar: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
         })
         .select("id")
         .single();
