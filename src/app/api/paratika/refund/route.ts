@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       params.append("CURRENCY", "TRY");
       params.append(
         "ORDERITEMS",
-        JSON.stringify([{ productCode: "1", quantity: "1" }])
+        JSON.stringify([{ productCode: rezervasyonId, quantity: "1" }])
       );
     }
 
