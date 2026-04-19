@@ -247,7 +247,8 @@ function OdemeContent() {
     try {
       setPaymentError(false);
       setPaymentLoading(true);
-      const orderId = queryParams?.get("rezervasyonId")?.trim() || "MYL-" + Date.now();
+      const orderId = queryParams?.get("rezervasyonId")?.trim() || queryParams?.get("id")?.trim() || "";
+      if (!orderId) { console.error("orderId bulunamadı"); }
       const resp = await fetch("/api/paratika/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

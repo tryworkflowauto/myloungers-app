@@ -66,8 +66,10 @@ async function redirectForResponseCode(
       bakiye_yuklenen?: number;
       bakiye_kalan?: number;
       bakiye_harcanan?: number;
+      merchantpaymentid?: string;
     } = { durum: "onaylandi" };
     updatePayload.giris_yapildi = false;
+    updatePayload.merchantpaymentid = normalizedMerchantPaymentId;
     if (normalizedPgtranid != null) {
       updatePayload.pgtranid = normalizedPgtranid;
     }

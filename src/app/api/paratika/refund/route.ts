@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const { data: row, error: fetchError } = await supabaseAdmin
       .from("rezervasyonlar")
-      .select("pgtranid, toplam_tutar, created_at")
+      .select("pgtranid, toplam_tutar, created_at, merchantpaymentid")
       .eq("id", rezervasyonId)
       .maybeSingle();
 
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       params.append("CURRENCY", "TRY");
       params.append(
         "ORDERITEMS",
-        JSON.stringify([{ productCode: rezervasyonId, quantity: "1" }])
+        JSON.stringify([{ productCode: (row.merchantpaymentid || rezervasyonId), quantity: "1" }])
       );
     }
 
