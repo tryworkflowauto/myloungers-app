@@ -509,6 +509,7 @@ export default function TesisDetailPage() {
       return;
     }
     if (!selStart) {
+      showToast("Lütfen önce tarih seçin.", "📅");
       const el = dateInputRef.current;
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
