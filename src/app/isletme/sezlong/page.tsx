@@ -237,6 +237,15 @@ export default function IsletmeSezlongPage() {
   const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "", aciklama: "", deniz_sirasi: "1" });
   const [silModal, setSilModal] = useState<GrupRow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // Tarih filtresi için seçili tarih (default: bugün)
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  });
+  const [rezervedSezlongIds, setRezervedSezlongIds] = useState<Set<string>>(new Set());
   const [cikisModal, setCikisModal] = useState(false);
   const [rezModal, setRezModal] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
@@ -395,8 +404,13 @@ export default function IsletmeSezlongPage() {
       }
       const counts = { bos: 0, dolu: 0, rezerve: 0, bakim: 0, kilitli: 0 };
       for (const s of sezRows) {
-        const d = (s.durum || "bos") as keyof typeof counts;
-        if (counts[d] !== undefined) counts[d]++;
+        // Eğer online onaylı rezervasyonda varsa "dolu" say
+        if (rezervedSezlongIds.has(s.id)) {
+          counts.dolu++;
+        } else {
+          const d = (s.durum || "bos") as keyof typeof counts;
+          if (counts[d] !== undefined) counts[d]++;
+        }
       }
       setLegendCounts(counts);
 
@@ -431,7 +445,11 @@ export default function IsletmeSezlongPage() {
           prefix,
           count: cap,
           color: g.renk || TEAL,
-          durumlar: list.map((s) => ({ id: s.id, numara: s.numara, durum: s.durum || "bos" })),
+          durumlar: list.map((s) => ({
+            id: s.id,
+            numara: s.numara,
+            durum: rezervedSezlongIds.has(s.id) ? "dolu" : (s.durum || "bos"),
+          })),
           title: g.ad,
           sub: aciklama || g.ad,
           icon: grupIcon(g.ad),
@@ -444,7 +462,40 @@ export default function IsletmeSezlongPage() {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [tesisId, authChecked, supabase]);
+  }, [tesisId, authChecked, supabase, selectedDate, rezervedSezlongIds]);
+
+  // Seçilen tarihte onaylı rezervasyonlardaki sezlong_ids'leri çek
+  useEffect(() => {
+    if (!tesisId || !selectedDate) {
+      setRezervedSezlongIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    async function loadRezervedIds() {
+      const { data, error } = await supabase
+        .from("rezervasyonlar")
+        .select("sezlong_ids, baslangic_tarih, bitis_tarih")
+        .eq("tesis_id", tesisId)
+        .eq("durum", "onaylandi")
+        .lte("baslangic_tarih", selectedDate)
+        .gte("bitis_tarih", selectedDate);
+      if (cancelled) return;
+      if (error) {
+        console.error("İşletme paneli rezerveli şezlong çekme hatası:", error);
+        return;
+      }
+      const idSet = new Set<string>();
+      (data ?? []).forEach((r: any) => {
+        const ids = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
+        ids.forEach((id: string) => {
+          if (typeof id === "string" && id.trim()) idSet.add(id);
+        });
+      });
+      if (!cancelled) setRezervedSezlongIds(idSet);
+    }
+    loadRezervedIds();
+    return () => { cancelled = true; };
+  }, [tesisId, selectedDate]);
 
   useEffect(() => {
     if (!authChecked || !tesisId) {
@@ -852,6 +903,55 @@ export default function IsletmeSezlongPage() {
       >
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Şezlong Haritası</h1>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: 12, 
+          padding: "12px 16px", 
+          background: "#F3F4F6", 
+          borderRadius: 8, 
+          marginBottom: 16,
+          flexWrap: "wrap"
+        }}>
+          <span style={{ fontWeight: 600, color: "#1F2937" }}>📅 Görüntülenen Tarih:</span>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{
+              padding: "8px 12px",
+              border: "1px solid #D1D5DB",
+              borderRadius: 6,
+              fontSize: 14,
+              fontFamily: "inherit",
+              cursor: "pointer"
+            }}
+          />
+          <button
+            onClick={() => {
+              const d = new Date();
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, "0");
+              const day = String(d.getDate()).padStart(2, "0");
+              setSelectedDate(`${y}-${m}-${day}`);
+            }}
+            style={{
+              padding: "8px 12px",
+              background: "#0d9488",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              fontSize: 13,
+              cursor: "pointer",
+              fontWeight: 600
+            }}
+          >
+            Bugün
+          </button>
+          <span style={{ fontSize: 12, color: "#6B7280", marginLeft: "auto" }}>
+            Seçilen tarihteki şezlong durumu gösteriliyor
+          </span>
+        </div>
           <span style={{ fontSize: 11, color: GRAY400 }}>{toplamSezlong} şezlong • {toplamDolu} dolu • {toplamBos} boş • {legendCounts.bakim} bakımda</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
