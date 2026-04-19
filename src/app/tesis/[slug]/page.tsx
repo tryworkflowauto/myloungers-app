@@ -86,6 +86,7 @@ export default function TesisDetailPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
+  const [rezervedSezlongIds, setRezervedSezlongIds] = useState<Set<string>>(new Set());
   const szlRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLDivElement>(null);
 
@@ -217,7 +218,12 @@ export default function TesisDetailPage() {
         const statuses: SzlStatus[] = [];
         for (let i = 1; i <= kapasite; i++) {
           const rec = list.find((s) => s.numara === i);
-          statuses.push(mapDbDurumToStatus(rec?.durum));
+          const recId = rec?.id;
+          if (recId && rezervedSezlongIds.has(recId)) {
+            statuses.push("full");
+          } else {
+            statuses.push(mapDbDurumToStatus(rec?.durum));
+          }
         }
         const doluCount = statuses.filter((s) => s === "full").length;
         const dolulukPct = statuses.length > 0 ? Math.round((doluCount / statuses.length) * 100) : 0;
@@ -248,7 +254,7 @@ export default function TesisDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [row?.id]);
+  }, [row?.id, rezervedSezlongIds]);
 
   useEffect(() => {
     if (!row?.id) return;
@@ -442,6 +448,59 @@ export default function TesisDetailPage() {
       cancelled = true;
     };
   }, [row?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRezervedSezlongs() {
+      if (!row || !selStart) {
+        setRezervedSezlongIds(new Set());
+        return;
+      }
+      const tesisId = (row as { id?: string | number }).id;
+      if (!tesisId) return;
+      
+      function fmtDate(d: Date): string {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+      
+      const startStr = fmtDate(selStart);
+      const endStr = selEnd ? fmtDate(selEnd) : startStr;
+      
+      // Seçilen tarih aralığında onaylı rezervasyonları çek
+      const { data: rezData, error: rezErr } = await supabase
+        .from("rezervasyonlar")
+        .select("sezlong_ids, baslangic_tarih, bitis_tarih")
+        .eq("tesis_id", tesisId)
+        .eq("durum", "onaylandi")
+        .lte("baslangic_tarih", endStr)
+        .gte("bitis_tarih", startStr);
+      
+      if (cancelled) return;
+      if (rezErr) {
+        console.error("Rezerveli şezlonglar çekme hatası:", rezErr);
+        return;
+      }
+      
+      const idSet = new Set<string>();
+      (rezData ?? []).forEach((r: any) => {
+        const ids = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
+        ids.forEach((id: string) => {
+          if (typeof id === "string" && id.trim()) {
+            idSet.add(id);
+          }
+        });
+      });
+      
+      if (!cancelled) {
+        setRezervedSezlongIds(idSet);
+      }
+    }
+    loadRezervedSezlongs();
+    return () => { cancelled = true; };
+  }, [row, selStart, selEnd]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
