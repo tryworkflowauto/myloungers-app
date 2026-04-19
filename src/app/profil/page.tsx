@@ -1450,7 +1450,7 @@ export default function ProfilPage() {
             <div style={{padding:"16px 18px 0",textAlign:"center"}}>
               <div style={{fontSize:"1.4rem",marginBottom:6}}>⚠️</div>
               <div style={{fontSize:".82rem",fontWeight:900,color:"#0A1628",marginBottom:4}}>Rezervasyonu İptal Et</div>
-              <div style={{fontSize:".72rem",color:"#6B7280",lineHeight:1.6}}>Bu rezervasyonu iptal etmek istediğinize emin misiniz? İptal işlemi geri alınamaz ve ücret iadeniz başlatılır.</div>
+              <div style={{fontSize:".72rem",color:"#6B7280",lineHeight:1.6}}>Bu rezervasyonu iptal etmek istediğinize emin misiniz? İptal işlemi geri alınamaz ve ücret iadeniz başlatılır.<br />Ödemeniz 5 iş günü içinde kartınıza iade edilecektir.</div>
             </div>
             <div style={{padding:"12px 18px 16px",display:"flex",gap:8}}>
               <button type="button" onClick={() => setCancelModal(null)} style={{flex:1,padding:"9px",border:"1.5px solid #E5E7EB",borderRadius:9,background:"#fff",fontSize:".75rem",fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#6B7280"}}>Vazgeç</button>
