@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    console.log("[refund] sending params:", params.toString());
+
     const paratResponse = await fetch("https://vpos.paratika.com.tr/paratika/api/v2", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
