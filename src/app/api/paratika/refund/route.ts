@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     console.log("[refund] paratika response:", rawText);
     const parsed = new URLSearchParams(rawText);
 
-    if (parsed.get("responseCode") === "00") {
+    if (parsed.get("responseCode") === "00" || parsed.get("pgTranReturnCode") === "00") {
       const { error: updateError } = await supabaseAdmin
         .from("rezervasyonlar")
         .update({ durum: "iptal" })
