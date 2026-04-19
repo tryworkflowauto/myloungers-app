@@ -552,7 +552,7 @@ export default function TesisDetailPage() {
     const { data: authRez } = await supabase.auth.getUser();
     const kullaniciId = authRez?.user?.id ?? null;
 
-    let sezlongIdVal: string | null = null;
+    const sezlongIdsArr: string[] = [];
     const tesisIdForSez = row?.id as string | undefined;
     if (tesisIdForSez) {
       for (const s of selSzls) {
@@ -568,8 +568,7 @@ export default function TesisDetailPage() {
           .eq("tesis_id", tesisIdForSez)
           .maybeSingle();
         if (szRow?.id) {
-          sezlongIdVal = String(szRow.id);
-          break;
+          sezlongIdsArr.push(String(szRow.id));
         }
       }
     }
@@ -582,7 +581,8 @@ export default function TesisDetailPage() {
         .insert({
           tesis_id: row?.id ?? null,
           kullanici_id: kullaniciId,
-          sezlong_id: sezlongIdVal,
+          sezlong_id: sezlongIdsArr[0] ?? null,
+          sezlong_ids: sezlongIdsArr,
           baslangic_tarih: startStr,
           bitis_tarih: endStr,
           kisi_sayisi: selSzls.length,

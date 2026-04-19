@@ -200,7 +200,7 @@ export default function ProfilPage() {
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .select(
-            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
+            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, sezlong_ids, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
           .in("durum", ["onaylandi", "iptal"])
@@ -237,6 +237,34 @@ export default function ProfilPage() {
                 ad: t.ad || `Tesis #${t.id}`,
                 loc: locParts || "-",
                 slug: typeof t.slug === "string" && t.slug.trim() ? t.slug.trim() : null,
+              };
+            });
+          }
+        }
+
+        // Tüm rezervasyonlardaki sezlong_ids'leri topla ve ilgili şezlongları tek seferde çek
+        const tumSezlongIds = Array.from(
+          new Set(
+            (rezData ?? [])
+              .flatMap((r: any) => Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [])
+              .filter((id: any) => id != null)
+          )
+        );
+
+        const sezlongMap: Record<string, { numara: number | string | null; grupAd: string | null }> = {};
+        if (tumSezlongIds.length) {
+          const { data: sezlongData, error: sezlongErr } = await supabase
+            .from("sezlonglar")
+            .select("id, numara, grup:sezlong_gruplari(ad)")
+            .in("id", tumSezlongIds);
+
+          if (sezlongErr) {
+            console.error("Profil sezlong sorgu hatası:", sezlongErr);
+          } else {
+            (sezlongData ?? []).forEach((s: any) => {
+              sezlongMap[String(s.id)] = {
+                numara: s.numara ?? null,
+                grupAd: s.grup?.ad ?? null,
               };
             });
           }
@@ -313,17 +341,43 @@ export default function ProfilPage() {
               grup?: { ad?: string | null } | null;
             } | null;
           }).sezlong;
-          const grupAd = sl?.grup?.ad?.trim();
-          const sezlongNum = sl?.numara;
-          const hasNum = sezlongNum != null && String(sezlongNum).trim() !== "";
+          
+          // sezlong_ids array'inden tüm şezlongları gruba göre grupla
+          const rezSezlongIds: string[] = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
+          const gruplar: Record<string, string[]> = {};
+          
+          for (const sid of rezSezlongIds) {
+            const s = sezlongMap[String(sid)];
+            if (!s) continue;
+            const gAd = (s.grupAd || "").trim();
+            const num = s.numara;
+            if (!gAd || num == null || String(num).trim() === "") continue;
+            const prefix = gAd.charAt(0).toUpperCase();
+            const etiket = `${prefix}${num}`;
+            if (!gruplar[gAd]) gruplar[gAd] = [];
+            gruplar[gAd].push(etiket);
+          }
+          
           let szlLabel = "-";
-          if (grupAd && hasNum) {
-            const prefix = grupAd.charAt(0).toUpperCase();
-            szlLabel = `${grupAd} - ${prefix}${sezlongNum}`;
-          } else if (hasNum) {
-            szlLabel = `No: ${sezlongNum}`;
-          } else if (grupAd) {
-            szlLabel = grupAd;
+          const grupKeys = Object.keys(gruplar);
+          if (grupKeys.length > 0) {
+            // Her grup için "Grup: E1, E2, E3" formatında satır oluştur
+            szlLabel = grupKeys
+              .map((gAd) => `${gAd}: ${gruplar[gAd].join(", ")}`)
+              .join("\n");
+          } else {
+            // Eski mantığa fallback (sezlong_ids boşsa eski sezlong alanını kullan)
+            const grupAd = sl?.grup?.ad?.trim();
+            const sezlongNum = sl?.numara;
+            const hasNum = sezlongNum != null && String(sezlongNum).trim() !== "";
+            if (grupAd && hasNum) {
+              const prefix = grupAd.charAt(0).toUpperCase();
+              szlLabel = `${grupAd} - ${prefix}${sezlongNum}`;
+            } else if (hasNum) {
+              szlLabel = `No: ${sezlongNum}`;
+            } else if (grupAd) {
+              szlLabel = grupAd;
+            }
           }
 
           const codeStr =
@@ -1135,7 +1189,7 @@ export default function ProfilPage() {
                     </div>
                     <div className="rc-rows">
                       <div className="rc-row"><span>📅</span><span className="rc-row-t">Tarih</span><span className="rc-row-v">{r.dates}</span></div>
-                      <div className="rc-row"><span>🛏</span><span className="rc-row-t">Şezlong</span><span className="rc-row-v">{r.szl}</span></div>
+                      <div className="rc-row"><span>🛏</span><span className="rc-row-t">Şezlong</span><span className="rc-row-v" style={{ whiteSpace: 'pre-line' }}>{r.szl}</span></div>
                       <div className="rc-row"><span>📆</span><span className="rc-row-t">Süre</span><span className="rc-row-v">{r.gun}</span></div>
                       <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>{r.odenen}</span></div>
                     </div>
