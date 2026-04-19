@@ -275,6 +275,18 @@ export default function IsletmeSezlongPage() {
   const [grupDropTargetId, setGrupDropTargetId] = useState<string | null>(null);
   const [seciliTarih, setSeciliTarih] = useState(() => new Date().toISOString().slice(0, 10));
   const [mod, setMod] = useState<"duzenleme" | "goruntulem" | "musteri">("duzenleme");
+  // Toplu seçim modu
+  const [topluMod, setTopluMod] = useState<boolean>(false);
+  const [topluSecilenIds, setTopluSecilenIds] = useState<Set<string>>(new Set());
+  const [topluDurum, setTopluDurum] = useState<string>("rezerve");
+  const [topluBaslangic, setTopluBaslangic] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [topluBitis, setTopluBitis] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [bugunGelirTutar, setBugunGelirTutar] = useState(0);
   const [bugunSiparisAdet, setBugunSiparisAdet] = useState(0);
 
@@ -873,8 +885,126 @@ export default function IsletmeSezlongPage() {
     showToast("✅ Değişiklikler kaydedildi!");
   }
 
+  async function handleTopluKaydet() {
+    if (topluSecilenIds.size === 0) {
+      showToast("⚠️ Önce şezlong seçin");
+      return;
+    }
+    
+    if (!topluBaslangic || !topluBitis) {
+      showToast("⚠️ Tarih aralığı seçin");
+      return;
+    }
+    
+    if (topluBaslangic > topluBitis) {
+      showToast("⚠️ Bitiş tarihi başlangıçtan önce olamaz");
+      return;
+    }
+    
+    const secilenIdArray = Array.from(topluSecilenIds);
+    
+    if (topluDurum === "bos") {
+      // Toplu iptal - seçilen şezlongların aktif işletme rezervelerini iptal et
+      const { error: cancelError } = await supabase
+        .from("rezervasyonlar")
+        .update({ durum: "iptal" })
+        .eq("tesis_id", tesisId)
+        .is("kullanici_id", null)
+        .eq("durum", "onaylandi")
+        .overlaps("sezlong_ids", secilenIdArray);
+      
+      if (cancelError) {
+        console.error("Toplu iptal hatası:", cancelError);
+        showToast("❌ Toplu iptal hatası: " + cancelError.message);
+        return;
+      }
+      
+      // Seçilenleri tüm tip setlerinden çıkar
+      setRezervedByType((prev) => {
+        const next = { 
+          rezerve: new Set(prev.rezerve), 
+          bakim: new Set(prev.bakim), 
+          kilitli: new Set(prev.kilitli), 
+          dolu: new Set(prev.dolu) 
+        };
+        secilenIdArray.forEach((id) => {
+          next.rezerve.delete(id);
+          next.bakim.delete(id);
+          next.kilitli.delete(id);
+          next.dolu.delete(id);
+        });
+        return next;
+      });
+      
+      showToast(`✅ ${secilenIdArray.length} şezlong serbest bırakıldı`);
+    } else if (topluDurum === "rezerve" || topluDurum === "bakim" || topluDurum === "kilitli") {
+      const musteriAdiMap: Record<string, string> = {
+        rezerve: "İŞLETME REZERVİ",
+        bakim: "BAKIM",
+        kilitli: "İŞLETME KİLİDİ",
+      };
+      
+      // TEK rezervasyon kaydı - tüm seçilen şezlonglar sezlong_ids array'inde
+      const { error: rezError } = await supabase.from("rezervasyonlar").insert({
+        tesis_id: tesisId,
+        kullanici_id: null,
+        sezlong_id: secilenIdArray[0],  // İlkini referans olarak koy (eski kod uyumluluğu)
+        sezlong_ids: secilenIdArray,
+        baslangic_tarih: topluBaslangic,
+        bitis_tarih: topluBitis,
+        kisi_sayisi: secilenIdArray.length,
+        toplam_tutar: 0,
+        durum: "onaylandi",
+        musteri_adi: musteriAdiMap[topluDurum] ?? "İŞLETME",
+        rezervasyon_kodu: `ISL-${Date.now()}`,
+      });
+      
+      if (rezError) {
+        console.error("Toplu rezervasyon hatası:", rezError);
+        showToast("❌ Toplu kayıt hatası: " + rezError.message);
+        return;
+      }
+      
+      // State güncelleme (seçilen tarih kapsam içindeyse)
+      if (selectedDate >= topluBaslangic && selectedDate <= topluBitis) {
+        setRezervedByType((prev) => {
+          const next = { 
+            rezerve: new Set(prev.rezerve), 
+            bakim: new Set(prev.bakim), 
+            kilitli: new Set(prev.kilitli), 
+            dolu: new Set(prev.dolu) 
+          };
+          const tip = topluDurum as "rezerve" | "bakim" | "kilitli";
+          secilenIdArray.forEach((id) => {
+            if (next[tip]) next[tip].add(id);
+          });
+          return next;
+        });
+      }
+      
+      showToast(`✅ ${secilenIdArray.length} şezlong kaydedildi`);
+    }
+    
+    // Seçimi temizle
+    setTopluSecilenIds(new Set());
+  }
+
   function handleSezlongClick(no: string, grupKey: string, durum: string, sezlongId: string) {
-    if (durum === "kilitli") {
+    // Toplu seçim modu açıksa, sadece seçime ekle/çıkar
+    if (topluMod) {
+      setTopluSecilenIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(sezlongId)) {
+          next.delete(sezlongId);
+        } else {
+          next.add(sezlongId);
+        }
+        return next;
+      });
+      return;
+    }
+    // Kilit koruması sadece müşteri modunda aktif
+    if (durum === "kilitli" && mod === "musteri") {
       setKilitliToastNo(no);
       setTimeout(() => setKilitliToastNo(null), 2500);
       return;
@@ -1084,6 +1214,130 @@ export default function IsletmeSezlongPage() {
             Seçilen tarihteki şezlong durumu gösteriliyor
           </span>
         </div>
+            {topluMod && (
+              <div style={{ 
+                margin: "12px 0", 
+                padding: 12, 
+                paddingRight: 40,
+                position: "relative",
+                background: "#FEF3C7", 
+                border: "2px solid #F59E0B", 
+                borderRadius: 8,
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 8,
+              }}>
+                <button
+                  onClick={() => {
+                    setTopluMod(false);
+                    setTopluSecilenIds(new Set());
+                  }}
+                  title="Toplu seçimi kapat"
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 28,
+                    height: 28,
+                    background: "white",
+                    color: "#92400E",
+                    border: "1px solid #F59E0B",
+                    borderRadius: "50%",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+                <span style={{ fontWeight: 700, color: "#92400E", fontSize: 13 }}>
+                  ⚡ Hızlı Seçim:
+                </span>
+                
+                {/* Tümünü Seç */}
+                <button
+                  onClick={() => {
+                    const all = new Set<string>();
+                    Object.values(haritaGruplari).forEach((g: any) => {
+                      (g.durumlar || []).forEach((s: any) => all.add(s.id));
+                    });
+                    setTopluSecilenIds(all);
+                  }}
+                  style={{
+                    padding: "6px 12px",
+                    background: "#0d9488",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  ✓ Tümünü Seç
+                </button>
+                
+                {/* Grup Bazlı Butonlar */}
+                {gruplar.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => {
+                      const h = haritaGruplari[g.id];
+                      if (!h) return;
+                      setTopluSecilenIds((prev) => {
+                        const next = new Set(prev);
+                        (h.durumlar || []).forEach((s: any) => next.add(s.id));
+                        return next;
+                      });
+                    }}
+                    style={{
+                      padding: "6px 12px",
+                      background: "white",
+                      color: "#374151",
+                      border: "1px solid #D1D5DB",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {g.name} ({g.count})
+                  </button>
+                ))}
+                
+                {/* Seçimi Temizle */}
+                <button
+                  onClick={() => setTopluSecilenIds(new Set())}
+                  style={{
+                    padding: "6px 12px",
+                    background: "#EF4444",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    marginLeft: "auto",
+                  }}
+                >
+                  ✕ Seçimi Temizle
+                </button>
+                
+                <span style={{ 
+                  fontWeight: 700, 
+                  color: "#92400E", 
+                  fontSize: 13,
+                  marginLeft: 8,
+                }}>
+                  {topluSecilenIds.size} şezlong seçili
+                </span>
+              </div>
+            )}
           <span style={{ fontSize: 11, color: GRAY400 }}>{toplamSezlong} şezlong • {toplamDolu} dolu • {toplamBos} boş • {legendCounts.bakim} bakımda</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1143,6 +1397,33 @@ export default function IsletmeSezlongPage() {
             <option value="goruntulem">👁️ Görüntüleme Modu</option>
             <option value="musteri">👤 Müşteri Görünümü</option>
           </select>
+            {mod === "duzenleme" && (
+              <button
+                onClick={() => {
+                  setTopluMod((prev) => !prev);
+                  if (topluMod) {
+                    // Kapatırken seçimi temizle
+                    setTopluSecilenIds(new Set());
+                  }
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: topluMod ? "2px solid #0d9488" : "1px solid #D1D5DB",
+                  background: topluMod ? "#0d9488" : "white",
+                  color: topluMod ? "white" : "#374151",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginLeft: 8,
+                }}
+              >
+                📋 Toplu Seçim {topluMod ? `(${topluSecilenIds.size})` : ""}
+              </button>
+            )}
         </div>
       </header>
 
@@ -1529,6 +1810,8 @@ export default function IsletmeSezlongPage() {
                                 opacity: durumSoluk ? 0.3 : 1,
                                 transition: "opacity 0.2s",
                                 pointerEvents: (durumSoluk || grupGizli) ? "none" : "auto",
+                                borderRadius: 8,
+                                boxShadow: topluMod && topluSecilenIds.has(slot.id) ? "0 0 0 3px #F59E0B" : undefined,
                               }}
                             >
                               <SezlongItem
@@ -1560,6 +1843,83 @@ export default function IsletmeSezlongPage() {
             flexShrink: 0,
           }}
         >
+          {topluMod ? (
+          <div style={{ padding: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+              📋 Toplu Kayıt
+            </h3>
+            <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 16 }}>
+              {topluSecilenIds.size > 0 
+                ? `${topluSecilenIds.size} şezlong seçili` 
+                : "Henüz şezlong seçilmedi"}
+            </div>
+            
+            {topluSecilenIds.size > 0 && (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>
+                    Durum:
+                  </label>
+                  <select
+                    value={topluDurum}
+                    onChange={(e) => setTopluDurum(e.target.value)}
+                    style={{ width: "100%", padding: 8, border: "1px solid #D1D5DB", borderRadius: 6, fontSize: 13 }}
+                  >
+                    <option value="rezerve">🔵 Rezerve</option>
+                    <option value="bakim">⚪ Bakım</option>
+                    <option value="kilitli">🟣 Kilit</option>
+                    <option value="bos">🟢 Boş (Aktif kayıtları iptal et)</option>
+                  </select>
+                </div>
+                
+                {(topluDurum === "rezerve" || topluDurum === "bakim" || topluDurum === "kilitli") && (
+                  <>
+                    <div style={{ marginBottom: 10 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>
+                        Başlangıç:
+                      </label>
+                      <input
+                        type="date"
+                        value={topluBaslangic}
+                        onChange={(e) => setTopluBaslangic(e.target.value)}
+                        style={{ width: "100%", padding: 8, border: "1px solid #D1D5DB", borderRadius: 6, fontSize: 13 }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>
+                        Bitiş:
+                      </label>
+                      <input
+                        type="date"
+                        value={topluBitis}
+                        onChange={(e) => setTopluBitis(e.target.value)}
+                        style={{ width: "100%", padding: 8, border: "1px solid #D1D5DB", borderRadius: 6, fontSize: 13 }}
+                      />
+                    </div>
+                  </>
+                )}
+                
+                <button
+                  onClick={handleTopluKaydet}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    background: "#0d9488",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  💾 Toplu Kaydet ({topluSecilenIds.size})
+                </button>
+              </>
+            )}
+          </div>
+          ) : (
+          <>
           <div style={{ padding: 16, background: mod === "musteri" ? "#7C3AED" : mod === "goruntulem" ? TEAL : NAVY, color: "white" }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Şezlong Detayı</h3>
             <span style={{ fontSize: 11, opacity: 0.6 }}>
@@ -1829,6 +2189,8 @@ export default function IsletmeSezlongPage() {
               </div>
             </div>
           </div>
+          </>
+        )}
         </div>
       </div>
 
