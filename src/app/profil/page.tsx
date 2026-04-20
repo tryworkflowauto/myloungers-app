@@ -203,7 +203,7 @@ export default function ProfilPage() {
             "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, sezlong_ids, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
-          .in("durum", ["onaylandi", "iptal"])
+          .in("durum", ["onaylandi", "iptal", "tamamlandi"])
           .order("baslangic_tarih", { ascending: false });
 
         if (rezError) {
@@ -323,12 +323,14 @@ export default function ProfilPage() {
             durumRaw === "cancelled"
           ) {
             statusKey = "cancel";
-          } else if (r.giris_yapildi === true) {
-            statusKey = "active";
+          } else if (durumRaw === "tamamlandi") {
+            statusKey = "past";
           } else if (startStr && startStr > today) {
             statusKey = "upcoming";
-          } else if (startStr && startStr <= today && (!endStr || endStr >= today)) {
-            statusKey = "upcoming";
+          } else if (startStr && endStr && startStr <= today && endStr >= today) {
+            statusKey = "active";
+          } else if (endStr && endStr < today) {
+            statusKey = "past";
           } else {
             statusKey = "past";
           }
@@ -477,16 +479,7 @@ export default function ProfilPage() {
   const filteredRes = reservations.filter((r) =>
     resFilter === "all"
       ? true
-      : resFilter === "active"
-        ? (() => {
-            const bugun = new Date().toISOString().slice(0, 10);
-            return (
-              (r.durum === "onaylandi" || r.durum === "bekliyor") &&
-              (r.tarihBaslangic || "").slice(0, 10) <= bugun &&
-              (r.tarihBitis || "").slice(0, 10) >= bugun
-            );
-          })()
-        : r.status === resFilter
+    : r.status === resFilter
   );
 
   function cancelRes(id: number | string) {
