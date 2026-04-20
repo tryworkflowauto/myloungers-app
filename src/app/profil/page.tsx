@@ -105,6 +105,8 @@ export default function ProfilPage() {
   const [reviewText, setReviewText] = useState("");
   const [kodModal, setKodModal] = useState(false);
   const [kodVal, setKodVal] = useState("");
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [toast, setToast] = useState<{msg: string, type: "success" | "error"} | null>(null);
   const [saveOk, setSaveOk] = useState(false);
   const [totalReservations, setTotalReservations] = useState<number | null>(null);
   const [totalSpent, setTotalSpent] = useState<number | null>(null);
@@ -482,6 +484,11 @@ export default function ProfilPage() {
     : r.status === resFilter
   );
 
+  function showToast(msg: string, type: "success" | "error" = "success") {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }
+
   function cancelRes(id: number | string) {
     setCancelError(null);
     setCancelModal({ id });
@@ -540,12 +547,12 @@ export default function ProfilPage() {
 
   async function activateReservationByCode(rawCode: string, source: "qr" | "kod") {
     if (!user?.id) {
-      alert("Lütfen önce giriş yapın.");
+      showToast("Lütfen önce giriş yapın.", "error");
       return;
     }
     const code = rawCode.trim().toUpperCase();
     if (code.length < 3) {
-      alert("Lütfen geçerli bir kod girin.");
+      showToast("Lütfen geçerli bir kod girin.", "error");
       return;
     }
 
@@ -560,11 +567,11 @@ export default function ProfilPage() {
 
     if (error) {
       console.error(`[profil] ${source} aktivasyon update hatası:`, error);
-      alert("Aktivasyon sırasında hata oluştu.");
+      showToast("Aktivasyon sırasında hata oluştu.", "error");
       return;
     }
     if (!row?.id) {
-      alert("Kod ile eşleşen aktif rezervasyon bulunamadı.");
+      showToast("Kod ile eşleşen aktif rezervasyon bulunamadı.", "error");
       return;
     }
 
@@ -583,7 +590,7 @@ export default function ProfilPage() {
     );
     setKodModal(false);
     setKodVal("");
-    alert("✅ Rezervasyon aktif edildi. Sipariş verebilirsiniz.");
+    showToast("Rezervasyon aktif edildi. Sipariş verebilirsiniz.", "success");
   }
 
   async function submitKod() {
@@ -670,6 +677,28 @@ export default function ProfilPage() {
 
   return (
     <>
+      {toast && (
+        <div style={{
+          position: "fixed",
+          top: 20,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: toast.type === "success" ? "#16A34A" : "#DC2626",
+          color: "#fff",
+          padding: "12px 20px",
+          borderRadius: 12,
+          fontSize: ".85rem",
+          fontWeight: 700,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}>
+          <span>{toast.type === "success" ? "✅" : "⚠️"}</span>
+          <span>{toast.msg}</span>
+        </div>
+      )}
       <style>{`
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
         :root{
@@ -1094,17 +1123,6 @@ export default function ProfilPage() {
               </button>
             </div>
           </div>
-          <div>
-            <div className="sec-label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Aktif Şezlonglarım
-            </div>
-            <div style={{textAlign:"center",padding:"16px 0",color:"var(--i3)"}}>
-              <div style={{fontSize:"2rem",opacity:.4}}>⛱️</div>
-              <div style={{fontSize:".78rem",marginTop:6}}>Henüz aktif şezlongunuz yok.</div>
-              <Link href="/arama" style={{display:"inline-block",marginTop:8,background:"var(--tdk)",color:"#fff",padding:"7px 18px",borderRadius:50,fontSize:".75rem",fontWeight:700,textDecoration:"none"}}>Rezervasyon Yap</Link>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1178,7 +1196,34 @@ export default function ProfilPage() {
                           <span className="rc-loc">📍 {r.loc}</span>
                         </div>
                       </div>
-                      <div className="rc-code" title={String(r.id)}>{r.code}</div>
+                      <div className="rc-code" title={String(r.id)} style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                        <span>{r.code}</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(r.code || "");
+                              setCopiedId(r.id);
+                              setTimeout(() => setCopiedId(null), 1500);
+                            } catch {
+                              // Clipboard erişimi reddedilirse sessizce geç.
+                            }
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.7rem",
+                            padding: "2px 6px",
+                            marginLeft: 4,
+                            color: copiedId === r.id ? "#16A34A" : "var(--tdk)",
+                          }}
+                          aria-label="Rezervasyon kodunu kopyala"
+                          title={copiedId === r.id ? "Kopyalandı" : "Kopyala"}
+                        >
+                          {copiedId === r.id ? "✓" : "📋"}
+                        </button>
+                      </div>
                     </div>
                     <div className="rc-rows">
                       <div className="rc-row"><span>📅</span><span className="rc-row-t">Tarih</span><span className="rc-row-v">{r.dates}</span></div>
@@ -1191,6 +1236,16 @@ export default function ProfilPage() {
                       {"review" in r && r.review && <button className="btn-review" onClick={() => { setReviewTarget(r.id); setReviewModal(true); }}>⭐ Değerlendir</button>}
                       <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
                         {r.status !== "cancel" && r.status !== "past" && <button className="btn-cancel" onClick={() => cancelRes(r.id)}>İptal Et</button>}
+                        {r.girisYapildi === true && r.status === "active" && (
+                          <button
+                            type="button"
+                            className="btn-detail"
+                            style={{ background: "#F59E0B", color: "#fff", borderColor: "#F59E0B" }}
+                            onClick={() => router.push("/tesis/" + (r.slug || "") + "?siparis=1")}
+                          >
+                            🍽️ Sipariş Ver
+                          </button>
+                        )}
                         <button
                           className="btn-detail"
                           onClick={() => {
@@ -1399,7 +1454,7 @@ export default function ProfilPage() {
             <button className="modal-close" style={{position:"absolute",top:16,right:16}} onClick={() => setKodModal(false)}>✕</button>
             <div style={{fontSize:"1rem",fontWeight:900,marginBottom:6,color:"var(--navy)"}}>⌨️ Şezlong Kodu Gir</div>
             <div style={{fontSize:".78rem",color:"var(--i3)",marginBottom:16}}>Şezlong üzerindeki kodu girerek rezervasyonunuzu aktif edin.</div>
-            <input className="kod-input" value={kodVal} onChange={e=>setKodVal(e.target.value.toUpperCase())} placeholder="MLG - XXXX" maxLength={10} />
+            <input className="kod-input" value={kodVal} onChange={e=>setKodVal(e.target.value.toUpperCase())} placeholder="MYL-DDMMYYYY-GX" maxLength={20} />
             <button className="kod-submit" onClick={submitKod}>Kodu Doğrula →</button>
           </div>
         </div>
