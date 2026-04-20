@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 type Reservation = {
   id: number;
+  tesisId?: string;
   name: string;
   cat: string;
   loc: string;
@@ -398,6 +399,7 @@ export default function ProfilPage() {
 
           return {
             id: r.id,
+            tesisId: r.tesis_id == null ? undefined : String(r.tesis_id),
             name: tesisInfo?.ad || `Tesis #${r.tesis_id ?? ""}`,
             cat: "Beach Club",
             loc: tesisInfo?.loc || "-",
@@ -1241,7 +1243,7 @@ export default function ProfilPage() {
                             type="button"
                             className="btn-detail"
                             style={{ background: "#F59E0B", color: "#fff", borderColor: "#F59E0B" }}
-                            onClick={() => router.push("/tesis/" + (r.slug || "") + "?siparis=1")}
+                            onClick={() => router.push("/siparis/" + r.id + "?tesis_id=" + (r.tesisId || ""))}
                           >
                             🍽️ Sipariş Ver
                           </button>
