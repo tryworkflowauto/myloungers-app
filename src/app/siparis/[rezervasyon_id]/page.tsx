@@ -49,6 +49,7 @@ export default function SiparisPage() {
   const [urunler, setUrunler] = useState<UrunRow[]>([]);
   const [seciliKategori, setSeciliKategori] = useState("tumü");
   const [sepet, setSepet] = useState<Record<string, number>>({});
+  const [sepetAcik, setSepetAcik] = useState(false);
   const [gonderiliyor, setGonderiliyor] = useState(false);
   const [toast, setToast] = useState<{
     msg: string;
@@ -285,7 +286,7 @@ export default function SiparisPage() {
             height: 44,
             borderRadius: "50%",
             border: "4px solid #CFF7F5",
-            borderTopColor: "#0ABAB5",
+            borderTopColor: "#FF7E5F",
             animation: "spin 1s linear infinite",
           }}
         />
@@ -327,14 +328,14 @@ export default function SiparisPage() {
             position: "sticky",
             top: 0,
             zIndex: 20,
-            background: "#0ABAB5",
+            background: "linear-gradient(135deg, #FF7E5F 0%, #FEB47B 100%)",
             color: "#fff",
             borderRadius: 14,
             padding: "10px 12px",
             display: "flex",
             alignItems: "center",
             gap: 10,
-            boxShadow: "0 8px 20px rgba(10,186,181,0.28)",
+            boxShadow: "0 8px 20px rgba(255,126,95,0.35)",
           }}
         >
           <button
@@ -364,11 +365,11 @@ export default function SiparisPage() {
               borderRadius: 999,
               padding: "5px 10px",
               textAlign: "right",
-              minWidth: 122,
+              minWidth: 132,
             }}
           >
-            <div style={{ fontSize: ".88rem", fontWeight: 900, lineHeight: 1.1 }}>{fmtTl(bakiyeKalan)}</div>
-            <div style={{ fontSize: ".62rem", opacity: 0.9 }}>Limit: {fmtTl(bakiyeYuklenen)}</div>
+            <div style={{ fontSize: ".88rem", fontWeight: 900, lineHeight: 1.1 }}>{fmtTl(bakiyeKalan)} / {fmtTl(bakiyeYuklenen)}</div>
+            <div style={{ fontSize: ".62rem", opacity: 0.9 }}>Kalan / Toplam</div>
           </div>
         </div>
 
@@ -389,7 +390,7 @@ export default function SiparisPage() {
               border: "none",
               borderRadius: 999,
               padding: "8px 14px",
-              background: seciliKategori === "tumü" ? "#0ABAB5" : "#f1f5f9",
+              background: seciliKategori === "tumü" ? "linear-gradient(135deg, #FF7E5F 0%, #FEB47B 100%)" : "#f1f5f9",
               color: seciliKategori === "tumü" ? "#fff" : "#475569",
               fontSize: ".78rem",
               fontWeight: 700,
@@ -408,7 +409,7 @@ export default function SiparisPage() {
                 border: "none",
                 borderRadius: 999,
                 padding: "8px 14px",
-                background: seciliKategori === kat.id ? "#0ABAB5" : "#f1f5f9",
+                background: seciliKategori === kat.id ? "linear-gradient(135deg, #FF7E5F 0%, #FEB47B 100%)" : "#f1f5f9",
                 color: seciliKategori === kat.id ? "#fff" : "#475569",
                 fontSize: ".78rem",
                 fontWeight: 700,
@@ -470,7 +471,7 @@ export default function SiparisPage() {
                       {urun.aciklama}
                     </div>
                   )}
-                  <div style={{ fontWeight: 900, color: "#0ABAB5", marginTop: 4, fontSize: ".86rem" }}>
+                  <div style={{ fontWeight: 900, color: "#FF7E5F", marginTop: 4, fontSize: ".86rem" }}>
                     {fmtTl(num(urun.fiyat))}
                   </div>
                 </div>
@@ -528,7 +529,7 @@ export default function SiparisPage() {
           >
             Bu kategoride urun bulunamadi.
             <div style={{ marginTop: 8 }}>
-              <Link href="/profil" style={{ color: "#0ABAB5", textDecoration: "none", fontWeight: 700 }}>
+              <Link href="/profil" style={{ color: "#FF7E5F", textDecoration: "none", fontWeight: 700 }}>
                 Profile Don
               </Link>
             </div>
@@ -551,37 +552,143 @@ export default function SiparisPage() {
             maxWidth: 600,
             background: "#0A1628",
             color: "#fff",
-            padding: "12px 14px calc(12px + env(safe-area-inset-bottom))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
             boxShadow: "0 -6px 24px rgba(0,0,0,.24)",
+            borderTopLeftRadius: 18,
+            borderTopRightRadius: 18,
+            overflow: "hidden",
           }}
         >
-          <div>
-            <div style={{ fontSize: ".7rem", opacity: 0.8 }}>{sepetAdetToplam} urun</div>
-            <div style={{ fontSize: "1rem", fontWeight: 900 }}>{fmtTl(sepetToplam)}</div>
-          </div>
-          <button
-            type="button"
-            onClick={handleSiparisVer}
-            disabled={gonderiliyor}
+          {sepetAcik && (
+            <div style={{ padding: "14px 16px 8px 16px", borderBottom: "1px solid rgba(255,255,255,0.1)", maxHeight: 280, overflowY: "auto" }}>
+              <div style={{ fontSize: ".75rem", opacity: 0.7, fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Sepetiniz</div>
+              {Object.entries(sepet).map(([urunId, adet]) => {
+                const urun = urunler.find((u) => String(u.id) === String(urunId));
+                if (!urun) return null;
+                const satirToplam = num(urun.fiyat) * adet;
+                return (
+                  <div key={urunId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+                    {urun.gorsel_url ? (
+                      <img
+                        src={urun.gorsel_url}
+                        alt={urun.ad}
+                        style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: "rgba(255,255,255,0.1)",
+                          color: "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "1rem",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {urun.icon || "🍽️"}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: ".82rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{urun.ad}</div>
+                      <div style={{ fontSize: ".68rem", opacity: 0.65 }}>{fmtTl(num(urun.fiyat))} × {adet}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => adetAzalt(urun.id)}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 7,
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          background: "rgba(255,255,255,0.08)",
+                          color: "#fff",
+                          cursor: "pointer",
+                          fontWeight: 800,
+                          fontSize: ".85rem",
+                        }}
+                      >
+                        −
+                      </button>
+                      <div style={{ minWidth: 20, textAlign: "center", fontWeight: 800, fontSize: ".85rem" }}>{adet}</div>
+                      <button
+                        type="button"
+                        onClick={() => adetArttir(urun.id)}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 7,
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          background: "rgba(255,255,255,0.08)",
+                          color: "#fff",
+                          cursor: "pointer",
+                          fontWeight: 800,
+                          fontSize: ".85rem",
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div style={{ minWidth: 58, textAlign: "right", fontSize: ".82rem", fontWeight: 800, color: "#FEB47B" }}>{fmtTl(satirToplam)}</div>
+                  </div>
+                );
+              })}
+              <div
+                style={{
+                  marginTop: 8,
+                  paddingTop: 10,
+                  borderTop: "1px solid rgba(255,255,255,0.15)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div style={{ fontSize: ".82rem", fontWeight: 700, opacity: 0.85 }}>Toplam</div>
+                <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#FEB47B" }}>{fmtTl(sepetToplam)}</div>
+              </div>
+            </div>
+          )}
+          <div
+            onClick={() => setSepetAcik((v) => !v)}
             style={{
-              border: "none",
-              background: "#0ABAB5",
-              color: "#fff",
-              borderRadius: 10,
-              padding: "10px 18px",
-              fontWeight: 800,
-              fontSize: ".85rem",
-              cursor: gonderiliyor ? "not-allowed" : "pointer",
-              opacity: gonderiliyor ? 0.75 : 1,
-              whiteSpace: "nowrap",
+              padding: "12px 14px calc(12px + env(safe-area-inset-bottom))",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              cursor: "pointer",
             }}
           >
-            {gonderiliyor ? "Gonderiliyor..." : "Siparis Ver"}
-          </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontSize: "1rem", transition: "transform 0.2s", transform: sepetAcik ? "rotate(180deg)" : "rotate(0deg)" }}>▲</div>
+              <div>
+                <div style={{ fontSize: ".7rem", opacity: 0.8 }}>{sepetAdetToplam} urun</div>
+                <div style={{ fontSize: "1rem", fontWeight: 900 }}>{fmtTl(sepetToplam)}</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleSiparisVer(); }}
+              disabled={gonderiliyor}
+              style={{
+                background: "linear-gradient(135deg, #FF7E5F 0%, #FEB47B 100%)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 12,
+                padding: "10px 18px",
+                fontWeight: 900,
+                fontSize: ".9rem",
+                cursor: gonderiliyor ? "not-allowed" : "pointer",
+                opacity: gonderiliyor ? 0.7 : 1,
+                boxShadow: "0 4px 12px rgba(255,126,95,0.35)",
+              }}
+            >
+              {gonderiliyor ? "Gonderiliyor..." : "Siparis Ver"}
+            </button>
+          </div>
         </div>
       )}
     </div>

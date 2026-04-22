@@ -99,14 +99,6 @@ export default function GarsonPage() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  if (authLoading) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
-        Yükleniyor...
-      </div>
-    );
-  }
-
   useEffect(() => {
     async function loadData() {
       const { data: authData, error: authErr } = await supabase.auth.getUser();
@@ -318,6 +310,14 @@ export default function GarsonPage() {
     loadData();
   }, []);
 
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
+
   // ── Sipariş actions ───────────────────────────────────────────────────────
   function siparisGuncelle(id: string, yeniDurum: SiparisDurum) {
     if (yeniDurum === "hazirlaniyor") {
@@ -428,7 +428,7 @@ export default function GarsonPage() {
         {/* SİPARİŞLER */}
         {sayfa === "siparisler" && (
           <>
-            {/* Müşteri Çağırıyor Banner */}
+            {/* TODO: cagrilar tablosu yapıldığında canlı verilerle bağlanacak
             {cagriGoster && (
               <div style={{ background: `linear-gradient(135deg,${RED},#9B1C1C)`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -460,6 +460,7 @@ export default function GarsonPage() {
                 </div>
               </div>
             )}
+            */}
 
             <div style={{ fontSize: 12, fontWeight: 700, color: GRAY400, marginBottom: 10 }}>
               Aktif Siparişler ({siparisler.length})
@@ -598,7 +599,7 @@ export default function GarsonPage() {
         </div>
       )}
 
-      {/* ── BAŞKASINA YÖNLENDIR MODAL ─────────────────────────────────────── */}
+      {/* TODO: cagrilar tablosu yapıldığında canlı verilerle bağlanacak
       {yonModal && (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setYonModal(false)}>
           <div style={{ background: "white", borderRadius: 16, padding: 24, width: 300, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
@@ -622,6 +623,7 @@ export default function GarsonPage() {
           </div>
         </div>
       )}
+      */}
 
       {/* ── SİPARİŞ DETAY MODAL ────────────────────────────────────────────── */}
       {detayModal && (
