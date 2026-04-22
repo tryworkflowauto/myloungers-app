@@ -19,6 +19,8 @@ type Reservation = {
   szl: string;
   gun: string;
   odenen: string;
+  bakiyeYuklenen?: number;
+  bakiyeKalan?: number;
   status: string;
   statusTxt: string;
   statusCss: string;
@@ -111,6 +113,9 @@ export default function ProfilPage() {
   const [saveOk, setSaveOk] = useState(false);
   const [totalReservations, setTotalReservations] = useState<number | null>(null);
   const [totalSpent, setTotalSpent] = useState<number | null>(null);
+  const [iptalCount, setIptalCount] = useState<number | null>(null);
+  const [totalEkYukleme, setTotalEkYukleme] = useState<number | null>(null);
+  const [totalSiparisHarcamasi, setTotalSiparisHarcamasi] = useState<number | null>(null);
   const [profile, setProfile] = useState({
     ad: "",
     soyad: "",
@@ -203,7 +208,7 @@ export default function ProfilPage() {
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .select(
-            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, sezlong_ids, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
+            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, sezlong_ids, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
           .in("durum", ["aktif", "onaylandi", "iptal", "tamamlandi"])
@@ -279,6 +284,36 @@ export default function ProfilPage() {
         const toplamTutar = (rezData ?? []).reduce((sum: number, r: any) => {
           const t = typeof r.toplam_tutar === "number" ? r.toplam_tutar : Number(r.toplam_tutar || 0);
           return sum + (isNaN(t) ? 0 : t);
+        }, 0);
+        // İptal edilmeyen rezervasyonlar
+        const aktifRezler = (rezData ?? []).filter((r: any) => r.durum !== "iptal");
+
+        // Rezervasyon sayısı (iptal hariç)
+        const rezervasyonSayisi = aktifRezler.length;
+
+        // İptal sayısı (altyazı için)
+        const iptalSayisi = (rezData ?? []).filter((r: any) => r.durum === "iptal").length;
+
+        // Online Ödeme: sadece MYL- prefix'li, iptal hariç, toplam_tutar toplamı
+        const onlineOdeme = aktifRezler
+          .filter((r: any) => typeof r.rezervasyon_kodu === "string" && r.rezervasyon_kodu.startsWith("MYL-"))
+          .reduce((sum: number, r: any) => {
+            const t = typeof r.toplam_tutar === "number" ? r.toplam_tutar : Number(r.toplam_tutar || 0);
+            return sum + (isNaN(t) ? 0 : t);
+          }, 0);
+
+        // Ek Yükleme: bakiye_yuklenen - toplam_tutar > 0 olanların farkı toplamı (iptal hariç)
+        const ekYukleme = aktifRezler.reduce((sum: number, r: any) => {
+          const yuklenen = typeof r.bakiye_yuklenen === "number" ? r.bakiye_yuklenen : Number(r.bakiye_yuklenen || 0);
+          const tutar = typeof r.toplam_tutar === "number" ? r.toplam_tutar : Number(r.toplam_tutar || 0);
+          const fark = yuklenen - tutar;
+          return sum + (fark > 0 ? fark : 0);
+        }, 0);
+
+        // Sipariş Harcaması: bakiye_harcanan toplamı (iptal hariç)
+        const siparisHarcamasi = aktifRezler.reduce((sum: number, r: any) => {
+          const h = typeof r.bakiye_harcanan === "number" ? r.bakiye_harcanan : Number(r.bakiye_harcanan || 0);
+          return sum + (isNaN(h) ? 0 : h);
         }, 0);
 
         const uiRes: Reservation[] = (rezData ?? []).map((r: any) => {
@@ -411,6 +446,8 @@ export default function ProfilPage() {
             szl: szlLabel,
             gun,
             odenen: `₺${Number(r.toplam_tutar || 0).toLocaleString("tr-TR")}`,
+            bakiyeYuklenen: Number(r.bakiye_yuklenen || 0),
+            bakiyeKalan: Number(r.bakiye_kalan || 0),
             status: statusKey,
             statusTxt: meta.txt,
             statusCss: meta.css,
@@ -423,8 +460,11 @@ export default function ProfilPage() {
         });
 
         setReservations(uiRes);
-        setTotalReservations(toplamRez);
-        setTotalSpent(toplamTutar);
+        setTotalReservations(rezervasyonSayisi);
+        setTotalSpent(onlineOdeme);
+        setIptalCount(iptalSayisi);
+        setTotalEkYukleme(ekYukleme);
+        setTotalSiparisHarcamasi(siparisHarcamasi);
         setResLoading(false);
       } catch (e) {
         console.error("Profil rezervasyon yükleme hatası:", e);
@@ -1084,12 +1124,27 @@ export default function ProfilPage() {
                 {totalReservations !== null ? totalReservations : "—"}
               </div>
               <div className="hstat-l">Rezervasyon</div>
+              {iptalCount && iptalCount > 0 && (
+                <div style={{ fontSize: "0.65rem", color: "#DC2626", marginTop: 2 }}>{iptalCount} iptal</div>
+              )}
             </div>
             <div>
               <div className="hstat-n">
                 {totalSpent !== null ? `₺${totalSpent.toLocaleString("tr-TR")}` : "—"}
               </div>
-              <div className="hstat-l">Toplam Harcama</div>
+              <div className="hstat-l">Online Ödeme</div>
+              <div style={{ fontSize: "0.65rem", color: "#64748B", marginTop: 2 }}>Komisyonlu</div>
+            </div>
+            {totalEkYukleme !== null && totalEkYukleme > 0 && (
+              <div>
+                <div className="hstat-n">{totalEkYukleme !== null ? `₺${totalEkYukleme.toLocaleString("tr-TR")}` : "—"}</div>
+                <div className="hstat-l">Ek Yükleme</div>
+                <div style={{ fontSize: "0.65rem", color: "#64748B", marginTop: 2 }}>Nakit</div>
+              </div>
+            )}
+            <div>
+              <div className="hstat-n">{totalSiparisHarcamasi !== null ? `₺${totalSiparisHarcamasi.toLocaleString("tr-TR")}` : "—"}</div>
+              <div className="hstat-l">Sipariş Harcaması</div>
             </div>
             <div>
               <div className="hstat-n">0</div>
@@ -1231,7 +1286,8 @@ export default function ProfilPage() {
                       <div className="rc-row"><span>📅</span><span className="rc-row-t">Tarih</span><span className="rc-row-v">{r.dates}</span></div>
                       <div className="rc-row"><span>🛏</span><span className="rc-row-t">Şezlong</span><span className="rc-row-v" style={{ whiteSpace: 'pre-line' }}>{r.szl}</span></div>
                       <div className="rc-row"><span>📆</span><span className="rc-row-t">Süre</span><span className="rc-row-v">{r.gun}</span></div>
-                      <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>{r.odenen}</span></div>
+                      <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>₺{((r as any).bakiyeYuklenen ?? 0).toLocaleString("tr-TR")}</span></div>
+                      <div className="rc-row"><span>💳</span><span className="rc-row-t">Kalan</span><span className="rc-row-v" style={{color: ((r as any).bakiyeKalan ?? 0) > 0 ? "#0891B2" : "#94A3B8"}}>₺{((r as any).bakiyeKalan ?? 0).toLocaleString("tr-TR")}</span></div>
                     </div>
                     <div className="rc-footer">
                       {"stars" in r && r.stars && <span className="rc-stars">{"★".repeat(r.stars as number)}{"☆".repeat(5-(r.stars as number))}</span>}
