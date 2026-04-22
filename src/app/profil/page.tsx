@@ -206,7 +206,7 @@ export default function ProfilPage() {
             "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, sezlong_ids, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
-          .in("durum", ["onaylandi", "iptal", "tamamlandi"])
+          .in("durum", ["aktif", "onaylandi", "iptal", "tamamlandi"])
           .order("baslangic_tarih", { ascending: false });
 
         if (rezError) {
@@ -560,7 +560,7 @@ export default function ProfilPage() {
 
     const { data: row, error } = await supabase
       .from("rezervasyonlar")
-      .update({ giris_yapildi: true })
+      .update({ giris_yapildi: true, durum: "onaylandi" })
       .eq("kullanici_id", user.id)
       .eq("rezervasyon_kodu", code)
       .neq("durum", "iptal")
@@ -1238,14 +1238,25 @@ export default function ProfilPage() {
                       {"review" in r && r.review && <button className="btn-review" onClick={() => { setReviewTarget(r.id); setReviewModal(true); }}>⭐ Değerlendir</button>}
                       <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
                         {r.status !== "cancel" && r.status !== "past" && <button className="btn-cancel" onClick={() => cancelRes(r.id)}>İptal Et</button>}
-                        {r.girisYapildi === true && r.status === "active" && (
+                        {r.status === "active" && (r.durum === "aktif" || r.durum === "onaylandi") && (
                           <button
                             type="button"
                             className="btn-detail"
-                            style={{ background: "#F59E0B", color: "#fff", borderColor: "#F59E0B" }}
-                            onClick={() => router.push("/siparis/" + r.id + "?tesis_id=" + (r.tesisId || ""))}
+                            style={{
+                              background: r.girisYapildi === true && r.durum === "onaylandi" ? "#F59E0B" : "#9CA3AF",
+                              color: "#fff",
+                              borderColor: r.girisYapildi === true && r.durum === "onaylandi" ? "#F59E0B" : "#9CA3AF",
+                              opacity: r.girisYapildi === true && r.durum === "onaylandi" ? 1 : 0.75,
+                            }}
+                            onClick={() => {
+                              if (r.girisYapildi === true && r.durum === "onaylandi") {
+                                router.push("/siparis/" + r.id + "?tesis_id=" + (r.tesisId || ""));
+                                return;
+                              }
+                              showToast("🔒 Önce şezlong girişinizi yapın. Yukarıdaki QR Oku veya Kod Gir ile şezlong kodunuzu doğrulayın.", "error");
+                            }}
                           >
-                            🍽️ Sipariş Ver
+                            {r.girisYapildi === true && r.durum === "onaylandi" ? "🍽️ Sipariş Ver" : "🔒 Sipariş Ver"}
                           </button>
                         )}
                         <button

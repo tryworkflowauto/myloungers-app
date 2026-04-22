@@ -522,7 +522,7 @@ export default function IsletmeSezlongPage() {
         .from("rezervasyonlar")
         .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
         .eq("tesis_id", tesisId)
-        .eq("durum", "onaylandi")
+        .in("durum", ["aktif", "onaylandi"])
         .lte("baslangic_tarih", selectedDate)
         .gte("bitis_tarih", selectedDate);
       if (cancelled) return;

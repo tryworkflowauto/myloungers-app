@@ -73,7 +73,7 @@ export default function SiparisPage() {
         const [rezRes, katRes, urunRes, tesisRes] = await Promise.all([
           supabase
             .from("rezervasyonlar")
-            .select("bakiye_kalan, bakiye_yuklenen, bakiye_harcanan")
+            .select("bakiye_kalan, bakiye_yuklenen, bakiye_harcanan, giris_yapildi, durum")
             .eq("id", rezervasyonId)
             .maybeSingle(),
           supabase
@@ -93,6 +93,15 @@ export default function SiparisPage() {
         if (katRes.error) throw katRes.error;
         if (urunRes.error) throw urunRes.error;
         if (tesisRes.error) throw tesisRes.error;
+        if (
+          rezRes.data &&
+          ((rezRes.data as any).giris_yapildi !== true || (rezRes.data as any).durum !== "onaylandi")
+        ) {
+          showToast("Önce şezlongunuzun girişini yapın (QR okutun veya kod girin)", "error");
+          router.push("/profil");
+          setYukleniyor(false);
+          return;
+        }
 
         setBakiyeKalan(num((rezRes.data as any)?.bakiye_kalan));
         setBakiyeYuklenen(num((rezRes.data as any)?.bakiye_yuklenen));

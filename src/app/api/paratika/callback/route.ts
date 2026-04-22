@@ -67,7 +67,7 @@ async function redirectForResponseCode(
       bakiye_kalan?: number;
       bakiye_harcanan?: number;
       merchantpaymentid?: string;
-    } = { durum: "onaylandi" };
+    } = { durum: "aktif" };
     updatePayload.giris_yapildi = false;
     updatePayload.merchantpaymentid = normalizedMerchantPaymentId;
     if (normalizedPgtranid != null) {
