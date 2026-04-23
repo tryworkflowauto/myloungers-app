@@ -6,6 +6,15 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
+function getRedirectPath(rol: string | undefined | null): string {
+  const r = (rol ?? "").toLowerCase();
+  if (r === "admin") return "/admin";
+  if (r === "isletmeci") return "/isletme";
+  if (r === "garson") return "/garson";
+  if (r === "mutfak") return "/mutfak";
+  return "/profil";
+}
+
 function GirisContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -46,10 +55,7 @@ function GirisContent() {
           });
         }
         const { data: kullanici } = await supabase.from("kullanicilar").select("rol").eq("email", session.user.email).single();
-        const rol = (kullanici as any)?.rol;
-        if (rol === "admin") window.location.href = "/admin";
-        else if (rol === "isletmeci") window.location.href = "/isletme";
-        else window.location.href = "/profil";
+        window.location.href = getRedirectPath((kullanici as any)?.rol);
       }
     });
     return () => subscription.unsubscribe();
@@ -99,9 +105,7 @@ function GirisContent() {
         .eq('email', authData.user.email)
         .single();
 
-      if ((kullanici as any)?.rol === 'admin') router.push('/admin');
-      else if ((kullanici as any)?.rol === 'isletmeci') router.push('/isletme');
-      else router.push('/profil');
+      router.push(getRedirectPath((kullanici as any)?.rol));
     }
   }
 
@@ -148,9 +152,7 @@ function GirisContent() {
         .eq('email', authData.user.email)
         .single();
 
-      if ((kullanici as any)?.rol === 'admin') router.push('/admin');
-      else if ((kullanici as any)?.rol === 'isletmeci') router.push('/isletme');
-      else router.push('/profil');
+      router.push(getRedirectPath((kullanici as any)?.rol));
     } catch (e) {
       console.error("Register error:", e);
       setErrorMsg("Sunucu hatası. Lütfen tekrar deneyin.");

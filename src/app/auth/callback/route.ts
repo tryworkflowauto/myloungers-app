@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
+function getRedirectPath(rol: string | undefined | null): string {
+  const r = (rol ?? "").toLowerCase();
+  if (r === "admin") return "/admin";
+  if (r === "isletmeci") return "/isletme";
+  if (r === "garson") return "/garson";
+  if (r === "mutfak") return "/mutfak";
+  return "/profil";
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -18,9 +27,7 @@ export async function GET(request: NextRequest) {
           .eq("id", user.id)
           .single();
 
-        if (kullanici?.rol === "admin") return NextResponse.redirect(origin + "/admin");
-        if (kullanici?.rol === "isletmeci") return NextResponse.redirect(origin + "/isletme");
-        return NextResponse.redirect(origin + "/profil");
+        return NextResponse.redirect(origin + getRedirectPath(kullanici?.rol));
       }
     }
   }

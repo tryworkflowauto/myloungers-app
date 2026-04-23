@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import LogoutModal from "@/components/LogoutModal";
+import { SIPARIS_DURUM } from "@/lib/constants";
 
 const NAVY = "#0A1628";
 const BG = "#F3F6FB";
@@ -15,8 +17,8 @@ const GREEN = "#10B981";
 const PURPLE = "#7C3AED";
 const SLATE = "#64748B";
 
-type SiparisDurum = "yeni" | "hazirlaniyor" | "hazir" | "yolda" | "verildi" | "iptal";
-type TabKey = "hazir" | "yolda" | "verildi";
+type SiparisDurum = "yeni" | "hazirlaniyor" | "hazir" | "yolda" | "teslim_edildi" | "iptal";
+type TabKey = "hazir" | "yolda" | "teslim_edildi";
 
 type UrunSatir = {
   isim: string;
@@ -27,7 +29,7 @@ type UrunSatir = {
 type SiparisKart = {
   id: string;
   durum: SiparisDurum;
-  sezlongKod: string;
+  sezlongId: string | null;
   baslik: string;
   musteri: string;
   telefon?: string;
@@ -42,7 +44,16 @@ type SiparisKart = {
 type GarsonOption = {
   id: string;
   ad: string;
-  atananKodlar: string[];
+  atananUuids: string[];
+  yetkiler: string[];
+};
+
+type SezlongOption = {
+  id: string;
+  numara: string;
+  grupId: string;
+  grupAd: string;
+  label: string;
 };
 
 function formatTl(v: number): string {
@@ -53,15 +64,18 @@ function normalizeKod(v: unknown): string {
   return String(v ?? "").trim().toUpperCase();
 }
 
-function extractAtananKodlar(personel: any): string[] {
-  const rawAtanan = personel?.atanan_sezlonglar;
-  const rawYetkiler = personel?.yetkiler;
-  const listA = Array.isArray(rawAtanan) ? rawAtanan : (Array.isArray(rawAtanan?.value) ? rawAtanan.value : []);
-  const listB = Array.isArray(rawYetkiler) ? rawYetkiler : (Array.isArray(rawYetkiler?.value) ? rawYetkiler.value : []);
-  return [...listA, ...listB]
-    .filter((x: unknown): x is string => typeof x === "string")
-    .map(normalizeKod)
-    .filter(Boolean);
+// Sadece sezlong UUID'lerini döndürür (atanan_sezlonglar alanı)
+function extractAtananSezlongIds(personel: any): string[] {
+  const raw = personel?.atanan_sezlonglar;
+  const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.value) ? raw.value : []);
+  return list.filter((x: unknown): x is string => typeof x === "string" && x.trim() !== "");
+}
+
+// Sadece izin string'lerini döndürür (yetkiler alanı)
+function extractYetkilerArray(personel: any): string[] {
+  const raw = personel?.yetkiler;
+  const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.value) ? raw.value : []);
+  return list.filter((x: unknown): x is string => typeof x === "string" && x.trim() !== "");
 }
 
 function rowToKart(s: any): SiparisKart {
@@ -69,10 +83,9 @@ function rowToKart(s: any): SiparisKart {
   const sureDakika = Math.max(1, Math.round((Date.now() - created.getTime()) / 60000));
 
   const rezervasyon = s?.rezervasyonlar ?? {};
-  const grupAd = String(rezervasyon?.sezlonglar?.sezlong_gruplari?.ad || "").trim();
-  const no = String(rezervasyon?.sezlonglar?.no || s?.sezlong_no || "").trim();
-  const sezlongKod = String(s?.sezlong_no || no || "").trim();
-  const baslik = grupAd && no ? `${grupAd} - ${no}` : (no || `Sipariş #${String(s?.id ?? "").slice(-3) || "000"}`);
+  // Gerçek sezlong bağlantısı: rezervasyonlar.sezlong_id (UUID)
+  const sezlongId = String(rezervasyon?.sezlong_id || "").trim() || null;
+  const baslik = `Sipariş #${String(s?.id ?? "").slice(-4) || "0000"}`;
 
   const userAd = String(rezervasyon?.kullanicilar?.ad || "").trim();
   const userSoyad = String(rezervasyon?.kullanicilar?.soyad || "").trim();
@@ -89,7 +102,7 @@ function rowToKart(s: any): SiparisKart {
   return {
     id: String(s?.id ?? ""),
     durum: (s?.durum as SiparisDurum) ?? "hazir",
-    sezlongKod,
+    sezlongId,
     baslik,
     musteri,
     telefon,
@@ -101,6 +114,25 @@ function rowToKart(s: any): SiparisKart {
     toplam: Number(s?.toplam ?? 0),
   };
 }
+
+const T = {
+  BG: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)",
+  CARD_BG: "rgba(255,255,255,0.04)",
+  CARD_BORDER: "rgba(255,255,255,0.08)",
+  ACCENT: "#0ABAB5",
+  AVATAR_BG: "linear-gradient(135deg, #0ABAB5, #0891B2)",
+  BTN_GRADIENT: "linear-gradient(135deg, #0ABAB5, #0891B2)",
+  TEXT: "white",
+  TEXT_SUB: "rgba(255,255,255,0.75)",
+  TEXT_MUTED: "rgba(255,255,255,0.5)",
+  TEXT_FAINT: "rgba(255,255,255,0.4)",
+  GREEN: "#6EE7B7",
+  GREEN_BG: "rgba(16,185,129,0.2)",
+  BLUE: "#93C5FD",
+  BLUE_BG: "rgba(59,130,246,0.2)",
+  RED: "#F87171",
+  RED_BG: "rgba(239,68,68,0.12)",
+};
 
 export default function GarsonPage() {
   const router = useRouter();
@@ -114,9 +146,15 @@ export default function GarsonPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [saat, setSaat] = useState("");
 
+  const [garsonAdi, setGarsonAdi] = useState("");
   const [garsonlar, setGarsonlar] = useState<GarsonOption[]>([]);
   const [activeGarsonId, setActiveGarsonId] = useState<string | null>(null);
-  const [kendiKodlar, setKendiKodlar] = useState<string[]>([]);
+  const [kendiUuids, setKendiUuids] = useState<string[]>([]);
+  const [kendiYetkiler, setKendiYetkiler] = useState<string[]>([]);
+  const [sezlongOptions, setSezlongOptions] = useState<SezlongOption[]>([]);
+  const [sezlongPanelAcik, setSezlongPanelAcik] = useState(false);
+  const [aktivCagrilar] = useState<any[]>([]);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const previousHazirCountRef = useRef(0);
 
   function showToast(msg: string) {
@@ -171,7 +209,7 @@ export default function GarsonPage() {
 
       const { data: kullanici, error: kulErr } = await supabase
         .from("kullanicilar")
-        .select("id, rol, tesis_id")
+        .select("id, rol, tesis_id, ad, soyad")
         .eq("id", uid)
         .maybeSingle();
       if (cancelled) return;
@@ -186,6 +224,9 @@ export default function GarsonPage() {
         return;
       }
 
+      const ad = String((kullanici as any).ad || "").trim();
+      const soyad = String((kullanici as any).soyad || "").trim();
+      setGarsonAdi([ad, soyad].filter(Boolean).join(" "));
       setRol(userRol);
       setTesisId(String(kullanici.tesis_id));
       setAuthLoading(false);
@@ -201,6 +242,7 @@ export default function GarsonPage() {
 
     let cancelled = false;
     async function loadGarsonContext() {
+      // Personel listesi
       const { data: garsonRows, error } = await supabase
         .from("personel")
         .select("id, ad, kullanici_id, rol, atanan_sezlonglar, yetkiler, aktif")
@@ -210,21 +252,42 @@ export default function GarsonPage() {
       if (error) {
         console.error("garson personel fetch error:", JSON.stringify(error, null, 2));
         setGarsonlar([]);
-        setKendiKodlar([]);
+        setKendiUuids([]);
+        setKendiYetkiler([]);
         return;
       }
+
+      // Sezlong listesi (UUID → label dönüşümü için)
+      // DB: sezlonglar.grup_id FK → sezlong_gruplari(id, ad)
+      const { data: sezRows, error: sezErr } = await supabase
+        .from("sezlonglar")
+        .select("id, numara, sezlong_gruplari(id, ad)")
+        .eq("tesis_id", tesisId)
+        .order("numara", { ascending: true });
+      if (cancelled) return;
+      if (sezErr) console.error("garson sezlong fetch error:", JSON.stringify(sezErr, null, 2));
+
+      const opts: SezlongOption[] = (sezRows ?? []).map((s: any) => {
+        const numara = String(s.numara ?? "");
+        const grupId = String(s.sezlong_gruplari?.id ?? "");
+        const grupAd = String(s.sezlong_gruplari?.ad ?? "").trim();
+        const label = grupAd && numara ? `${grupAd.charAt(0).toUpperCase()}-${numara}` : numara;
+        return { id: String(s.id), numara, grupId, grupAd, label };
+      });
+      setSezlongOptions(opts);
 
       const options: GarsonOption[] = (garsonRows ?? []).map((g: any) => ({
         id: String(g.id),
         ad: String(g.ad || "Garson"),
-        atananKodlar: extractAtananKodlar(g),
+        atananUuids: extractAtananSezlongIds(g),
+        yetkiler: extractYetkilerArray(g),
       }));
       setGarsonlar(options);
 
       const kendi = (garsonRows ?? []).find((g: any) => String(g.kullanici_id || "") === String(currentUserId || ""));
       if (rol === "garson") {
-        const kodlar = kendi ? extractAtananKodlar(kendi) : [];
-        setKendiKodlar(kodlar);
+        setKendiUuids(kendi ? extractAtananSezlongIds(kendi) : []);
+        setKendiYetkiler(kendi ? extractYetkilerArray(kendi) : []);
       } else {
         const first = options[0]?.id ?? null;
         setActiveGarsonId((prev) => prev ?? first);
@@ -236,11 +299,17 @@ export default function GarsonPage() {
     };
   }, [tesisId, rol, currentUserId]);
 
-  const activeKodlar = useMemo(() => {
-    if (rol === "garson") return kendiKodlar;
+  const activeUuids = useMemo(() => {
+    if (rol === "garson") return kendiUuids;
     const secilen = garsonlar.find((g) => g.id === activeGarsonId);
-    return secilen?.atananKodlar ?? [];
-  }, [rol, kendiKodlar, garsonlar, activeGarsonId]);
+    return secilen?.atananUuids ?? [];
+  }, [rol, kendiUuids, garsonlar, activeGarsonId]);
+
+  const activeYetkiler = useMemo(() => {
+    if (rol === "garson") return kendiYetkiler;
+    const secilen = garsonlar.find((g) => g.id === activeGarsonId);
+    return secilen?.yetkiler ?? [];
+  }, [rol, kendiYetkiler, garsonlar, activeGarsonId]);
 
   useEffect(() => {
     if (!tesisId) {
@@ -250,25 +319,29 @@ export default function GarsonPage() {
     }
 
     async function fetchWithJoinOrFallback(): Promise<any[]> {
-      const now = new Date();
-      const startTodayIso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
+      // Aktif siparişler (hazir/yolda) tarih bağımsız + bugünkü teslim_edildi
+      const bugunBaslangic = new Date();
+      bugunBaslangic.setHours(0, 0, 0, 0);
+      const bugunBaslangicIso = bugunBaslangic.toISOString();
+      const orFilter = `durum.neq.${SIPARIS_DURUM.TESLIM_EDILDI},and(durum.eq.${SIPARIS_DURUM.TESLIM_EDILDI},created_at.gte.${bugunBaslangicIso})`;
 
+      // Gerçek bağlantı: siparisler.rezervasyon_id → rezervasyonlar.sezlong_id (UUID)
       const { data: joinedRows, error: joinedErr } = await supabase
         .from("siparisler")
-        .select("id, rezervasyon_id, created_at, durum, toplam, notlar, sezlong_no, musteri_adi, siparis_kalemleri(ad, adet, fiyat), rezervasyonlar(musteri_adi, telefon, kullanici_id, sezlong_id, sezlonglar(no, sezlong_gruplari(ad)), kullanicilar(ad, soyad, telefon))")
+        .select("id, rezervasyon_id, created_at, durum, toplam, notlar, musteri_adi, siparis_kalemleri(ad, adet, fiyat), rezervasyonlar(musteri_adi, telefon, kullanici_id, sezlong_id, kullanicilar(ad, soyad, telefon))")
         .eq("tesis_id", tesisId)
-        .in("durum", ["hazir", "yolda", "verildi"])
-        .gte("created_at", startTodayIso)
+        .or(orFilter)
         .order("created_at", { ascending: true });
       if (!joinedErr) return joinedRows ?? [];
 
       console.error("garson joined fetch error:", JSON.stringify(joinedErr, null, 2));
+
+      // Fallback: ayrı sorgular
       const { data: sipRows, error: sipErr } = await supabase
         .from("siparisler")
-        .select("id, rezervasyon_id, created_at, durum, toplam, notlar, sezlong_no, musteri_adi, siparis_kalemleri(ad, adet, fiyat)")
+        .select("id, rezervasyon_id, created_at, durum, toplam, notlar, musteri_adi, siparis_kalemleri(ad, adet, fiyat)")
         .eq("tesis_id", tesisId)
-        .in("durum", ["hazir", "yolda", "verildi"])
-        .gte("created_at", startTodayIso)
+        .or(orFilter)
         .order("created_at", { ascending: true });
       if (sipErr) {
         console.error("garson fallback siparis fetch error:", JSON.stringify(sipErr, null, 2));
@@ -280,23 +353,16 @@ export default function GarsonPage() {
         ? await supabase.from("rezervasyonlar").select("id, musteri_adi, telefon, sezlong_id, kullanici_id").in("id", rezIds)
         : { data: [] as any[] };
 
-      const sezlongIds = Array.from(new Set((rezRows ?? []).map((x: any) => x.sezlong_id).filter(Boolean)));
-      const { data: sezRows } = sezlongIds.length
-        ? await supabase.from("sezlonglar").select("id, no, sezlong_gruplari(ad)").in("id", sezlongIds)
-        : { data: [] as any[] };
-
       const userIds = Array.from(new Set((rezRows ?? []).map((x: any) => x.kullanici_id).filter(Boolean)));
       const { data: userRows } = userIds.length
         ? await supabase.from("kullanicilar").select("id, ad, soyad, telefon").in("id", userIds)
         : { data: [] as any[] };
 
       const rezMap = new Map<string, any>((rezRows ?? []).map((r: any) => [String(r.id), r]));
-      const sezMap = new Map<string, any>((sezRows ?? []).map((z: any) => [String(z.id), z]));
       const userMap = new Map<string, any>((userRows ?? []).map((u: any) => [String(u.id), u]));
 
       return (sipRows ?? []).map((s: any) => {
         const rez = s?.rezervasyon_id ? rezMap.get(String(s.rezervasyon_id)) ?? null : null;
-        const sez = rez?.sezlong_id ? sezMap.get(String(rez.sezlong_id)) ?? null : null;
         const usr = rez?.kullanici_id ? userMap.get(String(rez.kullanici_id)) ?? null : null;
         return {
           ...s,
@@ -306,7 +372,6 @@ export default function GarsonPage() {
                 telefon: rez.telefon,
                 kullanici_id: rez.kullanici_id,
                 sezlong_id: rez.sezlong_id,
-                sezlonglar: sez ? { no: sez.no, sezlong_gruplari: { ad: sez?.sezlong_gruplari?.ad } } : null,
                 kullanicilar: usr ? { ad: usr.ad, soyad: usr.soyad, telefon: usr.telefon } : null,
               }
             : null,
@@ -316,12 +381,24 @@ export default function GarsonPage() {
 
     async function fetchRows() {
       const rawRows = await fetchWithJoinOrFallback();
+
+      // Debug: rezervasyonlar.sezlong_id ve activeUuids karşılaştırması
+      if (rawRows.length > 0) {
+        const ornekRez = rawRows[0]?.rezervasyonlar;
+        console.log("garson/debug sezlong_id örnek:", ornekRez?.sezlong_id, "| activeUuids:", activeUuids.slice(0, 3));
+      }
+
       let mapped = rawRows.map(rowToKart);
 
-      // Bölge kısıtı: sadece gerçek garsonda siparisler.sezlong_no IN atanan_sezlonglar.
-      if (rol === "garson" && activeKodlar.length > 0) {
-        const kodSet = new Set(activeKodlar.map(normalizeKod));
-        mapped = mapped.filter((m) => kodSet.has(normalizeKod(m.sezlongKod)));
+      // Bölge kısıtı: garson yalnızca atanan şezlonglardaki siparişleri görür.
+      // Atanan şezlong yoksa hiçbir sipariş gösterilmez.
+      if (rol === "garson") {
+        if (activeUuids.length === 0) {
+          mapped = [];
+        } else {
+          const atananIds = new Set(activeUuids.map((u) => u.toLowerCase()));
+          mapped = mapped.filter((m) => m.sezlongId && atananIds.has(m.sezlongId.toLowerCase()));
+        }
       }
 
       const hazirCount = mapped.filter((m) => m.durum === "hazir").length;
@@ -345,7 +422,7 @@ export default function GarsonPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tesisId, activeKodlar, sesAcik]);
+  }, [tesisId, activeUuids, sezlongOptions, sesAcik]);
 
   async function durumGuncelle(id: string, yeniDurum: SiparisDurum, msg: string) {
     const { error } = await supabase.from("siparisler").update({ durum: yeniDurum }).eq("id", id);
@@ -355,17 +432,17 @@ export default function GarsonPage() {
       return;
     }
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, durum: yeniDurum } : r)));
-    if (yeniDurum === "hazir") setTab("hazir");
-    else if (yeniDurum === "yolda") setTab("yolda");
-    else if (yeniDurum === "verildi") setTab("verildi");
+    if (yeniDurum === SIPARIS_DURUM.HAZIR) setTab(SIPARIS_DURUM.HAZIR);
+    else if (yeniDurum === SIPARIS_DURUM.YOLDA) setTab(SIPARIS_DURUM.YOLDA);
+    else if (yeniDurum === SIPARIS_DURUM.TESLIM_EDILDI) setTab(SIPARIS_DURUM.TESLIM_EDILDI);
     showToast(msg);
   }
 
   const counts = useMemo(() => {
     return {
-      hazir: rows.filter((r) => r.durum === "hazir").length,
-      yolda: rows.filter((r) => r.durum === "yolda").length,
-      verildi: rows.filter((r) => r.durum === "verildi").length,
+      hazir: rows.filter((r) => r.durum === SIPARIS_DURUM.HAZIR).length,
+      yolda: rows.filter((r) => r.durum === SIPARIS_DURUM.YOLDA).length,
+      teslim_edildi: rows.filter((r) => r.durum === SIPARIS_DURUM.TESLIM_EDILDI).length,
     };
   }, [rows]);
 
@@ -373,153 +450,312 @@ export default function GarsonPage() {
 
   if (authLoading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        Yükleniyor...
+      <div style={{ minHeight: "100vh", background: T.BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: T.TEXT_MUTED, fontSize: 14 }}>Yükleniyor...</div>
       </div>
     );
   }
 
-  return (
-    <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
-      <header style={{ background: NAVY, color: "white", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 22 }}>🛵</span>
-          <strong style={{ fontSize: 15 }}>GARSON PANELİ</strong>
-          <span style={{ fontSize: 18, fontWeight: 900, color: "#67E8F9" }}>{saat}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {(rol === "isletmeci" || rol === "admin") && (
-            <select
-              value={activeGarsonId ?? ""}
-              onChange={(e) => setActiveGarsonId(e.target.value || null)}
-              style={{ borderRadius: 10, border: "none", padding: "8px 10px", fontWeight: 700, color: NAVY }}
-            >
-              {garsonlar.map((g) => (
-                <option key={g.id} value={g.id}>{`Aktif Garson: ${g.ad}`}</option>
-              ))}
-            </select>
-          )}
-          <button onClick={() => setSesAcik((v) => !v)} style={{ border: "none", borderRadius: 10, padding: "8px 12px", cursor: "pointer", fontWeight: 700, background: sesAcik ? "#22C55E" : "#334155", color: "white" }}>
-            {sesAcik ? "🔊 Ses Açık" : "🔇 Ses Kapalı"}
-          </button>
-        </div>
-      </header>
+  // Yardımcı: avatar baş harfleri
+  const garsonInits = garsonAdi.split(" ").map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("") || "G";
 
-      <div style={{ padding: 14 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+  // Yardımcı: atanan grup adları + toplam şezlong özeti
+  const aktifGruplar = [...new Set(
+    activeUuids
+      .map((uuid) => sezlongOptions.find((o) => o.id.toLowerCase() === uuid.toLowerCase())?.grupAd)
+      .filter((g): g is string => !!g)
+  )];
+  const sezlongOzet = aktifGruplar.length > 0
+    ? `${aktifGruplar.join(" · ")} · ${activeUuids.length} şezlong`
+    : "Şezlong atanmamış";
+
+  // Yardımcı: atanan şezlong grupları (UI için)
+  function buildGrupMap() {
+    const grupMap = new Map<string, { grupAd: string; items: SezlongOption[] }>();
+    activeUuids.forEach((uuid) => {
+      const opt = sezlongOptions.find((o) => o.id.toLowerCase() === uuid.toLowerCase());
+      if (!opt) return;
+      const key = opt.grupId || opt.grupAd || "__";
+      if (!grupMap.has(key)) grupMap.set(key, { grupAd: opt.grupAd, items: [] });
+      grupMap.get(key)!.items.push(opt);
+    });
+    return Array.from(grupMap.values());
+  }
+
+  return (
+    <div style={{ background: T.BG, minHeight: "100vh" }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: 20 }}>
+
+        {/* ── HEADER ─────────────────────────────────────────────────────────── */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Avatar */}
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: T.AVATAR_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "white", flexShrink: 0 }}>
+              {garsonInits}
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: T.TEXT }}>{garsonAdi || "Garson Paneli"}</div>
+              <div style={{ fontSize: 11, color: T.TEXT_MUTED, marginTop: 2 }}>{sezlongOzet}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* İşletmeci / admin garson seçici */}
+            {(rol === "isletmeci" || rol === "admin") && (
+              <select
+                value={activeGarsonId ?? ""}
+                onChange={(e) => setActiveGarsonId(e.target.value || null)}
+                style={{ background: "rgba(255,255,255,0.07)", color: "white", border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 10, padding: "7px 10px", fontSize: 12, fontWeight: 500 }}
+              >
+                {garsonlar.map((g) => <option key={g.id} value={g.id} style={{ background: "#1E293B" }}>{g.ad}</option>)}
+              </select>
+            )}
+            {/* Ses toggle */}
+            <button
+              onClick={() => setSesAcik((v) => !v)}
+              style={{ background: "rgba(255,255,255,0.06)", border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 10, padding: "8px 10px", cursor: "pointer", color: sesAcik ? T.ACCENT : T.TEXT_MUTED, fontSize: 14, lineHeight: 1 }}
+            >
+              {sesAcik ? "🔊" : "🔇"}
+            </button>
+            {/* Saat */}
+            <div style={{ background: "rgba(255,255,255,0.05)", border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 12, padding: "8px 14px", fontSize: 13, color: T.TEXT, fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+              {saat}
+            </div>
+            {/* Çıkış */}
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              title="Çıkış yap"
+              style={{ background: "rgba(255,255,255,0.05)", border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 12, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.TEXT_MUTED, fontSize: 12 }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* ── ÇAĞRI BANNER (şimdilik gizli, state hazır) ──────────────────── */}
+        {aktivCagrilar.map((c: any) => (
+          <div key={c.id} style={{ background: T.RED_BG, border: "0.5px solid rgba(239,68,68,0.35)", borderRadius: 14, padding: "13px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.RED, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, color: "#FCA5A5", fontWeight: 500 }}>{c.baslik || "Garson çağrısı"}</div>
+              <div style={{ fontSize: 11, color: "rgba(252,165,165,0.7)", marginTop: 2 }}>{c.zaman || ""}</div>
+            </div>
+            <button style={{ background: "#EF4444", color: "white", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Yanıtla</button>
+          </div>
+        ))}
+
+        {/* ── ÖZET SEKMESİ ────────────────────────────────────────────────── */}
+        <div style={{ display: "flex", gap: 6, background: T.CARD_BG, padding: 4, borderRadius: 12, marginBottom: 16 }}>
           {([
-            { key: "hazir", label: "Hazır", count: counts.hazir, bg: "#DCFCE7", border: GREEN, color: "#14532D" },
-            { key: "yolda", label: "Yolda", count: counts.yolda, bg: "#F3E8FF", border: PURPLE, color: "#581C87" },
-            { key: "verildi", label: "Teslim", count: counts.verildi, bg: "#E2E8F0", border: SLATE, color: "#334155" },
-          ] as const).map((t) => (
+            { key: "hazir" as TabKey, label: "Hazır", count: counts.hazir, activeColor: T.GREEN, activeBg: T.GREEN_BG },
+            { key: "yolda" as TabKey, label: "Yolda", count: counts.yolda, activeColor: T.BLUE, activeBg: T.BLUE_BG },
+            { key: "teslim_edildi" as TabKey, label: "Teslim", count: counts.teslim_edildi, activeColor: T.TEXT_MUTED, activeBg: "rgba(255,255,255,0.08)" },
+          ]).map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              style={{
-                border: `2px solid ${tab === t.key ? t.border : "transparent"}`,
-                background: tab === t.key ? t.bg : WHITE,
-                color: t.color,
-                fontWeight: 800,
-                padding: "10px 14px",
-                borderRadius: 12,
-                cursor: "pointer",
-                fontSize: 13,
-              }}
+              style={{ flex: 1, padding: 9, textAlign: "center", border: "none", cursor: "pointer", background: tab === t.key ? t.activeBg : "transparent", borderRadius: 9 }}
             >
-              {t.label} ({t.count})
+              <div style={{ fontSize: 16, fontWeight: 500, color: T.TEXT }}>{t.count}</div>
+              <div style={{ fontSize: 11, color: tab === t.key ? t.activeColor : T.TEXT_MUTED }}>{t.label}</div>
             </button>
           ))}
         </div>
 
+        {/* ── SİPARİŞ LİSTESİ ─────────────────────────────────────────────── */}
         {activeRows.length === 0 ? (
-          <div style={{ background: WHITE, border: `1px solid ${GRAY200}`, borderRadius: 14, padding: "36px 20px", textAlign: "center", color: GRAY600, fontWeight: 600 }}>
-            Bu sekmede sipariş yok.
+          <div style={{ textAlign: "center", padding: "30px 20px", color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
+            Bu sekmede sipariş yok
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16, justifyItems: "start", alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
             {activeRows.map((k) => {
+              const sezOpt = k.sezlongId ? sezlongOptions.find((o) => o.id.toLowerCase() === k.sezlongId!.toLowerCase()) : null;
+              const sezLabel = sezOpt?.label ?? "";
+              const sezGrupAd = sezOpt?.grupAd ?? "";
+              const kartBaslik = sezLabel || (k.sezlongId ? "Şezlong bilinmiyor" : k.baslik);
+              const urunOzet = k.urunler.map((u) => `${u.isim} ×${u.adet}`).join(" · ");
               const acil = k.durum === "hazir" && k.sureDakika >= 5;
-              const theme =
-                k.durum === "hazir"
-                  ? { border: GREEN, bg: "#F0FDF4", head: "#DCFCE7", action: GREEN }
-                  : k.durum === "yolda"
-                    ? { border: PURPLE, bg: "#FAF5FF", head: "#F3E8FF", action: PURPLE }
-                    : { border: SLATE, bg: "#F8FAFC", head: "#E2E8F0", action: SLATE };
+
+              const ct = k.durum === "hazir" ? {
+                bg: T.CARD_BG,
+                border: acil ? "rgba(239,68,68,0.6)" : T.CARD_BORDER,
+                badgeBg: T.GREEN_BG, badgeColor: T.GREEN, badgeText: "HAZIR",
+                sureColor: T.GREEN, sureText: `${k.sureDakika} dk`,
+                btnBg: T.BTN_GRADIENT, btnText: "Teslim al →",
+                btnClick: () => durumGuncelle(k.id, SIPARIS_DURUM.YOLDA, "🏃 Sipariş alındı, yola çıkıldı"),
+              } : k.durum === "yolda" ? {
+                bg: "rgba(59,130,246,0.08)",
+                border: "rgba(59,130,246,0.25)",
+                badgeBg: T.BLUE_BG, badgeColor: T.BLUE, badgeText: "YOLDA",
+                sureColor: T.BLUE, sureText: "taşınıyor",
+                btnBg: "#10B981", btnText: "Teslim edildi ✓",
+                btnClick: () => durumGuncelle(k.id, SIPARIS_DURUM.TESLIM_EDILDI, "✅ Sipariş teslim edildi"),
+              } : {
+                bg: "rgba(255,255,255,0.02)",
+                border: "rgba(255,255,255,0.06)",
+                badgeBg: "rgba(255,255,255,0.1)", badgeColor: T.TEXT_MUTED, badgeText: "TESLİM",
+                sureColor: T.TEXT_FAINT, sureText: "teslim edildi",
+                btnBg: null as string | null, btnText: null as string | null,
+                btnClick: null as (() => void) | null,
+              };
 
               return (
-                <div key={k.id} style={{ width: "100%", maxWidth: 440, border: `2px solid ${acil ? "#EF4444" : theme.border}`, borderRadius: 14, background: theme.bg, overflow: "hidden", opacity: k.durum === "verildi" ? 0.78 : 1 }}>
-                  <div style={{ background: theme.head, padding: "16px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: NAVY }}>{k.baslik}</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: GRAY600, marginTop: 2 }}>{k.musteri}</div>
-                      {k.telefon ? <div style={{ fontSize: 12, color: GRAY400, marginTop: 2 }}>{k.telefon}</div> : null}
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 11, color: GRAY400 }}>{k.saat}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: GRAY600 }}>{k.sureDakika} dk önce</div>
+                <div
+                  key={k.id}
+                  style={{ background: ct.bg, border: `0.5px solid ${ct.border}`, borderRadius: 14, padding: "14px 16px", opacity: k.durum === SIPARIS_DURUM.TESLIM_EDILDI ? 0.6 : 1 }}
+                >
+                  {/* Üst satır: badge + sezlong + süre */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ background: ct.badgeBg, color: ct.badgeColor, padding: "3px 9px", borderRadius: 7, fontSize: 10, fontWeight: 500, letterSpacing: 0.5, whiteSpace: "nowrap" }}>
+                        {ct.badgeText}
+                      </span>
                       {acil && (
-                        <div style={{ display: "inline-flex", marginTop: 6, background: "#EF4444", color: "white", fontSize: 10, fontWeight: 900, padding: "3px 9px", borderRadius: 999 }}>
-                          ACİL
+                        <span style={{ background: "rgba(239,68,68,0.2)", color: T.RED, padding: "3px 9px", borderRadius: 7, fontSize: 10, fontWeight: 700, letterSpacing: 0.5 }}>ACİL</span>
+                      )}
+                      <span style={{ fontSize: 15, fontWeight: 500, color: T.TEXT }}>{kartBaslik}</span>
+                      {sezGrupAd && <span style={{ fontSize: 11, color: T.TEXT_FAINT }}>{sezGrupAd}</span>}
+                    </div>
+                    <span style={{ fontSize: 11, color: ct.sureColor, fontWeight: 500, whiteSpace: "nowrap" }}>{ct.sureText}</span>
+                  </div>
+
+                  {/* Müşteri adı + telefon */}
+                  {(() => {
+                    const isTeslim = k.durum === SIPARIS_DURUM.TESLIM_EDILDI;
+                    const gercekMusteri = k.musteri !== "Misafir";
+                    // Teslim durumunda sadece gerçek müşteri göster (Misafir'i gizle)
+                    if (isTeslim && !gercekMusteri) return null;
+                    if (!gercekMusteri && !k.telefon) return null;
+                    const ikonRenk = isTeslim ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.5)";
+                    const musteriRenk = isTeslim ? "rgba(255,255,255,0.55)" : (gercekMusteri ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.5)");
+                    const telefonRenk = isTeslim ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.4)";
+                    return (
+                      <div style={{ marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ikonRenk} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                          </svg>
+                          <span style={{
+                            fontSize: 13, fontWeight: 500,
+                            color: musteriRenk,
+                            fontStyle: !gercekMusteri ? "italic" : "normal",
+                          }}>
+                            {k.musteri}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ padding: "22px", borderTop: `1px solid ${GRAY200}` }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      {k.urunler.length === 0 ? (
-                        <div style={{ fontSize: 14, color: GRAY600 }}>Ürün detayı bulunamadı</div>
-                      ) : (
-                        k.urunler.map((u, i) => (
-                          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: 12, fontSize: 14, paddingBottom: 10, borderBottom: i < k.urunler.length - 1 ? `1px solid ${GRAY200}` : "none" }}>
-                            <span style={{ color: NAVY, fontWeight: 700, fontSize: 15 }}>{u.isim}</span>
-                            <span style={{ color: GRAY600, fontWeight: 700, fontSize: 14 }}>x {u.adet}</span>
-                            <span style={{ color: GRAY600, fontWeight: 800, fontSize: 14 }}>{formatTl(u.fiyat)}</span>
+                        {k.telefon && (
+                          <div style={{ fontSize: 11, color: telefonRenk, marginTop: 2, paddingLeft: 19 }}>
+                            {k.telefon}
                           </div>
-                        ))
-                      )}
-                    </div>
-
-                    {k.not && (
-                      <div style={{ marginTop: 14, padding: "10px 12px", background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 10, fontSize: 13, color: "#92400E", fontWeight: 600 }}>
-                        📝 {k.not}
+                        )}
                       </div>
-                    )}
+                    );
+                  })()}
 
-                    <div style={{ marginTop: 16, display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${GRAY200}`, paddingTop: 14 }}>
-                      <span style={{ fontSize: 15, color: GRAY600, fontWeight: 800 }}>Toplam</span>
-                      <span style={{ fontSize: 20, color: theme.action, fontWeight: 900 }}>{formatTl(k.toplam)}</span>
-                    </div>
-
-                    {k.durum === "hazir" && (
-                      <button
-                        onClick={() => durumGuncelle(k.id, "yolda", "🏃 Sipariş alındı, yola çıkıldı")}
-                        style={{ marginTop: 16, width: "100%", border: "none", borderRadius: 10, padding: "14px 16px", cursor: "pointer", background: PURPLE, color: "white", fontWeight: 900, fontSize: 15 }}
-                      >
-                        🏃 Aldım, Götürüyorum
-                      </button>
-                    )}
-                    {k.durum === "yolda" && (
-                      <button
-                        onClick={() => durumGuncelle(k.id, "verildi", "✅ Sipariş teslim edildi")}
-                        style={{ marginTop: 16, width: "100%", border: "none", borderRadius: 10, padding: "14px 16px", cursor: "pointer", background: GREEN, color: "white", fontWeight: 900, fontSize: 15 }}
-                      >
-                        ✅ Teslim Ettim
-                      </button>
-                    )}
+                  {/* Ürün özeti */}
+                  <div style={{ fontSize: 13, color: T.TEXT_SUB, marginBottom: ct.btnText ? 12 : 0 }}>
+                    {urunOzet || "Ürün bilgisi yok"}
                   </div>
+
+                  {/* Not */}
+                  {k.not && (
+                    <div style={{ padding: "8px 10px", background: "rgba(245,158,11,0.12)", border: "0.5px solid rgba(245,158,11,0.3)", borderRadius: 8, fontSize: 12, color: "#FCD34D", marginTop: 8, marginBottom: ct.btnText ? 12 : 0 }}>
+                      📝 {k.not}
+                    </div>
+                  )}
+
+                  {/* Aksiyon butonu */}
+                  {ct.btnText && (
+                    <button
+                      onClick={ct.btnClick!}
+                      style={{ width: "100%", background: ct.btnBg!, border: "none", borderRadius: 10, padding: 10, color: "white", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
+                    >
+                      {ct.btnText}
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
+
+        {/* ── ATANAN ŞEZLONGLAR — collapse edilebilir ──────────────────────── */}
+        <div style={{ marginBottom: 10 }}>
+          <button
+            onClick={() => setSezlongPanelAcik((v) => !v)}
+            style={{ width: "100%", background: T.CARD_BG, border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", textAlign: "left" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, textTransform: "uppercase" }}>Bölgem</span>
+              <span style={{ fontSize: 12, color: T.TEXT_SUB }}>{sezlongOzet}</span>
+            </div>
+            <span style={{ fontSize: 11, color: T.TEXT_MUTED }}>{sezlongPanelAcik ? "▲" : "▼"}</span>
+          </button>
+
+          {sezlongPanelAcik && (
+            <div style={{ background: T.CARD_BG, border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 12, padding: "12px 14px", marginTop: 4 }}>
+              {activeUuids.length === 0 ? (
+                <div style={{ fontSize: 12, color: T.TEXT_MUTED, fontStyle: "italic" }}>Henüz şezlong atanmamış</div>
+              ) : (() => {
+                const gruplar = buildGrupMap();
+                if (gruplar.length === 0) return <div style={{ fontSize: 12, color: T.TEXT_MUTED, fontStyle: "italic" }}>Şezlong bilgisi yükleniyor…</div>;
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {gruplar.map((g) => (
+                      <div key={g.grupAd || "grup"}>
+                        <div style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>
+                          {g.grupAd || "Grup"}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                          {g.items.map((opt) => (
+                            <span key={opt.id} style={{ background: "rgba(255,255,255,0.08)", color: "white", padding: "4px 10px", borderRadius: 8, fontSize: 11, fontWeight: 500 }}>
+                              {opt.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* ── YETKİLER ────────────────────────────────────────────────────── */}
+        {activeYetkiler.length > 0 && (
+          <div style={{ background: T.CARD_BG, border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>Yetkiler</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {activeYetkiler.map((y) => (
+                <span key={y} style={{ background: "rgba(16,185,129,0.15)", color: T.GREEN, padding: "4px 10px", borderRadius: 8, fontSize: 11, fontWeight: 500 }}>{y}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
+      {/* ── TOAST ───────────────────────────────────────────────────────────── */}
       {toast && (
-        <div style={{ position: "fixed", top: 72, left: "50%", transform: "translateX(-50%)", background: NAVY, color: "white", padding: "10px 16px", borderRadius: 999, fontSize: 13, fontWeight: 800, zIndex: 300 }}>
+        <div style={{ position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)", background: "rgba(10,186,181,0.15)", backdropFilter: "blur(8px)", border: "0.5px solid rgba(10,186,181,0.4)", color: "white", padding: "10px 18px", borderRadius: 999, fontSize: 13, fontWeight: 600, zIndex: 300, whiteSpace: "nowrap" }}>
           {toast}
         </div>
       )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 400px) {
+          body { font-size: 13px; }
+        }
+        select option { background: #1E293B; color: white; }
+      ` }} />
+
+      {showLogoutModal && <LogoutModal onClose={() => setShowLogoutModal(false)} />}
     </div>
   );
 }

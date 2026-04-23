@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { SIPARIS_DURUM } from "@/lib/constants";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -96,15 +97,15 @@ function mapSiparisToItem(
     grup: grupAd || "—",
     kisi,
     musteri,
-    timer: durum === "verildi" ? `✓ ${diffM} dk` : timer,
-    timerClass: durum === "verildi" ? "ok" : timerClass,
+  timer: durum === SIPARIS_DURUM.TESLIM_EDILDI ? `✓ ${diffM} dk` : timer,
+  timerClass: durum === SIPARIS_DURUM.TESLIM_EDILDI ? "ok" : timerClass,
     saat,
     bg,
     urunler: urunler.length ? urunler : [{ adet: 1, ad: "—", fiyat: "₺0" }],
     garson: garson ? { ...garson, name: garson.name } : null,
     tutar,
     isYeni,
-    opacity: durum === "verildi" ? 0.75 : 1,
+    opacity: durum === SIPARIS_DURUM.TESLIM_EDILDI ? 0.75 : 1,
   };
 }
 
@@ -116,7 +117,7 @@ function mapSiparisToGecmis(s: any, garsonMap: Map<string, Garson>, no: string):
   const kalemler = (s.siparis_kalemleri ?? []) as { ad?: string; adet?: number }[];
   const urunlerStr = kalemler.map((k) => `${k.adet ?? 1}x ${k.ad ?? "—"}`).join(", ");
   const saat = created.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-  const durum = (s.durum ?? "verildi") as string;
+  const durum = (s.durum ?? SIPARIS_DURUM.TESLIM_EDILDI) as string;
   const garsonId = s.garson_id ? String(s.garson_id) : null;
   const garson: Garson = garsonId && garsonMap.get(garsonId)
     ? garsonMap.get(garsonId)!
@@ -132,7 +133,7 @@ function mapSiparisToGecmis(s: any, garsonMap: Map<string, Garson>, no: string):
     saat: durum === "iptal" ? `${saat} → İptal` : `${saat} → Teslim`,
     garson,
     tutar,
-    durum: durum === "iptal" ? "iptal" : "verildi",
+    durum: durum === "iptal" ? "iptal" : SIPARIS_DURUM.TESLIM_EDILDI,
     tutarColor: durum === "iptal" ? RED : undefined,
   };
 }
@@ -379,12 +380,12 @@ export default function IsletmeSiparislerPage() {
           const hazir: SiparisItem[] = [];
           const teslim: SiparisItem[] = [];
           const gecmis: GecmisItem[] = [];
-          let gecmisNo = rows.filter((r: any) => r.durum === "verildi" || r.durum === "iptal").length + 80;
+          let gecmisNo = rows.filter((r: any) => r.durum === SIPARIS_DURUM.TESLIM_EDILDI || r.durum === "iptal").length + 80;
           rows.forEach((s, i) => {
             const item = mapSiparisToItem(s, garsonMap, i);
             if (s.durum === "yeni") yeni.push(item);
             else if (s.durum === "hazirlaniyor") hazir.push(item);
-            else if (s.durum === "verildi") {
+            else if (s.durum === SIPARIS_DURUM.TESLIM_EDILDI) {
               teslim.push(item);
               gecmis.push(mapSiparisToGecmis(s, garsonMap, "#" + String(gecmisNo--).padStart(3, "0")));
             } else if (s.durum === "iptal") {
@@ -423,7 +424,7 @@ export default function IsletmeSiparislerPage() {
   }
 
   async function teslimEt(order: SiparisItem) {
-    const { error } = await supabase.from("siparisler").update({ durum: "verildi" }).eq("id", order.id);
+    const { error } = await supabase.from("siparisler").update({ durum: SIPARIS_DURUM.TESLIM_EDILDI }).eq("id", order.id);
     if (error) {
       console.error("teslimEt error:", error);
       return;
@@ -440,7 +441,7 @@ export default function IsletmeSiparislerPage() {
       saat: `${order.saat} → Teslim`,
       garson: order.garson ?? { inits: "—", name: "Atanmadı", color: GRAY400 },
       tutar: order.tutar,
-      durum: "verildi",
+      durum: SIPARIS_DURUM.TESLIM_EDILDI,
     };
     setGecmisList((p) => [newGecmis, ...p]);
     showToast("✅ Sipariş teslim edildi!");
@@ -492,7 +493,7 @@ export default function IsletmeSiparislerPage() {
     const headers = ["Sezlong", "Müşteri", "Grup", "Ürünler", "Tutar", "Garson", "Saat", "Durum"];
     const rows = [
       ...teslimList.map((s) => [s.sezlong, s.musteri, s.grup, s.urunler.map((u) => `${u.adet}x ${u.ad}`).join("; "), s.tutar, s.garson?.name ?? "—", s.saat, "Teslim Edildi"]),
-      ...gecmisList.filter((g) => g.durum === "verildi").map((g) => [g.sezlong, "—", "—", g.urunler, g.tutar, g.garson.name, g.saat, "Teslim Edildi"]),
+              ...gecmisList.filter((g) => g.durum === SIPARIS_DURUM.TESLIM_EDILDI).map((g) => [g.sezlong, "—", "—", g.urunler, g.tutar, g.garson.name, g.saat, "Teslim Edildi"]),
     ];
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -584,7 +585,7 @@ export default function IsletmeSiparislerPage() {
           {[
             { icon: "🆕", val: String(yeniList.length), lbl: "Yeni Sipariş", valColor: YELLOW, iconBg: "#FEF3C7" },
             { icon: "🍳", val: String(hazirList.length), lbl: "Hazırlanıyor", valColor: BLUE, iconBg: "#DBEAFE" },
-            { icon: "✅", val: String(gecmisList.filter((g) => g.durum === "verildi").length + teslimList.length), lbl: "Teslim Edildi", valColor: GREEN, iconBg: "#DCFCE7" },
+            { icon: "✅", val: String(gecmisList.filter((g) => g.durum === SIPARIS_DURUM.TESLIM_EDILDI).length + teslimList.length), lbl: "Teslim Edildi", valColor: GREEN, iconBg: "#DCFCE7" },
             { icon: "💰", val: gunlukCiroStr, lbl: "Günlük Ciro", valColor: ORANGE, iconBg: "#FFEDD5" },
             { icon: "⏱️", val: "0 dk", lbl: "Ort. Teslimat", valColor: "#7C3AED", iconBg: "#F5F3FF" },
           ].map((s, i) => (
@@ -715,7 +716,7 @@ export default function IsletmeSiparislerPage() {
                 style={{ padding: "7px 12px", border: `1px solid ${gecmisDurum ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 12 }}
               >
                 <option value="">Tüm Durumlar</option>
-                <option value="verildi">Teslim Edildi</option>
+                <option value={SIPARIS_DURUM.TESLIM_EDILDI}>Teslim Edildi</option>
                 <option value="iptal">İptal</option>
               </select>
               {(gecmisArama || gecmisGarson || gecmisDurum) && (
@@ -749,8 +750,8 @@ export default function IsletmeSiparislerPage() {
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: r.tutarColor ?? NAVY }}>{r.tutar}</div>
                     <div>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 20, background: r.durum === "verildi" ? "#DCFCE7" : "#FEE2E2", color: r.durum === "verildi" ? "#16A34A" : RED }}>
-                        {r.durum === "verildi" ? "✓ Teslim" : "✖ İptal"}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 20, background: r.durum === SIPARIS_DURUM.TESLIM_EDILDI ? "#DCFCE7" : "#FEE2E2", color: r.durum === SIPARIS_DURUM.TESLIM_EDILDI ? "#16A34A" : RED }}>
+                        {r.durum === SIPARIS_DURUM.TESLIM_EDILDI ? "✓ Teslim" : "✖ İptal"}
                       </span>
                     </div>
                   </div>

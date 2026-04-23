@@ -59,6 +59,10 @@ type Personel = {
   yetkiKilitli: string[];
   aktif: boolean;
   photo?: string;
+  kullanici_id: string | null;
+  kullaniciEmail: string | null;
+  adDb: string;
+  soyadDb: string | null;
 };
 
 type SezlongOption = { id: string; label: string; grupId: string; grupAd: string; renk: string | null };
@@ -95,8 +99,23 @@ const AVATAR_GRADIENTS = [
 
 const ALL_YETKI_NAMES = YETKI_SECTIONS.flatMap((s) => s.items.map((i) => i.name));
 
-function rowToPersonel(row: { id: string; ad: string; telefon: string | null; rol: string | null; aktif: boolean | null; atanan_sezlonglar?: unknown; yetkiler: unknown }, index: number): Personel {
-  const name = (row.ad ?? "").trim() || "—";
+// Türkçe karakter → Latin, özel karakter kaldır, kelime ayracı ekle
+function slugify(text: string, wordSep: string = "-"): string {
+  return text
+    .replace(/İ/g, "i").replace(/Ğ/g, "g").replace(/Ü/g, "u")
+    .replace(/Ş/g, "s").replace(/Ö/g, "o").replace(/Ç/g, "c")
+    .toLowerCase()
+    .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
+    .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, wordSep);
+}
+
+function rowToPersonel(row: { id: string; ad: string; soyad?: string | null; telefon: string | null; rol: string | null; aktif: boolean | null; atanan_sezlonglar?: unknown; yetkiler: unknown; kullanici_id?: string | null; kullanicilar?: { email?: string } | { email?: string }[] | null }, index: number): Personel {
+  const adDb = (row.ad ?? "").trim();
+  const soyadDb = (row.soyad ?? "").trim() || null;
+  const name = [adDb, soyadDb].filter(Boolean).join(" ") || "—";
   const rol = (["mudur", "garson", "mutfak", "ozel"].includes(row.rol ?? "") ? row.rol : "garson") as RolType;
   const rawSez = row.atanan_sezlonglar;
   const sezArr = Array.isArray(rawSez) ? rawSez : (Array.isArray((rawSez as any)?.value) ? (rawSez as any).value : []);
@@ -110,6 +129,10 @@ function rowToPersonel(row: { id: string; ad: string; telefon: string | null; ro
   const photo = getPhotoFromStorage(row.id);
   const stats: PersonelStat[] = [{ v: "—", l: "Teslimat" }, { v: "—", l: "Ort. Süre" }, { v: "Yetki", l: "Durum", vColor: TEAL }];
   if (rol === "mutfak") (stats[0] as PersonelStat).l = "Hazırlanan";
+  const kullanici_id = (row.kullanici_id as string | null | undefined) ?? null;
+  const rawKul = row.kullanicilar;
+  const kulObj = Array.isArray(rawKul) ? rawKul[0] : rawKul;
+  const kullaniciEmail = (kulObj as { email?: string } | null | undefined)?.email ?? null;
   return {
     id: String(row.id),
     inits,
@@ -128,18 +151,23 @@ function rowToPersonel(row: { id: string; ad: string; telefon: string | null; ro
     yetkiKilitli,
     aktif,
     photo,
+    kullanici_id,
+    kullaniciEmail: kullaniciEmail ?? null,
+    adDb,
+    soyadDb,
   };
 }
 
 const emptyForm = { name: "", phone: "", rol: "garson" as RolType, sezlonglar: "", aktif: true };
 
 // ── PersonelKart ────────────────────────────────────────────────────────────
-function PersonelKart({ p, onEdit, onYetki, onToggle, onSil, sezlongOptions }: {
+function PersonelKart({ p, onEdit, onYetki, onToggle, onSil, onHesapOlustur, sezlongOptions }: {
   p: Personel;
   onEdit: () => void;
   onYetki: () => void;
   onToggle: () => void;
   onSil: () => void;
+  onHesapOlustur: () => void;
   sezlongOptions?: SezlongOption[];
 }) {
   const rolStyle = ROL_STYLES[p.rol];
@@ -223,6 +251,24 @@ function PersonelKart({ p, onEdit, onYetki, onToggle, onSil, sezlongOptions }: {
         )}
       </div>
 
+      <div style={{ padding: "12px 14px", borderBottom: `1px solid ${GRAY100}` }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: GRAY400, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>Giriş Hesabı</div>
+        {p.kullanici_id ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "#DCFCE7", color: "#166534", whiteSpace: "nowrap" }}>✅ Giriş Aktif</span>
+            {p.kullaniciEmail && <span style={{ fontSize: 10, color: GRAY400 }}>{p.kullaniciEmail}</span>}
+          </div>
+        ) : (
+          <button
+            className="pk-action"
+            onClick={onHesapOlustur}
+            style={{ width: "100%", padding: 7, borderRadius: 8, border: `1px solid ${NAVY}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: NAVY }}
+          >
+            🔐 Giriş Hesabı Oluştur
+          </button>
+        )}
+      </div>
+
       <div style={{ padding: "12px 14px", display: "flex", gap: 8, alignItems: "center" }}>
         <button className="pk-action" onClick={onEdit} style={{ flex: 1, padding: 7, borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: GRAY800 }}>✏️ Düzenle</button>
         <button className="pk-action" onClick={onYetki} style={{ flex: 1, padding: 7, borderRadius: 8, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 11, fontWeight: 600, color: GRAY800 }}>🔑 Yetkiler</button>
@@ -265,6 +311,16 @@ export default function IsletmePersonelPage() {
   const [sezlongOptions, setSezlongOptions] = useState<SezlongOption[]>([]);
   const [sezlongLoading, setSezlongLoading] = useState(false);
 
+  // Hesap oluştur modal
+  const [hesapModal, setHesapModal] = useState<Personel | null>(null);
+  const [hesapEmail, setHesapEmail] = useState("");
+  const [hesapSifre, setHesapSifre] = useState("");
+  const [hesapSifreTekrar, setHesapSifreTekrar] = useState("");
+  const [hesapLoading, setHesapLoading] = useState(false);
+
+  // Tesis slug
+  const [tesisSlug, setTesisSlug] = useState("");
+
   // Toast
   const [toast, setToast] = useState<string | null>(null);
 
@@ -278,7 +334,7 @@ export default function IsletmePersonelPage() {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setAddModalOpen(false); setEditModal(null);
-        setSilModal(null); setYetkiModal(null);
+        setSilModal(null); setYetkiModal(null); setHesapModal(null);
       }
     };
     window.addEventListener("keydown", handler);
@@ -344,6 +400,16 @@ export default function IsletmePersonelPage() {
     };
   }, [router]);
 
+  // Tesis slug için tesisler.ad çek
+  useEffect(() => {
+    if (!tesisId) return;
+    supabase.from("tesisler").select("ad").eq("id", tesisId).maybeSingle().then(({ data }) => {
+      if (data?.ad) {
+        setTesisSlug(slugify(String(data.ad), "-"));
+      }
+    });
+  }, [tesisId]);
+
   // Sezlong list (for Atanan Şezlonglar checkbox list)
   useEffect(() => {
     if (!tesisId) {
@@ -378,7 +444,7 @@ export default function IsletmePersonelPage() {
       });
   }, [tesisId]);
 
-  // Supabase: personel listesi (tesis_id)
+  // Supabase: personel listesi (tesis_id) — fallback pattern (no FK join)
   useEffect(() => {
     if (!tesisId) {
       setPersoneller([]);
@@ -387,17 +453,59 @@ export default function IsletmePersonelPage() {
     }
     let cancelled = false;
     setLoading(true);
-    supabase.from("personel").select("id, ad, telefon, rol, aktif, atanan_sezlonglar, yetkiler").eq("tesis_id", tesisId).order("ad", { ascending: true }).then((res) => {
+
+    const fetchPersonel = async () => {
+      // Step 1: personel çek (join yok)
+      const res = await supabase
+        .from("personel")
+        .select("id, ad, soyad, telefon, rol, aktif, atanan_sezlonglar, yetkiler, kullanici_id")
+        .eq("tesis_id", tesisId)
+        .order("ad", { ascending: true });
+
       if (cancelled) return;
+
       if (res.error) {
-        console.error("personel fetch error:", res.error);
+        console.error("personel fetch error:", JSON.stringify(res.error, null, 2));
         setPersoneller([]);
-      } else {
-        const rows = (res.data ?? []) as any[];
-        setPersoneller(rows.map((r, i) => rowToPersonel(r, i)));
+        setLoading(false);
+        return;
       }
+
+      const rows = (res.data ?? []) as any[];
+
+      // Step 2: kullanici_id'si dolu olanları topla
+      const kullaniciIds = [...new Set(
+        rows.map((r: any) => r.kullanici_id).filter((id: any): id is string => !!id)
+      )];
+
+      // Step 3: kullanicilar tablosundan email çek
+      let emailMap: Record<string, string> = {};
+      if (kullaniciIds.length > 0) {
+        const { data: kullanicilar } = await supabase
+          .from("kullanicilar")
+          .select("id, email")
+          .in("id", kullaniciIds);
+        if (!cancelled && kullanicilar) {
+          emailMap = Object.fromEntries(
+            (kullanicilar as { id: string; email: string }[]).map((k) => [k.id, k.email ?? ""])
+          );
+        }
+      }
+
+      if (cancelled) return;
+
+      // Step 4: client-side birleştir
+      const mapped = rows.map((r: any, i: number) => {
+        const p = rowToPersonel(r, i);
+        p.kullaniciEmail = r.kullanici_id ? (emailMap[r.kullanici_id] ?? null) : null;
+        return p;
+      });
+
+      setPersoneller(mapped);
       setLoading(false);
-    });
+    };
+
+    fetchPersonel();
     return () => { cancelled = true; };
   }, [tesisId]);
 
@@ -549,6 +657,57 @@ export default function IsletmePersonelPage() {
     setYetkiModal(null);
   }
 
+  function openHesapModal(p: Personel) {
+    const adPart = slugify(p.adDb || p.name, ".");
+    const soyadPart = p.soyadDb ? slugify(p.soyadDb, ".") : "";
+    const namePart = soyadPart ? `${adPart}.${soyadPart}` : adPart;
+    const slug = tesisSlug || "tesis";
+    setHesapEmail(`${namePart}@${slug}.myloungers.com`);
+    setHesapSifre("");
+    setHesapSifreTekrar("");
+    setHesapModal(p);
+  }
+
+  async function hesapOlustur() {
+    if (!hesapModal || !hesapEmail || hesapSifre.length < 8) return;
+    if (hesapSifre !== hesapSifreTekrar) {
+      showToast("❌ Şifreler eşleşmiyor");
+      return;
+    }
+    setHesapLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token ?? "";
+      const res = await fetch("/api/personel/hesap-olustur", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ personel_id: hesapModal.id, email: hesapEmail, password: hesapSifre }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        showToast(`❌ ${json.error ?? "Hesap oluşturulamadı"}`);
+      } else {
+        setPersoneller((prev) =>
+          prev.map((p) =>
+            p.id === hesapModal.id
+              ? { ...p, kullanici_id: String(json.user_id ?? "created"), kullaniciEmail: json.email }
+              : p
+          )
+        );
+        showToast(`✅ ${hesapModal.name} için giriş hesabı oluşturuldu`);
+        setHesapModal(null);
+      }
+    } catch (e) {
+      console.error("hesapOlustur client error:", e);
+      showToast("❌ Beklenmeyen bir hata oluştu");
+    } finally {
+      setHesapLoading(false);
+    }
+  }
+
   function csvIndir() {
     const headers = ["Ad Soyad", "Telefon", "Rol", "Aktif", "Teslimat", "Ort. Süre", "Yetkiler"];
     const rows = personeller.map((p) => [
@@ -662,6 +821,7 @@ export default function IsletmePersonelPage() {
               onYetki={() => openYetki(p)}
               onToggle={() => toggleAktif(p.id)}
               onSil={() => setSilModal(p)}
+              onHesapOlustur={() => openHesapModal(p)}
               sezlongOptions={sezlongOptions}
             />
           ))}
@@ -740,6 +900,83 @@ export default function IsletmePersonelPage() {
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setSilModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
               <button onClick={silPersonel} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: RED, color: "white", cursor: "pointer" }}>🗑️ Evet, Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── HESAP OLUŞTUR MODAL ─────────────────────────────────────────────── */}
+      {hesapModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setHesapModal(null)}>
+          <div style={{ background: "white", borderRadius: 16, width: 460, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: "20px 24px", borderBottom: `1px solid ${GRAY200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>🔐 Giriş Hesabı Oluştur</h3>
+                <div style={{ fontSize: 11, color: GRAY400, marginTop: 2 }}>{hesapModal.name}</div>
+              </div>
+              <button onClick={() => setHesapModal(null)} style={{ width: 30, height: 30, border: "none", background: GRAY100, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>✕</button>
+            </div>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={labelStyle}>E-posta</label>
+                <input
+                  type="email"
+                  value={hesapEmail}
+                  onChange={(e) => setHesapEmail(e.target.value)}
+                  style={inputStyle}
+                  placeholder="ornek@tesis.myloungers.com"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Şifre <span style={{ color: GRAY400, fontWeight: 400 }}>(en az 8 karakter)</span></label>
+                <input
+                  type="password"
+                  value={hesapSifre}
+                  onChange={(e) => setHesapSifre(e.target.value)}
+                  style={{ ...inputStyle, borderColor: hesapSifre.length > 0 && hesapSifre.length < 8 ? RED : GRAY200 }}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                {hesapSifre.length > 0 && hesapSifre.length < 8 && (
+                  <div style={{ fontSize: 10, color: RED, marginTop: 4 }}>Şifre en az 8 karakter olmalı</div>
+                )}
+              </div>
+              <div>
+                <label style={labelStyle}>Şifre Tekrar</label>
+                <input
+                  type="password"
+                  value={hesapSifreTekrar}
+                  onChange={(e) => setHesapSifreTekrar(e.target.value)}
+                  style={{ ...inputStyle, borderColor: hesapSifreTekrar.length > 0 && hesapSifreTekrar !== hesapSifre ? RED : hesapSifreTekrar.length > 0 && hesapSifreTekrar === hesapSifre ? GREEN : GRAY200 }}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                {hesapSifreTekrar.length > 0 && hesapSifreTekrar !== hesapSifre && (
+                  <div style={{ fontSize: 10, color: RED, marginTop: 4 }}>Şifreler eşleşmiyor</div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", padding: "16px 24px", borderTop: `1px solid ${GRAY200}` }}>
+              <button
+                onClick={() => setHesapModal(null)}
+                disabled={hesapLoading}
+                style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}
+              >
+                İptal
+              </button>
+              <button
+                onClick={hesapOlustur}
+                disabled={hesapLoading || !hesapEmail || hesapSifre.length < 8 || hesapSifre !== hesapSifreTekrar}
+                style={{
+                  padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none",
+                  background: (hesapLoading || !hesapEmail || hesapSifre.length < 8 || hesapSifre !== hesapSifreTekrar) ? GRAY200 : NAVY,
+                  color: (hesapLoading || !hesapEmail || hesapSifre.length < 8 || hesapSifre !== hesapSifreTekrar) ? GRAY400 : "white",
+                  cursor: (hesapLoading || !hesapEmail || hesapSifre.length < 8 || hesapSifre !== hesapSifreTekrar) ? "not-allowed" : "pointer",
+                }}
+              >
+                {hesapLoading ? "Oluşturuluyor…" : "Hesap Oluştur"}
+              </button>
             </div>
           </div>
         </div>
