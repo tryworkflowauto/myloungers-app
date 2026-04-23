@@ -270,7 +270,7 @@ export default function IsletmeDashboardPage() {
         supabase.from("rezervasyonlar").select("id, baslangic_tarih, bitis_tarih, kisi_sayisi, kullanici_id, kullanicilar(ad)").eq("tesis_id", tesisId).gte("bitis_tarih", today).order("baslangic_tarih", { ascending: true }).limit(10),
         supabase.from("yorumlar").select("id, puan, yorum, created_at, kullanici_id, kullanicilar(ad)").eq("tesis_id", tesisId).eq("durum", "aktif").order("created_at", { ascending: false }).limit(5),
         supabase.from("siparisler").select("id, durum, created_at").eq("tesis_id", tesisId).gte("created_at", `${today}T00:00:00Z`),
-        supabase.from("siparisler").select("id, durum, created_at").eq("tesis_id", tesisId).eq("durum", "bekliyor").order("created_at", { ascending: true }).limit(8),
+        supabase.from("siparisler").select("id, durum, created_at").eq("tesis_id", tesisId).eq("durum", "yeni").order("created_at", { ascending: true }).limit(8),
         supabase.from("rezervasyonlar").select("id, baslangic_tarih").eq("tesis_id", tesisId).gte("baslangic_tarih", now.toISOString()).lte("baslangic_tarih", ucGunSonra.toISOString()),
         supabase.from("rezervasyonlar").select("id, musteri_adi, bakiye_kalan, bakiye_son_tarih").eq("tesis_id", tesisId).not("bakiye_son_tarih", "is", null).lte("bakiye_son_tarih", ucGunSonra.toISOString()).order("bakiye_son_tarih", { ascending: true }).limit(10),
         supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).gte("created_at", haftaninBasi.toISOString()).lte("created_at", haftaninSonu.toISOString()),
@@ -339,7 +339,7 @@ export default function IsletmeDashboardPage() {
       setStatData([
         { etiket: "Günlük Gelir", ikon: "💰", deger: `₺${gunlukGelir.toLocaleString("tr-TR")}`, sub: "Bugün", change: "—", changeClass: "neutral", renk: "teal" },
         { etiket: "Aktif Şezlonglar", ikon: "🏖️", deger: String(doluSezlong), ek: `/${toplamSezlong}`, sub: `${toplamSezlong - doluSezlong} boş şezlong`, change: "= Veri", changeClass: "neutral", renk: "orange" },
-        { etiket: "Tamamlanan Sipariş", ikon: "🍽️", deger: String(siparisBugun.filter((s) => s.durum === "teslim").length), sub: "Bugün", change: "—", changeClass: "neutral", renk: "green" },
+        { etiket: "Tamamlanan Sipariş", ikon: "🍽️", deger: String(siparisBugun.filter((s) => s.durum === "verildi").length), sub: "Bugün", change: "—", changeClass: "neutral", renk: "green" },
         { etiket: "Aktif Müşteri", ikon: "👥", deger: String(aktifMusteri), sub: "Tesiste", change: "—", changeClass: "neutral", renk: "purple" },
       ]);
 

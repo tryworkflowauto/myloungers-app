@@ -19,7 +19,7 @@ const YELLOW = "#F59E0B";
 const BLUE   = "#3B82F6";
 const PURPLE = "#7C3AED";
 
-type SiparisDurum = "yeni" | "hazirlaniyor" | "yolda" | "teslim";
+type SiparisDurum = "yeni" | "hazirlaniyor" | "hazir" | "yolda" | "verildi" | "iptal";
 type SiparisKart = {
   id: string; sezlong: string; musteri: string; bolge: string;
   kisi: number; sure: number; sureClass: "ok" | "warn" | "danger";
@@ -148,14 +148,14 @@ export default function GarsonPage() {
           .select("id, garson_id, durum, created_at, not, musteri_adi, kisi_sayisi, sezlong_id, sezlonglar(numara, sezlong_gruplari(ad)), siparis_kalemleri(adet, urun_adi)")
           .eq("tesis_id", tesisId)
           .in("garson_id", garsonIdList)
-          .in("durum", ["bekliyor", "hazirlaniyor", "yolda"])
+          .in("durum", ["yeni", "hazirlaniyor", "hazir", "yolda"])
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
           .select("id, created_at, musteri_adi, sezlonglar(numara)")
           .eq("tesis_id", tesisId)
           .in("garson_id", garsonIdList)
-          .eq("durum", "bekliyor")
+          .eq("durum", "yeni")
           .order("created_at", { ascending: false })
           .limit(20),
         supabase
@@ -168,7 +168,7 @@ export default function GarsonPage() {
           .select("id, created_at, teslim_suresi_dk, musteri_adi, sezlonglar(numara)")
           .eq("tesis_id", tesisId)
           .in("garson_id", garsonIdList)
-          .eq("durum", "teslim")
+          .eq("durum", "verildi")
           .order("created_at", { ascending: false })
           .limit(10),
         supabase
@@ -188,7 +188,7 @@ export default function GarsonPage() {
         const createdAtMs = s.created_at ? new Date(s.created_at).getTime() : nowMs;
         const sure = Math.max(1, Math.round((nowMs - createdAtMs) / 60000));
         const sureClass: "ok" | "warn" | "danger" = sure >= 15 ? "danger" : sure >= 8 ? "warn" : "ok";
-        const durum: SiparisDurum = s.durum === "bekliyor" ? "yeni" : s.durum;
+        const durum: SiparisDurum = s.durum;
         const kalemler = (s.siparis_kalemleri ?? []).map((k: any) => ({
           emoji: "🍽️",
           isim: k.urun_adi || "Ürün",
@@ -229,7 +229,7 @@ export default function GarsonPage() {
         : sezlongRowsAll;
       const cagriSezlongSet = new Set(
         siparisRows
-          .filter((s: any) => s.durum === "bekliyor")
+          .filter((s: any) => s.durum === "yeni")
           .map((s: any) => (s.sezlonglar?.numara ? String(s.sezlonglar.numara) : ""))
           .filter(Boolean)
       );
@@ -285,11 +285,11 @@ export default function GarsonPage() {
       );
 
       const perfRows = (perfRes ?? []) as any[];
-      const teslimat = perfRows.filter((r: any) => r.durum === "teslim").length;
+      const teslimat = perfRows.filter((r: any) => r.durum === "verildi").length;
       const ortSureRaw =
         teslimat > 0
           ? perfRows
-              .filter((r: any) => r.durum === "teslim")
+              .filter((r: any) => r.durum === "verildi")
               .reduce((sum: number, r: any) => sum + Number(r.teslim_suresi_dk ?? r.teslim_suresi ?? 0), 0) / teslimat
           : 0;
       const musteri = new Set(perfRows.map((r: any) => String(r.musteri_adi ?? "")).filter(Boolean)).size;
@@ -326,7 +326,7 @@ export default function GarsonPage() {
     } else if (yeniDurum === "yolda") {
       setSiparisler(p => p.map(s => s.id === id ? { ...s, durum: "yolda" } : s));
       showToast("🛵 Yola çıkıldı!");
-    } else if (yeniDurum === "teslim") {
+    } else if (yeniDurum === "verildi") {
       showToast("✅ Teslimat tamamlandı!");
       setTimeout(() => {
         setSiparisler(p => p.filter(s => s.id !== id));
@@ -682,10 +682,13 @@ export default function GarsonPage() {
                   <button onClick={() => { siparisGuncelle(detayModal.id, "hazirlaniyor"); setDetayModal(p => p ? { ...p, durum: "hazirlaniyor" } : p); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: ORANGE, color: "white" }}>📋 Siparişi Aldım</button>
                 )}
                 {detayModal.durum === "hazirlaniyor" && (
-                  <button onClick={() => { siparisGuncelle(detayModal.id, "yolda"); setDetayModal(p => p ? { ...p, durum: "yolda" } : p); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: BLUE, color: "white" }}>🛵 Yola Çıktım</button>
+                  <button onClick={() => { siparisGuncelle(detayModal.id, "hazir"); setDetayModal(p => p ? { ...p, durum: "hazir" } : p); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: BLUE, color: "white" }}>✅ Hazır</button>
+                )}
+                {detayModal.durum === "hazir" && (
+                  <button onClick={() => { siparisGuncelle(detayModal.id, "yolda"); setDetayModal(p => p ? { ...p, durum: "yolda" } : p); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: BLUE, color: "white" }}>🛵 Yolda</button>
                 )}
                 {detayModal.durum === "yolda" && (
-                  <button onClick={() => { siparisGuncelle(detayModal.id, "teslim"); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: GREEN, color: "white" }}>✅ Teslim Ettim</button>
+                  <button onClick={() => { siparisGuncelle(detayModal.id, "verildi"); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: GREEN, color: "white" }}>✅ Teslim Ettim</button>
                 )}
               </div>
             </div>
@@ -699,10 +702,10 @@ export default function GarsonPage() {
 // ── Progress bar (inline card) ────────────────────────────────────────────────
 function DurumAkisiDetay({ durum }: { durum: SiparisDurum }) {
   const steps = [
-    { key: "hazirlaniyor", label: "Alındı",       icon: "✓",  done: ["hazirlaniyor","yolda","teslim"].includes(durum), active: durum === "yeni" },
-    { key: "hazirKontrol", label: "Hazırlanıyor", icon: "⏳", done: ["yolda","teslim"].includes(durum),               active: durum === "hazirlaniyor" },
-    { key: "yolda",        label: "Yolda",         icon: "🛵", done: durum === "teslim",                               active: durum === "yolda" },
-    { key: "teslim",       label: "Teslim",        icon: "✓",  done: false,                                            active: durum === "teslim" },
+    { key: "hazirlaniyor", label: "Alındı",       icon: "✓",  done: ["hazirlaniyor","hazir","yolda","verildi"].includes(durum), active: durum === "yeni" },
+    { key: "hazirKontrol", label: "Hazır",        icon: "🍽️", done: ["hazir","yolda","verildi"].includes(durum),               active: durum === "hazirlaniyor" },
+    { key: "yolda",        label: "Yolda",        icon: "🛵", done: ["yolda","verildi"].includes(durum),                        active: durum === "hazir" },
+    { key: "teslim",       label: "Teslim",       icon: "✓",  done: false,                                                    active: durum === "yolda" || durum === "verildi" },
   ];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4, background: GRAY50, borderRadius: 10, padding: "12px 10px" }}>
@@ -728,10 +731,10 @@ function SiparisKartComp({ siparis, onDurumGuncelle, onKartClick }: {
   onKartClick: () => void;
 }) {
   const { durum } = siparis;
-  const borderColor = durum === "yeni" ? ORANGE : durum === "hazirlaniyor" ? YELLOW : durum === "yolda" ? BLUE : GREEN;
+  const borderColor = durum === "yeni" ? ORANGE : durum === "hazirlaniyor" ? YELLOW : (durum === "hazir" ? TEAL : (durum === "yolda" ? BLUE : GREEN));
   const sureBg    = siparis.sureClass === "danger" ? "#FEE2E2" : siparis.sureClass === "warn" ? "#FEF3C7" : "#DCFCE7";
   const sureColor = siparis.sureClass === "danger" ? RED : siparis.sureClass === "warn" ? "#D97706" : "#16A34A";
-  const chipStyle = durum === "yeni" ? { bg: "#EFF6FF", color: BLUE } : durum === "hazirlaniyor" ? { bg: "#FEF3C7", color: "#D97706" } : { bg: "#EDE9FE", color: PURPLE };
+  const chipStyle = durum === "yeni" ? { bg: "#EFF6FF", color: BLUE } : (durum === "hazirlaniyor" ? { bg: "#FEF3C7", color: "#D97706" } : (durum === "hazir" ? { bg: "#CCFBF1", color: "#0F766E" } : { bg: "#EDE9FE", color: PURPLE }));
 
   return (
     <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden", marginBottom: 10, borderLeft: `4px solid ${borderColor}` }}>
@@ -747,7 +750,7 @@ function SiparisKartComp({ siparis, onDurumGuncelle, onKartClick }: {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
           <span style={{ fontSize: 13, fontWeight: 800, padding: "4px 10px", borderRadius: 20, background: sureBg, color: sureColor }}>{siparis.sure}dk</span>
           <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: chipStyle.bg, color: chipStyle.color }}>
-            {durum === "yeni" ? "Yeni" : durum === "hazirlaniyor" ? "Hazırlanıyor" : "Yolda"}
+            {durum === "yeni" ? "Yeni" : durum === "hazirlaniyor" ? "Hazırlanıyor" : (durum === "hazir" ? "Hazır" : (durum === "yolda" ? "Yolda" : "Verildi"))}
           </span>
         </div>
       </div>
@@ -764,28 +767,30 @@ function SiparisKartComp({ siparis, onDurumGuncelle, onKartClick }: {
       </div>
 
       {/* Progress bar */}
-      {durum === "hazirlaniyor" && <ProgressBar durum="hazirlaniyor" />}
+      {(durum === "hazirlaniyor" || durum === "hazir") && <ProgressBar durum={durum === "hazirlaniyor" ? "hazirlaniyor" : "hazir"} />}
       {durum === "yolda"        && <ProgressBar durum="yolda" />}
 
       {/* Aksiyon butonu */}
       <div style={{ padding: "10px 14px", borderTop: `1px solid ${GRAY100}`, background: GRAY50 }}>
         {durum === "yeni"         && <button onClick={(e) => { e.stopPropagation(); onDurumGuncelle(siparis.id, "hazirlaniyor"); }} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: ORANGE, color: "white" }}>📋 Siparişi Aldım</button>}
-        {durum === "hazirlaniyor" && <button onClick={(e) => { e.stopPropagation(); onDurumGuncelle(siparis.id, "yolda"); }}       style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: BLUE,   color: "white" }}>🛵 Yola Çıktım</button>}
-        {durum === "yolda"        && <button onClick={(e) => { e.stopPropagation(); onDurumGuncelle(siparis.id, "teslim"); }}      style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: GREEN,  color: "white" }}>✅ Teslim Ettim</button>}
+        {durum === "hazirlaniyor" && <button onClick={(e) => { e.stopPropagation(); onDurumGuncelle(siparis.id, "hazir"); }}       style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: BLUE,   color: "white" }}>✅ Hazır</button>}
+        {durum === "hazir"        && <button onClick={(e) => { e.stopPropagation(); onDurumGuncelle(siparis.id, "yolda"); }}       style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: BLUE,   color: "white" }}>🛵 Yolda</button>}
+        {durum === "yolda"        && <button onClick={(e) => { e.stopPropagation(); onDurumGuncelle(siparis.id, "verildi"); }}     style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: GREEN,  color: "white" }}>✅ Teslim Ettim</button>}
       </div>
     </div>
   );
 }
 
-function ProgressBar({ durum }: { durum: "hazirlaniyor" | "yolda" }) {
+function ProgressBar({ durum }: { durum: "hazirlaniyor" | "hazir" | "yolda" }) {
   const done1 = true;
-  const done2 = durum === "yolda";
+  const done2 = durum === "hazir" || durum === "yolda";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 14px", background: GRAY50, borderRadius: 10, margin: "0 14px 8px" }}>
       {[
         { icon: "✓",  label: "Alındı",       active: false, done: true    },
         { icon: "⏳", label: "Hazırlanıyor", active: durum === "hazirlaniyor", done: done2 },
-        { icon: "🛵", label: "Yolda",         active: durum === "yolda",       done: false },
+        { icon: "🍽️", label: "Hazır",       active: durum === "hazir",        done: durum === "yolda" },
+        { icon: "🛵", label: "Yolda",        active: durum === "yolda",        done: false },
         { icon: "✓",  label: "Teslim",        active: false,                   done: false },
       ].map((s, i, arr) => (
         <div key={i} style={{ display: "flex", alignItems: "center", flex: 1 }}>

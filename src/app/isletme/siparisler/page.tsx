@@ -85,8 +85,8 @@ function mapSiparisToItem(
   const tutar = `₺${toplam.toLocaleString("tr-TR")}`;
   const garsonId = s.garson_id ? String(s.garson_id) : null;
   const garson = garsonId ? garsonMap.get(garsonId) ?? null : null;
-  const durum = (s.durum ?? "bekliyor") as string;
-  const isYeni = durum === "bekliyor";
+  const durum = (s.durum ?? "yeni") as string;
+  const isYeni = durum === "yeni";
   const musteri = s.rezervasyonlar?.musteri_adi?.trim() || "Misafir";
   const kisi = 1;
 
@@ -96,15 +96,15 @@ function mapSiparisToItem(
     grup: grupAd || "—",
     kisi,
     musteri,
-    timer: durum === "teslim" ? `✓ ${diffM} dk` : timer,
-    timerClass: durum === "teslim" ? "ok" : timerClass,
+    timer: durum === "verildi" ? `✓ ${diffM} dk` : timer,
+    timerClass: durum === "verildi" ? "ok" : timerClass,
     saat,
     bg,
     urunler: urunler.length ? urunler : [{ adet: 1, ad: "—", fiyat: "₺0" }],
     garson: garson ? { ...garson, name: garson.name } : null,
     tutar,
     isYeni,
-    opacity: durum === "teslim" ? 0.75 : 1,
+    opacity: durum === "verildi" ? 0.75 : 1,
   };
 }
 
@@ -116,7 +116,7 @@ function mapSiparisToGecmis(s: any, garsonMap: Map<string, Garson>, no: string):
   const kalemler = (s.siparis_kalemleri ?? []) as { ad?: string; adet?: number }[];
   const urunlerStr = kalemler.map((k) => `${k.adet ?? 1}x ${k.ad ?? "—"}`).join(", ");
   const saat = created.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-  const durum = (s.durum ?? "teslim") as string;
+  const durum = (s.durum ?? "verildi") as string;
   const garsonId = s.garson_id ? String(s.garson_id) : null;
   const garson: Garson = garsonId && garsonMap.get(garsonId)
     ? garsonMap.get(garsonId)!
@@ -132,7 +132,7 @@ function mapSiparisToGecmis(s: any, garsonMap: Map<string, Garson>, no: string):
     saat: durum === "iptal" ? `${saat} → İptal` : `${saat} → Teslim`,
     garson,
     tutar,
-    durum: durum === "iptal" ? "iptal" : "teslim",
+    durum: durum === "iptal" ? "iptal" : "verildi",
     tutarColor: durum === "iptal" ? RED : undefined,
   };
 }
@@ -379,12 +379,12 @@ export default function IsletmeSiparislerPage() {
           const hazir: SiparisItem[] = [];
           const teslim: SiparisItem[] = [];
           const gecmis: GecmisItem[] = [];
-          let gecmisNo = rows.filter((r: any) => r.durum === "teslim" || r.durum === "iptal").length + 80;
+          let gecmisNo = rows.filter((r: any) => r.durum === "verildi" || r.durum === "iptal").length + 80;
           rows.forEach((s, i) => {
             const item = mapSiparisToItem(s, garsonMap, i);
-            if (s.durum === "bekliyor") yeni.push(item);
+            if (s.durum === "yeni") yeni.push(item);
             else if (s.durum === "hazirlaniyor") hazir.push(item);
-            else if (s.durum === "teslim") {
+            else if (s.durum === "verildi") {
               teslim.push(item);
               gecmis.push(mapSiparisToGecmis(s, garsonMap, "#" + String(gecmisNo--).padStart(3, "0")));
             } else if (s.durum === "iptal") {
@@ -423,7 +423,7 @@ export default function IsletmeSiparislerPage() {
   }
 
   async function teslimEt(order: SiparisItem) {
-    const { error } = await supabase.from("siparisler").update({ durum: "teslim" }).eq("id", order.id);
+    const { error } = await supabase.from("siparisler").update({ durum: "verildi" }).eq("id", order.id);
     if (error) {
       console.error("teslimEt error:", error);
       return;
@@ -440,7 +440,7 @@ export default function IsletmeSiparislerPage() {
       saat: `${order.saat} → Teslim`,
       garson: order.garson ?? { inits: "—", name: "Atanmadı", color: GRAY400 },
       tutar: order.tutar,
-      durum: "teslim",
+      durum: "verildi",
     };
     setGecmisList((p) => [newGecmis, ...p]);
     showToast("✅ Sipariş teslim edildi!");
@@ -492,7 +492,7 @@ export default function IsletmeSiparislerPage() {
     const headers = ["Sezlong", "Müşteri", "Grup", "Ürünler", "Tutar", "Garson", "Saat", "Durum"];
     const rows = [
       ...teslimList.map((s) => [s.sezlong, s.musteri, s.grup, s.urunler.map((u) => `${u.adet}x ${u.ad}`).join("; "), s.tutar, s.garson?.name ?? "—", s.saat, "Teslim Edildi"]),
-      ...gecmisList.filter((g) => g.durum === "teslim").map((g) => [g.sezlong, "—", "—", g.urunler, g.tutar, g.garson.name, g.saat, "Teslim Edildi"]),
+      ...gecmisList.filter((g) => g.durum === "verildi").map((g) => [g.sezlong, "—", "—", g.urunler, g.tutar, g.garson.name, g.saat, "Teslim Edildi"]),
     ];
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -584,7 +584,7 @@ export default function IsletmeSiparislerPage() {
           {[
             { icon: "🆕", val: String(yeniList.length), lbl: "Yeni Sipariş", valColor: YELLOW, iconBg: "#FEF3C7" },
             { icon: "🍳", val: String(hazirList.length), lbl: "Hazırlanıyor", valColor: BLUE, iconBg: "#DBEAFE" },
-            { icon: "✅", val: String(gecmisList.filter((g) => g.durum === "teslim").length + teslimList.length), lbl: "Teslim Edildi", valColor: GREEN, iconBg: "#DCFCE7" },
+            { icon: "✅", val: String(gecmisList.filter((g) => g.durum === "verildi").length + teslimList.length), lbl: "Teslim Edildi", valColor: GREEN, iconBg: "#DCFCE7" },
             { icon: "💰", val: gunlukCiroStr, lbl: "Günlük Ciro", valColor: ORANGE, iconBg: "#FFEDD5" },
             { icon: "⏱️", val: "0 dk", lbl: "Ort. Teslimat", valColor: "#7C3AED", iconBg: "#F5F3FF" },
           ].map((s, i) => (
@@ -665,7 +665,7 @@ export default function IsletmeSiparislerPage() {
             <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
               <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #10B981", background: "#F0FDF4" }}>
                 <h3 style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>✅ Teslim Edildi</h3>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: "#DCFCE7", color: "#166534" }}>{gecmisList.filter((g) => g.durum === "teslim").length + teslimList.length} bugün</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: "#DCFCE7", color: "#166534" }}>{gecmisList.filter((g) => g.durum === "verildi").length + teslimList.length} bugün</span>
               </div>
               <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10, minHeight: 200 }}>
                 {filteredTeslim.map((s) => (
@@ -715,7 +715,7 @@ export default function IsletmeSiparislerPage() {
                 style={{ padding: "7px 12px", border: `1px solid ${gecmisDurum ? TEAL : GRAY200}`, borderRadius: 8, fontSize: 12 }}
               >
                 <option value="">Tüm Durumlar</option>
-                <option value="teslim">Teslim Edildi</option>
+                <option value="verildi">Teslim Edildi</option>
                 <option value="iptal">İptal</option>
               </select>
               {(gecmisArama || gecmisGarson || gecmisDurum) && (
@@ -749,8 +749,8 @@ export default function IsletmeSiparislerPage() {
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: r.tutarColor ?? NAVY }}>{r.tutar}</div>
                     <div>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 20, background: r.durum === "teslim" ? "#DCFCE7" : "#FEE2E2", color: r.durum === "teslim" ? "#16A34A" : RED }}>
-                        {r.durum === "teslim" ? "✓ Teslim" : "✖ İptal"}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 20, background: r.durum === "verildi" ? "#DCFCE7" : "#FEE2E2", color: r.durum === "verildi" ? "#16A34A" : RED }}>
+                        {r.durum === "verildi" ? "✓ Teslim" : "✖ İptal"}
                       </span>
                     </div>
                   </div>

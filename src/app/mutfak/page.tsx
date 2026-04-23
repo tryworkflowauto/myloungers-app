@@ -17,7 +17,7 @@ const GREEN  = "#10B981";
 const RED    = "#EF4444";
 const YELLOW = "#F59E0B";
 
-type SiparisDurum = "yeni" | "hazirlaniyor" | "tamamlandi";
+type SiparisDurum = "yeni" | "hazirlaniyor" | "hazir" | "yolda" | "verildi" | "iptal";
 type UrunSatir    = { emoji: string; isim: string; adet: number; hazirlandi?: boolean };
 type SiparisKart  = {
   id: string; barColor: string; sezlong: string; musteri: string;
@@ -130,7 +130,11 @@ export default function MutfakPage() {
       const sure = Math.max(1, Math.round((Date.now() - createdAtMs) / 60000));
       const sureClass: "ok" | "warn" | "danger" = sure >= 15 ? "danger" : sure >= 8 ? "warn" : "ok";
       const durumDb = s?.durum;
-      const durum: SiparisDurum = durumDb === "bekliyor" ? "yeni" : (durumDb === "hazirlaniyor" ? "hazirlaniyor" : "tamamlandi");
+      const durum: SiparisDurum = durumDb === "yeni"
+        ? "yeni"
+        : (durumDb === "hazirlaniyor"
+          ? "hazirlaniyor"
+          : (durumDb === "hazir" ? "hazir" : (durumDb === "yolda" ? "yolda" : (durumDb === "iptal" ? "iptal" : "verildi"))));
       const musteri = s?.musteri_adi || "Misafir";
       const urunler: UrunSatir[] = (s?.siparis_kalemleri ?? []).map((k: any) => ({
         emoji: "🍽️",
@@ -143,16 +147,16 @@ export default function MutfakPage() {
         : undefined;
       return {
         id: String(s?.id ?? ""),
-        barColor: durum === "yeni" ? RED : durum === "hazirlaniyor" ? YELLOW : GRAY400,
+        barColor: durum === "yeni" ? RED : (durum === "hazirlaniyor" ? YELLOW : GRAY400),
         sezlong: s?.sezlong_no != null && s.sezlong_no !== '' ? String(s.sezlong_no) : "-",
         sezlong_no: s?.sezlong_no || "",
         musteri,
         tarih: s?.created_at ? new Date(s.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
         sure,
-        sureLabel: durum === "yeni" ? "Bekleniyor" : durum === "hazirlaniyor" ? "Hazırlanıyor" : "Hazırlandı",
+        sureLabel: durum === "yeni" ? "Bekleniyor" : (durum === "hazirlaniyor" ? "Hazırlanıyor" : "Hazırlandı"),
         sureClass,
         oncelikli: sure >= 15,
-        urunler: urunler.length ? urunler : [{ emoji: "🍽️", isim: "Sipariş", adet: 1, hazirlandi: durum === "tamamlandi" }],
+        urunler: urunler.length ? urunler : [{ emoji: "🍽️", isim: "Sipariş", adet: 1, hazirlandi: ["hazir", "yolda", "verildi"].includes(durum) }],
         not: s?.notlar || undefined,
         teslimSaat,
         durum,
@@ -165,7 +169,7 @@ export default function MutfakPage() {
           .from("siparisler")
           .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
-          .eq("durum", "bekliyor")
+          .eq("durum", "yeni")
           .order("created_at", { ascending: true }),
         supabase
           .from("siparisler")
@@ -177,7 +181,7 @@ export default function MutfakPage() {
           .from("siparisler")
           .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
           .eq("tesis_id", tesisId)
-          .eq("durum", "teslim")
+          .in("durum", ["hazir", "yolda", "verildi"])
           .order("created_at", { ascending: false }),
       ]);
 
@@ -246,7 +250,7 @@ export default function MutfakPage() {
   async function tamamla(kart: SiparisKart) {
     const { error } = await supabase
       .from("siparisler")
-      .update({ durum: "teslim" })
+      .update({ durum: "hazir" })
       .eq("id", kart.id);
     if (error) {
       console.error("mutfak tamamla update error:", error);
@@ -435,7 +439,7 @@ export default function MutfakPage() {
 
             <div style={{ padding: 18 }}>
               {/* ACİL badge */}
-              {(detayModal.sure >= 15 || detayModal.oncelikli) && detayModal.durum !== "tamamlandi" && (
+              {(detayModal.sure >= 15 || detayModal.oncelikli) && !["hazir", "yolda", "verildi"].includes(detayModal.durum) && (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 20, background: RED, color: "white", marginBottom: 12 }}>🔥 ACİL — En Uzun Bekleyen</div>
               )}
 

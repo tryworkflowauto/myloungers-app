@@ -210,7 +210,7 @@ export default function SiparisPage() {
         .insert({
           tesis_id: hedefTesisId,
           rezervasyon_id: rezervasyonId,
-          durum: "bekliyor",
+          durum: "yeni",
           toplam: sepetToplam,
           sezlong_no: sezlongNo,
           musteri_adi: musteriAdi,

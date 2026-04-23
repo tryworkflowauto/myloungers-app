@@ -95,7 +95,7 @@ export default function IsletmeSidebar() {
 
       const [{ count: rezCount, error: rezErr }, { count: sipCount, error: sipErr }, { count: yorumCount, error: yorumErr }] = await Promise.all([
         supabase.from('rezervasyonlar').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
-        supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
+        supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'yeni'),
         supabase.from('yorumlar').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
       ]);
       if (!cancelled) {

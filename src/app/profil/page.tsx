@@ -294,13 +294,11 @@ export default function ProfilPage() {
         // İptal sayısı (altyazı için)
         const iptalSayisi = (rezData ?? []).filter((r: any) => r.durum === "iptal").length;
 
-        // Online Ödeme: sadece MYL- prefix'li, iptal hariç, toplam_tutar toplamı
-        const onlineOdeme = aktifRezler
-          .filter((r: any) => typeof r.rezervasyon_kodu === "string" && r.rezervasyon_kodu.startsWith("MYL-"))
-          .reduce((sum: number, r: any) => {
-            const t = typeof r.toplam_tutar === "number" ? r.toplam_tutar : Number(r.toplam_tutar || 0);
-            return sum + (isNaN(t) ? 0 : t);
-          }, 0);
+        // Toplam Ödeme: iptal edilmeyen tüm rezervasyonların toplam_tutar toplamı
+        const onlineOdeme = aktifRezler.reduce((sum: number, r: any) => {
+          const t = typeof r.toplam_tutar === "number" ? r.toplam_tutar : Number(r.toplam_tutar || 0);
+          return sum + (isNaN(t) ? 0 : t);
+        }, 0);
 
         // Ek Yükleme: bakiye_yuklenen - toplam_tutar > 0 olanların farkı toplamı (iptal hariç)
         const ekYukleme = aktifRezler.reduce((sum: number, r: any) => {
@@ -310,11 +308,17 @@ export default function ProfilPage() {
           return sum + (fark > 0 ? fark : 0);
         }, 0);
 
-        // Sipariş Harcaması: bakiye_harcanan toplamı (iptal hariç)
-        const siparisHarcamasi = aktifRezler.reduce((sum: number, r: any) => {
-          const h = typeof r.bakiye_harcanan === "number" ? r.bakiye_harcanan : Number(r.bakiye_harcanan || 0);
-          return sum + (isNaN(h) ? 0 : h);
-        }, 0);
+        // Kalan Bakiye: sadece aktif + yaklaşan rezervasyonların bakiye_kalan toplamı (iptal hariç)
+        const kalanBakiye = (aktifRezler ?? [])
+          .filter((r: any) => {
+            const startStr = r?.baslangic_tarih ? String(r.baslangic_tarih).slice(0, 10) : null;
+            const endStr = r?.bitis_tarih ? String(r.bitis_tarih).slice(0, 10) : null;
+            return startStr != null && endStr != null && startStr <= today && endStr >= today;
+          })
+          .reduce((sum: number, r: any) => {
+            const b = typeof r.bakiye_kalan === "number" ? r.bakiye_kalan : Number(r.bakiye_kalan || 0);
+            return sum + (isNaN(b) ? 0 : b);
+          }, 0);
 
         const uiRes: Reservation[] = (rezData ?? []).map((r: any) => {
           const startStr = r.baslangic_tarih as string | null;
@@ -464,7 +468,7 @@ export default function ProfilPage() {
         setTotalSpent(onlineOdeme);
         setIptalCount(iptalSayisi);
         setTotalEkYukleme(ekYukleme);
-        setTotalSiparisHarcamasi(siparisHarcamasi);
+        setTotalSiparisHarcamasi(kalanBakiye);
         setResLoading(false);
       } catch (e) {
         console.error("Profil rezervasyon yükleme hatası:", e);
@@ -1132,8 +1136,7 @@ export default function ProfilPage() {
               <div className="hstat-n">
                 {totalSpent !== null ? `₺${totalSpent.toLocaleString("tr-TR")}` : "—"}
               </div>
-              <div className="hstat-l">Online Ödeme</div>
-              <div style={{ fontSize: "0.65rem", color: "#64748B", marginTop: 2 }}>Komisyonlu</div>
+              <div className="hstat-l">Toplam Ödeme</div>
             </div>
             {totalEkYukleme !== null && totalEkYukleme > 0 && (
               <div>
@@ -1144,11 +1147,7 @@ export default function ProfilPage() {
             )}
             <div>
               <div className="hstat-n">{totalSiparisHarcamasi !== null ? `₺${totalSiparisHarcamasi.toLocaleString("tr-TR")}` : "—"}</div>
-              <div className="hstat-l">Sipariş Harcaması</div>
-            </div>
-            <div>
-              <div className="hstat-n">0</div>
-              <div className="hstat-l">Favori Tesis</div>
+              <div className="hstat-l">Kalan Bakiye</div>
             </div>
           </div>
         </div>
