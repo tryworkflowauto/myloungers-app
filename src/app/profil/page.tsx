@@ -1118,7 +1118,7 @@ export default function ProfilPage() {
             </div>
             <div className="phero-badges">
               <span className="hbadge hbadge-teal">✓ E-posta Doğrulandı</span>
-              <span className="hbadge hbadge-or">🏖️ Sadık Üye</span>
+              <span className="hbadge hbadge-or">🏖️ Üye</span>
               <span className="hbadge hbadge-wh">📅 {memberSince}</span>
             </div>
           </div>
