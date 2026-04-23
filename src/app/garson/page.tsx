@@ -153,9 +153,10 @@ export default function GarsonPage() {
   const [kendiYetkiler, setKendiYetkiler] = useState<string[]>([]);
   const [sezlongOptions, setSezlongOptions] = useState<SezlongOption[]>([]);
   const [sezlongPanelAcik, setSezlongPanelAcik] = useState(false);
-  const [aktivCagrilar] = useState<any[]>([]);
+  const [aktivCagrilar, setAktivCagrilar] = useState<any[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const previousHazirCountRef = useRef(0);
+  const prevCagriIdsRef = useRef<Set<string>>(new Set());
 
   function showToast(msg: string) {
     setToast(msg);
@@ -181,6 +182,55 @@ export default function GarsonPage() {
       osc.stop(now + 0.22);
     } catch {
       // no-op
+    }
+  }
+
+  function playCagriSesi() {
+    if (!sesAcik || typeof window === "undefined") return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.frequency.value = 880;
+      osc1.type = "sine";
+      gain1.gain.setValueAtTime(0, ctx.currentTime);
+      gain1.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 0.01);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.4);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.frequency.value = 587.33;
+      osc2.type = "sine";
+      gain2.gain.setValueAtTime(0, ctx.currentTime + 0.3);
+      gain2.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 0.31);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.9);
+      osc2.start(ctx.currentTime + 0.3);
+      osc2.stop(ctx.currentTime + 0.9);
+
+      setTimeout(() => {
+        try {
+          const osc3 = ctx.createOscillator();
+          const gain3 = ctx.createGain();
+          osc3.connect(gain3);
+          gain3.connect(ctx.destination);
+          osc3.frequency.value = 880;
+          osc3.type = "sine";
+          gain3.gain.setValueAtTime(0, ctx.currentTime);
+          gain3.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.01);
+          gain3.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc3.start(ctx.currentTime);
+          osc3.stop(ctx.currentTime + 0.3);
+        } catch { /* no-op */ }
+      }, 1000);
+    } catch (e) {
+      console.warn("Ses oynatılamadı:", e);
     }
   }
 
@@ -424,6 +474,97 @@ export default function GarsonPage() {
     };
   }, [tesisId, activeUuids, sezlongOptions, sesAcik]);
 
+  useEffect(() => {
+    if (!tesisId) return;
+
+    const activeUuidSet = new Set(activeUuids.map((u) => u.toLowerCase()));
+
+    async function fetchCagrilar() {
+      const { data, error } = await supabase
+        .from("bildirimler")
+        .select("id, tesis_id, sezlong_id, created_at, okundu, baslik, mesaj, yanit_tarihi, yanit_suresi_saniye, varis_tarihi, varis_suresi_saniye")
+        .eq("tesis_id", tesisId)
+        .eq("tip", "garson_cagri")
+        .is("varis_tarihi", null)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("garson cagri fetch error:", JSON.stringify(error, null, 2));
+        return;
+      }
+
+      const filtered = (data ?? []).filter(
+        (b: any) => b.sezlong_id && activeUuidSet.has(String(b.sezlong_id).toLowerCase())
+      );
+
+      const newIds = filtered.map((c: any) => String(c.id));
+      const prevIds = prevCagriIdsRef.current;
+      const hasBrandNew = newIds.some((id: string) => !prevIds.has(id));
+      if (hasBrandNew && prevIds.size > 0) {
+        playCagriSesi();
+      }
+      prevCagriIdsRef.current = new Set(newIds);
+
+      setAktivCagrilar(filtered);
+    }
+
+    fetchCagrilar();
+
+    const channel = supabase
+      .channel(`garson-cagri-${tesisId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bildirimler", filter: `tesis_id=eq.${tesisId}` },
+        () => fetchCagrilar()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tesisId, activeUuids]);
+
+  async function handleYoldaCiktim(cagriId: string, createdAt: string) {
+    const now = new Date();
+    const sureSaniye = Math.round((now.getTime() - new Date(createdAt).getTime()) / 1000);
+
+    const { error } = await supabase
+      .from("bildirimler")
+      .update({
+        okundu: true,
+        yanit_tarihi: now.toISOString(),
+        yanit_suresi_saniye: sureSaniye,
+      })
+      .eq("id", cagriId);
+
+    if (!error) {
+      setAktivCagrilar((prev) =>
+        prev.map((c) =>
+          c.id === cagriId
+            ? { ...c, yanit_tarihi: now.toISOString(), okundu: true, yanit_suresi_saniye: sureSaniye }
+            : c
+        )
+      );
+    }
+  }
+
+  async function handleGeldim(cagriId: string, createdAt: string) {
+    const now = new Date();
+    const sureSaniye = Math.round((now.getTime() - new Date(createdAt).getTime()) / 1000);
+
+    const { error } = await supabase
+      .from("bildirimler")
+      .update({
+        varis_tarihi: now.toISOString(),
+        varis_suresi_saniye: sureSaniye,
+      })
+      .eq("id", cagriId);
+
+    if (!error) {
+      setAktivCagrilar((prev) => prev.filter((c) => c.id !== cagriId));
+    }
+  }
+
   async function durumGuncelle(id: string, yeniDurum: SiparisDurum, msg: string) {
     const { error } = await supabase.from("siparisler").update({ durum: yeniDurum }).eq("id", id);
     if (error) {
@@ -535,17 +676,49 @@ export default function GarsonPage() {
           </div>
         </div>
 
-        {/* ── ÇAĞRI BANNER (şimdilik gizli, state hazır) ──────────────────── */}
-        {aktivCagrilar.map((c: any) => (
-          <div key={c.id} style={{ background: T.RED_BG, border: "0.5px solid rgba(239,68,68,0.35)", borderRadius: 14, padding: "13px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.RED, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, color: "#FCA5A5", fontWeight: 500 }}>{c.baslik || "Garson çağrısı"}</div>
-              <div style={{ fontSize: 11, color: "rgba(252,165,165,0.7)", marginTop: 2 }}>{c.zaman || ""}</div>
+        {/* ── ÇAĞRI BANNER ─────────────────────────────────────────────────── */}
+        {aktivCagrilar.map((c: any) => {
+          const sezOpt = c.sezlong_id
+            ? sezlongOptions.find((o) => o.id.toLowerCase() === String(c.sezlong_id).toLowerCase())
+            : null;
+          const sezLabel = sezOpt?.label ?? (c.sezlong_id ? "Şezlong" : "");
+          const created = c.created_at ? new Date(c.created_at) : null;
+          const dakikaOnce = created
+            ? Math.max(0, Math.round((Date.now() - created.getTime()) / 60000))
+            : null;
+          const zamanMetni = dakikaOnce !== null
+            ? dakikaOnce === 0 ? "Az önce" : `${dakikaOnce} dk önce`
+            : "";
+          const isAşama1 = !c.okundu && !c.yanit_tarihi;
+          const isAşama2 = c.yanit_tarihi && !c.varis_tarihi;
+          return (
+            <div key={c.id} style={{ background: T.RED_BG, border: "0.5px solid rgba(239,68,68,0.35)", borderRadius: 14, padding: "13px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.RED, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, color: "#FCA5A5", fontWeight: 500 }}>
+                  {sezLabel ? `${sezLabel} — Garson çağrısı` : (c.baslik || "Garson çağrısı")}
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(252,165,165,0.7)", marginTop: 2 }}>{zamanMetni}</div>
+              </div>
+              {isAşama1 && (
+                <button
+                  onClick={() => handleYoldaCiktim(String(c.id), c.created_at)}
+                  style={{ background: "#10B981", color: "white", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}
+                >
+                  Yolda ✓
+                </button>
+              )}
+              {isAşama2 && (
+                <button
+                  onClick={() => handleGeldim(String(c.id), c.created_at)}
+                  style={{ background: "#0891B2", color: "white", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}
+                >
+                  Geldim ✓
+                </button>
+              )}
             </div>
-            <button style={{ background: "#EF4444", color: "white", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Yanıtla</button>
-          </div>
-        ))}
+          );
+        })}
 
         {/* ── ÖZET SEKMESİ ────────────────────────────────────────────────── */}
         <div style={{ display: "flex", gap: 6, background: T.CARD_BG, padding: 4, borderRadius: 12, marginBottom: 16 }}>

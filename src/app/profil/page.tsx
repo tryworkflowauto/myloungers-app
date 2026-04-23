@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { SIPARIS_DURUM } from "@/lib/constants";
+import CallWaiterModal from "@/components/CallWaiterModal";
 
 type Reservation = {
   id: number;
   tesisId?: string;
+  sezlongId?: string;
   name: string;
   cat: string;
   loc: string;
@@ -40,6 +43,17 @@ type UserReview = {
   tesis: { ad: string } | { ad: string }[] | null;
 };
 
+type MusteriSiparis = {
+  id: string;
+  durumKey: string;
+  tesisAd: string;
+  createdAt: Date;
+  sureDakika: number;
+  urunler: { isim: string; adet: number; fiyat: number }[];
+  toplam: number;
+  rezervasyonId: string;
+};
+
 type FavoriteItem = {
   id: number;
   tesis: {
@@ -60,6 +74,32 @@ type FavoriteItem = {
     aktif?: boolean;
   } | null;
 };
+
+type AktifCagriDurum = {
+  id: string;
+  createdAt: string;
+  yanitTarihi: string | null;
+  yanitSuresi: number | null;
+  varisTarihi: string | null;
+  varisSuresi: number | null;
+};
+
+function formatSure(saniye: number): string {
+  const dk = Math.floor(saniye / 60);
+  const sn = saniye % 60;
+  if (dk === 0) return `${sn} sn`;
+  if (sn === 0) return `${dk} dk`;
+  return `${dk} dk ${sn} sn`;
+}
+
+function formatZamanOnce(createdAt: Date | string): string {
+  const diff = Date.now() - new Date(createdAt).getTime();
+  const dk = Math.floor(diff / 60000);
+  const sa = Math.floor(dk / 60);
+  if (sa > 0) return `${sa} sa önce`;
+  if (dk > 0) return `${dk} dk önce`;
+  return "Az önce";
+}
 
 const STATUS_META: Record<
   "upcoming" | "active" | "past" | "cancel",
@@ -136,6 +176,17 @@ export default function ProfilPage() {
   const [cancelModal, setCancelModal] = useState<{ id: string | number } | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<MusteriSiparis[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [gecmisAcik, setGecmisAcik] = useState(false);
+  const [orderRezIds, setOrderRezIds] = useState<string[]>([]);
+  const [garsonCagriCooldown, setGarsonCagriCooldown] = useState<Record<string, number>>({});
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [callModalRez, setCallModalRez] = useState<Reservation | null>(null);
+  const [aktifCagrilar, setAktifCagrilar] = useState<Record<string, AktifCagriDurum>>({});
+  const [bildirimler, setBildirimler] = useState<any[]>([]);
+  const [bildirimlerLoading, setBildirimlerLoading] = useState(false);
+  const [tick, setTick] = useState(0);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -147,6 +198,11 @@ export default function ProfilPage() {
       setUserLoading(false);
     }
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    const iv = setInterval(() => setTick((t) => t + 1), 10000);
+    return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
@@ -439,6 +495,7 @@ export default function ProfilPage() {
           return {
             id: r.id,
             tesisId: r.tesis_id == null ? undefined : String(r.tesis_id),
+            sezlongId: Array.isArray(r.sezlong_ids) && r.sezlong_ids.length > 0 ? String(r.sezlong_ids[0]) : undefined,
             name: tesisInfo?.ad || `Tesis #${r.tesis_id ?? ""}`,
             cat: "Beach Club",
             loc: tesisInfo?.loc || "-",
@@ -478,6 +535,83 @@ export default function ProfilPage() {
 
     loadReservations();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || reservations.length === 0) return;
+
+    const rezIds = reservations.map((r) => String(r.id)).filter(Boolean);
+
+    async function fetchAktifCagrilar() {
+      const { data, error } = await supabase
+        .from("bildirimler")
+        .select("id, rezervasyon_id, created_at, yanit_tarihi, yanit_suresi_saniye, varis_tarihi, varis_suresi_saniye, okundu")
+        .eq("tip", "garson_cagri")
+        .in("rezervasyon_id", rezIds)
+        .order("created_at", { ascending: false });
+
+      if (error) { console.error("fetchAktifCagrilar:", JSON.stringify(error)); return; }
+
+      const now = Date.now();
+      const onDakika = 10 * 60 * 1000;
+      const birDakika = 60 * 1000;
+      const yeni: Record<string, AktifCagriDurum> = {};
+
+      for (const b of (data ?? [])) {
+        const key = String(b.rezervasyon_id);
+        if (yeni[key]) continue;
+        const createdMs = new Date(b.created_at).getTime();
+        const varisMs = b.varis_tarihi ? new Date(b.varis_tarihi).getTime() : null;
+        const isOkunmamis = !b.okundu && (now - createdMs) < onDakika;
+        const isYoldaFazinda = b.yanit_tarihi !== null && b.varis_tarihi === null;
+        const isYeniVaris = varisMs !== null && (now - varisMs) < birDakika;
+        if (isOkunmamis || isYoldaFazinda || isYeniVaris) {
+          yeni[key] = {
+            id: String(b.id),
+            createdAt: b.created_at,
+            yanitTarihi: b.yanit_tarihi ?? null,
+            yanitSuresi: b.yanit_suresi_saniye ?? null,
+            varisTarihi: b.varis_tarihi ?? null,
+            varisSuresi: b.varis_suresi_saniye ?? null,
+          };
+        }
+      }
+      setAktifCagrilar(yeni);
+    }
+
+    async function fetchBildirimler() {
+      setBildirimlerLoading(true);
+      const { data, error } = await supabase
+        .from("bildirimler")
+        .select("id, rezervasyon_id, created_at, yanit_tarihi, yanit_suresi_saniye, varis_tarihi, varis_suresi_saniye, okundu")
+        .eq("tip", "garson_cagri")
+        .in("rezervasyon_id", rezIds)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setBildirimlerLoading(false);
+      if (error) { console.error("fetchBildirimler:", JSON.stringify(error)); return; }
+      setBildirimler(data ?? []);
+    }
+
+    fetchAktifCagrilar();
+    fetchBildirimler();
+
+    const channel = supabase
+      .channel(`musteri-cagri-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "bildirimler" },
+        (payload) => {
+          const updated = payload.new as any;
+          if (updated && rezIds.includes(String(updated.rezervasyon_id))) {
+            fetchAktifCagrilar();
+            fetchBildirimler();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, reservations]);
 
   useEffect(() => {
     async function loadUserReviews() {
@@ -524,6 +658,138 @@ export default function ProfilPage() {
     loadFavorites();
   }, [user]);
 
+  // ── Siparişleri çek ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadOrders() {
+      setOrdersLoading(true);
+
+      // 1. Kullanıcının rezervasyon ID'leri + tesis bilgisi
+      const { data: rezData } = await supabase
+        .from("rezervasyonlar")
+        .select("id, tesis_id")
+        .eq("kullanici_id", user.id)
+        .neq("durum", "iptal");
+      if (cancelled) return;
+
+      const rezIds = (rezData ?? []).map((r: any) => String(r.id));
+      setOrderRezIds(rezIds);
+
+      if (!rezIds.length) {
+        setOrders([]);
+        setOrdersLoading(false);
+        return;
+      }
+
+      // 2. Tesis adları
+      const tesisIds = [...new Set((rezData ?? []).map((r: any) => r.tesis_id).filter(Boolean))];
+      const tesisAdMap: Record<string, string> = {};
+      if (tesisIds.length) {
+        const { data: tesisData } = await supabase
+          .from("tesisler").select("id, ad").in("id", tesisIds);
+        (tesisData ?? []).forEach((t: any) => { tesisAdMap[String(t.id)] = t.ad || "Tesis"; });
+      }
+      const rezTesisMap: Record<string, string> = {};
+      (rezData ?? []).forEach((r: any) => {
+        rezTesisMap[String(r.id)] = tesisAdMap[String(r.tesis_id)] || "Tesis";
+      });
+
+      // 3. Siparişler: aktif (tarih bağımsız) + bugünkü teslim_edildi
+      const bugunBaslangic = new Date();
+      bugunBaslangic.setHours(0, 0, 0, 0);
+      const bugunIso = bugunBaslangic.toISOString();
+      const orFilter = `durum.neq.${SIPARIS_DURUM.TESLIM_EDILDI},and(durum.eq.${SIPARIS_DURUM.TESLIM_EDILDI},created_at.gte.${bugunIso})`;
+
+      const { data: sipData, error: sipError } = await supabase
+        .from("siparisler")
+        .select("id, created_at, durum, toplam, rezervasyon_id, siparis_kalemleri(ad, adet, fiyat)")
+        .in("rezervasyon_id", rezIds)
+        .or(orFilter)
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+      if (sipError) {
+        console.error("Profil siparisler fetch error:", JSON.stringify(sipError, null, 2));
+        setOrdersLoading(false);
+        return;
+      }
+
+      const mapped: MusteriSiparis[] = (sipData ?? []).map((s: any) => {
+        const created = s.created_at ? new Date(s.created_at) : new Date();
+        return {
+          id: String(s.id),
+          durumKey: String(s.durum || SIPARIS_DURUM.YENI),
+          tesisAd: rezTesisMap[String(s.rezervasyon_id)] || "Tesis",
+          createdAt: created,
+          sureDakika: Math.max(1, Math.round((Date.now() - created.getTime()) / 60000)),
+          urunler: (s.siparis_kalemleri ?? []).map((k: any) => ({
+            isim: String(k.ad || "Ürün"),
+            adet: Number(k.adet ?? 1),
+            fiyat: Number(k.fiyat ?? 0),
+          })),
+          toplam: Number(s.toplam ?? 0),
+          rezervasyonId: String(s.rezervasyon_id),
+        };
+      });
+
+      setOrders(mapped);
+      setOrdersLoading(false);
+    }
+
+    loadOrders();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // ── Realtime: sipariş durum güncellemeleri ────────────────────────────────
+  useEffect(() => {
+    if (!user || !orderRezIds.length) return;
+
+    async function refetchOrders() {
+      const bugunBaslangic = new Date();
+      bugunBaslangic.setHours(0, 0, 0, 0);
+      const orFilter = `durum.neq.${SIPARIS_DURUM.TESLIM_EDILDI},and(durum.eq.${SIPARIS_DURUM.TESLIM_EDILDI},created_at.gte.${bugunBaslangic.toISOString()})`;
+      const { data: sipData } = await supabase
+        .from("siparisler")
+        .select("id, created_at, durum, toplam, rezervasyon_id, siparis_kalemleri(ad, adet, fiyat)")
+        .in("rezervasyon_id", orderRezIds)
+        .or(orFilter)
+        .order("created_at", { ascending: false });
+      if (!sipData) return;
+      setOrders((prev) => {
+        const tesisMap: Record<string, string> = {};
+        prev.forEach((o) => { tesisMap[o.rezervasyonId] = o.tesisAd; });
+        return sipData.map((s: any) => {
+          const created = s.created_at ? new Date(s.created_at) : new Date();
+          return {
+            id: String(s.id),
+            durumKey: String(s.durum || SIPARIS_DURUM.YENI),
+            tesisAd: tesisMap[String(s.rezervasyon_id)] || "Tesis",
+            createdAt: created,
+            sureDakika: Math.max(1, Math.round((Date.now() - created.getTime()) / 60000)),
+            urunler: (s.siparis_kalemleri ?? []).map((k: any) => ({
+              isim: String(k.ad || "Ürün"),
+              adet: Number(k.adet ?? 1),
+              fiyat: Number(k.fiyat ?? 0),
+            })),
+            toplam: Number(s.toplam ?? 0),
+            rezervasyonId: String(s.rezervasyon_id),
+          };
+        });
+      });
+    }
+
+    const channel = supabase
+      .channel(`musteri-siparisler-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "siparisler" }, () => {
+        refetchOrders();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, orderRezIds]);
+
   const filteredRes = reservations.filter((r) =>
     resFilter === "all"
       ? true
@@ -538,6 +804,73 @@ export default function ProfilPage() {
   function cancelRes(id: number | string) {
     setCancelError(null);
     setCancelModal({ id });
+  }
+
+  function garsonCagir(rez: Reservation) {
+    const kilitKey = String(rez.id);
+    const bitis = garsonCagriCooldown[kilitKey];
+    if (bitis && bitis > Date.now()) return;
+    if (!rez.tesisId || !rez.sezlongId) {
+      showToast("Çağrı gönderilemedi, tekrar deneyin", "error");
+      return;
+    }
+    setCallModalRez(rez);
+    setShowCallModal(true);
+  }
+
+  async function handleCallConfirm() {
+    const rez = callModalRez;
+    setShowCallModal(false);
+    setCallModalRez(null);
+    if (!rez) return;
+
+    const kilitKey = String(rez.id);
+    const musteriAd = `${profile.ad || ""} ${profile.soyad || ""}`.trim() || "Müşteri";
+    const insertedAt = new Date().toISOString();
+    const { data: insertData, error } = await supabase
+      .from("bildirimler")
+      .insert({
+        tip: "garson_cagri",
+        tesis_id: rez.tesisId,
+        sezlong_id: rez.sezlongId,
+        rezervasyon_id: rez.id,
+        kullanici_id: null,
+        baslik: "Garson Çağrısı",
+        mesaj: `${musteriAd} size çağrıda bulundu`,
+        okundu: false,
+      })
+      .select("id, created_at")
+      .single();
+
+    if (error) {
+      console.error("Profil garson çağrı insert error:", JSON.stringify(error, null, 2));
+      showToast("Çağrı gönderilemedi, tekrar deneyin", "error");
+      return;
+    }
+
+    const createdAt = insertData?.created_at ?? insertedAt;
+    setAktifCagrilar((prev) => ({
+      ...prev,
+      [kilitKey]: {
+        id: String(insertData?.id ?? ""),
+        createdAt,
+        yanitTarihi: null,
+        yanitSuresi: null,
+        varisTarihi: null,
+        varisSuresi: null,
+      },
+    }));
+
+    showToast("Garson çağrıldı, birazdan yanınızda olacak", "success");
+    const yeniBitis = Date.now() + 2 * 60 * 1000;
+    setGarsonCagriCooldown((prev) => ({ ...prev, [kilitKey]: yeniBitis }));
+    window.setTimeout(() => {
+      setGarsonCagriCooldown((prev) => {
+        const n = { ...prev };
+        if ((n[kilitKey] ?? 0) <= Date.now()) delete n[kilitKey];
+        return n;
+      });
+    }, 2 * 60 * 1000 + 200);
   }
 
   async function confirmCancel() {
@@ -904,6 +1237,55 @@ export default function ProfilPage() {
         .kod-input:focus{border-color:var(--tdk)}
         .kod-submit{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:12px;font-size:.9rem;font-weight:800;cursor:pointer;font-family:'GR',sans-serif}
 
+        /* AKTİF ŞEZLONG KARTI */
+        .szl-aktif-card{background:linear-gradient(135deg,var(--navy),#112240);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;color:#fff}
+        .szl-aktif-label{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.55);margin-bottom:4px}
+        .szl-aktif-name{font-size:1rem;font-weight:700;color:#fff}
+        .szl-aktif-sub{font-size:.7rem;color:rgba(255,255,255,.5);margin-top:3px}
+        .szl-aktif-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+        .btn-siparis-ver{background:var(--or);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-size:.72rem;font-weight:800;cursor:pointer;font-family:'GR',sans-serif;white-space:nowrap}
+        .btn-garson-cagir{background:none;color:#EF4444;border:1.5px solid #EF4444;border-radius:9px;padding:6px 14px;font-size:.72rem;font-weight:800;cursor:pointer;font-family:'GR',sans-serif;white-space:nowrap}
+
+        /* SİPARİŞ KARTI */
+        .order-card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:12px}
+        .order-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px}
+        .order-card-id{font-size:.82rem;font-weight:800;color:var(--navy)}
+        .order-card-tesis{font-size:.68rem;color:var(--i3);margin-top:2px}
+        .order-card-time{font-size:.65rem;color:var(--i3);white-space:nowrap;flex-shrink:0}
+        .order-urunler{margin-bottom:10px}
+        .order-urun-row{display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:var(--i3);padding:3px 0;border-bottom:1px solid var(--bg)}
+        .order-urun-row:last-child{border-bottom:none}
+        .order-toplam{font-size:.78rem;font-weight:800;color:var(--navy);text-align:right;padding-top:6px;border-top:1px solid var(--bd);margin-top:6px}
+        .order-durum-txt{font-size:.82rem;font-weight:700;margin-bottom:10px}
+
+        /* PROGRESS BAR */
+        .order-progress{display:flex;align-items:flex-start;gap:0;margin-bottom:8px}
+        .op-step{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+        .op-step:not(:last-child)::after{content:"";position:absolute;top:11px;left:50%;width:100%;height:2px;z-index:0}
+        .op-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:900;z-index:1;position:relative;flex-shrink:0}
+        .op-dot-done{background:#22C55E;color:#fff}
+        .op-dot-active{background:var(--or);color:#fff}
+        .op-dot-future{background:#E5E7EB;color:var(--i3)}
+        .op-line-done{background:#22C55E}
+        .op-line-active{background:#E5E7EB}
+        .op-line-future{background:#E5E7EB}
+        .op-label{font-size:.55rem;color:var(--i3);margin-top:4px;text-align:center;line-height:1.3}
+        .op-label-active{color:var(--or);font-weight:700}
+        .op-label-done{color:#16A34A}
+
+        /* AKTİF SİPARİŞ PULSE */
+        @keyframes siparis-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(245,130,31,0.5); transform: scale(1); }
+          50%  { box-shadow: 0 0 0 8px rgba(245,130,31,0); transform: scale(1.08); }
+          100% { box-shadow: 0 0 0 0 rgba(245,130,31,0); transform: scale(1); }
+        }
+        .siparis-aktif-asama { animation: siparis-pulse 1.8s ease-out infinite; }
+
+        /* GEÇMİŞ ACCORDION */
+        .gecmis-btn{width:100%;background:#fff;border:1px solid var(--bd);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:'GR',sans-serif;font-size:.82rem;font-weight:800;color:var(--navy);margin-top:8px}
+        .gecmis-btn:hover{background:var(--bg)}
+        .gecmis-card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:12px 16px;margin-bottom:8px;opacity:.85}
+
         /* EMPTY */
         .empty-state{text-align:center;padding:48px 20px;color:var(--i3)}
         .empty-ic{font-size:3rem;margin-bottom:10px}
@@ -1153,9 +1535,9 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* QR + AKTİF BÖLÜMÜ */}
+      {/* QR BÖLÜMÜ */}
       <div style={{background:"#fff",borderBottom:"1px solid var(--bd)"}}>
-        <div style={{maxWidth:1100,margin:"0 auto",padding:"16px 20px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+        <div style={{maxWidth:1100,margin:"0 auto",padding:"16px 20px"}}>
           <div>
             <div className="sec-label">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>
@@ -1190,9 +1572,10 @@ export default function ProfilPage() {
           <div className="sm-head">Hesabım</div>
           {[
             {id:"reservations", ic:"🏖️", label:"Rezervasyonlarım", cnt:reservations.length, cntColor:"var(--or)"},
+            {id:"orders", ic:"📦", label:"Siparişlerim", cnt:orders.filter(o => o.durumKey !== SIPARIS_DURUM.TESLIM_EDILDI).length, cntColor:"var(--or)"},
             {id:"reviews", ic:"💬", label:"Yorumlarım", cnt:userReviews.length, cntColor:"var(--teal)"},
-            {id:"favorites", ic:"❤️", label:"Favorilerim", cnt:0, cntColor:"var(--teal)"},
-            {id:"notifications", ic:"🔔", label:"Bildirimler", cnt:0, cntColor:"var(--or)"},
+            {id:"favorites", ic:"❤️", label:"Favorilerim", cnt:favorites.length, cntColor:"var(--teal)"},
+            {id:"notifications", ic:"🔔", label:"Bildirimler", cnt:bildirimler.filter(b => !b.okundu).length, cntColor:"var(--or)"},
           ].map(item => (
             <button key={item.id} className={`sm-item${activeTab===item.id?" on":""}`} onClick={() => setActiveTab(item.id)}>
               <span style={{fontSize:"1rem",width:22,textAlign:"center"}}>{item.ic}</span>
@@ -1288,10 +1671,54 @@ export default function ProfilPage() {
                       <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>₺{((r as any).bakiyeYuklenen ?? 0).toLocaleString("tr-TR")}</span></div>
                       <div className="rc-row"><span>💳</span><span className="rc-row-t">Kalan</span><span className="rc-row-v" style={{color: ((r as any).bakiyeKalan ?? 0) > 0 ? "#0891B2" : "#94A3B8"}}>₺{((r as any).bakiyeKalan ?? 0).toLocaleString("tr-TR")}</span></div>
                     </div>
+                    {(() => {
+                      const cagri = aktifCagrilar[String(r.id)];
+                      if (!cagri) return null;
+                      const nowMs = tick >= 0 ? Date.now() : Date.now();
+                      const createdMs = new Date(cagri.createdAt).getTime();
+
+                      // Aşama 3: varis_tarihi dolu
+                      if (cagri.varisTarihi) {
+                        const varisMs = new Date(cagri.varisTarihi).getTime();
+                        if (nowMs - varisMs > 60000) return null;
+                        const sureSn = cagri.varisSuresi ?? Math.round((varisMs - createdMs) / 1000);
+                        return (
+                          <div style={{ padding:"8px 12px", borderRadius:8, margin:"6px 0 2px", background:"rgba(8,145,178,0.08)", border:"1px solid rgba(8,145,178,0.25)", fontSize:".75rem", color:"#0C4A6E", fontWeight:500 }}>
+                            💚 Garson masanızda &bull; Geldi: {formatSure(sureSn)}
+                          </div>
+                        );
+                      }
+
+                      // Aşama 2: yanit_tarihi dolu, varis yok
+                      if (cagri.yanitTarihi) {
+                        const yanitMs = new Date(cagri.yanitTarihi).getTime();
+                        const sureSn = cagri.yanitSuresi ?? Math.round((yanitMs - createdMs) / 1000);
+                        return (
+                          <div style={{ padding:"8px 12px", borderRadius:8, margin:"6px 0 2px", background:"rgba(16,185,129,0.08)", border:"1px solid rgba(16,185,129,0.25)", fontSize:".75rem", color:"#065F46", fontWeight:500 }}>
+                            ✅ Garson yolda &bull; Yanıt süresi: {formatSure(sureSn)}
+                          </div>
+                        );
+                      }
+
+                      // Aşama 1: bekliyor
+                      const dakikaOnce = Math.max(0, Math.round((nowMs - createdMs) / 60000));
+                      const zamanMetni = dakikaOnce === 0 ? "Az önce" : `${dakikaOnce} dk önce`;
+                      return (
+                        <div style={{ padding:"8px 12px", borderRadius:8, margin:"6px 0 2px", background:"rgba(245,130,31,0.08)", border:"1px solid rgba(245,130,31,0.25)", fontSize:".75rem", color:"#92400E", fontWeight:500 }}>
+                          🔔 Garson çağrısı gönderildi &bull; {zamanMetni}
+                        </div>
+                      );
+                    })()}
                     <div className="rc-footer">
                       {"stars" in r && r.stars && <span className="rc-stars">{"★".repeat(r.stars as number)}{"☆".repeat(5-(r.stars as number))}</span>}
                       {"review" in r && r.review && <button className="btn-review" onClick={() => { setReviewTarget(r.id); setReviewModal(true); }}>⭐ Değerlendir</button>}
                       <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
+                        {(() => {
+                          const aktifVeOnayli = r.status === "active" && r.girisYapildi === true && r.durum === "onaylandi";
+                          const kilit = garsonCagriCooldown[String(r.id)];
+                          const cagriKilitli = !!kilit && kilit > Date.now();
+                          return (
+                            <>
                         {r.status !== "cancel" && r.status !== "past" && <button className="btn-cancel" onClick={() => cancelRes(r.id)}>İptal Et</button>}
                         {r.status === "active" && (r.durum === "aktif" || r.durum === "onaylandi") && (
                           <button
@@ -1314,6 +1741,23 @@ export default function ProfilPage() {
                             {r.girisYapildi === true && r.durum === "onaylandi" ? "🍽️ Sipariş Ver" : "🔒 Sipariş Ver"}
                           </button>
                         )}
+                        {aktifVeOnayli && (
+                          <button
+                            type="button"
+                            className="btn-detail"
+                            disabled={cagriKilitli}
+                            style={{
+                              background: cagriKilitli ? "#FCA5A5" : "#EF4444",
+                              color: "#fff",
+                              borderColor: cagriKilitli ? "#FCA5A5" : "#EF4444",
+                              opacity: cagriKilitli ? 0.8 : 1,
+                              cursor: cagriKilitli ? "not-allowed" : "pointer",
+                            }}
+                            onClick={() => garsonCagir(r)}
+                          >
+                            {cagriKilitli ? "✅ Çağrıldı" : "🔔 Garson Çağır"}
+                          </button>
+                        )}
                         <button
                           className="btn-detail"
                           onClick={() => {
@@ -1326,6 +1770,9 @@ export default function ProfilPage() {
                         >
                           Tesise Git →
                         </button>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -1333,6 +1780,255 @@ export default function ProfilPage() {
               ))}
             </div>
           )}
+
+          {/* SİPARİŞLERİM */}
+          {activeTab === "orders" && (() => {
+            const DURUM_META: Record<string, { label: string; ic: string; color: string; step: number }> = {
+              [SIPARIS_DURUM.YENI]:          { label: "Sipariş Alındı",   ic: "📦", color: "#F59E0B", step: 0 },
+              [SIPARIS_DURUM.HAZIRLANIYOR]:  { label: "Hazırlanıyor",     ic: "🍳", color: "#F5821F", step: 1 },
+              [SIPARIS_DURUM.HAZIR]:         { label: "Hazır",            ic: "✅", color: "#16A34A", step: 2 },
+              [SIPARIS_DURUM.YOLDA]:         { label: "Yolda",            ic: "🛵", color: "#2563EB", step: 3 },
+              [SIPARIS_DURUM.TESLIM_EDILDI]: { label: "Teslim Edildi",    ic: "✓",  color: "#6B7280", step: 4 },
+            };
+            const PROGRESS_STEPS = ["Alındı", "Hazırlanıyor", "Hazır", "Yolda", "Teslim"];
+
+            function ProgressBar({ step }: { step: number }) {
+              return (
+                <div className="order-progress">
+                  {PROGRESS_STEPS.map((lbl, i) => {
+                    const done = i < step;
+                    const active = i === step;
+                    return (
+                      <div key={i} className="op-step" style={{ "--line-color": done ? "#22C55E" : "#E5E7EB" } as React.CSSProperties}>
+                        {i < PROGRESS_STEPS.length - 1 && (
+                          <div style={{ position: "absolute", top: 11, left: "50%", width: "100%", height: 2, background: done ? "#22C55E" : "#E5E7EB", zIndex: 0 }} />
+                        )}
+                        <div className={`op-dot ${done ? "op-dot-done" : active ? "op-dot-active" : "op-dot-future"}`}>
+                          {done ? "✓" : i + 1}
+                        </div>
+                        <div className={`op-label ${done ? "op-label-done" : active ? "op-label-active" : ""}`}>{lbl}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+
+            const aktifSiparisler = orders.filter(o => o.durumKey !== SIPARIS_DURUM.TESLIM_EDILDI);
+            const gecmisSiparisler = orders.filter(o => o.durumKey === SIPARIS_DURUM.TESLIM_EDILDI);
+
+            return (
+              <div>
+                <div className="sec-head">
+                  <div>
+                    <div className="sec-title">📦 Siparişlerim</div>
+                    <div className="sec-sub">Aktif siparişleriniz ve bugünkü teslimler</div>
+                  </div>
+                </div>
+
+                {ordersLoading && (
+                  <div style={{ textAlign: "center", padding: "32px 0", color: "var(--i3)", fontSize: ".85rem" }}>Siparişler yükleniyor...</div>
+                )}
+
+                {!ordersLoading && aktifSiparisler.length === 0 && gecmisSiparisler.length === 0 && (
+                  <div className="empty-state">
+                    <div className="empty-ic">📦</div>
+                    <div className="empty-t">Henüz siparişiniz yok</div>
+                    <div style={{ fontSize: ".78rem", marginTop: 4 }}>Aktif rezervasyonunuzdan sipariş verebilirsiniz.</div>
+                  </div>
+                )}
+
+                {/* Aktif Siparişlerim — yeni tasarım */}
+                {aktifSiparisler.length > 0 && (() => {
+                  const stages = [
+                    { key: "yeni",          label: "Alındı",  icon: "✓"  },
+                    { key: "hazirlaniyor",  label: "Hazırlanıyor", icon: "🍳" },
+                    { key: "hazir",         label: "Hazır",   icon: "🔔" },
+                    { key: "yolda",         label: "Yolda",   icon: "🛵" },
+                    { key: "teslim_edildi", label: "Teslim",  icon: "✅" },
+                  ];
+                  const stageOrder = stages.map((s) => s.key);
+
+                  const chipConfig: Record<string, { bg: string; color: string; text: string }> = {
+                    yeni:         { bg: "rgba(245,130,31,0.12)", color: "#F5821F",  text: "📥 Sipariş Alındı" },
+                    hazirlaniyor: { bg: "rgba(234,179,8,0.12)",  color: "#CA8A04",  text: "🍳 Hazırlanıyor"   },
+                    hazir:        { bg: "rgba(16,185,129,0.12)", color: "#10B981",  text: "🔔 Hazır"           },
+                    yolda:        { bg: "rgba(59,130,246,0.15)", color: "#3B82F6",  text: "🛵 Garson Yolda"   },
+                  };
+
+                  const durumMesajlari: Record<string, string> = {
+                    yeni:         "📥 Siparişiniz alındı, mutfağa iletildi",
+                    hazirlaniyor: "🍳 Mutfak sizin için hazırlıyor",
+                    hazir:        "🔔 Siparişiniz hazır, garson alacak",
+                    yolda:        "🛵 Garson size doğru geliyor",
+                  };
+
+                  return (
+                    <div>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0A1628", marginBottom: 12, marginTop: 8 }}>
+                        🍳 Aktif Siparişleriniz ({aktifSiparisler.length})
+                      </h3>
+                      {aktifSiparisler.map((o) => {
+                        const currentIndex = stageOrder.indexOf(o.durumKey);
+                        const chip = chipConfig[o.durumKey] ?? chipConfig["yeni"];
+                        const toplamHesap = o.urunler.reduce((s, u) => s + u.fiyat * u.adet, 0);
+                        const toplamGoster = toplamHesap > 0 ? toplamHesap : o.toplam;
+                        const progressPct = currentIndex > 0
+                          ? (currentIndex / (stageOrder.length - 1)) * 80
+                          : 0;
+
+                        return (
+                          <div
+                            key={o.id}
+                            style={{
+                              background: "white",
+                              border: "1px solid rgba(10,186,181,0.25)",
+                              borderRadius: 16,
+                              padding: 20,
+                              marginBottom: 14,
+                              boxShadow: "0 2px 16px rgba(10,186,181,0.10)",
+                            }}
+                          >
+                            {/* Üst satır */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                              <div>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: "#0A1628" }}>
+                                  Sipariş #{o.id.slice(0, 5)}
+                                </div>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(0,0,0,0.6)", marginTop: 2 }}>
+                                  {o.tesisAd}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                <div style={{ background: chip.bg, color: chip.color, padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, display: "inline-block", whiteSpace: "nowrap" }}>
+                                  {chip.text}
+                                </div>
+                                <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)", marginTop: 4 }}>
+                                  {formatZamanOnce(o.createdAt)}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Ürün listesi */}
+                            <div style={{ marginTop: 14, fontSize: 13, color: "rgba(0,0,0,0.7)", display: "flex", flexWrap: "wrap", gap: "3px 6px" }}>
+                              {o.urunler.map((u, i) => (
+                                <span key={i}>
+                                  {u.isim} ×{u.adet}{i < o.urunler.length - 1 ? " ·" : ""}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Toplam */}
+                            <div style={{ marginTop: 8, textAlign: "right", fontSize: 14, fontWeight: 700, color: "#0A1628" }}>
+                              ₺{toplamGoster.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                            </div>
+
+                            {/* Progress bar */}
+                            <div style={{ marginTop: 18, marginBottom: 8, position: "relative" }}>
+                              {/* Arka plan çizgisi */}
+                              <div style={{ position: "absolute", top: 14, left: "10%", right: "10%", height: 2, background: "rgba(0,0,0,0.08)", zIndex: 0 }} />
+                              {/* Yeşil ilerleme */}
+                              {currentIndex > 0 && (
+                                <div style={{ position: "absolute", top: 14, left: "10%", width: `${progressPct}%`, height: 2, background: "#10B981", zIndex: 1, transition: "width 0.4s ease" }} />
+                              )}
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", zIndex: 2 }}>
+                                {stages.map((stage, idx) => {
+                                  const isDone   = idx < currentIndex;
+                                  const isActive = idx === currentIndex;
+                                  const circleSize = isActive ? 34 : 28;
+                                  return (
+                                    <div key={stage.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 40 }}>
+                                      <div
+                                        className={isActive ? "siparis-aktif-asama" : ""}
+                                        style={{
+                                          width: circleSize,
+                                          height: circleSize,
+                                          borderRadius: "50%",
+                                          background: isDone ? "#10B981" : isActive ? "#F5821F" : "rgba(0,0,0,0.08)",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          fontSize: isActive ? 16 : 12,
+                                          color: isDone || isActive ? "white" : "rgba(0,0,0,0.35)",
+                                          fontWeight: isDone ? 700 : 500,
+                                          transition: "all 0.3s ease",
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        {isDone ? "✓" : stage.icon}
+                                      </div>
+                                      <div style={{
+                                        fontSize: 10,
+                                        fontWeight: isDone ? 600 : isActive ? 700 : 500,
+                                        color: isDone ? "#10B981" : isActive ? "#F5821F" : "rgba(0,0,0,0.35)",
+                                        marginTop: 5,
+                                        textAlign: "center",
+                                        whiteSpace: "normal",
+                                        lineHeight: 1.2,
+                                        wordBreak: "break-word",
+                                      }}>
+                                        {stage.label}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Durum mesajı */}
+                            {durumMesajlari[o.durumKey] && (
+                              <div style={{ marginTop: 14, fontSize: 12, color: "rgba(0,0,0,0.6)", textAlign: "center" }}>
+                                {durumMesajlari[o.durumKey]}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* Geçmiş siparişler accordion */}
+                {gecmisSiparisler.length > 0 && (
+                  <div>
+                    <button className="gecmis-btn" onClick={() => setGecmisAcik(v => !v)}>
+                      <span>Bugün Teslim Edildi ({gecmisSiparisler.length})</span>
+                      <span style={{ fontSize: ".8rem" }}>{gecmisAcik ? "▲" : "▼"}</span>
+                    </button>
+                    {gecmisAcik && (
+                      <div style={{ marginTop: 8 }}>
+                        {gecmisSiparisler.map(o => {
+                          const sureLabel = o.sureDakika < 60 ? `${o.sureDakika} dk önce` : `${Math.floor(o.sureDakika / 60)} sa önce`;
+                          return (
+                            <div key={o.id} className="gecmis-card">
+                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
+                                <div>
+                                  <span style={{ fontSize: ".78rem", fontWeight: 800, color: "var(--navy)" }}>Sipariş #{o.id.slice(-5)}</span>
+                                  <span style={{ fontSize: ".68rem", color: "var(--i3)", marginLeft: 8 }}>{o.tesisAd}</span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <span style={{ fontSize: ".6rem", color: "var(--i3)" }}>{sureLabel}</span>
+                                  <span style={{ background: "#F0FDF4", color: "#16A34A", border: "1px solid #BBF7D0", borderRadius: 6, padding: "2px 8px", fontSize: ".62rem", fontWeight: 800 }}>✓ Teslim</span>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: ".72rem", color: "var(--i3)" }}>
+                                {o.urunler.map((u, i) => (
+                                  <span key={i}>{u.isim} ×{u.adet}{i < o.urunler.length - 1 ? " · " : ""}</span>
+                                ))}
+                              </div>
+                              <div style={{ fontSize: ".75rem", fontWeight: 700, color: "var(--navy)", textAlign: "right", marginTop: 6 }}>
+                                ₺{o.toplam.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* FAVORİLER */}
           {activeTab === "favorites" && (
@@ -1380,12 +2076,81 @@ export default function ProfilPage() {
           {/* BİLDİRİMLER */}
           {activeTab === "notifications" && (
             <div>
-              <div className="sec-head"><div><div className="sec-title">🔔 Bildirimler</div><div className="sec-sub">Henüz bildiriminiz yok.</div></div></div>
-              <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,textAlign:"center",color:"var(--i3)"}}>
-                <div style={{fontSize:"2rem",opacity:.4}}>🔕</div>
-                <div style={{fontSize:".85rem",marginTop:8}}>Henüz bildiriminiz yok.</div>
-                <div style={{fontSize:".78rem",marginTop:4}}>Rezervasyonlarınız ve kampanyalarla ilgili güncellemeler burada görünecek.</div>
+              <div className="sec-head">
+                <div>
+                  <div className="sec-title">🔔 Bildirimler</div>
+                  <div className="sec-sub">Garson çağrılarınız ve bildirimler</div>
+                </div>
               </div>
+              {bildirimlerLoading ? (
+                <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,color:"var(--i3)",fontSize:".85rem"}}>
+                  Bildirimler yükleniyor...
+                </div>
+              ) : bildirimler.length === 0 ? (
+                <div style={{background:"#fff",border:"1px solid var(--bd)",borderRadius:"var(--r4)",boxShadow:"var(--sh)",padding:22,textAlign:"center",color:"var(--i3)"}}>
+                  <div style={{fontSize:"2rem",opacity:.4}}>🔕</div>
+                  <div style={{fontSize:".85rem",marginTop:8}}>Henüz bildiriminiz yok.</div>
+                  <div style={{fontSize:".78rem",marginTop:4}}>Rezervasyonlarınız ve kampanyalarla ilgili güncellemeler burada görünecek.</div>
+                </div>
+              ) : (
+                <div>
+                  {bildirimler.map((b) => {
+                    const rez = reservations.find((r) => String(r.id) === String(b.rezervasyon_id));
+                    const tesisAd = rez?.name ?? "Tesis";
+                    const tarih = new Date(b.created_at).toLocaleDateString("tr-TR", { day:"numeric", month:"short", year:"numeric" });
+                    const saat = new Date(b.created_at).toLocaleTimeString("tr-TR", { hour:"2-digit", minute:"2-digit" });
+
+                    let altBilgi: ReactNode;
+                    if (b.varis_tarihi) {
+                      const yanitSn = b.yanit_suresi_saniye != null
+                        ? b.yanit_suresi_saniye
+                        : (b.yanit_tarihi ? Math.round((new Date(b.yanit_tarihi).getTime() - new Date(b.created_at).getTime()) / 1000) : 0);
+                      const varisSn = b.varis_suresi_saniye != null
+                        ? b.varis_suresi_saniye
+                        : Math.round((new Date(b.varis_tarihi).getTime() - new Date(b.created_at).getTime()) / 1000);
+                      altBilgi = (
+                        <span style={{color:"#0891B2"}}>
+                          ✓ Yolda: {formatSure(yanitSn)} &bull; ✓ Vardı: {formatSure(varisSn)}
+                        </span>
+                      );
+                    } else if (b.yanit_tarihi) {
+                      const yanitSn = b.yanit_suresi_saniye != null
+                        ? b.yanit_suresi_saniye
+                        : Math.round((new Date(b.yanit_tarihi).getTime() - new Date(b.created_at).getTime()) / 1000);
+                      altBilgi = (
+                        <span>
+                          <span style={{color:"#16A34A"}}>✓ Yanıtlandı: {formatSure(yanitSn)}</span>
+                          <span style={{color:"#6B7280"}}> &bull; ⏳ Henüz gelmedi</span>
+                        </span>
+                      );
+                    } else if (!b.okundu) {
+                      const gecenDakika = Math.round((Date.now() - new Date(b.created_at).getTime()) / 60000);
+                      if (gecenDakika >= 5) {
+                        altBilgi = <span style={{color:"#DC2626"}}>⚠️ Yanıtlanmadı</span>;
+                      } else {
+                        altBilgi = <span style={{color:"#D97706"}}>⏳ Bekliyor</span>;
+                      }
+                    } else {
+                      altBilgi = <span style={{color:"#16A34A"}}>✅ Yanıtlandı</span>;
+                    }
+
+                    return (
+                      <div key={b.id} className="gecmis-card" style={{marginBottom:8}}>
+                        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:6}}>
+                          <div>
+                            <span style={{fontSize:".78rem",fontWeight:800,color:"var(--navy)"}}>🔔 Garson çağrısı</span>
+                            <span style={{fontSize:".68rem",color:"var(--i3)",marginLeft:8}}>{tesisAd}</span>
+                          </div>
+                          <div style={{fontSize:".65rem",color:"var(--i3)",whiteSpace:"nowrap",textAlign:"right",lineHeight:1.6}}>
+                            {tarih}<br/>{saat}
+                          </div>
+                        </div>
+                        <div style={{fontSize:".73rem"}}>{altBilgi}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -1638,6 +2403,13 @@ export default function ProfilPage() {
           <button type="button" onClick={() => setCancelError(null)} style={{marginLeft:12,background:"none",border:"none",color:"#fff",cursor:"pointer",fontWeight:900}}>✕</button>
         </div>
       )}
+
+      <CallWaiterModal
+        isOpen={showCallModal}
+        onClose={() => { setShowCallModal(false); setCallModalRez(null); }}
+        onConfirm={handleCallConfirm}
+        tesisAdi={callModalRez?.name ?? ""}
+      />
     </>
   );
 }
