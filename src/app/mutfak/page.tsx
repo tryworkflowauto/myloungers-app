@@ -1,47 +1,127 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const NAVY   = "#0A1628";
-const TEAL   = "#0ABAB5";
-const ORANGE = "#F5821F";
-const GRAY50  = "#F8FAFC";
+const NAVY = "#0A1628";
+const BG = "#F3F6FB";
+const WHITE = "#FFFFFF";
 const GRAY100 = "#F1F5F9";
 const GRAY200 = "#E2E8F0";
 const GRAY400 = "#94A3B8";
 const GRAY600 = "#475569";
-const GRAY800 = "#1E293B";
-const GREEN  = "#10B981";
-const RED    = "#EF4444";
-const YELLOW = "#F59E0B";
+const RED = "#EF4444";
+const BLUE = "#3B82F6";
+const ORANGE = "#F5821F";
+const GREEN = "#10B981";
 
 type SiparisDurum = "yeni" | "hazirlaniyor" | "hazir" | "yolda" | "verildi" | "iptal";
-type UrunSatir    = { emoji: string; isim: string; adet: number; hazirlandi?: boolean };
-type SiparisKart  = {
-  id: string; barColor: string; sezlong: string; musteri: string;
-  sezlong_no?: string;
-  tarih?: string;
-  sure: number; sureLabel: "Bekleniyor" | "Hazırlanıyor" | "Hazırlandı";
-  sureClass: "ok" | "warn" | "danger"; oncelikli?: boolean;
-  urunler: UrunSatir[]; not?: string; teslimSaat?: string; durum: SiparisDurum;
+type TabKey = "yeni" | "hazirlaniyor" | "hazir" | "verildi";
+
+type UrunSatir = {
+  isim: string;
+  adet: number;
+  fiyat: number;
 };
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+type SiparisKart = {
+  id: string;
+  durum: SiparisDurum;
+  sezlong: string;
+  telefon?: string;
+  musteri: string;
+  baslik: string;
+  createdAt: string;
+  saat: string;
+  sureDakika: number;
+  urunler: UrunSatir[];
+  not?: string;
+  toplam: number;
+};
+
+function formatTl(v: number): string {
+  return `₺${Number(v || 0).toLocaleString("tr-TR")}`;
+}
+
+function rowToKart(s: any): SiparisKart {
+  const created = s?.created_at ? new Date(s.created_at) : new Date();
+  const sureDakika = Math.max(1, Math.round((Date.now() - created.getTime()) / 60000));
+  const rezervasyon = s?.rezervasyonlar ?? {};
+  const userAd = String(rezervasyon?.kullanicilar?.ad || "").trim();
+  const userSoyad = String(rezervasyon?.kullanicilar?.soyad || "").trim();
+  const userMusteri = `${userAd} ${userSoyad}`.trim();
+  const rezMusteri = String(rezervasyon?.musteri_adi || "").trim();
+  const siparisMusteri = String(s?.musteri_adi || "").trim();
+  const musteriAd = rezMusteri || userMusteri || siparisMusteri;
+  const grupAd = String(rezervasyon?.sezlonglar?.sezlong_gruplari?.ad || "").trim();
+  const sezlongNoRaw = rezervasyon?.sezlonglar?.no ?? s?.sezlong_no;
+  const sezlongNo = sezlongNoRaw != null && sezlongNoRaw !== "" ? String(sezlongNoRaw).trim() : "";
+  const sezlong = grupAd && sezlongNo ? `${grupAd} - ${sezlongNo}` : (sezlongNo || String(s?.sezlong_no || "").trim());
+  const telefon = String(rezervasyon?.telefon || rezervasyon?.kullanicilar?.telefon || "").trim() || undefined;
+  const idStr = String(s?.id ?? "");
+  const fallbackSiparis = `Sipariş #${idStr.slice(-3) || "000"}`;
+  const baslik = sezlong || fallbackSiparis;
+  const urunler: UrunSatir[] = (s?.siparis_kalemleri ?? []).map((k: any) => ({
+    isim: (k?.ad || "").trim() || "Ürün",
+    adet: Number(k?.adet ?? 1),
+    fiyat: Number(k?.fiyat ?? 0),
+  }));
+
+  return {
+    id: String(s?.id ?? ""),
+    durum: (s?.durum as SiparisDurum) ?? "yeni",
+    sezlong,
+    telefon,
+    musteri: musteriAd || fallbackSiparis,
+    baslik,
+    createdAt: s?.created_at || new Date().toISOString(),
+    saat: created.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+    sureDakika,
+    urunler,
+    not: s?.notlar || undefined,
+    toplam: Number(s?.toplam ?? 0),
+  };
+}
+
 export default function MutfakPage() {
   const router = useRouter();
-  const [yeni,         setYeni]         = useState<SiparisKart[]>([]);
-  const [hazirlaniyor, setHazirlaniyor] = useState<SiparisKart[]>([]);
-  const [tamamlandi,   setTamamlandi]   = useState<SiparisKart[]>([]);
-  const [sesAcik,      setSesAcik]      = useState(true);
-  const [saat,         setSaat]         = useState("");
-  const [toast,        setToast]        = useState<string | null>(null);
-  const [onayModal,    setOnayModal]    = useState<SiparisKart | null>(null);
-  const [detayModal,   setDetayModal]   = useState<SiparisKart | null>(null);
-  const [tesisId,      setTesisId]      = useState<string | null>(null);
-  const [tesisAd,      setTesisAd]      = useState("Tesis");
-  const [authLoading,  setAuthLoading]  = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [tesisId, setTesisId] = useState<string | null>(null);
+  const [tesisAd, setTesisAd] = useState("Tesis");
+  const [tab, setTab] = useState<TabKey>("yeni");
+  const [rows, setRows] = useState<SiparisKart[]>([]);
+  const [sesAcik, setSesAcik] = useState(true);
+  const [saat, setSaat] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+  const previousYeniCountRef = useRef(0);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2600);
+  }
+
+  function playYeniSiparisSesi() {
+    if (!sesAcik || typeof window === "undefined") return;
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      const audio = new AC();
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 900;
+      gain.gain.value = 0.001;
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      const now = audio.currentTime;
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    } catch {
+      // no-op
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -49,42 +129,32 @@ export default function MutfakPage() {
       const { data: authData, error: authErr } = await supabase.auth.getUser();
       if (cancelled) return;
       if (authErr || !authData?.user) {
-        router.push('/giris');
+        router.push("/giris");
         return;
       }
-      const { data } = await supabase
-        .from('kullanicilar')
-        .select('rol')
-        .eq('email', authData.user.email)
-        .single();
+      const { data } = await supabase.from("kullanicilar").select("rol").eq("email", authData.user.email).single();
       if (cancelled) return;
       const rol = String(data?.rol || "").toLowerCase();
-      if (rol !== 'mutfak' && rol !== 'isletmeci' && rol !== 'admin') {
-        router.push('/');
+      if (rol !== "mutfak" && rol !== "isletmeci" && rol !== "admin") {
+        router.push("/");
         return;
       }
       setAuthLoading(false);
     }
     checkAuthRole();
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
-  // Real-time clock (1-second interval)
   useEffect(() => {
     function tick() {
       const now = new Date();
-      setSaat(now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0"));
+      setSaat(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
     }
     tick();
     const iv = setInterval(tick, 1000);
     return () => clearInterval(iv);
-  }, []);
-
-  // ESC closes modals
-  useEffect(() => {
-    function h(e: KeyboardEvent) { if (e.key === "Escape") { setOnayModal(null); setDetayModal(null); } }
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
   }, []);
 
   useEffect(() => {
@@ -109,92 +179,106 @@ export default function MutfakPage() {
       setTesisId(String(kullanici.tesis_id));
     }
     loadTesisId();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!tesisId) {
-      setYeni([]);
-      setHazirlaniyor([]);
-      setTamamlandi([]);
+      setRows([]);
       setTesisAd("Tesis");
+      previousYeniCountRef.current = 0;
       return;
     }
 
-    const now = new Date();
-    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
-    const endToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
-
-    const mapRowToKart = (s: any): SiparisKart => {
-      const createdAtMs = s?.created_at ? new Date(s.created_at).getTime() : Date.now();
-      const sure = Math.max(1, Math.round((Date.now() - createdAtMs) / 60000));
-      const sureClass: "ok" | "warn" | "danger" = sure >= 15 ? "danger" : sure >= 8 ? "warn" : "ok";
-      const durumDb = s?.durum;
-      const durum: SiparisDurum = durumDb === "yeni"
-        ? "yeni"
-        : (durumDb === "hazirlaniyor"
-          ? "hazirlaniyor"
-          : (durumDb === "hazir" ? "hazir" : (durumDb === "yolda" ? "yolda" : (durumDb === "iptal" ? "iptal" : "verildi"))));
-      const musteri = s?.musteri_adi || "Misafir";
-      const urunler: UrunSatir[] = (s?.siparis_kalemleri ?? []).map((k: any) => ({
-        emoji: "🍽️",
-        isim: k?.ad || "Ürün",
-        adet: Number(k?.adet ?? 1),
-        hazirlandi: false,
-      }));
-      const teslimSaat = s?.created_at
-        ? `${new Date(s.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}'de teslim edildi`
-        : undefined;
-      return {
-        id: String(s?.id ?? ""),
-        barColor: durum === "yeni" ? RED : (durum === "hazirlaniyor" ? YELLOW : GRAY400),
-        sezlong: s?.sezlong_no != null && s.sezlong_no !== '' ? String(s.sezlong_no) : "-",
-        sezlong_no: s?.sezlong_no || "",
-        musteri,
-        tarih: s?.created_at ? new Date(s.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
-        sure,
-        sureLabel: durum === "yeni" ? "Bekleniyor" : (durum === "hazirlaniyor" ? "Hazırlanıyor" : "Hazırlandı"),
-        sureClass,
-        oncelikli: sure >= 15,
-        urunler: urunler.length ? urunler : [{ emoji: "🍽️", isim: "Sipariş", adet: 1, hazirlandi: ["hazir", "yolda", "verildi"].includes(durum) }],
-        not: s?.notlar || undefined,
-        teslimSaat,
-        durum,
-      };
-    };
-
     async function fetchSiparisler() {
-      const [yeniRes, hazRes, tamRes] = await Promise.all([
-        supabase
-          .from("siparisler")
-          .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
-          .eq("tesis_id", tesisId)
-          .eq("durum", "yeni")
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("siparisler")
-          .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
-          .eq("tesis_id", tesisId)
-          .eq("durum", "hazirlaniyor")
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("siparisler")
-          .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, siparis_kalemleri(adet, ad)")
-          .eq("tesis_id", tesisId)
-          .in("durum", ["hazir", "yolda", "verildi"])
-          .order("created_at", { ascending: false }),
-      ]);
+      const now = new Date();
+      const startTodayIso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
+      const { data: joinedData, error: joinedError } = await supabase
+        .from("siparisler")
+        .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, toplam, rezervasyon_id, siparis_kalemleri(adet, ad, fiyat), rezervasyonlar(musteri_adi, telefon, rezervasyon_kodu, sezlong_id, kullanici_id, sezlonglar(no, sezlong_gruplari(ad)), kullanicilar(ad, soyad, telefon))")
+        .eq("tesis_id", tesisId)
+        .in("durum", ["yeni", "hazirlaniyor", "hazir", "yolda", "verildi"])
+        .gte("created_at", startTodayIso)
+        .order("created_at", { ascending: true });
 
-      if (yeniRes.error || hazRes.error || tamRes.error) {
-        if (yeniRes.error) console.error("mutfak yeni siparis fetch error:", yeniRes.error);
-        if (hazRes.error) console.error("mutfak hazirlaniyor fetch error:", hazRes.error);
-        if (tamRes.error) console.error("mutfak tamamlanan fetch error:", tamRes.error);
-        return;
+      let data: any[] = joinedData ?? [];
+      if (joinedError) {
+        console.error("mutfak joined fetch error, fallback used:", joinedError);
+        const { data: siparisData, error: siparisErr } = await supabase
+          .from("siparisler")
+          .select("id, created_at, durum, notlar, sezlong_no, musteri_adi, toplam, rezervasyon_id, siparis_kalemleri(adet, ad, fiyat)")
+          .eq("tesis_id", tesisId)
+          .in("durum", ["yeni", "hazirlaniyor", "hazir", "yolda", "verildi"])
+          .gte("created_at", startTodayIso)
+          .order("created_at", { ascending: true });
+        if (siparisErr) {
+          console.error("mutfak fallback siparis fetch error:", siparisErr);
+          return;
+        }
+
+        const rezIds = Array.from(new Set((siparisData ?? []).map((x: any) => x.rezervasyon_id).filter(Boolean)));
+        const { data: rezData } = rezIds.length
+          ? await supabase
+              .from("rezervasyonlar")
+              .select("id, musteri_adi, telefon, rezervasyon_kodu, sezlong_id, kullanici_id")
+              .in("id", rezIds)
+          : { data: [] as any[] };
+
+        const userIds = Array.from(new Set((rezData ?? []).map((x: any) => x.kullanici_id).filter(Boolean)));
+        const { data: userData } = userIds.length
+          ? await supabase
+              .from("kullanicilar")
+              .select("id, ad, soyad, telefon")
+              .in("id", userIds)
+          : { data: [] as any[] };
+
+        const sezlongIds = Array.from(new Set((rezData ?? []).map((x: any) => x.sezlong_id).filter(Boolean)));
+        const { data: sezlongData } = sezlongIds.length
+          ? await supabase
+              .from("sezlonglar")
+              .select("id, no, sezlong_gruplari(ad)")
+              .in("id", sezlongIds)
+          : { data: [] as any[] };
+
+        const rezMap = new Map<string, any>((rezData ?? []).map((r: any) => [String(r.id), r]));
+        const sezMap = new Map<string, any>((sezlongData ?? []).map((s: any) => [String(s.id), s]));
+        const userMap = new Map<string, any>((userData ?? []).map((u: any) => [String(u.id), u]));
+        data = (siparisData ?? []).map((s: any) => {
+          const rez = s?.rezervasyon_id ? rezMap.get(String(s.rezervasyon_id)) : null;
+          const sz = rez?.sezlong_id ? sezMap.get(String(rez.sezlong_id)) : null;
+          const usr = rez?.kullanici_id ? userMap.get(String(rez.kullanici_id)) : null;
+          return {
+            ...s,
+            rezervasyonlar: rez
+              ? {
+                  musteri_adi: rez.musteri_adi,
+                  telefon: rez.telefon,
+                  rezervasyon_kodu: rez.rezervasyon_kodu,
+                  kullanici_id: rez.kullanici_id,
+                  kullanicilar: usr
+                    ? {
+                        ad: usr.ad,
+                        soyad: usr.soyad,
+                        telefon: usr.telefon,
+                      }
+                    : null,
+                  sezlonglar: sz ? { no: sz.no, sezlong_gruplari: { ad: sz?.sezlong_gruplari?.ad } } : null,
+                }
+              : null,
+          };
+        });
       }
 
-      setYeni((yeniRes.data ?? []).map(mapRowToKart));
-      setHazirlaniyor((hazRes.data ?? []).map(mapRowToKart));
-      setTamamlandi((tamRes.data ?? []).map(mapRowToKart));
+      const mapped = (data ?? []).map(rowToKart);
+      const yeniCount = mapped.filter((r) => r.durum === "yeni").length;
+      if (yeniCount > previousYeniCountRef.current) {
+        playYeniSiparisSesi();
+        showToast("🔔 Yeni sipariş geldi");
+      }
+      previousYeniCountRef.current = yeniCount;
+      setRows(mapped);
     }
 
     fetchSiparisler();
@@ -215,367 +299,181 @@ export default function MutfakPage() {
 
     const channel = supabase
       .channel(`mutfak-siparisler-${tesisId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "siparisler", filter: `tesis_id=eq.${tesisId}` },
-        () => { fetchSiparisler(); }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "siparisler", filter: `tesis_id=eq.${tesisId}` }, () => {
+        fetchSiparisler();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tesisId]);
+  }, [tesisId, sesAcik]);
 
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
-
-  // ── ACİL auto-badge: sure >= 15 ──────────────────────────────────────────
-  function isAcil(k: SiparisKart) { return k.sure >= 15 || k.oncelikli; }
-
-  // ── Actions ───────────────────────────────────────────────────────────────
-  async function hazirlaBasla(kart: SiparisKart) {
-    const { error } = await supabase
-      .from("siparisler")
-      .update({ durum: "hazirlaniyor" })
-      .eq("id", kart.id);
+  async function durumGuncelle(id: string, yeniDurum: SiparisDurum, okMsg: string) {
+    const { error } = await supabase.from("siparisler").update({ durum: yeniDurum }).eq("id", id);
     if (error) {
-      console.error("mutfak hazirlaBasla update error:", error);
-    showToast("❌ Hata oluştu.");
-      return;
-    }
-    setOnayModal(null);
-    showToast("🍳 Hazırlanıyor: " + kart.sezlong);
-  }
-
-  async function tamamla(kart: SiparisKart) {
-    const { error } = await supabase
-      .from("siparisler")
-      .update({ durum: "hazir" })
-      .eq("id", kart.id);
-    if (error) {
-      console.error("mutfak tamamla update error:", error);
+      console.error("mutfak durum guncelle error:", error);
       showToast("❌ Sipariş güncellenemedi");
       return;
     }
-    if (detayModal?.id === kart.id) setDetayModal(null);
-    showToast("✅ Sipariş garsona verildi! — " + kart.sezlong);
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, durum: yeniDurum } : r)));
+    if (yeniDurum === "hazirlaniyor") setTab("hazirlaniyor");
+    else if (yeniDurum === "hazir") setTab("hazir");
+    else if (yeniDurum === "yolda" || yeniDurum === "verildi") setTab("verildi");
+    showToast(okMsg);
   }
 
-  function toggleSes() {
-    const next = !sesAcik;
-    setSesAcik(next);
-    showToast(next ? "🔊 Ses açıldı" : "🔇 Ses kapatıldı");
-  }
+  const counts = useMemo(() => {
+    return {
+      yeni: rows.filter((r) => r.durum === "yeni").length,
+      hazirlaniyor: rows.filter((r) => r.durum === "hazirlaniyor").length,
+      hazir: rows.filter((r) => r.durum === "hazir").length,
+      verildi: rows.filter((r) => r.durum === "yolda" || r.durum === "verildi").length,
+    };
+  }, [rows]);
 
-  const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 };
+  const activeRows = useMemo(() => {
+    if (tab === "verildi") return rows.filter((r) => r.durum === "yolda" || r.durum === "verildi");
+    return rows.filter((r) => r.durum === tab);
+  }, [rows, tab]);
 
   if (authLoading) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: GRAY600 }}>
-        Yükleniyor...
-      </div>
-    );
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Yükleniyor...</div>;
   }
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#0f1923", color: GRAY800, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-      {/* TOPBAR */}
-      <header style={{ background: NAVY, padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 20 }}>🍳</span>
-            <strong style={{ fontSize: 14, fontWeight: 800, color: "white" }}>MUTFAK PANELİ</strong>
-          </div>
-          <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.1)" }} />
-          <div style={{ fontSize: 22, fontWeight: 900, color: TEAL, fontVariantNumeric: "tabular-nums", minWidth: 52 }}>{saat}</div>
-          <div style={{ fontSize: 11, color: GRAY400 }}>{tesisAd}</div>
-        </div>
+    <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
+      <header style={{ background: NAVY, color: "white", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Stat kartlar — gerçek zamanlı */}
-          {[
-            { val: yeni.length,         label: "Yeni",              color: TEAL   },
-            { val: hazirlaniyor.length, label: "Hazırlanıyor",      color: GREEN  },
-            { val: tamamlandi.length,   label: "Bugün Tamamlanan",  color: GRAY400 },
-          ].map((s, i) => (
-            <div key={i} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 8, padding: "6px 14px", textAlign: "center", minWidth: 52 }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: s.color, transition: "all 0.3s" }}>{s.val}</div>
-              <div style={{ fontSize: 9, color: GRAY400 }}>{s.label}</div>
-            </div>
-          ))}
-          <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.1)" }} />
-          <button
-            onClick={toggleSes}
-            style={{ background: sesAcik ? TEAL : "rgba(255,255,255,0.1)", border: "none", borderRadius: 8, padding: "6px 12px", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s" }}
-          >{sesAcik ? "🔊 Ses Açık" : "🔇 Ses Kapalı"}</button>
+          <span style={{ fontSize: 22 }}>🍳</span>
+          <strong style={{ fontSize: 15 }}>MUTFAK PANELİ</strong>
+          <span style={{ fontSize: 12, color: "#A5B4FC" }}>{tesisAd}</span>
+          <span style={{ fontSize: 18, fontWeight: 900, color: "#67E8F9" }}>{saat}</span>
         </div>
+        <button onClick={() => setSesAcik((v) => !v)} style={{ border: "none", borderRadius: 10, padding: "8px 12px", cursor: "pointer", fontWeight: 700, background: sesAcik ? "#22C55E" : "#334155", color: "white" }}>
+          {sesAcik ? "🔊 Ses Açık" : "🔇 Ses Kapalı"}
+        </button>
       </header>
 
-      {/* KOLONLAR */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: 10, flex: 1, overflow: "hidden" }}>
-
-        {/* YENİ SİPARİŞLER */}
-        <div style={{ display: "flex", flexDirection: "column", borderRadius: 14, overflow: "hidden", background: "#1a1f35" }}>
-          <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, background: "#1e2540" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>🔴 Yeni Siparişler</div>
-            <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "rgba(249,115,22,0.2)", color: ORANGE }}>{yeni.length} Sipariş</span>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-            {yeni.length === 0
-              ? <EmptyState icon="📭" msg="Yeni sipariş yok" />
-              : yeni.map(s => (
-                  <SiparisKartComp
-                    key={s.id} kart={s} isAcil={!!isAcil(s)}
-                    onKartClick={() => setDetayModal(s)}
-                    onHazirla={() => setOnayModal(s)}
-                    onTamamla={() => {}}
-                    isYeni
-                  />
-                ))
-            }
-          </div>
+      <div style={{ padding: 14 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+          {([
+            { key: "yeni", label: "Yeni", count: counts.yeni, bg: "#FEE2E2", border: RED, color: "#991B1B" },
+            { key: "hazirlaniyor", label: "Hazırlanıyor", count: counts.hazirlaniyor, bg: "#FFF7ED", border: ORANGE, color: "#9A3412" },
+            { key: "hazir", label: "Hazır", count: counts.hazir, bg: "#DCFCE7", border: GREEN, color: "#14532D" },
+            { key: "verildi", label: "Verildi", count: counts.verildi, bg: "#E2E8F0", border: GRAY400, color: "#334155" },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                border: `2px solid ${tab === t.key ? t.border : "transparent"}`,
+                background: tab === t.key ? t.bg : WHITE,
+                color: t.color,
+                fontWeight: 800,
+                padding: "10px 14px",
+                borderRadius: 12,
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              {t.label} ({t.count})
+            </button>
+          ))}
         </div>
 
-        {/* HAZIRLANIYOR */}
-        <div style={{ display: "flex", flexDirection: "column", borderRadius: 14, overflow: "hidden", background: "#1a2a1a" }}>
-          <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, background: "#1e341e" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>🟡 Hazırlanıyor</div>
-            <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "rgba(16,185,129,0.2)", color: GREEN }}>{hazirlaniyor.length} Sipariş</span>
+        {activeRows.length === 0 ? (
+          <div style={{ background: WHITE, border: `1px solid ${GRAY200}`, borderRadius: 14, padding: "36px 20px", textAlign: "center", color: GRAY600, fontWeight: 600 }}>
+            Bu sekmede sipariş yok.
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-            {hazirlaniyor.length === 0
-              ? <EmptyState icon="🍳" msg="Hazırlanan sipariş yok" />
-              : hazirlaniyor.map(s => (
-                  <SiparisKartComp
-                    key={s.id} kart={s} isAcil={!!isAcil(s)}
-                    onKartClick={() => setDetayModal(s)}
-                    onHazirla={() => {}}
-                    onTamamla={() => tamamla(s)}
-                    isHazirlaniyor
-                  />
-                ))
-            }
-          </div>
-        </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16, justifyItems: "start", alignItems: "start" }}>
+            {activeRows.map((k) => {
+              const acil = k.sureDakika >= 10 && (k.durum === "yeni" || k.durum === "hazirlaniyor");
+              const theme =
+                k.durum === "yeni"
+                  ? { border: RED, bg: "#FFF1F2", head: "#EFF6FF" }
+                  : k.durum === "hazirlaniyor"
+                    ? { border: ORANGE, bg: "#FFF7ED", head: "#FFEDD5" }
+                    : k.durum === "hazir"
+                      ? { border: GREEN, bg: "#F0FDF4", head: "#DCFCE7" }
+                      : { border: GRAY400, bg: "#F8FAFC", head: "#E2E8F0" };
 
-        {/* TAMAMLANANLAR */}
-        <div style={{ display: "flex", flexDirection: "column", borderRadius: 14, overflow: "hidden", background: "#1a1a2a" }}>
-          <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, background: "#1e1e34" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "white" }}>✅ Tamamlananlar</div>
-            <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "rgba(148,163,184,0.2)", color: GRAY400 }}>{tamamlandi.length} Bugün</span>
+              return (
+                <div key={k.id} style={{ width: "100%", maxWidth: 440, border: `2px solid ${acil ? RED : theme.border}`, borderRadius: 14, background: theme.bg, overflow: "hidden", opacity: tab === "verildi" ? 0.78 : 1 }}>
+                  <div style={{ background: theme.head, padding: "16px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: NAVY }}>{k.baslik}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: GRAY600, marginTop: 2 }}>{k.musteri}</div>
+                      {k.telefon ? <div style={{ fontSize: 12, color: GRAY400, marginTop: 2 }}>{k.telefon}</div> : null}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 11, color: GRAY400 }}>{k.saat}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: GRAY600 }}>{k.sureDakika} dk önce</div>
+                      {acil && (
+                        <div style={{ display: "inline-flex", marginTop: 6, background: RED, color: "white", fontSize: 10, fontWeight: 900, padding: "3px 9px", borderRadius: 999 }}>
+                          ACİL
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: "22px", borderTop: `1px solid ${GRAY200}` }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {k.urunler.length === 0 ? (
+                        <div style={{ fontSize: 14, color: GRAY600 }}>Ürün detayı bulunamadı</div>
+                      ) : (
+                        k.urunler.map((u, i) => (
+                          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: 12, fontSize: 14, paddingBottom: 10, borderBottom: i < k.urunler.length - 1 ? `1px solid ${GRAY200}` : "none" }}>
+                            <span style={{ color: NAVY, fontWeight: 700, fontSize: 15 }}>{u.isim}</span>
+                            <span style={{ color: GRAY600, fontWeight: 700, fontSize: 14 }}>x {u.adet}</span>
+                            <span style={{ color: GRAY600, fontWeight: 800, fontSize: 14 }}>{formatTl(u.fiyat)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {k.not && (
+                      <div style={{ marginTop: 14, padding: "10px 12px", background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 10, fontSize: 13, color: "#92400E", fontWeight: 600 }}>
+                        📝 {k.not}
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: 16, display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${GRAY200}`, paddingTop: 14 }}>
+                      <span style={{ fontSize: 15, color: GRAY600, fontWeight: 800 }}>Toplam</span>
+                      <span style={{ fontSize: 20, color: GREEN, fontWeight: 900 }}>{formatTl(k.toplam)}</span>
+                    </div>
+
+                    {k.durum === "yeni" && (
+                      <button
+                        onClick={() => durumGuncelle(k.id, "hazirlaniyor", "🍳 Sipariş hazırlanmaya alındı")}
+                        style={{ marginTop: 16, width: "100%", border: "none", borderRadius: 10, padding: "14px 16px", cursor: "pointer", background: "#2563EB", color: "white", fontWeight: 900, fontSize: 15 }}
+                      >
+                        🔥 Hazırlamaya Başla
+                      </button>
+                    )}
+                    {k.durum === "hazirlaniyor" && (
+                      <button
+                        onClick={() => durumGuncelle(k.id, "hazir", "✅ Sipariş hazır olarak işaretlendi")}
+                        style={{ marginTop: 16, width: "100%", border: "none", borderRadius: 10, padding: "14px 16px", cursor: "pointer", background: GREEN, color: "white", fontWeight: 900, fontSize: 15 }}
+                      >
+                        ✅ Hazır
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-            {tamamlandi.length === 0
-              ? <EmptyState icon="✅" msg="Henüz tamamlanan yok" />
-              : tamamlandi.map(s => (
-                  <SiparisKartComp
-                    key={s.id} kart={s} isAcil={false}
-                    onKartClick={() => setDetayModal(s)}
-                    onHazirla={() => {}} onTamamla={() => {}}
-                    isTamamlandi
-                  />
-                ))
-            }
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* TOAST */}
       {toast && (
-        <div style={{ position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", background: ORANGE, color: "white", padding: "12px 24px", borderRadius: 30, fontSize: 14, fontWeight: 800, zIndex: 500, boxShadow: "0 8px 24px rgba(245,130,31,0.4)", whiteSpace: "nowrap" }}>
+        <div style={{ position: "fixed", top: 72, left: "50%", transform: "translateX(-50%)", background: NAVY, color: "white", padding: "10px 16px", borderRadius: 999, fontSize: 13, fontWeight: 800, zIndex: 300 }}>
           {toast}
         </div>
       )}
-
-      {/* ── HAZIRLAMAYA AL ONAY MODAL ───────────────────────────────────────── */}
-      {onayModal && (
-        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setOnayModal(null)}>
-          <div style={{ background: "white", borderRadius: 16, padding: 28, width: 360, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
-            <div style={{ fontSize: 44, marginBottom: 12 }}>🍳</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Hazırlamaya Al</h3>
-            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 6 }}>
-              <strong style={{ color: NAVY }}>{onayModal.sezlong}</strong> — {onayModal.musteri}
-            </p>
-            <div style={{ background: GRAY50, borderRadius: 10, padding: "10px 14px", marginBottom: 20, textAlign: "left" }}>
-              {onayModal.urunler.map((u, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13 }}>
-                  <span>{u.emoji}</span>
-                  <span style={{ flex: 1, fontWeight: 600, color: NAVY }}>{u.isim}</span>
-                  <span style={{ color: GRAY400 }}>× {u.adet}</span>
-                </div>
-              ))}
-              {onayModal.not && <div style={{ marginTop: 8, fontSize: 11, color: "#92400E", padding: "6px 8px", background: "#FEF3C7", borderRadius: 6 }}>⚠️ {onayModal.not}</div>}
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button onClick={() => setOnayModal(null)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
-              <button onClick={() => hazirlaBasla(onayModal)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>🍳 Hazırlamaya Al</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── SİPARİŞ DETAY MODAL ─────────────────────────────────────────────── */}
-      {detayModal && (
-        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && setDetayModal(null)}>
-          <div style={{ background: "white", borderRadius: 16, width: 400, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", overflow: "hidden" }}>
-            {/* Header */}
-            <div style={{ height: 5, background: detayModal.barColor }} />
-            <div style={{ background: NAVY, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(10,186,181,0.2)", border: `2px solid ${TEAL}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: TEAL }}>{detayModal.sezlong}</div>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>{detayModal.musteri}</div>
-                  <div style={{ fontSize: 11, color: TEAL }}>{detayModal.durum === "yeni" ? "🔴 Yeni Sipariş" : detayModal.durum === "hazirlaniyor" ? "🟡 Hazırlanıyor" : "✅ Tamamlandı"}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {(() => {
-                  const sc = detayModal.sureClass === "danger" ? RED : detayModal.sureClass === "warn" ? YELLOW : GREEN;
-                  return <span style={{ fontSize: 18, fontWeight: 900, padding: "4px 12px", borderRadius: 20, background: "rgba(255,255,255,0.1)", color: sc }}>{detayModal.sure}dk</span>;
-                })()}
-                <button onClick={() => setDetayModal(null)} style={{ width: 30, height: 30, border: "none", background: "rgba(255,255,255,0.1)", borderRadius: 8, color: "white", cursor: "pointer", fontSize: 14 }}>✕</button>
-              </div>
-            </div>
-
-            <div style={{ padding: 18 }}>
-              {/* ACİL badge */}
-              {(detayModal.sure >= 15 || detayModal.oncelikli) && !["hazir", "yolda", "verildi"].includes(detayModal.durum) && (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 20, background: RED, color: "white", marginBottom: 12 }}>🔥 ACİL — En Uzun Bekleyen</div>
-              )}
-
-              {/* Ürünler */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, marginBottom: 8 }}>SİPARİŞ İÇERİĞİ</div>
-              <div style={{ background: GRAY50, borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
-                {detayModal.urunler.map((u, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < detayModal.urunler.length - 1 ? `1px solid ${GRAY200}` : "none" }}>
-                    <span style={{ fontSize: 22 }}>{u.emoji}</span>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: u.hazirlandi ? GRAY400 : NAVY, textDecoration: u.hazirlandi ? "line-through" : "none" }}>{u.isim}</span>
-                    <span style={{ fontSize: 13, fontWeight: 900, color: u.hazirlandi ? "white" : GRAY600, background: u.hazirlandi ? GREEN : GRAY100, padding: "2px 10px", borderRadius: 20 }}>× {u.adet}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Not */}
-              {detayModal.not && (
-                <div style={{ marginBottom: 12, padding: "10px 12px", background: "#FEF3C7", borderRadius: 8, fontSize: 12, color: "#92400E", display: "flex", gap: 6 }}>
-                  <span>⚠️</span><span><strong>Müşteri notu:</strong> {detayModal.not}</span>
-                </div>
-              )}
-
-              {/* Teslim saati */}
-              {detayModal.teslimSaat && (
-                <div style={{ marginBottom: 12, padding: "8px 12px", background: "#DCFCE7", borderRadius: 8, fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
-                  ✓ {detayModal.teslimSaat}
-                </div>
-              )}
-
-              {/* Aksiyon butonu */}
-              {detayModal.durum === "yeni" && (
-                <button onClick={() => { setDetayModal(null); setOnayModal(detayModal); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", background: ORANGE, color: "white" }}>🍳 Hazırlamaya Al</button>
-              )}
-              {detayModal.durum === "hazirlaniyor" && (
-                <button onClick={() => { tamamla(detayModal); setDetayModal(null); }} style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", background: GREEN, color: "white" }}>✅ Hazır — Garsona Ver</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState({ icon, msg }: { icon: string; msg: string }) {
-  return (
-    <div style={{ textAlign: "center", padding: "40px 20px", color: "rgba(255,255,255,0.2)" }}>
-      <span style={{ fontSize: 36, display: "block", marginBottom: 8 }}>{icon}</span>
-      <p style={{ fontSize: 12, fontWeight: 600 }}>{msg}</p>
-    </div>
-  );
-}
-
-// ── Sipariş Kartı ─────────────────────────────────────────────────────────────
-function SiparisKartComp({
-  kart, onKartClick, onHazirla, onTamamla, isYeni, isHazirlaniyor, isTamamlandi, isAcil,
-}: {
-  kart: SiparisKart;
-  onKartClick: () => void;
-  onHazirla: () => void;
-  onTamamla: () => void;
-  isYeni?: boolean;
-  isHazirlaniyor?: boolean;
-  isTamamlandi?: boolean;
-  isAcil: boolean;
-}) {
-  const sureColor = kart.sureClass === "danger" ? RED : kart.sureClass === "warn" ? YELLOW : GREEN;
-
-  return (
-    <div
-      onClick={onKartClick}
-      style={{
-        background: isTamamlandi ? "#e5e7eb" : "white",
-        borderRadius: 12, overflow: "hidden", cursor: "pointer",
-        opacity: isTamamlandi ? 0.6 : 1,
-        filter: isTamamlandi ? "grayscale(30%)" : undefined,
-        boxShadow: isAcil && !isTamamlandi ? `0 0 0 2px ${RED}, 0 4px 16px rgba(239,68,68,0.3)` : undefined,
-        transition: "opacity 0.2s",
-      }}
-    >
-      <div style={{ height: 4, background: kart.barColor }} />
-      <div style={{ padding: "10px 14px 8px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 900, color: isTamamlandi ? GRAY400 : NAVY, overflow: "hidden", textOverflow: "ellipsis" }}>{kart.sezlong}</div>
-          <div style={{ fontSize: 11, color: GRAY600, marginTop: 1 }}>{kart.musteri} · {kart.tarih}</div>
-        </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <span style={{ fontSize: 16, fontWeight: 900, display: "block", color: isTamamlandi ? GRAY400 : sureColor }}>{kart.sure}dk</span>
-          <span style={{ fontSize: 9, color: GRAY400 }}>{kart.sureLabel}</span>
-        </div>
-      </div>
-
-      {/* ACİL badge — auto for sure >= 15 */}
-      {isAcil && !isTamamlandi && (
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: RED, color: "white", margin: "0 14px 8px" }}>
-          🔥 ACİL — En Uzun Bekleyen
-        </div>
-      )}
-
-      {/* Ürünler */}
-      <div style={{ padding: "0 14px 10px" }}>
-        {kart.urunler.map((u, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < kart.urunler.length - 1 ? `1px solid ${GRAY100}` : "none" }}>
-            <span style={{ fontSize: 20 }}>{u.emoji}</span>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: u.hazirlandi ? GRAY400 : NAVY, textDecoration: u.hazirlandi ? "line-through" : "none" }}>{u.isim}</span>
-            <span style={{ fontSize: 13, fontWeight: 900, color: u.hazirlandi ? "white" : GRAY600, background: u.hazirlandi ? GREEN : GRAY100, padding: "2px 8px", borderRadius: 20 }}>× {u.adet}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Müşteri notu */}
-      {kart.not && (
-        <div style={{ margin: "0 14px 10px", padding: "8px 10px", background: "#FEF3C7", borderRadius: 8, fontSize: 11, color: "#92400E", display: "flex", gap: 6 }}>
-          ⚠️ <span><strong>Müşteri notu:</strong> {kart.not}</span>
-        </div>
-      )}
-
-      {/* Teslim saati */}
-      {isTamamlandi && kart.teslimSaat && (
-        <div style={{ padding: "6px 14px 10px", fontSize: 11, color: GRAY600, fontWeight: 600 }}>✓ {kart.teslimSaat}</div>
-      )}
-
-      <div style={{ padding: "4px 14px", fontSize: 11, color: GRAY400 }}>📋 Sipariş alındı: {kart.tarih}</div>
-
-      {/* Aksiyon butonu — stop propagation so card click doesn't also fire */}
-      {!isTamamlandi && (
-        <div style={{ padding: "10px 14px", borderTop: `2px solid ${GRAY100}` }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); isYeni ? onHazirla() : onTamamla(); }}
-            style={{ width: "100%", padding: 14, borderRadius: 10, border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", background: isYeni ? ORANGE : GREEN, color: "white" }}
-          >
-            {isYeni ? "🍳 Hazırlamaya Başla" : "✅ Hazır — Garsona Ver"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
