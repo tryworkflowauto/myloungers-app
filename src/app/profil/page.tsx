@@ -180,6 +180,9 @@ export default function ProfilPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [gecmisAcik, setGecmisAcik] = useState(false);
   const [orderRezIds, setOrderRezIds] = useState<string[]>([]);
+  const [gecmisTumSiparisler, setGecmisTumSiparisler] = useState<MusteriSiparis[]>([]);
+  const [gecmisTumLoading, setGecmisTumLoading] = useState(false);
+  const [gecmisFilter, setGecmisFilter] = useState<"bugun" | "hafta" | "ay" | "tumu">("ay");
   const [garsonCagriCooldown, setGarsonCagriCooldown] = useState<Record<string, number>>({});
   const [showCallModal, setShowCallModal] = useState(false);
   const [callModalRez, setCallModalRez] = useState<Reservation | null>(null);
@@ -789,6 +792,67 @@ export default function ProfilPage() {
 
     return () => { supabase.removeChannel(channel); };
   }, [user, orderRezIds]);
+
+  useEffect(() => {
+    async function fetchGecmisSiparisler() {
+      if (!user) return;
+      setGecmisTumLoading(true);
+
+      let sinirTarih: Date | null = null;
+      const now = new Date();
+      if (gecmisFilter === "bugun") {
+        sinirTarih = new Date();
+        sinirTarih.setHours(0, 0, 0, 0);
+      } else if (gecmisFilter === "hafta") {
+        sinirTarih = new Date();
+        sinirTarih.setDate(now.getDate() - 7);
+      } else if (gecmisFilter === "ay") {
+        sinirTarih = new Date();
+        sinirTarih.setMonth(now.getMonth() - 1);
+      }
+
+      let query = supabase
+        .from("siparisler")
+        .select("id, created_at, durum, toplam, tesis_id, rezervasyon_id, siparis_kalemleri(ad, adet, fiyat), rezervasyonlar!inner(kullanici_id, tesisler(ad))")
+        .eq("rezervasyonlar.kullanici_id", user.id)
+        .eq("durum", SIPARIS_DURUM.TESLIM_EDILDI)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (sinirTarih) {
+        query = query.gte("created_at", sinirTarih.toISOString());
+      }
+
+      const { data, error } = await query;
+      setGecmisTumLoading(false);
+      if (error) { console.error("fetchGecmisSiparisler:", JSON.stringify(error)); return; }
+
+      const mapped: MusteriSiparis[] = (data ?? []).map((s: any) => {
+        const created = new Date(s.created_at);
+        const sureDakika = Math.max(1, Math.round((Date.now() - created.getTime()) / 60000));
+        const tesisler = s?.rezervasyonlar?.tesisler;
+        const tesisAd = Array.isArray(tesisler) ? tesisler[0]?.ad ?? "Tesis" : tesisler?.ad ?? "Tesis";
+        return {
+          id: String(s.id),
+          durumKey: String(s.durum || "teslim_edildi"),
+          tesisAd,
+          createdAt: created,
+          sureDakika,
+          urunler: (s.siparis_kalemleri ?? []).map((k: any) => ({
+            isim: String(k.ad || "Ürün"),
+            adet: Number(k.adet ?? 1),
+            fiyat: Number(k.fiyat ?? 0),
+          })),
+          toplam: Number(s.toplam ?? 0),
+          rezervasyonId: String(s.rezervasyon_id ?? ""),
+        };
+      });
+
+      setGecmisTumSiparisler(mapped);
+    }
+
+    fetchGecmisSiparisler();
+  }, [user, gecmisFilter]);
 
   const filteredRes = reservations.filter((r) =>
     resFilter === "all"
@@ -2026,6 +2090,98 @@ export default function ProfilPage() {
                     )}
                   </div>
                 )}
+
+                {/* SİPARİŞ GEÇMİŞİM - YENİ BÖLÜM */}
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0A1628", margin: 0 }}>
+                      📋 Sipariş Geçmişim
+                    </h3>
+                  </div>
+
+                  {/* Filter chip'leri */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+                    {[
+                      { key: "bugun", label: "Bugün" },
+                      { key: "hafta", label: "Bu Hafta" },
+                      { key: "ay", label: "Bu Ay" },
+                      { key: "tumu", label: "Tümü" },
+                    ].map(f => (
+                      <button
+                        key={f.key}
+                        onClick={() => setGecmisFilter(f.key as any)}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 999,
+                          fontSize: ".75rem",
+                          fontWeight: 700,
+                          border: "1px solid " + (gecmisFilter === f.key ? "var(--or)" : "var(--bd)"),
+                          background: gecmisFilter === f.key ? "var(--or)" : "#fff",
+                          color: gecmisFilter === f.key ? "#fff" : "var(--i3)",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {gecmisTumLoading ? (
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--i3)", fontSize: ".85rem" }}>
+                      Geçmiş siparişler yükleniyor...
+                    </div>
+                  ) : gecmisTumSiparisler.length === 0 ? (
+                    <div style={{ background: "#fff", border: "1px solid var(--bd)", borderRadius: "var(--r4)", padding: 18, textAlign: "center", color: "var(--i3)", fontSize: ".85rem" }}>
+                      Bu dönemde sipariş bulunamadı.
+                    </div>
+                  ) : (() => {
+                    const gruplar: Record<string, MusteriSiparis[]> = {};
+                    gecmisTumSiparisler.forEach(o => {
+                      const d = new Date(o.createdAt);
+                      const key = d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
+                      if (!gruplar[key]) gruplar[key] = [];
+                      gruplar[key].push(o);
+                    });
+
+                    return (
+                      <div>
+                        {Object.entries(gruplar).map(([tarih, siparisler]) => (
+                          <div key={tarih} style={{ marginBottom: 14 }}>
+                            <div style={{ fontSize: ".7rem", fontWeight: 700, color: "var(--i3)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, paddingLeft: 2 }}>
+                              ── {tarih} ──
+                            </div>
+                            {siparisler.map(o => {
+                              const saat = new Date(o.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+                              return (
+                                <div key={o.id} className="gecmis-card" style={{ marginBottom: 8 }}>
+                                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
+                                    <div>
+                                      <span style={{ fontSize: ".78rem", fontWeight: 800, color: "var(--navy)" }}>Sipariş #{o.id.slice(-5)}</span>
+                                      <span style={{ fontSize: ".68rem", color: "var(--i3)", marginLeft: 8 }}>{o.tesisAd}</span>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <span style={{ fontSize: ".6rem", color: "var(--i3)" }}>{saat}</span>
+                                      <span style={{ background: "#F0FDF4", color: "#16A34A", border: "1px solid #BBF7D0", borderRadius: 6, padding: "2px 8px", fontSize: ".62rem", fontWeight: 800 }}>✓ Teslim</span>
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: ".72rem", color: "var(--i3)" }}>
+                                    {o.urunler.map((u, i) => (
+                                      <span key={i}>{u.isim} ×{u.adet}{i < o.urunler.length - 1 ? " · " : ""}</span>
+                                    ))}
+                                  </div>
+                                  <div style={{ fontSize: ".75rem", fontWeight: 700, color: "var(--navy)", textAlign: "right", marginTop: 6 }}>
+                                    ₺{o.toplam.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             );
           })()}
