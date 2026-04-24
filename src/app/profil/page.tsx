@@ -1748,7 +1748,7 @@ export default function ProfilPage() {
                         const sureSn = cagri.varisSuresi ?? Math.round((varisMs - createdMs) / 1000);
                         return (
                           <div style={{ padding:"8px 12px", borderRadius:8, margin:"6px 0 2px", background:"rgba(8,145,178,0.08)", border:"1px solid rgba(8,145,178,0.25)", fontSize:".75rem", color:"#0C4A6E", fontWeight:500 }}>
-                            💚 Garson masanızda &bull; Geldi: {formatSure(sureSn)}
+                            💚 Garson şezlongunuza geldi &bull; Süre: {formatSure(sureSn)}
                           </div>
                         );
                       }

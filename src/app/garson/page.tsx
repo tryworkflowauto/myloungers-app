@@ -155,6 +155,8 @@ export default function GarsonPage() {
   const [sezlongPanelAcik, setSezlongPanelAcik] = useState(false);
   const [aktivCagrilar, setAktivCagrilar] = useState<any[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [gecmisCagrilar, setGecmisCagrilar] = useState<any[]>([]);
+  const [gecmisCagrilarLoading, setGecmisCagrilarLoading] = useState(false);
   const previousHazirCountRef = useRef(0);
   const prevCagriIdsRef = useRef<Set<string>>(new Set());
 
@@ -524,6 +526,43 @@ export default function GarsonPage() {
     };
   }, [tesisId, activeUuids]);
 
+  useEffect(() => {
+    if (!tesisId) return;
+
+    async function fetchGecmisCagrilar() {
+      setGecmisCagrilarLoading(true);
+      const bugunBaslangic = new Date();
+      bugunBaslangic.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from("bildirimler")
+        .select("id, tesis_id, sezlong_id, rezervasyon_id, created_at, yanit_tarihi, yanit_suresi_saniye, varis_tarihi, varis_suresi_saniye, mesaj")
+        .eq("tesis_id", tesisId)
+        .eq("tip", "garson_cagri")
+        .gte("created_at", bugunBaslangic.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      if (!error && data) {
+        setGecmisCagrilar(data);
+      }
+      setGecmisCagrilarLoading(false);
+    }
+
+    fetchGecmisCagrilar();
+
+    const channel = supabase
+      .channel(`garson-gecmis-cagrilar-${tesisId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bildirimler", filter: `tesis_id=eq.${tesisId}` },
+        () => { fetchGecmisCagrilar(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [tesisId]);
+
   async function handleYoldaCiktim(cagriId: string, createdAt: string) {
     const now = new Date();
     const sureSaniye = Math.round((now.getTime() - new Date(createdAt).getTime()) / 1000);
@@ -719,6 +758,95 @@ export default function GarsonPage() {
             </div>
           );
         })}
+
+        {/* Günlük Özet */}
+        {gecmisCagrilar.length > 0 && (
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+            {(() => {
+              const toplam = gecmisCagrilar.length;
+              const varisDoluList = gecmisCagrilar.filter(c => c.varis_suresi_saniye);
+              const yanitDoluList = gecmisCagrilar.filter(c => c.yanit_suresi_saniye);
+              const ortYanit = yanitDoluList.length > 0
+                ? Math.round(yanitDoluList.reduce((a, c) => a + (c.yanit_suresi_saniye || 0), 0) / yanitDoluList.length)
+                : 0;
+              const ortVaris = varisDoluList.length > 0
+                ? Math.round(varisDoluList.reduce((a, c) => a + (c.varis_suresi_saniye || 0), 0) / varisDoluList.length)
+                : 0;
+              const formatSn = (sn: number) => sn < 60 ? `${sn} sn` : `${Math.floor(sn/60)} dk ${sn%60} sn`;
+              return (
+                <>
+                  <div style={{ flex: "1 1 120px", background: "rgba(255,255,255,0.05)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "12px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>{toplam}</div>
+                    <div style={{ fontSize: 11, color: T.TEXT_MUTED, marginTop: 2 }}>Bugün Çağrı</div>
+                  </div>
+                  <div style={{ flex: "1 1 120px", background: "rgba(16,185,129,0.08)", border: "0.5px solid rgba(16,185,129,0.25)", borderRadius: 12, padding: "12px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: "#10B981" }}>{formatSn(ortYanit)}</div>
+                    <div style={{ fontSize: 11, color: T.TEXT_MUTED, marginTop: 2 }}>Ort. Yanıt</div>
+                  </div>
+                  <div style={{ flex: "1 1 120px", background: "rgba(8,145,178,0.08)", border: "0.5px solid rgba(8,145,178,0.25)", borderRadius: 12, padding: "12px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: "#0891B2" }}>{formatSn(ortVaris)}</div>
+                    <div style={{ fontSize: 11, color: T.TEXT_MUTED, marginTop: 2 }}>Ort. Varış</div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Son Çağrılar Listesi */}
+        {gecmisCagrilar.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 10, marginTop: 8 }}>
+              Son Çağrılar (Bugün)
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {gecmisCagrilar.map((c) => {
+                const now = Date.now();
+                const createdMs = new Date(c.created_at).getTime();
+                const dakika = Math.floor((now - createdMs) / 60000);
+                const saat = Math.floor(dakika / 60);
+                const zamanMetni = saat > 0 ? `${saat} sa önce` : dakika > 0 ? `${dakika} dk önce` : "Az önce";
+                const saatStr = new Date(c.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+                const formatSn = (sn: number) => sn < 60 ? `${sn} sn` : `${Math.floor(sn/60)} dk ${sn%60} sn`;
+                const sezlongNo = c.mesaj?.match(/[A-Z]-?\d+/)?.[0] || "—";
+
+                let bgColor = "rgba(148,163,184,0.06)";
+                let borderColor = "rgba(148,163,184,0.2)";
+                let durumIkon = "⏳";
+                let durumText = "Bekliyor";
+                let durumColor = T.TEXT_MUTED;
+
+                if (c.varis_tarihi) {
+                  bgColor = "rgba(8,145,178,0.06)";
+                  borderColor = "rgba(8,145,178,0.25)";
+                  durumIkon = "✓✓";
+                  durumText = `Yolda: ${formatSn(c.yanit_suresi_saniye || 0)} • Vardı: ${formatSn(c.varis_suresi_saniye || 0)}`;
+                  durumColor = "#0891B2";
+                } else if (c.yanit_tarihi) {
+                  bgColor = "rgba(16,185,129,0.06)";
+                  borderColor = "rgba(16,185,129,0.25)";
+                  durumIkon = "✓";
+                  durumText = `Yolda (${formatSn(c.yanit_suresi_saniye || 0)})`;
+                  durumColor = "#10B981";
+                }
+
+                return (
+                  <div key={c.id} style={{ background: bgColor, border: `0.5px solid ${borderColor}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ fontSize: 18 }}>{durumIkon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                        {sezlongNo} • <span style={{ color: durumColor, fontWeight: 500 }}>{durumText}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: T.TEXT_MUTED, marginTop: 2 }}>
+                        {saatStr} • {zamanMetni}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── ÖZET SEKMESİ ────────────────────────────────────────────────── */}
         <div style={{ display: "flex", gap: 6, background: T.CARD_BG, padding: 4, borderRadius: 12, marginBottom: 16 }}>
