@@ -159,6 +159,7 @@ export default function GarsonPage() {
   const [gecmisCagrilarLoading, setGecmisCagrilarLoading] = useState(false);
   const [sonCagrilarAcik, setSonCagrilarAcik] = useState(true);
   const [cagriTekrarAktif, setCagriTekrarAktif] = useState(false);
+  const [hazirTekrarAktif, setHazirTekrarAktif] = useState(false);
   const previousHazirCountRef = useRef(0);
   const prevCagriIdsRef = useRef<Set<string>>(new Set());
 
@@ -170,22 +171,35 @@ export default function GarsonPage() {
   function playHazirSiparisSesi() {
     if (!sesAcik || typeof window === "undefined") return;
     try {
-      const AC = window.AudioContext || (window as any).webkitAudioContext;
-      const audio = new AC();
-      const osc = audio.createOscillator();
-      const gain = audio.createGain();
-      osc.type = "triangle";
-      osc.frequency.value = 840;
-      gain.gain.value = 0.001;
-      osc.connect(gain);
-      gain.connect(audio.destination);
-      const now = audio.currentTime;
-      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.start(now);
-      osc.stop(now + 0.22);
-    } catch {
-      // no-op
+      const audio = new window.Audio("/sounds/cagri.mp3");
+      audio.volume = 1.0;
+      audio.play().catch((err) => {
+        console.log("[garson hazir ses] autoplay blocked:", err);
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const playTone = (freq: number, start: number, duration: number) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "square";
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, ctx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + start + 0.05);
+            gain.gain.setValueAtTime(0.8, ctx.currentTime + start + duration - 0.05);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + duration);
+          };
+          playTone(1000, 0, 0.18);
+          playTone(1000, 0.25, 0.18);
+          playTone(1000, 0.5, 0.18);
+        } catch (e) {
+          console.log("[garson hazir ses] fallback başarısız:", e);
+        }
+      });
+    } catch (e) {
+      console.log("[garson hazir ses] play error:", e);
     }
   }
 
@@ -604,6 +618,19 @@ export default function GarsonPage() {
     }, 10000);
     return () => clearInterval(interval);
   }, [aktivCagrilar, sesAcik]);
+
+  useEffect(() => {
+    const hazirSiparis = rows.some((r: any) => r.durum === "hazir");
+    if (!hazirSiparis || !sesAcik) {
+      setHazirTekrarAktif(false);
+      return;
+    }
+    setHazirTekrarAktif(true);
+    const interval = setInterval(() => {
+      playHazirSiparisSesi();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [rows, sesAcik]);
 
   async function durumGuncelle(id: string, yeniDurum: SiparisDurum, msg: string) {
     const { error } = await supabase.from("siparisler").update({ durum: yeniDurum }).eq("id", id);

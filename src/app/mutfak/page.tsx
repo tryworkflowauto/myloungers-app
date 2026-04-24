@@ -111,6 +111,7 @@ export default function MutfakPage() {
   const [saat, setSaat] = useState("");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [yeniSiparisTekrarAktif, setYeniSiparisTekrarAktif] = useState(false);
   const previousYeniCountRef = useRef(0);
 
   function showToast(msg: string) {
@@ -121,22 +122,35 @@ export default function MutfakPage() {
   function playYeniSiparisSesi() {
     if (!sesAcik || typeof window === "undefined") return;
     try {
-      const AC = window.AudioContext || (window as any).webkitAudioContext;
-      const audio = new AC();
-      const osc = audio.createOscillator();
-      const gain = audio.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 900;
-      gain.gain.value = 0.001;
-      osc.connect(gain);
-      gain.connect(audio.destination);
-      const now = audio.currentTime;
-      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-      osc.start(now);
-      osc.stop(now + 0.24);
-    } catch {
-      // no-op
+      const audio = new window.Audio("/sounds/cagri.mp3");
+      audio.volume = 1.0;
+      audio.play().catch((err) => {
+        console.log("[mutfak ses] autoplay blocked:", err);
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const playTone = (freq: number, start: number, duration: number) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "square";
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, ctx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + start + 0.05);
+            gain.gain.setValueAtTime(0.8, ctx.currentTime + start + duration - 0.05);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + duration);
+          };
+          playTone(1000, 0, 0.18);
+          playTone(1000, 0.25, 0.18);
+          playTone(1000, 0.5, 0.18);
+        } catch (e) {
+          console.log("[mutfak ses] fallback başarısız:", e);
+        }
+      });
+    } catch (e) {
+      console.log("[mutfak ses] play error:", e);
     }
   }
 
@@ -305,6 +319,19 @@ export default function MutfakPage() {
 
     return () => { supabase.removeChannel(channel); };
   }, [tesisId, sesAcik]);
+
+  useEffect(() => {
+    const yeniSiparisVar = rows.some((s: any) => s.durum === SIPARIS_DURUM.YENI);
+    if (!yeniSiparisVar || !sesAcik) {
+      setYeniSiparisTekrarAktif(false);
+      return;
+    }
+    setYeniSiparisTekrarAktif(true);
+    const interval = setInterval(() => {
+      playYeniSiparisSesi();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [rows, sesAcik]);
 
   async function durumGuncelle(id: string, yeniDurum: SiparisDurum, okMsg: string) {
     const { error } = await supabase.from("siparisler").update({ durum: yeniDurum }).eq("id", id);
