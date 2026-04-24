@@ -157,6 +157,7 @@ export default function GarsonPage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [gecmisCagrilar, setGecmisCagrilar] = useState<any[]>([]);
   const [gecmisCagrilarLoading, setGecmisCagrilarLoading] = useState(false);
+  const [sonCagrilarAcik, setSonCagrilarAcik] = useState(true);
   const previousHazirCountRef = useRef(0);
   const prevCagriIdsRef = useRef<Set<string>>(new Set());
 
@@ -796,9 +797,29 @@ export default function GarsonPage() {
         {/* Son Çağrılar Listesi */}
         {gecmisCagrilar.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 10, marginTop: 8 }}>
-              Son Çağrılar (Bugün)
-            </h3>
+            <button
+              onClick={() => setSonCagrilarAcik(!sonCagrilarAcik)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 700,
+                marginBottom: 10,
+                marginTop: 8,
+                padding: 0,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                textAlign: "left",
+              }}
+            >
+              <span style={{ transform: sonCagrilarAcik ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", display: "inline-block" }}>▶</span>
+              Son Çağrılar (Bugün) · {gecmisCagrilar.length}
+            </button>
+            {sonCagrilarAcik && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {gecmisCagrilar.map((c) => {
                 const now = Date.now();
@@ -808,7 +829,14 @@ export default function GarsonPage() {
                 const zamanMetni = saat > 0 ? `${saat} sa önce` : dakika > 0 ? `${dakika} dk önce` : "Az önce";
                 const saatStr = new Date(c.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
                 const formatSn = (sn: number) => sn < 60 ? `${sn} sn` : `${Math.floor(sn/60)} dk ${sn%60} sn`;
-                const sezlongNo = c.mesaj?.match(/[A-Z]-?\d+/)?.[0] || "—";
+                const sezlongItem = sezlongOptions?.find((s: any) => String(s.id) === String(c.sezlong_id));
+                let sezlongNo = "—";
+                if (sezlongItem) {
+                  const grupAd = sezlongItem.grupAd || "";
+                  const numara = sezlongItem.numara || "";
+                  const ilkHarf = grupAd ? grupAd.charAt(0).toUpperCase() : "";
+                  sezlongNo = ilkHarf && numara ? `${ilkHarf}-${numara}` : (numara ? String(numara) : "—");
+                }
 
                 let bgColor = "rgba(148,163,184,0.06)";
                 let borderColor = "rgba(148,163,184,0.2)";
@@ -832,10 +860,15 @@ export default function GarsonPage() {
 
                 return (
                   <div key={c.id} style={{ background: bgColor, border: `0.5px solid ${borderColor}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ fontSize: 18 }}>{durumIkon}</div>
+                    <div style={{ fontSize: 16, color: durumColor, fontWeight: 700, minWidth: 24, textAlign: "center" }}>{durumIkon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-                        {sezlongNo} • <span style={{ color: durumColor, fontWeight: 500 }}>{durumText}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: 6 }}>
+                          {sezlongNo}
+                        </span>
+                        <span style={{ fontSize: 12, color: durumColor, fontWeight: 600 }}>
+                          {durumText}
+                        </span>
                       </div>
                       <div style={{ fontSize: 11, color: T.TEXT_MUTED, marginTop: 2 }}>
                         {saatStr} • {zamanMetni}
@@ -845,6 +878,7 @@ export default function GarsonPage() {
                 );
               })}
             </div>
+            )}
           </div>
         )}
 
