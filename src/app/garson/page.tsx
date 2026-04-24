@@ -158,6 +158,7 @@ export default function GarsonPage() {
   const [gecmisCagrilar, setGecmisCagrilar] = useState<any[]>([]);
   const [gecmisCagrilarLoading, setGecmisCagrilarLoading] = useState(false);
   const [sonCagrilarAcik, setSonCagrilarAcik] = useState(true);
+  const [cagriTekrarAktif, setCagriTekrarAktif] = useState(false);
   const previousHazirCountRef = useRef(0);
   const prevCagriIdsRef = useRef<Set<string>>(new Set());
 
@@ -191,49 +192,35 @@ export default function GarsonPage() {
   function playCagriSesi() {
     if (!sesAcik || typeof window === "undefined") return;
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.frequency.value = 880;
-      osc1.type = "sine";
-      gain1.gain.setValueAtTime(0, ctx.currentTime);
-      gain1.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 0.01);
-      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-      osc1.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 0.4);
-
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.frequency.value = 587.33;
-      osc2.type = "sine";
-      gain2.gain.setValueAtTime(0, ctx.currentTime + 0.3);
-      gain2.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 0.31);
-      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.9);
-      osc2.start(ctx.currentTime + 0.3);
-      osc2.stop(ctx.currentTime + 0.9);
-
-      setTimeout(() => {
+      const audio = new window.Audio("/sounds/cagri.mp3");
+      audio.volume = 1.0;
+      audio.play().catch((err) => {
+        console.log("[ses] autoplay blocked, fallback oscillator:", err);
         try {
-          const osc3 = ctx.createOscillator();
-          const gain3 = ctx.createGain();
-          osc3.connect(gain3);
-          gain3.connect(ctx.destination);
-          osc3.frequency.value = 880;
-          osc3.type = "sine";
-          gain3.gain.setValueAtTime(0, ctx.currentTime);
-          gain3.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.01);
-          gain3.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-          osc3.start(ctx.currentTime);
-          osc3.stop(ctx.currentTime + 0.3);
-        } catch { /* no-op */ }
-      }, 1000);
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const playTone = (freq: number, start: number, duration: number) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "square";
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, ctx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + start + 0.05);
+            gain.gain.setValueAtTime(0.8, ctx.currentTime + start + duration - 0.05);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + duration);
+          };
+          playTone(1000, 0, 0.18);
+          playTone(1000, 0.25, 0.18);
+          playTone(1000, 0.5, 0.18);
+        } catch (e) {
+          console.log("[ses] fallback de başarısız:", e);
+        }
+      });
     } catch (e) {
-      console.warn("Ses oynatılamadı:", e);
+      console.log("[ses] play error:", e);
     }
   }
 
@@ -604,6 +591,19 @@ export default function GarsonPage() {
       setAktivCagrilar((prev) => prev.filter((c) => c.id !== cagriId));
     }
   }
+
+  useEffect(() => {
+    const bekleyenCagri = aktivCagrilar.find((c: any) => !c.yanit_tarihi);
+    if (!bekleyenCagri || !sesAcik) {
+      setCagriTekrarAktif(false);
+      return;
+    }
+    setCagriTekrarAktif(true);
+    const interval = setInterval(() => {
+      playCagriSesi();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [aktivCagrilar, sesAcik]);
 
   async function durumGuncelle(id: string, yeniDurum: SiparisDurum, msg: string) {
     const { error } = await supabase.from("siparisler").update({ durum: yeniDurum }).eq("id", id);
