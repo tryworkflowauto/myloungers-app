@@ -66,10 +66,12 @@ export async function POST(req: NextRequest) {
     params.append("MERCHANT", "10008941");
     params.append("PGTRANID", String(pgtranid).trim());
     if (!sameDay) {
+      const refundAmount = parseFloat(String(row.toplam_tutar || 0)).toFixed(2);
+      params.append("AMOUNT", refundAmount);
       params.append("CURRENCY", "TRY");
       params.append(
         "ORDERITEMS",
-        JSON.stringify([{ productCode: (row.merchantpaymentid || rezervasyonId), quantity: "1" }])
+        JSON.stringify([{ productCode: (row.merchantpaymentid || rezervasyonId), quantity: "1", amount: refundAmount }])
       );
     }
 
