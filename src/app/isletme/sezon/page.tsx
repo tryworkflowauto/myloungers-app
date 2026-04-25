@@ -458,6 +458,17 @@ export default function IsletmeSezonPage() {
       genelAyarlar.iptalPolitika === "ozel"
         ? `${genelAyarlar.ozelSaat} saat öncesine kadar tam iade`
         : genelAyarlar.iptalPolitika;
+    const iptal_saat_oncesi = (() => {
+      if (genelAyarlar.iptalPolitika === "ozel") {
+        const n = parseInt(String(genelAyarlar.ozelSaat || 0), 10);
+        return isNaN(n) || n < 0 ? 24 : n;
+      }
+      if (genelAyarlar.iptalPolitika === "İade yok") return 999999;
+      if (genelAyarlar.iptalPolitika === "%50 iade") return 0;
+      if (genelAyarlar.iptalPolitika === "24 saat öncesine kadar tam iade") return 24;
+      if (genelAyarlar.iptalPolitika === "48 saat öncesine kadar tam iade") return 48;
+      return 24; // fallback
+    })();
     const { error } = await supabase
       .from("tesisler")
       .update({
@@ -467,6 +478,7 @@ export default function IsletmeSezonPage() {
         son_dakika_indirimi: genelAyarlar.sonDakikaPct,
         son_dakika_aktif: genelAyarlar.sonDakikaToggle,
         iptal_politikasi,
+        iptal_saat_oncesi,
       })
       .eq("id", tesisId);
     if (error) {

@@ -944,7 +944,6 @@ export default function TesisDetailPage() {
     { icon: "🚫", text: "Dışarıdan yiyecek/içecek getirilmez" },
     { icon: "🚫", text: "18 yaş altı 21:00'dan sonra tesis içinde bulunamaz" },
     { icon: "✅", text: "Giriş: 09:00 — Çıkış: 19:00" },
-    { icon: "✅", text: "İptal: 48 saat öncesine kadar ücretsiz" },
   ];
   const defaultKampanyalar: { icon: string; text: string }[] = [
     { icon: "🌟", text: "Erken Rezervasyon: 30 gün öncesi %10 indirim" },
@@ -968,6 +967,15 @@ export default function TesisDetailPage() {
 
   const parsedKurallar = row ? parseIconTextArray((row as any).kurallar) : [];
   const parsedKampanyalar = row ? parseIconTextArray((row as any).kampanya_notlari) : [];
+
+  const iptalPolitikasiText = (row as any)?.iptal_politikasi as string | null;
+  const kurallarFinal: { icon: string; text: string }[] = (() => {
+    const baseList = parsedKurallar.length > 0 ? [...parsedKurallar] : [...defaultKurallar];
+    if (iptalPolitikasiText && iptalPolitikasiText.trim() !== "") {
+      baseList.push({ icon: "✅", text: `İptal: ${iptalPolitikasiText}` });
+    }
+    return baseList;
+  })();
 
   // ULAŞIM REHBERİ (Supabase)
   type Ulasim = {
@@ -1698,7 +1706,7 @@ export default function TesisDetailPage() {
                 <div className="rules-grid">
                   <div className="rules-col">
                     <h4>🚫 Kurallar</h4>
-                    {(parsedKurallar.length ? parsedKurallar : defaultKurallar).map((item) => {
+                    {kurallarFinal.map((item) => {
                       const emoji = (item as any).emoji ?? item.icon;
                       const text = item.text ?? "";
                       const startsWithEmoji = emoji && text.startsWith(emoji);

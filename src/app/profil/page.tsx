@@ -32,6 +32,8 @@ type Reservation = {
   girisYapildi?: boolean;
   stars?: number;
   review?: boolean;
+  iptalSaatOncesi?: number;
+  calismaSaatleri?: any;
 };
 
 type UserReview = {
@@ -131,6 +133,35 @@ const RESERVATIONS: Reservation[] = [
   { id:5, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-6988", dates:"10 Nis 2025", szl:"A5 · İskele", gun:"1 gün", odenen:"₺1.250", status:"cancel", statusTxt:"✗ İptal", statusCss:"background:#FEF2F2;color:#DC2626;border-color:#FECACA", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
 ];
 
+const TR_DAYS = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+
+function iptalEdilebilirMi(rezervasyon: any, tesis: any): { edilebilir: boolean; kalanSaat: number; gerekenSaat: number } {
+  const iptalSaatOncesi = typeof tesis?.iptal_saat_oncesi === "number" ? tesis.iptal_saat_oncesi : 24;
+  if (iptalSaatOncesi >= 999999) {
+    return { edilebilir: false, kalanSaat: 0, gerekenSaat: iptalSaatOncesi };
+  }
+  let calismaSaatleri: any[] = [];
+  try {
+    const raw = tesis?.calisma_saatleri;
+    calismaSaatleri = Array.isArray(raw) ? raw : (typeof raw === "string" ? JSON.parse(raw) : []);
+  } catch { calismaSaatleri = []; }
+  const baslangicDate = new Date(`${rezervasyon.baslangic_tarih}T00:00:00+03:00`);
+  const dayName = TR_DAYS[baslangicDate.getDay()];
+  const gunData = calismaSaatleri.find((g: any) => g?.name === dayName);
+  if (gunData && gunData.kapali === true) {
+    return { edilebilir: false, kalanSaat: 0, gerekenSaat: iptalSaatOncesi };
+  }
+  const acilisStr = (gunData?.acilis && /^\d{1,2}:\d{2}$/.test(gunData.acilis)) ? gunData.acilis : "09:00";
+  const rezervasyonBaslangicDT = new Date(`${rezervasyon.baslangic_tarih}T${acilisStr}:00+03:00`);
+  const kalanMs = rezervasyonBaslangicDT.getTime() - new Date().getTime();
+  const kalanSaat = kalanMs / (1000 * 60 * 60);
+  return {
+    edilebilir: kalanSaat >= iptalSaatOncesi,
+    kalanSaat: Math.max(0, Math.floor(kalanSaat)),
+    gerekenSaat: iptalSaatOncesi,
+  };
+}
+
 export default function ProfilPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -195,9 +226,9 @@ export default function ProfilPage() {
   useEffect(() => {
     async function loadUser() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
       setUserLoading(false);
     }
     loadUser();
@@ -287,12 +318,12 @@ export default function ProfilPage() {
           )
         );
 
-        const tesisMap: Record<number, { ad: string; loc: string; slug: string | null }> = {};
+        const tesisMap: Record<number, { ad: string; loc: string; slug: string | null; iptal_saat_oncesi?: number; calisma_saatleri?: any }> = {};
 
         if (tesisIds.length) {
           const { data: tesisData, error: tesisError } = await supabase
             .from("tesisler")
-            .select("id, ad, sehir, ilce, slug")
+            .select("id, ad, sehir, ilce, slug, iptal_saat_oncesi, calisma_saatleri")
             .in("id", tesisIds);
 
           if (tesisError) {
@@ -304,6 +335,8 @@ export default function ProfilPage() {
                 ad: t.ad || `Tesis #${t.id}`,
                 loc: locParts || "-",
                 slug: typeof t.slug === "string" && t.slug.trim() ? t.slug.trim() : null,
+                iptal_saat_oncesi: typeof t.iptal_saat_oncesi === "number" ? t.iptal_saat_oncesi : undefined,
+                calisma_saatleri: t.calisma_saatleri ?? undefined,
               };
             });
           }
@@ -520,6 +553,8 @@ export default function ProfilPage() {
             girisYapildi: r.giris_yapildi === true,
             stars: undefined,
             review: false,
+            iptalSaatOncesi: tesisInfo?.iptal_saat_oncesi,
+            calismaSaatleri: tesisInfo?.calisma_saatleri,
           };
         });
 
@@ -1783,7 +1818,25 @@ export default function ProfilPage() {
                           const cagriKilitli = !!kilit && kilit > Date.now();
                           return (
                             <>
-                        {r.status !== "cancel" && r.status !== "past" && <button className="btn-cancel" onClick={() => cancelRes(r.id)}>İptal Et</button>}
+                        {r.status !== "cancel" && r.status !== "past" && (() => {
+                          const sonuc = iptalEdilebilirMi(
+                            { baslangic_tarih: r.tarihBaslangic },
+                            { iptal_saat_oncesi: r.iptalSaatOncesi, calisma_saatleri: r.calismaSaatleri }
+                          );
+                          if (sonuc.edilebilir) {
+                            return <button className="btn-cancel" onClick={() => cancelRes(r.id)}>İptal Et</button>;
+                          }
+                          return (
+                            <button
+                              className="btn-cancel"
+                              onClick={() => setCancelError(`İptal süresi dolmuştur. Bu rezervasyon için iptal işlemi en az ${sonuc.gerekenSaat} saat önce yapılmalıydı. Lütfen tesis ile iletişime geçin.`)}
+                              style={{ opacity: 0.5, cursor: "not-allowed", background: "#9CA3AF", borderColor: "#9CA3AF" }}
+                              title="İptal süresi geçmiş"
+                            >
+                              İptal Et
+                            </button>
+                          );
+                        })()}
                         {r.status === "active" && (r.durum === "aktif" || r.durum === "onaylandi") && (
                           <button
                             type="button"

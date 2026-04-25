@@ -18,6 +18,16 @@ function istanbulDateKey(d: Date | string): string {
   }).format(date);
 }
 
+const friendlyParatikaError = (rawErr: string | undefined | null): string => {
+  if (!rawErr) return "İade işlemi sırasında bir sorun oluştu. Lütfen daha sonra tekrar deneyin.";
+  const lower = rawErr.toLowerCase();
+  if (lower.includes("declined")) return "İade işlemi banka tarafından reddedildi. Lütfen tesisle iletişime geçin.";
+  if (lower.includes("geçersiz parametre")) return "İade işlemi şu an gerçekleştirilemiyor. Lütfen tesisle iletişime geçin.";
+  if (lower.includes("timeout") || lower.includes("zaman aşımı")) return "Banka yanıt vermedi, lütfen birkaç dakika sonra tekrar deneyin.";
+  if (lower.includes("not found") || lower.includes("bulunamadı")) return "Bu rezervasyona ait ödeme kaydı bulunamadı. Lütfen tesisle iletişime geçin.";
+  return rawErr;
+};
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -29,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     const { data: row, error: fetchError } = await supabaseAdmin
       .from("rezervasyonlar")
-      .select("pgtranid, toplam_tutar, created_at, merchantpaymentid")
+      .select("pgtranid, toplam_tutar, created_at, merchantpaymentid, tesis_id, baslangic_tarih")
       .eq("id", rezervasyonId)
       .maybeSingle();
 
@@ -38,6 +48,82 @@ export async function POST(req: NextRequest) {
     }
     if (!row) {
       return NextResponse.json({ error: "Rezervasyon bulunamadı" }, { status: 404 });
+    }
+
+    // İptal süresi kontrolü — tesisin politikası
+    const { data: tesisData, error: tesisError } = await supabaseAdmin
+      .from("tesisler")
+      .select("iptal_saat_oncesi, iptal_politikasi, calisma_saatleri")
+      .eq("id", row.tesis_id)
+      .single();
+
+    if (tesisError || !tesisData) {
+      return NextResponse.json(
+        { error: "Tesis bilgisi alınamadı" },
+        { status: 400 }
+      );
+    }
+
+    const iptalSaatOncesi = typeof tesisData.iptal_saat_oncesi === "number"
+      ? tesisData.iptal_saat_oncesi
+      : 24;
+
+    // İade yok politikası
+    if (iptalSaatOncesi >= 999999) {
+      return NextResponse.json(
+        { error: "Bu tesis iptal/iade kabul etmiyor. Lütfen tesis ile iletişime geçin." },
+        { status: 400 }
+      );
+    }
+
+    // Rezervasyon başlangıcına kalan saat hesapla
+    // Rezervasyon gününü Türkçe kısa adıyla bul (Pzt, Sal, Çar, Per, Cum, Cmt, Paz)
+    const TR_DAYS = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+    const baslangicDate = new Date(`${row.baslangic_tarih}T00:00:00+03:00`);
+    const dayIndex = baslangicDate.getDay(); // 0=Pazar, 1=Pzt, ...
+    const dayName = TR_DAYS[dayIndex];
+
+    // Tesisin o günkü çalışma saatlerini bul
+    let calismaSaatleri: any[] = [];
+    try {
+      const raw = (tesisData as any).calisma_saatleri;
+      calismaSaatleri = Array.isArray(raw) ? raw : (typeof raw === "string" ? JSON.parse(raw) : []);
+    } catch {
+      calismaSaatleri = [];
+    }
+
+    const gunData = calismaSaatleri.find((g: any) => g?.name === dayName);
+
+    // Eğer tesis o gün kapalıysa → iptal yapılamaz
+    if (gunData && gunData.kapali === true) {
+      return NextResponse.json(
+        { error: "Bu rezervasyon günü tesis kapalı, iptal işlemi için lütfen tesisle iletişime geçin." },
+        { status: 400 }
+      );
+    }
+
+    // Açılış saatini al (yoksa fallback 09:00)
+    const acilisStr = (gunData?.acilis && /^\d{1,2}:\d{2}$/.test(gunData.acilis))
+      ? gunData.acilis
+      : "09:00";
+
+    // Tam datetime oluştur (Türkiye saati explicit, +03:00)
+    const rezervasyonBaslangicDT = new Date(`${row.baslangic_tarih}T${acilisStr}:00+03:00`);
+
+    const simdi = new Date();
+    const kalanMs = rezervasyonBaslangicDT.getTime() - simdi.getTime();
+    const kalanSaat = kalanMs / (1000 * 60 * 60);
+
+    // Süre dolmuşsa iptal reddet
+    if (kalanSaat < iptalSaatOncesi) {
+      return NextResponse.json(
+        {
+          error: `İptal süresi geçmiş. Bu tesisin politikası: rezervasyon başlangıcından en az ${iptalSaatOncesi} saat önce iptal edilmelidir. Şu an rezervasyon başlangıcına ${Math.max(0, Math.floor(kalanSaat))} saat kaldı.`,
+          kalanSaat: Math.max(0, Math.floor(kalanSaat)),
+          gerekenSaat: iptalSaatOncesi,
+        },
+        { status: 400 }
+      );
     }
 
     const pgtranid = row.pgtranid;
@@ -90,12 +176,12 @@ export async function POST(req: NextRequest) {
       const json = JSON.parse(rawText);
       responseCode = json.responseCode || "";
       pgTranReturnCode = json.pgTranReturnCode || "";
-      errMsg = json.errorMsg || json.message || "İade başarısız";
+      errMsg = friendlyParatikaError(json.errorMsg || json.message);
     } catch {
       const parsed = new URLSearchParams(rawText);
       responseCode = parsed.get("responseCode") || "";
       pgTranReturnCode = parsed.get("pgTranReturnCode") || "";
-      errMsg = parsed.get("errorMsg") || parsed.get("message") || "İade başarısız";
+      errMsg = friendlyParatikaError(parsed.get("errorMsg") || parsed.get("message"));
     }
     if (responseCode === "00" || pgTranReturnCode === "00") {
       const { error: updateError } = await supabaseAdmin

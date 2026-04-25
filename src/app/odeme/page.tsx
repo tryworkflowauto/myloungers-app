@@ -103,6 +103,7 @@ function OdemeContent() {
   const [cardDate, setCardDate] = useState("");
   const [tesisCover, setTesisCover] = useState("/logo.png");
   const [tesisAddress, setTesisAddress] = useState("");
+  const [tesisIptalPolitikasi, setTesisIptalPolitikasi] = useState<string | null>(null);
   // Rezervasyon tutma süresi sayacı
   const [rezerveliKadar, setRezerveliKadar] = useState<Date | null>(null);
   const [kalanSure, setKalanSure] = useState<number>(0); // saniye cinsinden
@@ -146,7 +147,7 @@ function OdemeContent() {
     let cancelled = false;
     (async () => {
       const slugKey = tesisParam.toLowerCase();
-      const sel = "fotograflar, adres, ilce, sehir";
+      const sel = "fotograflar, adres, ilce, sehir, iptal_politikasi";
       const { data: bySlug } = await supabase
         .from("tesisler")
         .select(sel)
@@ -177,6 +178,7 @@ function OdemeContent() {
       }
       setTesisCover(firstPhotoFromFotograflar(row.fotograflar));
       setTesisAddress(addressFromTesisRow(row));
+      setTesisIptalPolitikasi((row as any).iptal_politikasi ?? null);
     })();
     return () => { cancelled = true; };
   }, [res.tesis]);
@@ -619,7 +621,7 @@ function OdemeContent() {
                   </div>
 
                   <div className="policy-box">
-                    🔄 <b>Ücretsiz İptal:</b> Rezervasyon tarihinden 24 saat öncesine kadar ücretsiz iptal hakkınız bulunmaktadır.
+                    🔄 <b>İptal Politikası:</b> {tesisIptalPolitikasi ?? "Tesisin iptal politikası belirtilmemiş, lütfen tesise sorun."}
                   </div>
                 </div>
               </div>
@@ -919,7 +921,7 @@ function OdemeContent() {
           </div>
 
           <div className="trust-strip">
-            {[["🔒","SSL şifreli güvenli ödeme"],["↩️","24 saate kadar ücretsiz iptal"],["✅","Anında rezervasyon onayı"],["📱","QR ile temassız giriş"],["🎧","7/24 müşteri desteği"]].map(([ic,t]) => (
+            {[["🔒","SSL şifreli güvenli ödeme"],["↩️", tesisIptalPolitikasi ? `İptal: ${tesisIptalPolitikasi}` : "İptal politikası tesise göre değişir"],["✅","Anında rezervasyon onayı"],["📱","QR ile temassız giriş"],["🎧","7/24 müşteri desteği"]].map(([ic,t]) => (
               <div key={t as string} className="trust-item"><span className="trust-ic">{ic}</span> {t}</div>
             ))}
           </div>
