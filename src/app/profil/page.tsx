@@ -1878,10 +1878,6 @@ export default function ProfilPage() {
                         <button
                           className="btn-detail"
                           onClick={() => {
-                            if (r.girisYapildi !== true) {
-                              alert("Sipariş verebilmek için önce QR/Kod ile giriş yapmalısınız.");
-                              return;
-                            }
                             router.push("/tesis/" + (r.slug || r.name.trim().toLowerCase().replace(/\s+/g, "-")));
                           }}
                         >
