@@ -268,7 +268,7 @@ export default function IsletmeSezlongPage() {
   });
   const [cikisModal, setCikisModal] = useState(false);
   const [rezModal, setRezModal] = useState(false);
-  const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
+  const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: new Date().toISOString().slice(0, 10), kisiSayisi: "" });
   const [durumFiltresi, setDurumFiltresi] = useState<string | null>(null);
   const [grupFiltresi, setGrupFiltresi] = useState<string | null>(null);
   const [grupDragId, setGrupDragId] = useState<string | null>(null);
@@ -2010,7 +2010,6 @@ export default function IsletmeSezlongPage() {
                     }}
                   >
                     <option value="bos">🟢 Boş</option>
-                    <option value="dolu">🟠 Dolu</option>
                     <option value="rezerve">🔵 Rezerve</option>
                     <option value="bakim">⚪ Bakımda</option>
                     <option value="kilitli">🔒 İşletme Rezervi</option>
@@ -2107,7 +2106,7 @@ export default function IsletmeSezlongPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {[
-                { label: "📋 Rezervasyon Yap", action: () => setRezModal(true) },
+                { label: "📋 Rezervasyon Yap", action: () => { setRezForm({ musteriAdi: "", telefon: "", tarih: new Date().toISOString().slice(0, 10), kisiSayisi: "" }); setRezModal(true); } },
                 { label: "🍽️ Sipariş Gör", action: () => router.push("/isletme/siparisler") },
                 { label: "💰 Bakiye Gör", action: () => router.push("/isletme/raporlar") },
                 {
@@ -2453,6 +2452,10 @@ export default function IsletmeSezlongPage() {
                     showToast("Oturum bulunamadı.");
                     return;
                   }
+                  if (!seciliSezlongId) {
+                    showToast("⚠️ Lütfen bir şezlong seçin.");
+                    return;
+                  }
                   const tarih = rezForm.tarih || new Date().toISOString().slice(0, 10);
                   const baslangicStr = `${tarih}T09:00:00`;
                   const bitisStr = `${tarih}T23:59:59`;
@@ -2461,15 +2464,17 @@ export default function IsletmeSezlongPage() {
                     tesis_id: tesisId,
                     musteri_adi: rezForm.musteriAdi.trim() || null,
                     telefon: rezForm.telefon.trim() || null,
-                    sezlong_id: seciliSezlongId || null,
+                    sezlong_id: seciliSezlongId,
+                    sezlong_ids: [seciliSezlongId],
                     baslangic_tarih: baslangicStr,
                     bitis_tarih: bitisStr,
                     kisi_sayisi: kisi,
                     toplam_tutar: 0,
-                    durum: "bekliyor",
+                    durum: "onaylandi",
+                    giris_yapildi: true,
                   });
                   setRezModal(false);
-                  setRezForm({ musteriAdi: "", telefon: "", tarih: "", kisiSayisi: "" });
+                  setRezForm({ musteriAdi: "", telefon: "", tarih: new Date().toISOString().slice(0, 10), kisiSayisi: "" });
                   if (error) {
                     console.error("Rezervasyon insert error:", error);
                     showToast("Rezervasyon kaydedilemedi.");

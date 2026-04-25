@@ -18,7 +18,7 @@ const PURPLE = "#7C3AED";
 const SLATE = "#64748B";
 
 type SiparisDurum = "yeni" | "hazirlaniyor" | "hazir" | "yolda" | "teslim_edildi" | "iptal";
-type TabKey = "hazir" | "yolda" | "teslim_edildi";
+type TabKey = "hazir" | "yolda" | "teslim_edildi" | "aktif_sezlonglar";
 
 type UrunSatir = {
   isim: string;
@@ -162,10 +162,62 @@ export default function GarsonPage() {
   const [hazirTekrarAktif, setHazirTekrarAktif] = useState(false);
   const previousHazirCountRef = useRef(0);
   const prevCagriIdsRef = useRef<Set<string>>(new Set());
+  const [aktifRezervasyonlar, setAktifRezervasyonlar] = useState<any[]>([]);
+  const [bosaAlConfirm, setBosaAlConfirm] = useState<{ rezervasyonId: string; sezlongAd: string; musteriAd: string; sezlongId: string | null } | null>(null);
+  const [bosaAlLoading, setBosaAlLoading] = useState(false);
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2600);
+  }
+
+  async function fetchAktifRezervasyonlar() {
+    if (!tesisId) return;
+    const today = new Date().toISOString().split("T")[0];
+    const { data, error } = await supabase
+      .from("rezervasyonlar")
+      .select("id, rezervasyon_kodu, baslangic_tarih, bitis_tarih, kullanici_id, sezlong_id, durum, giris_yapildi, musteri_adi, sezlonglar(numara, sezlong_gruplari(ad)), kullanicilar(ad, soyad)")
+      .eq("tesis_id", tesisId)
+      .eq("giris_yapildi", true)
+      .in("durum", ["aktif", "onaylandi", "bekliyor"])
+      .gte("bitis_tarih", today)
+      .order("baslangic_tarih", { ascending: false });
+    if (error) {
+      console.error("fetchAktifRezervasyonlar error:", error);
+      return;
+    }
+    const sistemRezerviAdlari = ["İŞLETME REZERVİ", "BAKIM", "İŞLETME KİLİDİ"];
+    const filtered = (data ?? []).filter(
+      (r: any) => !sistemRezerviAdlari.includes(r.musteri_adi || "")
+    );
+    setAktifRezervasyonlar(filtered);
+  }
+
+  async function handleBosaAl() {
+    if (!bosaAlConfirm) return;
+    setBosaAlLoading(true);
+    try {
+      const { error } = await supabase
+        .from("rezervasyonlar")
+        .update({
+          durum: "tamamlandi",
+          erken_cikis_zamani: new Date().toISOString(),
+          erken_cikis_yapan: "garson",
+        })
+        .eq("id", bosaAlConfirm.rezervasyonId);
+      if (error) {
+        alert("❌ Hata: " + error.message);
+        return;
+      }
+      if (bosaAlConfirm.sezlongId) {
+        await supabase.from("sezlonglar").update({ durum: "bos" }).eq("id", bosaAlConfirm.sezlongId);
+      }
+      setBosaAlConfirm(null);
+      await fetchAktifRezervasyonlar();
+      showToast("✅ Şezlong başarıyla boşa alındı");
+    } finally {
+      setBosaAlLoading(false);
+    }
   }
 
   function playHazirSiparisSesi() {
@@ -565,6 +617,11 @@ export default function GarsonPage() {
     return () => { supabase.removeChannel(channel); };
   }, [tesisId]);
 
+  useEffect(() => {
+    if (tesisId) fetchAktifRezervasyonlar();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tesisId]);
+
   async function handleYoldaCiktim(cagriId: string, createdAt: string) {
     const now = new Date();
     const sureSaniye = Math.round((now.getTime() - new Date(createdAt).getTime()) / 1000);
@@ -915,6 +972,7 @@ export default function GarsonPage() {
             { key: "hazir" as TabKey, label: "Hazır", count: counts.hazir, activeColor: T.GREEN, activeBg: T.GREEN_BG },
             { key: "yolda" as TabKey, label: "Yolda", count: counts.yolda, activeColor: T.BLUE, activeBg: T.BLUE_BG },
             { key: "teslim_edildi" as TabKey, label: "Teslim", count: counts.teslim_edildi, activeColor: T.TEXT_MUTED, activeBg: "rgba(255,255,255,0.08)" },
+            { key: "aktif_sezlonglar" as TabKey, label: "🏖️ Aktif", count: aktifRezervasyonlar.length, activeColor: T.RED, activeBg: T.RED_BG },
           ]).map((t) => (
             <button
               key={t.key}
@@ -928,7 +986,7 @@ export default function GarsonPage() {
         </div>
 
         {/* ── SİPARİŞ LİSTESİ ─────────────────────────────────────────────── */}
-        {activeRows.length === 0 ? (
+        {tab !== "aktif_sezlonglar" && (activeRows.length === 0 ? (
           <div style={{ textAlign: "center", padding: "30px 20px", color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
             Bu sekmede sipariş yok
           </div>
@@ -1044,6 +1102,40 @@ export default function GarsonPage() {
               );
             })}
           </div>
+        ))}
+
+        {/* ── AKTİF ŞEZLONGLAR ────────────────────────────────────────────── */}
+        {tab === "aktif_sezlonglar" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+            {aktifRezervasyonlar.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 20px", color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
+                Şu an aktif kullanımda şezlong yok
+              </div>
+            ) : aktifRezervasyonlar.map((r: any) => {
+              const grupAd = r.sezlonglar?.sezlong_gruplari?.ad ?? "";
+              const numara = r.sezlonglar?.numara ?? "";
+              const sezlongAd = grupAd && numara ? `${grupAd} - ${numara}` : numara ? `No: ${numara}` : "Şezlong";
+              const musteriAd = r.kullanicilar ? `${r.kullanicilar.ad ?? ""} ${r.kullanicilar.soyad ?? ""}`.trim() : "Misafir";
+              const tarih = r.baslangic_tarih ? new Date(r.baslangic_tarih).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }) : "-";
+              return (
+                <div key={r.id} style={{ background: T.CARD_BG, border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 14, padding: "13px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: T.TEXT, marginBottom: 2 }}>🏖️ {sezlongAd}</div>
+                      <div style={{ fontSize: 12, color: T.TEXT_SUB, marginBottom: 2 }}>👤 {musteriAd}</div>
+                      <div style={{ fontSize: 11, color: T.TEXT_MUTED }}>📋 {r.rezervasyon_kodu || r.id} · {tarih}</div>
+                    </div>
+                    <button
+                      onClick={() => setBosaAlConfirm({ rezervasyonId: r.id, sezlongAd, musteriAd, sezlongId: r.sezlong_id ?? null })}
+                      style={{ flexShrink: 0, background: "#EF4444", border: "none", borderRadius: 10, padding: "10px 14px", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      Boşa Al
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
 
         {/* ── ATANAN ŞEZLONGLAR — collapse edilebilir ──────────────────────── */}
@@ -1102,6 +1194,39 @@ export default function GarsonPage() {
         )}
 
       </div>
+
+      {/* ── BOŞA AL CONFIRM MODAL ────────────────────────────────────────── */}
+      {bosaAlConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#1E293B", border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 16, width: "100%", maxWidth: 320, overflow: "hidden" }}>
+            <div style={{ padding: "18px 18px 0", textAlign: "center" }}>
+              <div style={{ fontSize: "1.6rem", marginBottom: 8 }}>🏖️</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.TEXT, marginBottom: 6 }}>Şezlongu Boşa Al</div>
+              <div style={{ fontSize: 12, color: T.TEXT_SUB, lineHeight: 1.6, marginBottom: 16 }}>
+                <strong>{bosaAlConfirm.musteriAd}</strong> müşterisi <strong>{bosaAlConfirm.sezlongAd}</strong> şezlongunu kullanmıyor mu? Boşa alırsanız başka müşteri rezervasyon yapabilir.
+              </div>
+            </div>
+            <div style={{ padding: "0 18px 18px", display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setBosaAlConfirm(null)}
+                disabled={bosaAlLoading}
+                style={{ flex: 1, padding: 10, border: `0.5px solid ${T.CARD_BORDER}`, borderRadius: 10, background: "transparent", color: T.TEXT_MUTED, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={handleBosaAl}
+                disabled={bosaAlLoading}
+                style={{ flex: 1, padding: 10, border: "none", borderRadius: 10, background: bosaAlLoading ? "#6B7280" : "#EF4444", color: "white", fontSize: 13, fontWeight: 700, cursor: bosaAlLoading ? "not-allowed" : "pointer" }}
+              >
+                {bosaAlLoading ? "İşleniyor…" : "Evet, Boşa Al"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── TOAST ───────────────────────────────────────────────────────────── */}
       {toast && (

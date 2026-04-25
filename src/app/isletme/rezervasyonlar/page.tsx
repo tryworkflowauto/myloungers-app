@@ -612,6 +612,10 @@ export default function IsletmeRezervasyonlarPage() {
 
   async function saveYeni() {
     if (!tesisId) return;
+    if (!yeniForm.sezlongId) {
+      alert("Lütfen bir şezlong seçin.");
+      return;
+    }
     const baslangicStr = `${yeniForm.tarih}T${(yeniForm.saat || "09:00").padEnd(5, "0")}:00`;
     const bitisStr = `${yeniForm.tarih}T23:59:59`;
     const payload: Record<string, unknown> = {
@@ -620,10 +624,12 @@ export default function IsletmeRezervasyonlarPage() {
       bitis_tarih: bitisStr,
       kisi_sayisi: parseInt(yeniForm.kisiSayisi, 10) || 2,
       toplam_tutar: 0,
-      durum: "bekliyor",
+      durum: "onaylandi",
       musteri_adi: yeniForm.musteriAdi.trim() || null,
       telefon: yeniForm.telefon.trim() || null,
-      sezlong_id: yeniForm.sezlongId || null,
+      sezlong_id: yeniForm.sezlongId,
+      sezlong_ids: [yeniForm.sezlongId],
+      giris_yapildi: true,
     };
     const { data: row, error } = await supabase
       .from("rezervasyonlar")
