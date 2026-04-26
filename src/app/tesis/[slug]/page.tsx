@@ -1275,6 +1275,12 @@ export default function TesisDetailPage() {
           .srows{display:flex;flex-direction:column;gap:8px}
           .su{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
           .schema{overflow-x:auto;-webkit-overflow-scrolling:touch}
+          .layout{display:flex;flex-direction:column}
+          .main-col{display:contents}
+          .panel{order:3}
+          .panel-szl{order:1}
+          .sidebar{order:2;position:static}
+          .panel-yorumlar{order:4}
         }
         @media(max-width:480px){.wrap{padding:0 12px}.gall{height:150px}.gp-main{width:220px;height:150px}.gp-tr,.gp-mr,.gp-bl,.gp-br{width:100px;height:150px}}
       `}</style>
@@ -1484,7 +1490,7 @@ export default function TesisDetailPage() {
             </div>
 
             {/* ŞEZLONG DÜZENİ */}
-            <div className="panel" ref={szlRef}>
+            <div className="panel panel-szl" ref={szlRef}>
               <div className="ph" onClick={() => togglePanel("szl")}>
                 <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Şezlong Düzeni</div><div className="ph-sub">100 şezlong · İskele · VIP · Silver</div></div></div>
                 <svg className={`ch${openPanels.szl ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1802,7 +1808,7 @@ export default function TesisDetailPage() {
             )}
 
             {/* YORUMLAR */}
-            <div className="panel">
+            <div className="panel panel-yorumlar">
               <div className="ph" onClick={() => togglePanel("reviews")}>
                 <div className="ph-l">
                   <span className="ph-ic">⭐</span>
