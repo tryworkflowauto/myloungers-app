@@ -58,8 +58,8 @@ export default function TesisDetailPage() {
   const [toast, setToast] = useState<{msg:string;icon:string}|null>(null);
   const [lbIdx, setLbIdx] = useState(0);
   const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
-    about: true, feats: true, plan: true, szl: true,
-    video: true, transport: true, rules: true, menu: false, reviews: true,
+    about: false, feats: false, plan: false, szl: false,
+    video: false, transport: false, rules: false, menu: false, reviews: false,
   });
   const [menuKategoriler, setMenuKategoriler] = useState<any[]>([]);
   const [menuUrunler, setMenuUrunler] = useState<any[]>([]);
@@ -1277,10 +1277,17 @@ export default function TesisDetailPage() {
           .schema{overflow-x:auto;-webkit-overflow-scrolling:touch}
           .layout{display:flex;flex-direction:column}
           .main-col{display:contents}
-          .panel{order:3}
-          .panel-szl{order:1}
-          .sidebar{order:2;position:static}
-          .panel-yorumlar{order:4}
+          .sidebar{position:static;order:6}
+          .panel-hakkinda{order:1}
+          .panel-imkanlar{order:2}
+          .panel-saatler{order:3}
+          .panel-yerlesim{order:4}
+          .panel-szl{order:5}
+          .panel-video{order:7}
+          .panel-ulasim{order:8}
+          .panel-kurallar{order:9}
+          .panel-menu{order:10}
+          .panel-yorumlar{order:11}
         }
         @media(max-width:480px){.wrap{padding:0 12px}.gall{height:150px}.gp-main{width:220px;height:150px}.gp-tr,.gp-mr,.gp-bl,.gp-br{width:100px;height:150px}}
       `}</style>
@@ -1355,7 +1362,7 @@ export default function TesisDetailPage() {
           <div className="main-col">
 
             {/* HAKKINDA */}
-            <div className="panel">
+            <div className="panel panel-hakkinda">
               <div className="ph" onClick={() => togglePanel("about")}>
                 <div className="ph-l"><span className="ph-ic">📍</span><div><div className="ph-title">Tesis Hakkında</div><div className="ph-sub">{HOTEL.name}</div></div></div>
                 <svg className={`ch${openPanels.about ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1380,7 +1387,7 @@ export default function TesisDetailPage() {
             </div>
 
             {/* İMKANLAR */}
-            <div className="panel">
+            <div className="panel panel-imkanlar">
               <div className="ph" onClick={() => togglePanel("feats")}>
                 <div className="ph-l"><span className="ph-ic">✨</span><div><div className="ph-title">Tesis İmkânları</div><div className="ph-sub">Öne çıkan özellikler</div></div></div>
                 <svg className={`ch${openPanels.feats ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1403,7 +1410,7 @@ export default function TesisDetailPage() {
 
             {/* ÇALIŞMA SAATLERİ */}
             {calismaSaatleri.length > 0 && (
-              <div className="panel">
+              <div className="panel panel-saatler">
                 <div className="ph" onClick={() => togglePanel("hours")}>
                   <div className="ph-l">
                     <span className="ph-ic">⏰</span>
@@ -1455,7 +1462,7 @@ export default function TesisDetailPage() {
             )}
 
             {/* YERLEŞİM PLANI */}
-            <div className="panel">
+            <div className="panel panel-yerlesim">
               <div className="ph" onClick={() => togglePanel("plan")}>
                 <div className="ph-l"><span className="ph-ic">🗺️</span><div><div className="ph-title">Tesis Yerleşim Planı</div><div className="ph-sub">Bölgeye tıklayarak şezlong seçin</div></div></div>
                 <svg className={`ch${openPanels.plan ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1534,7 +1541,7 @@ export default function TesisDetailPage() {
 
             {/* VİDEO */}
             {(videoUrl || videoEmbed) && (
-              <div className="panel">
+              <div className="panel panel-video">
                 <div className="ph" onClick={() => togglePanel("video")}>
                   <div className="ph-l">
                     <span className="ph-ic">🎬</span>
@@ -1578,7 +1585,7 @@ export default function TesisDetailPage() {
 
             {/* ULAŞIM */}
             {ulasim && (
-              <div className="panel">
+              <div className="panel panel-ulasim">
                 <div className="ph" onClick={() => togglePanel("transport")}>
                   <div className="ph-l">
                     <span className="ph-ic">🚌</span>
@@ -1703,7 +1710,7 @@ export default function TesisDetailPage() {
             )}
 
             {/* KURALLAR */}
-            <div className="panel">
+            <div className="panel panel-kurallar">
               <div className="ph" onClick={() => togglePanel("rules")}>
                 <div className="ph-l"><span className="ph-ic">📋</span><div><div className="ph-title">Bilinmesi Gerekenler</div><div className="ph-sub">Kurallar & Kampanyalar</div></div></div>
                 <svg className={`ch${openPanels.rules ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1743,7 +1750,7 @@ export default function TesisDetailPage() {
             </div>
 
             {menuKategoriler.length > 0 && (
-              <div className="panel">
+              <div className="panel panel-menu">
                 <div className="ph" onClick={() => togglePanel("menu")}>
                   <div className="ph-l">
                     <span className="ph-ic">🍽️</span>
