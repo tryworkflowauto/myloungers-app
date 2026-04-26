@@ -821,6 +821,7 @@ export default function IsletmeSezlongPage() {
             .eq("tesis_id", tesisId)
             .is("kullanici_id", null)
             .eq("durum", "onaylandi")
+            .eq("giris_yapildi", false)
             .contains("sezlong_ids", [seciliSezlongId]);
           
           if (cancelError) {
@@ -911,6 +912,7 @@ export default function IsletmeSezlongPage() {
         .eq("tesis_id", tesisId)
         .is("kullanici_id", null)
         .eq("durum", "onaylandi")
+        .eq("giris_yapildi", false)
         .overlaps("sezlong_ids", secilenIdArray);
       
       if (cancelError) {

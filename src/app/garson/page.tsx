@@ -173,6 +173,10 @@ export default function GarsonPage() {
 
   async function fetchAktifRezervasyonlar() {
     if (!tesisId) return;
+    if (!kendiUuids || kendiUuids.length === 0) {
+      setAktifRezervasyonlar([]);
+      return;
+    }
     const today = new Date().toISOString().split("T")[0];
     const { data, error } = await supabase
       .from("rezervasyonlar")
@@ -180,7 +184,8 @@ export default function GarsonPage() {
       .eq("tesis_id", tesisId)
       .eq("giris_yapildi", true)
       .in("durum", ["aktif", "onaylandi", "bekliyor"])
-      .gte("bitis_tarih", today)
+      .eq("baslangic_tarih", today)
+      .in("sezlong_id", kendiUuids)
       .order("baslangic_tarih", { ascending: false });
     if (error) {
       console.error("fetchAktifRezervasyonlar error:", error);
@@ -190,7 +195,15 @@ export default function GarsonPage() {
     const filtered = (data ?? []).filter(
       (r: any) => !sistemRezerviAdlari.includes(r.musteri_adi || "")
     );
-    setAktifRezervasyonlar(filtered);
+    const sortedData = filtered.sort((a: any, b: any) => {
+      const grupA = a.sezlonglar?.sezlong_gruplari?.ad ?? "";
+      const grupB = b.sezlonglar?.sezlong_gruplari?.ad ?? "";
+      if (grupA !== grupB) return grupA.localeCompare(grupB, "tr");
+      const numA = parseInt(String(a.sezlonglar?.numara ?? "0"), 10) || 0;
+      const numB = parseInt(String(b.sezlonglar?.numara ?? "0"), 10) || 0;
+      return numA - numB;
+    });
+    setAktifRezervasyonlar(sortedData);
   }
 
   async function handleBosaAl() {
@@ -620,7 +633,7 @@ export default function GarsonPage() {
   useEffect(() => {
     if (tesisId) fetchAktifRezervasyonlar();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tesisId]);
+  }, [tesisId, kendiUuids]);
 
   async function handleYoldaCiktim(cagriId: string, createdAt: string) {
     const now = new Date();
