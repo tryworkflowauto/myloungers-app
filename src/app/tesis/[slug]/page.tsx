@@ -1049,6 +1049,7 @@ export default function TesisDetailPage() {
     <>
       <style>{`
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html,body{overflow-x:hidden;max-width:100vw}
         :root{
           --navy:#0A1628;--teal:#0ABAB5;--tdk:#0D8C89;--tlt:#E6F7F7;--or:#F5821F;--wh:#fff;
           --bg:#F4F6F9;--bd:#E5E7EB;--i2:#374151;--i3:#6B7280;
@@ -1065,7 +1066,7 @@ export default function TesisDetailPage() {
         .nav-profil:hover{border-color:var(--navy);color:var(--navy)}
         .fav-btn{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--i3);background:none;border:1.5px solid var(--bd);padding:7px 14px;border-radius:10px;cursor:pointer;transition:all .12s}
         .fav-btn.on{border-color:#EF4444;color:#EF4444;background:#FEF2F2}
-        .wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+        .wrap{max-width:1240px;margin:0 auto;padding:0 20px;overflow-x:hidden}
         .bc{padding:14px 0;display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--i3)}
         .bc a{color:var(--i3);text-decoration:none}.bc a:hover{color:var(--teal)}
         .bc-sep{color:var(--bd)}
@@ -1095,6 +1096,11 @@ export default function TesisDetailPage() {
         .panel{background:var(--wh);border:1px solid var(--bd);border-radius:var(--r4);overflow:hidden;box-shadow:var(--sh)}
         .ph{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;user-select:none;gap:12px}
         .ph:hover{background:#FAFAFA}
+        .ph-teal{background:#0d9488}
+        .ph-teal:hover{background:#0f766e}
+        .ph-teal .ph-title{color:#fff}
+        .ph-teal .ph-sub{color:rgba(255,255,255,.78)}
+        .ph-teal svg{stroke:#fff}
         .ph-l{display:flex;align-items:center;gap:12px}
         .ph-ic{font-size:1.3rem;flex-shrink:0}
         .ph-title{font-size:.92rem;font-weight:800;color:var(--navy)}
@@ -1275,9 +1281,17 @@ export default function TesisDetailPage() {
           .srows{display:flex;flex-direction:column;gap:8px}
           .su{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
           .schema{overflow-x:auto;-webkit-overflow-scrolling:touch}
-          .layout{display:flex;flex-direction:column}
-          .main-col{display:contents}
-          .sidebar{position:static;order:6}
+          .wrap{padding:0 12px}
+          .layout{display:flex;flex-direction:column;gap:12px}
+          .main-col{display:contents;padding:0;margin:0}
+          .sidebar{position:static;order:6;width:100%;max-width:100%}
+          .layout > *,.main-col > *{width:100%;max-width:100%;flex:0 0 auto;min-width:0}
+          .panel{border-radius:12px}
+          .ph{padding:12px 14px;gap:10px}
+          .ph-l{gap:10px}
+          .ph-ic{font-size:1.1rem}
+          .ph-title{font-size:.86rem}
+          .ph-sub{font-size:.68rem}
           .panel-hakkinda{order:1}
           .panel-imkanlar{order:2}
           .panel-saatler{order:3}
@@ -1289,7 +1303,7 @@ export default function TesisDetailPage() {
           .panel-menu{order:10}
           .panel-yorumlar{order:11}
         }
-        @media(max-width:480px){.wrap{padding:0 12px}.gall{height:150px}.gp-main{width:220px;height:150px}.gp-tr,.gp-mr,.gp-bl,.gp-br{width:100px;height:150px}}
+        @media(max-width:480px){.wrap{padding:0 8px}.gall{height:150px}.gp-main{width:220px;height:150px}.gp-tr,.gp-mr,.gp-bl,.gp-br{width:100px;height:150px}}
       `}</style>
 
       {/* NAV */}
@@ -1498,8 +1512,8 @@ export default function TesisDetailPage() {
 
             {/* ŞEZLONG DÜZENİ */}
             <div className="panel panel-szl" ref={szlRef}>
-              <div className="ph" onClick={() => togglePanel("szl")}>
-                <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Şezlong Düzeni</div><div className="ph-sub">100 şezlong · İskele · VIP · Silver</div></div></div>
+              <div className={`ph${!openPanels.szl ? " ph-teal" : ""}`} onClick={() => togglePanel("szl")}>
+                <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Şezlong Seç</div><div className="ph-sub">100 şezlong · İskele · VIP · Silver</div></div></div>
                 <svg className={`ch${openPanels.szl ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {openPanels.szl && <div className="pb" style={{ padding: 22 }}>
