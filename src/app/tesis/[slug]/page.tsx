@@ -508,10 +508,10 @@ export default function TesisDetailPage() {
       const startStr = fmtDate(selStart);
       const endStr = selEnd ? fmtDate(selEnd) : startStr;
       
-      // 1) Onaylı rezervasyonlar
+      // 1) Onaylı rezervasyonlar — hem sezlong_id hem sezlong_ids çek (eski kayıtlarda ids NULL)
       const { data: onayliData, error: onayliErr } = await supabase
         .from("rezervasyonlar")
-        .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
+        .select("sezlong_id, sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
         .eq("tesis_id", tesisId)
         .in("durum", ["aktif", "onaylandi"])
         .lte("baslangic_tarih", endStr)
@@ -521,7 +521,7 @@ export default function TesisDetailPage() {
       const nowIso = new Date().toISOString();
       const { data: bekleyenData, error: bekleyenErr } = await supabase
         .from("rezervasyonlar")
-        .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
+        .select("sezlong_id, sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
         .eq("tesis_id", tesisId)
         .eq("durum", "bekliyor")
         .gt("rezerveli_kadar", nowIso)
@@ -549,7 +549,18 @@ export default function TesisDetailPage() {
         dolu: new Set<string>(),
       };
       rezData.forEach((r: any) => {
-        const ids = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
+        // Eski kayıtlarda sezlong_ids NULL, yeni kayıtlarda her ikisi de dolu.
+        // Her iki kaynağı birleştirerek tüm şezlong UUID'lerini topla.
+        const ids = new Set<string>();
+        if (Array.isArray(r.sezlong_ids)) {
+          r.sezlong_ids.forEach((id: any) => {
+            if (typeof id === "string" && id.trim()) ids.add(id.trim());
+          });
+        }
+        if (r.sezlong_id && typeof r.sezlong_id === "string" && r.sezlong_id.trim()) {
+          ids.add(r.sezlong_id.trim());
+        }
+
         const musteriAdi = (r.musteri_adi || "").toUpperCase();
         let tip: "rezerve" | "bakim" | "kilitli" | "dolu" = "dolu";
         // Bekleyen rezervasyon → zorla "dolu" (başka müşteri için kilit)
@@ -558,11 +569,7 @@ export default function TesisDetailPage() {
         } else if (musteriAdi === "İŞLETME REZERVİ") tip = "rezerve";
         else if (musteriAdi === "BAKIM") tip = "bakim";
         else if (musteriAdi === "İŞLETME KİLİDİ") tip = "kilitli";
-        ids.forEach((id: string) => {
-          if (typeof id === "string" && id.trim()) {
-            newByType[tip].add(id);
-          }
-        });
+        ids.forEach((id) => newByType[tip].add(id));
       });
       
       if (!cancelled) {
