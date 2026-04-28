@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
     }
     const amountStr = amountNum.toFixed(2);
 
-    console.log('[paratika/session] istek:', { orderId, amount: amountStr, customerEmail });
+    const rawIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '';
+    const customerIp = rawIp.split(',')[0].trim() || '127.0.0.1';
+    console.log('[paratika/session] istek:', { orderId, amount: amountStr, customerEmail, customerIp, rawIp });
 
     const params = new URLSearchParams();
     params.append('MERCHANT', '10008941');
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
     params.append('CUSTOMERNAME', `${customerName || ''} ${customerSurname || ''}`.trim());
     params.append('CUSTOMEREMAIL', customerEmail || '');
     params.append('CUSTOMERPHONE', customerPhone || '');
-    params.append('CUSTOMERIP', req.headers.get('x-forwarded-for') || '127.0.0.1');
+    params.append('CUSTOMERIP', customerIp);
     params.append('BILLTOADDRESSLINE', 'Türkiye');
     params.append('BILLTOCITY', 'Muğla');
     params.append('BILLTOCOUNTRY', 'TR');
