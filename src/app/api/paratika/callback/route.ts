@@ -36,13 +36,15 @@ async function redirectForResponseCode(
         ? "id"
         : "rezervasyon_kodu";
     const lookupValue = normalizedMerchantPaymentId!;
+
+    // Birincil satırı çek — kardeş satır araması için metadata lazım
     const { data: rezRow, error: rezFetchErr } = await supabaseAdmin
       .from("rezervasyonlar")
-      .select("id, toplam_tutar, rezervasyon_kodu")
+      .select("id, toplam_tutar, rezervasyon_kodu, kullanici_id, tesis_id, baslangic_tarih, created_at")
       .eq(lookupColumn, lookupValue)
       .maybeSingle();
     if (rezFetchErr) {
-      console.error("[paratika/callback] toplam_tutar çekme:", rezFetchErr);
+      console.error("[paratika/callback] birincil satır çekme:", rezFetchErr);
     }
     if (!rezRow?.id) {
       console.error("[paratika/callback] rezervasyon bulunamadı:", {
@@ -51,54 +53,90 @@ async function redirectForResponseCode(
       });
       return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
     }
-    const rawTt = rezRow?.toplam_tutar;
-    const toplamTutar =
-      typeof rawTt === "number"
-        ? rawTt
-        : rawTt != null
-          ? Number(rawTt)
-          : NaN;
 
-    const updatePayload: {
-      durum: string;
-      pgtranid?: string;
-      giris_yapildi?: boolean;
-      bakiye_yuklenen?: number;
-      bakiye_kalan?: number;
-      bakiye_harcanan?: number;
-      merchantpaymentid?: string;
-    } = { durum: "aktif" };
-    updatePayload.giris_yapildi = false;
-    updatePayload.merchantpaymentid = normalizedMerchantPaymentId;
+    // Aynı satın almadan gelen kardeş satırları bul.
+    // goRes() döngüsündeki INSERT'ler birbirinden saniyeler içinde oluşur;
+    // ±30 saniyelik pencere tüm kardeş satırları yakalar.
+    type HedefRow = { id: string; toplam_tutar: number | null };
+    let hedefRows: HedefRow[] = [{ id: String(rezRow.id), toplam_tutar: rezRow.toplam_tutar ?? null }];
+
+    if (rezRow.kullanici_id && rezRow.tesis_id && rezRow.baslangic_tarih && rezRow.created_at) {
+      const merkez = new Date(rezRow.created_at as string).getTime();
+      const windowStart = new Date(merkez - 30_000).toISOString();
+      const windowEnd   = new Date(merkez + 30_000).toISOString();
+
+      const { data: kardesRows, error: kardesErr } = await supabaseAdmin
+        .from("rezervasyonlar")
+        .select("id, toplam_tutar")
+        .eq("kullanici_id", rezRow.kullanici_id)
+        .eq("tesis_id", rezRow.tesis_id)
+        .eq("baslangic_tarih", rezRow.baslangic_tarih)
+        .gte("created_at", windowStart)
+        .lte("created_at", windowEnd);
+
+      if (kardesErr) {
+        console.error("[paratika/callback] kardeş satır arama hatası:", kardesErr);
+      } else if (kardesRows && kardesRows.length > 0) {
+        // Birincil satırın zaten listede olduğundan emin ol
+        const birincilVarMi = kardesRows.some((r: any) => String(r.id) === String(rezRow.id));
+        hedefRows = [
+          ...(birincilVarMi ? [] : [{ id: String(rezRow.id), toplam_tutar: rezRow.toplam_tutar ?? null }]),
+          ...kardesRows.map((r: any) => ({ id: String(r.id), toplam_tutar: r.toplam_tutar ?? null })),
+        ];
+      }
+    }
+
+    console.log(`[paratika/callback] güncellenecek satır sayısı: ${hedefRows.length}`, hedefRows.map(r => r.id));
+
+    // Her satırı kendi toplam_tutar'ına göre ayrı ayrı güncelle
+    const basePayload: Record<string, unknown> = {
+      durum: "aktif",
+      giris_yapildi: false,
+      merchantpaymentid: normalizedMerchantPaymentId,
+    };
     if (normalizedPgtranid != null) {
-      updatePayload.pgtranid = normalizedPgtranid;
+      basePayload.pgtranid = normalizedPgtranid;
     }
-    if (!Number.isNaN(toplamTutar)) {
-      updatePayload.bakiye_yuklenen = toplamTutar;
-      updatePayload.bakiye_kalan = toplamTutar;
-      updatePayload.bakiye_harcanan = 0;
+
+    let basariliSayisi = 0;
+    for (const hedef of hedefRows) {
+      const satırTutar =
+        typeof hedef.toplam_tutar === "number"
+          ? hedef.toplam_tutar
+          : hedef.toplam_tutar != null
+            ? Number(hedef.toplam_tutar)
+            : NaN;
+
+      const rowPayload = {
+        ...basePayload,
+        ...(!Number.isNaN(satırTutar)
+          ? { bakiye_yuklenen: satırTutar, bakiye_kalan: satırTutar, bakiye_harcanan: 0 }
+          : {}),
+      };
+
+      const { data: updatedRows, error: updErr } = await supabaseAdmin
+        .from("rezervasyonlar")
+        .update(rowPayload)
+        .eq("id", hedef.id)
+        .select("id, durum, pgtranid");
+
+      if (updErr) {
+        console.error("[paratika/callback] satır güncelleme hatası:", {
+          error: updErr,
+          rezervasyonId: hedef.id,
+        });
+      } else if (updatedRows && updatedRows.length > 0) {
+        basariliSayisi++;
+        console.log("[paratika/callback] satır güncellendi:", updatedRows[0]);
+      } else {
+        console.warn("[paratika/callback] update 0 satır döndü:", hedef.id);
+      }
     }
-    const { data: updatedRows, error } = await supabaseAdmin
-      .from("rezervasyonlar")
-      .update(updatePayload)
-      .eq("id", rezRow.id)
-      .select("id, durum, pgtranid");
-    if (error) {
-      console.error("[paratika/callback] rezervasyon güncelleme:", {
-        error,
-        rezervasyonId: rezRow.id,
-        updatePayload,
-      });
+
+    if (basariliSayisi === 0) {
+      console.error("[paratika/callback] hiçbir satır güncellenemedi");
       return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
     }
-    if (!updatedRows || updatedRows.length === 0) {
-      console.error("[paratika/callback] update 0 satır döndü:", {
-        rezervasyonId: rezRow.id,
-        updatePayload,
-      });
-      return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
-    }
-    console.log("[paratika/callback] update success:", updatedRows[0]);
   }
   if (ok) return NextResponse.redirect("https://myloungers.com/profil");
   return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");

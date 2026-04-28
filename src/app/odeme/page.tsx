@@ -321,16 +321,34 @@ function OdemeContent() {
   async function startParatikaPayment() {
     if (paymentInFlightRef.current) return;
     paymentInFlightRef.current = true;
+    setPaymentError(false);
+    setPaymentLoading(true);
     try {
-      setPaymentError(false);
-      setPaymentLoading(true);
       const orderId = queryParams?.get("rezervasyonId")?.trim() || queryParams?.get("id")?.trim() || "";
-      if (!orderId) { console.error("orderId bulunamadı"); }
+      if (!orderId) {
+        console.error("[startParatikaPayment] orderId boş — rezervasyon DB'ye kaydedilemedi veya URL'de eksik");
+        paymentInFlightRef.current = false;
+        setPaymentLoading(false);
+        setPaymentError(true);
+        return;
+      }
+
+      const amount = res.toplam;
+      if (!amount || amount <= 0) {
+        console.error("[startParatikaPayment] Geçersiz tutar:", amount);
+        paymentInFlightRef.current = false;
+        setPaymentLoading(false);
+        setPaymentError(true);
+        return;
+      }
+
+      console.log("[startParatikaPayment] istek:", { orderId, amount });
+
       const resp = await fetch("/api/paratika/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: res.toplam,
+          amount,
           orderId,
           customerName: form.name || "Misafir",
           customerSurname: form.surname || "",
@@ -338,15 +356,20 @@ function OdemeContent() {
           customerPhone: form.phone || "",
         }),
       });
-      if (!resp.ok) throw new Error("Session alınamadı");
+
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({})) as Record<string, unknown>;
+        console.error("[startParatikaPayment] Paratika session hatası:", errBody);
+        throw new Error(String(errBody?.error || "Session alınamadı"));
+      }
+
       const data = await resp.json();
       const token = data?.sessionToken;
       if (!token) throw new Error("Session token boş");
-      const returnUrl = "https://myloungers.com/api/paratika/callback";
       const payUrl = `https://vpos.paratika.com.tr/payment/${token}`;
       window.location.href = payUrl;
     } catch (err) {
-      console.error("Paratika ödeme başlatma hatası:", err);
+      console.error("[startParatikaPayment] hata:", err);
       paymentInFlightRef.current = false;
       setPaymentLoading(false);
       setPaymentError(true);

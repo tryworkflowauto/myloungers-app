@@ -298,7 +298,7 @@ export default function ProfilPage() {
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .select(
-            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, sezlong_ids, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
+            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, sezlong_ids, pgtranid, created_at, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
           .in("durum", ["aktif", "onaylandi", "iptal", "tamamlandi"])
@@ -370,6 +370,11 @@ export default function ProfilPage() {
           }
         }
 
+        // Her satır ayrı kart — gruplama yok; baslangic_tarih desc sırala
+        const sortedRezData: any[] = [...(rezData ?? [])].sort((a, b) =>
+          String(b.baslangic_tarih ?? "").localeCompare(String(a.baslangic_tarih ?? ""))
+        );
+
         const today = new Date().toISOString().slice(0, 10);
 
         const toplamRez = (rezData ?? []).length;
@@ -412,7 +417,7 @@ export default function ProfilPage() {
             return sum + (isNaN(b) ? 0 : b);
           }, 0);
 
-        const uiRes: Reservation[] = (rezData ?? []).map((r: any) => {
+        const uiRes: Reservation[] = sortedRezData.map((r: any) => {
           const startStr = r.baslangic_tarih as string | null;
           const endStr = r.bitis_tarih as string | null;
           const start = startStr ? new Date(startStr) : null;
@@ -478,37 +483,27 @@ export default function ProfilPage() {
             } | null;
           }).sezlong;
           
-          // sezlong_ids array'inden tüm şezlongları gruba göre grupla
-          const rezSezlongIds: string[] = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
-          const gruplar: Record<string, string[]> = {};
-          
-          for (const sid of rezSezlongIds) {
-            const s = sezlongMap[String(sid)];
-            if (!s) continue;
+          // Her satır tek bir şezlonga karşılık geliyor — tek etiket üret
+          let szlLabel = "-";
+          // Kaynak 1: sezlong_ids[0] → sezlongMap
+          const ilkSzlId = Array.isArray(r.sezlong_ids) && r.sezlong_ids.length > 0
+            ? String(r.sezlong_ids[0])
+            : r.sezlong_id ? String(r.sezlong_id) : null;
+          if (ilkSzlId && sezlongMap[ilkSzlId]) {
+            const s = sezlongMap[ilkSzlId];
             const gAd = (s.grupAd || "").trim();
             const num = s.numara;
-            if (!gAd || num == null || String(num).trim() === "") continue;
-            const prefix = gAd.charAt(0).toUpperCase();
-            const etiket = `${prefix}${num}`;
-            if (!gruplar[gAd]) gruplar[gAd] = [];
-            gruplar[gAd].push(etiket);
+            if (gAd && num != null && String(num).trim() !== "") {
+              szlLabel = `${gAd} ${gAd.charAt(0).toUpperCase()}${num}`;
+            }
           }
-          
-          let szlLabel = "-";
-          const grupKeys = Object.keys(gruplar);
-          if (grupKeys.length > 0) {
-            // Her grup için "Grup: E1, E2, E3" formatında satır oluştur
-            szlLabel = grupKeys
-              .map((gAd) => `${gAd}: ${gruplar[gAd].join(", ")}`)
-              .join("\n");
-          } else {
-            // Eski mantığa fallback (sezlong_ids boşsa eski sezlong alanını kullan)
-            const grupAd = sl?.grup?.ad?.trim();
-            const sezlongNum = sl?.numara;
+          // Kaynak 2: embedded sezlong (fallback)
+          if (szlLabel === "-" && sl) {
+            const grupAd = (sl.grup?.ad || "").trim();
+            const sezlongNum = sl.numara;
             const hasNum = sezlongNum != null && String(sezlongNum).trim() !== "";
             if (grupAd && hasNum) {
-              const prefix = grupAd.charAt(0).toUpperCase();
-              szlLabel = `${grupAd} - ${prefix}${sezlongNum}`;
+              szlLabel = `${grupAd} ${grupAd.charAt(0).toUpperCase()}${sezlongNum}`;
             } else if (hasNum) {
               szlLabel = `No: ${sezlongNum}`;
             } else if (grupAd) {
@@ -974,14 +969,14 @@ export default function ProfilPage() {
 
   async function confirmCancel() {
     if (!cancelModal) return;
-    const id = cancelModal.id;
+    const primaryId = cancelModal.id;
     setCancelLoading(true);
     setCancelError(null);
     try {
       const refundRes = await fetch("/api/paratika/refund", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rezervasyonId: id }),
+        body: JSON.stringify({ rezervasyonId: primaryId }),
       });
       const refundData = (await refundRes.json().catch(() => ({}))) as {
         success?: boolean;
@@ -994,7 +989,7 @@ export default function ProfilPage() {
       }
       setReservations((prev) =>
         prev.map((r) =>
-          r.id === id
+          r.id === primaryId
             ? {
                 ...r,
                 status: "cancel",

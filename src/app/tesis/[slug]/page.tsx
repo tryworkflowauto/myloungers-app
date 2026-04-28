@@ -100,6 +100,8 @@ export default function TesisDetailPage() {
   });
   const szlRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLDivElement>(null);
+  const resInFlightRef = useRef(false);
+  const [resLoading, setResLoading] = useState(false);
   const [userRole, setUserRole] = useState<string>("musteri");
 
   function mapDbDurumToStatus(durum: string | null | undefined): SzlStatus {
@@ -667,8 +669,11 @@ export default function TesisDetailPage() {
   }
 
   async function goRes() {
+    if (resInFlightRef.current) return;
     if (!selStart) { alert("Lütfen giriş tarihini seçin."); return; }
     if (selSzls.length === 0) { alert("Lütfen en az 1 şezlong seçin."); return; }
+    resInFlightRef.current = true;
+    setResLoading(true);
     function padZ(n: number) { return String(n).padStart(2, "0"); }
     const startStr = selStart.getFullYear() + "-" + padZ(selStart.getMonth() + 1) + "-" + padZ(selStart.getDate());
     const endStr = selEnd
@@ -680,51 +685,59 @@ export default function TesisDetailPage() {
 
     const { data: authRez } = await supabase.auth.getUser();
     const kullaniciId = authRez?.user?.id ?? null;
-
-    const sezlongIdsArr: string[] = [];
     const tesisIdForSez = row?.id as string | undefined;
-    if (tesisIdForSez) {
-      for (const s of selSzls) {
-        const z = zones.find((zn) => zn.key === s.zoneKey);
-        const prefix = z?.prefix ?? "";
-        const numara = prefix ? parseInt(s.no.slice(prefix.length), 10) : NaN;
-        if (!Number.isFinite(numara)) continue;
-        const { data: szRow } = await supabase
-          .from("sezlonglar")
-          .select("id")
-          .eq("grup_id", s.zoneKey)
-          .eq("numara", numara)
-          .eq("tesis_id", tesisIdForSez)
-          .maybeSingle();
-        if (szRow?.id) {
-          sezlongIdsArr.push(String(szRow.id));
-        }
-      }
-    }
+    // Tüm satırlar aynı tutma süresini paylaşır (tek ödeme akışı)
+    const rezerveliKadar = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    // Supabase üzerinde rezervasyon kaydı oluştur
+    // Seçilen her şezlong için ayrı rezervasyon satırı oluştur.
+    // İlk satırın ID'si Paratika session referansı olarak kullanılır.
     let rezervasyonIdParam: string | null = null;
     try {
-      const { data: rezData, error: rezError } = await supabase
-        .from("rezervasyonlar")
-        .insert({
-          tesis_id: row?.id ?? null,
-          kullanici_id: kullaniciId,
-          sezlong_id: sezlongIdsArr[0] ?? null,
-          sezlong_ids: sezlongIdsArr,
-          baslangic_tarih: startStr,
-          bitis_tarih: endStr,
-          kisi_sayisi: selSzls.length,
-          toplam_tutar: toplamFiyat,
-          durum: "bekliyor",
-          rezerveli_kadar: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-        })
-        .select("id")
-        .single();
-      if (rezError) {
-        console.error("Rezervasyon oluşturma hatası:", rezError);
-      } else if (rezData?.id) {
-        rezervasyonIdParam = String(rezData.id);
+      for (let i = 0; i < selSzls.length; i++) {
+        const s = selSzls[i];
+        const satırFiyat = s.price * Math.max(gunSayisi, 1);
+
+        // Bu şezlongun DB UUID'sini çek
+        let sezlongUuid: string | null = null;
+        if (tesisIdForSez) {
+          const z = zones.find((zn) => zn.key === s.zoneKey);
+          const prefix = z?.prefix ?? "";
+          const numara = prefix ? parseInt(s.no.slice(prefix.length), 10) : NaN;
+          if (Number.isFinite(numara)) {
+            const { data: szRow } = await supabase
+              .from("sezlonglar")
+              .select("id")
+              .eq("grup_id", s.zoneKey)
+              .eq("numara", numara)
+              .eq("tesis_id", tesisIdForSez)
+              .maybeSingle();
+            if (szRow?.id) sezlongUuid = String(szRow.id);
+          }
+        }
+
+        const { data: rezData, error: rezError } = await supabase
+          .from("rezervasyonlar")
+          .insert({
+            tesis_id: row?.id ?? null,
+            kullanici_id: kullaniciId,
+            sezlong_id: sezlongUuid,
+            sezlong_ids: sezlongUuid ? [sezlongUuid] : [],
+            baslangic_tarih: startStr,
+            bitis_tarih: endStr,
+            kisi_sayisi: 1,
+            toplam_tutar: satırFiyat,
+            durum: "bekliyor",
+            rezerveli_kadar: rezerveliKadar,
+          })
+          .select("id")
+          .single();
+
+        if (rezError) {
+          console.error(`[goRes] Rezervasyon ${i + 1}/${selSzls.length} oluşturma hatası:`, rezError);
+        } else if (rezData?.id && rezervasyonIdParam === null) {
+          // İlk başarılı satırın ID'si Paratika session için referans olarak kullanılır
+          rezervasyonIdParam = String(rezData.id);
+        }
       }
     } catch (e) {
       console.error("Rezervasyon oluşturma beklenmeyen hata:", e);
@@ -741,6 +754,12 @@ export default function TesisDetailPage() {
     });
     if (rezervasyonIdParam) params.set("rezervasyonId", rezervasyonIdParam);
     router.push("/odeme?" + params.toString());
+    // Yönlendirme başladı; bayrağı resetlemiyoruz — sayfa zaten değişecek.
+    // Hata durumunda (rezervasyonIdParam null ise) butonu tekrar aktif et.
+    if (!rezervasyonIdParam) {
+      resInFlightRef.current = false;
+      setResLoading(false);
+    }
   }
 
   // Tesis videosu: row.video_url kolonunu otomatik embed et
@@ -1002,8 +1021,9 @@ export default function TesisDetailPage() {
     }
   }
 
-  const btnDisabled = !selStart || selSzls.length === 0;
-  const btnText = !selStart ? "Tarih Seçerek Başlayın"
+  const btnDisabled = !selStart || selSzls.length === 0 || resLoading;
+  const btnText = resLoading ? "İşleniyor..."
+    : !selStart ? "Tarih Seçerek Başlayın"
     : selSzls.length === 0 ? "🛏 Haritadan Şezlong Seç"
     : "📅 Rezervasyonu Tamamla →";
 
@@ -2131,7 +2151,7 @@ export default function TesisDetailPage() {
             )}
           </div>
           <div className="bb-p">₺{total.toLocaleString("tr-TR")}</div>
-          <button className="bb-btn" onClick={goRes}>Rezervasyonu Tamamla →</button>
+          <button className="bb-btn" onClick={goRes} disabled={resLoading} style={resLoading ? { opacity: 0.7, cursor: "not-allowed" } : undefined}>{resLoading ? "İşleniyor..." : "Rezervasyonu Tamamla →"}</button>
         </div>
       )}
 
