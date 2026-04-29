@@ -121,6 +121,7 @@ export default function IsletmeTesisPage() {
   const [mapsLink, setMapsLink]         = useState("https://maps.google.com/?q=Zuzuu+Beach+Hotel+Bodrum");
   const [aciklama, setAciklama]         = useState("");
   const [kategoriler, setKategoriler]   = useState<string[]>(["BEACH CLUB", "OTEL"]);
+  const [iletisimNumarasi, setIletisimNumarasi] = useState("");
   const [tesisId, setTesisId]           = useState<string | null>(null);
 
   // Ulaşım Rehberi
@@ -199,7 +200,7 @@ export default function IsletmeTesisPage() {
 
       const { data, error } = await supabase
         .from("tesisler")
-        .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar")
+        .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi")
         .eq("id", tesis_id)
         .limit(1)
         .single();
@@ -258,6 +259,7 @@ export default function IsletmeTesisPage() {
       if (row.enlem) setEnlem(String(row.enlem));
       if (row.boylam) setBoylam(String(row.boylam));
       if (row.maps_link) setMapsLink(row.maps_link);
+      if (row.iletisim_numarasi) setIletisimNumarasi(row.iletisim_numarasi);
 
       const imkanlarDb = (row.imkanlar as ImkanItem[] | null | undefined) || [];
       setImkanlar(imkanlarDb.length ? imkanlarDb : INIT_IMKANLAR);
@@ -421,6 +423,10 @@ export default function IsletmeTesisPage() {
       showToast("❌ Kayıt başarısız");
       return;
     }
+    if (iletisimNumarasi.trim() && iletisimNumarasi.trim().length < 10) {
+      showToast("❌ İletişim numarası en az 10 karakter olmalı");
+      return;
+    }
     // sehir / ilce senkronizasyonu (kullanıcı alanı değiştirdiyse)
     if (sehirIlce.trim()) {
       const parts = sehirIlce.split(",").map((p) => p.trim()).filter(Boolean);
@@ -460,6 +466,7 @@ export default function IsletmeTesisPage() {
       },
       aktif: tesisAktif,
       fotograflar: photos,
+      iletisim_numarasi: iletisimNumarasi.trim() || null,
     };
     const { error } = await supabase.from("tesisler").update(payload).eq("id", tesisId);
     if (error) {
@@ -548,6 +555,16 @@ export default function IsletmeTesisPage() {
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Web Sitesi</label>
               <input type="url" value={webSitesi} onChange={(e) => setWebSitesi(e.target.value)} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>İletişim Numarası <span style={{ color: GRAY400, fontWeight: 400 }}>("Tesisi Ara" butonu için)</span></label>
+              <input
+                type="tel"
+                value={iletisimNumarasi}
+                onChange={(e) => setIletisimNumarasi(e.target.value)}
+                placeholder="+90 5XX XXX XX XX"
+                style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+              />
             </div>
           </div>
           <div style={{ marginTop: 8 }}>

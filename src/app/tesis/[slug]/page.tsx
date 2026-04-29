@@ -2143,6 +2143,39 @@ export default function TesisDetailPage() {
               <iframe className="map-embed" src={HOTEL.mapsEmbed} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="map" />
             </div>
 
+            {/* TESISI ARA */}
+            {(() => {
+              const rawNum = (row as any)?.iletisim_numarasi as string | null | undefined;
+              const tel = rawNum ? rawNum.replace(/[\s\-\(\)]/g, "") : null;
+              return (
+                <div className="bcard" style={{ flexDirection: "column", alignItems: "stretch" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <span className="bcard-i">📞</span>
+                    <div>
+                      <div className="bcard-t">Tesis İletişim</div>
+                      {tel && <div className="bcard-s">{rawNum}</div>}
+                      {!tel && <div className="bcard-s">İletişim numarası henüz eklenmedi</div>}
+                    </div>
+                  </div>
+                  {tel ? (
+                    <a
+                      href={`tel:${tel}`}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 16px", borderRadius: 10, background: "var(--teal)", color: "white", fontWeight: 700, fontSize: ".85rem", textDecoration: "none", cursor: "pointer" }}
+                    >
+                      📞 Tesisi Ara
+                    </a>
+                  ) : (
+                    <button
+                      disabled
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 16px", borderRadius: 10, background: "#CBD5E1", color: "#94A3B8", fontWeight: 700, fontSize: ".85rem", border: "none", cursor: "not-allowed", opacity: 0.5, width: "100%" }}
+                    >
+                      📞 Tesisi Ara
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ROZET */}
             <div className="bcard">
               <div className="bcard-i">🏆</div>
