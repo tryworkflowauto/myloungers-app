@@ -101,6 +101,8 @@ export default function TesisDetailPage() {
   const szlRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLDivElement>(null);
   const resInFlightRef = useRef(false);
+  // Realtime channel callback'inin güncel rezerve sorgusunu tetiklemesi için ref
+  const refreshRezervedRef = useRef<(() => void) | null>(null);
   const [resLoading, setResLoading] = useState(false);
   const [userRole, setUserRole] = useState<string>("musteri");
 
@@ -576,9 +578,38 @@ export default function TesisDetailPage() {
         setRezervedByType(newByType);
       }
     }
+    // Ref'e ata (realtime channel callback'i bu ref'i kullanır)
+    refreshRezervedRef.current = loadRezervedSezlongs;
     loadRezervedSezlongs();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      refreshRezervedRef.current = null;
+    };
   }, [row, selStart, selEnd]);
+
+  // Realtime channel: rezervasyonlar tablosunu dinle, olay gelince doluluk sorgusunu yenile
+  useEffect(() => {
+    if (!row?.id || !selStart) return;
+    const tesisId = String((row as { id?: unknown }).id ?? "");
+    if (!tesisId) return;
+    const d = selStart;
+    const tarihStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    // Benzersiz suffix: aynı isimde mevcut channel'ın döndürülmesini (deduplication) önler
+    const uid = Math.random().toString(36).slice(2);
+    const channel = supabase
+      .channel(`tesis-rezervasyonlar-${tesisId}-${tarihStr}-${uid}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "rezervasyonlar", filter: `tesis_id=eq.${tesisId}` },
+        () => {
+          refreshRezervedRef.current?.();
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [row?.id, selStart]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
