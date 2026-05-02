@@ -46,6 +46,27 @@ function fmtRange(start: Date | null, end: Date | null) {
 
 type SelSzl = { no: string; zoneKey: string; price: number };
 
+/** Supabase menu_kategorileri satırı (ad_en opsiyonel) */
+type MenuKategoriRow = {
+  id: string;
+  ad?: string | null;
+  ad_en?: string | null;
+  icon?: string | null;
+};
+
+/** Supabase menu_urunleri satırı (ad_en, aciklama_en opsiyonel) */
+type MenuUrunRow = {
+  id: string;
+  kategori_id?: string | null;
+  ad?: string | null;
+  ad_en?: string | null;
+  aciklama?: string | null;
+  aciklama_en?: string | null;
+  fiyat?: number | string | null;
+  gorsel_url?: string | null;
+  icon?: string | null;
+};
+
 export default function TesisDetailPage() {
   const router = useRouter();
   const { slug } = useParams<{ slug: string }>();
@@ -63,8 +84,8 @@ export default function TesisDetailPage() {
     about: false, feats: false, plan: false, szl: false,
     video: false, transport: false, rules: false, menu: false, reviews: false,
   });
-  const [menuKategoriler, setMenuKategoriler] = useState<any[]>([]);
-  const [menuUrunler, setMenuUrunler] = useState<any[]>([]);
+  const [menuKategoriler, setMenuKategoriler] = useState<MenuKategoriRow[]>([]);
+  const [menuUrunler, setMenuUrunler] = useState<MenuUrunRow[]>([]);
   const [aktifMenuKat, setAktifMenuKat] = useState<string>("tumü");
   const [yorumlar, setYorumlar] = useState<any[]>([]);
   const [yorumYukleniyor, setYorumYukleniyor] = useState(false);
@@ -368,8 +389,8 @@ export default function TesisDetailPage() {
         .select("*")
         .eq("tesis_id", row.id)
         .eq("aktif", true);
-      if (katlar) setMenuKategoriler(katlar);
-      if (urunler) setMenuUrunler(urunler);
+      if (katlar) setMenuKategoriler(katlar as MenuKategoriRow[]);
+      if (urunler) setMenuUrunler(urunler as MenuUrunRow[]);
     };
     fetchMenu();
   }, [row?.id]);
@@ -1894,7 +1915,7 @@ export default function TesisDetailPage() {
                           onClick={() => setAktifMenuKat(kat.id)}
                           style={{ padding: "6px 14px", borderRadius: 20, border: "none", background: aktifMenuKat === kat.id ? "#0ea5e9" : "#f1f5f9", color: aktifMenuKat === kat.id ? "#fff" : "#374151", fontWeight: 600, cursor: "pointer", fontSize: ".8rem" }}
                         >
-                          {kat.icon} {kat.ad}
+                          {kat.icon} {getLocalizedField(kat, "ad", siteLang)}
                         </button>
                       ))}
                     </div>
@@ -1904,23 +1925,27 @@ export default function TesisDetailPage() {
                       return (
                         <div key={kat.id} style={{ marginBottom: 20 }}>
                           <div style={{ fontWeight: 700, fontSize: ".9rem", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 6 }}>
-                            <span>{kat.icon}</span><span>{kat.ad}</span>
+                            <span>{kat.icon}</span><span>{getLocalizedField(kat, "ad", siteLang)}</span>
                           </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {katUrunler.map((urun) => (
-                              <div key={urun.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e5e7eb" }}>
-                                {urun.gorsel_url ? (
-                                  <img src={urun.gorsel_url} alt={urun.ad} style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover" }} />
-                                ) : (
-                                  <div style={{ width: 52, height: 52, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{urun.icon || "🍽️"}</div>
-                                )}
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontWeight: 600, fontSize: ".85rem" }}>{urun.ad}</div>
-                                  {urun.aciklama && <div style={{ fontSize: ".75rem", color: "#6b7280", marginTop: 2 }}>{urun.aciklama}</div>}
+                            {katUrunler.map((urun) => {
+                              const adLoc = getLocalizedField(urun, "ad", siteLang);
+                              const descLoc = getLocalizedField(urun, "aciklama", siteLang);
+                              return (
+                                <div key={urun.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                                  {urun.gorsel_url ? (
+                                    <img src={urun.gorsel_url} alt={adLoc} style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover" }} />
+                                  ) : (
+                                    <div style={{ width: 52, height: 52, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{urun.icon || "🍽️"}</div>
+                                  )}
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: ".85rem" }}>{adLoc}</div>
+                                    {descLoc ? <div style={{ fontSize: ".75rem", color: "#6b7280", marginTop: 2 }}>{descLoc}</div> : null}
+                                  </div>
+                                  <div style={{ fontWeight: 700, color: "#0ea5e9", fontSize: ".9rem", whiteSpace: "nowrap" }}>₺{urun.fiyat}</div>
                                 </div>
-                                <div style={{ fontWeight: 700, color: "#0ea5e9", fontSize: ".9rem", whiteSpace: "nowrap" }}>₺{urun.fiyat}</div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       );

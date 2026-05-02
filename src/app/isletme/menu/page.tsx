@@ -26,6 +26,8 @@ type Urun = {
   stok: boolean;
   name: string;
   desc: string;
+  ad_en?: string;
+  aciklama_en?: string;
   price: string;
   priceNum: number;
   birim: string;
@@ -40,6 +42,7 @@ type KategoriItem = {
   id: string;
   icon: string;
   name: string;
+  ad_en?: string;
 };
 
 const EMOJI_OPTS_KAT = ["🥤", "☕", "🍹", "🍺", "🍽️", "🐟", "🥗", "🍟", "🍦", "🍕", "🍰", "🧃"];
@@ -48,8 +51,8 @@ const EMOJI_OPTS_URUN = ["🍹", "🥤", "☕", "🍺", "🍷", "🍽️", "🐟
 const BIRIM_OPTS = ["adet", "porsiyon", "bardak", "şişe", "fincan", "dilim"];
 const BADGE_OPTS = [{ val: "", label: "Etiket Yok" }, { val: "populer", label: "⭐ Popüler" }, { val: "yeni", label: "🆕 Yeni" }, { val: "alkol", label: "🔞 Alkollü" }];
 
-const emptyUrunForm = { name: "", desc: "", icon: "🍹", kategori: "", price: "", birim: "adet", badge: "", aktif: true };
-const emptyCatForm = { name: "", icon: "🥤" };
+const emptyUrunForm = { name: "", desc: "", ad_en: "", aciklama_en: "", icon: "🍹", kategori: "", price: "", birim: "adet", badge: "", aktif: true };
+const emptyCatForm = { name: "", icon: "🥤", ad_en: "" };
 
 // ── ProductCard ────────────────────────────────────────────────────────────
 function ProductCard({
@@ -213,15 +216,26 @@ export default function IsletmeMenuPage() {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      supabase.from("menu_kategorileri").select("id, ad, icon, sira").eq("tesis_id", tesisId).eq("aktif", true).order("sira", { ascending: true }),
-      supabase.from("menu_urunleri").select("id, kategori_id, ad, aciklama, fiyat, gorsel_url, aktif, icon, birim, badges, stok").eq("tesis_id", tesisId),
+      supabase.from("menu_kategorileri").select("id, ad, ad_en, icon, sira").eq("tesis_id", tesisId).eq("aktif", true).order("sira", { ascending: true }),
+      supabase.from("menu_urunleri").select("id, kategori_id, ad, ad_en, aciklama, aciklama_en, fiyat, gorsel_url, aktif, icon, birim, badges, stok").eq("tesis_id", tesisId),
     ]).then(([katRes, urunRes]) => {
       if (cancelled) return;
       if (katRes.error) {
         console.error("menu_kategorileri fetch error:", katRes.error);
       }
       const katRows = (katRes.data ?? []) as any[];
-      const kats: KategoriItem[] = [{ id: "tumu", icon: "📋", name: "Tümü" }, ...katRows.map((k) => ({ id: String(k.id), icon: (k.icon ?? "📋").trim() || "📋", name: (k.ad ?? "").trim() || "Kategori" }))];
+      const kats: KategoriItem[] = [
+        { id: "tumu", icon: "📋", name: "Tümü" },
+        ...katRows.map((k) => {
+          const adEn = k.ad_en != null ? String(k.ad_en).trim() : "";
+          return {
+            id: String(k.id),
+            icon: (k.icon ?? "📋").trim() || "📋",
+            name: (k.ad ?? "").trim() || "Kategori",
+            ...(adEn ? { ad_en: adEn } : {}),
+          };
+        }),
+      ];
       setKategoriler(kats);
 
       if (urunRes.error) {
@@ -234,6 +248,8 @@ export default function IsletmeMenuPage() {
         const badgesArr = badgesStr ? badgesStr.split(",").map((b: string) => b.trim()).filter(Boolean) : [];
         const birimRaw = (u.birim ?? "adet").trim() || "adet";
         const photos = u.gorsel_url ? [u.gorsel_url] : [];
+        const adEn = u.ad_en != null ? String(u.ad_en).trim() : "";
+        const aciklamaEn = u.aciklama_en != null ? String(u.aciklama_en).trim() : "";
         return {
           id: String(u.id),
           icon: (u.icon ?? "🍽️").trim() || "🍽️",
@@ -241,6 +257,8 @@ export default function IsletmeMenuPage() {
           stok: Boolean(u.stok !== false),
           name: (u.ad ?? "").trim() || "—",
           desc: (u.aciklama ?? "").trim() || "",
+          ...(adEn ? { ad_en: adEn } : {}),
+          ...(aciklamaEn ? { aciklama_en: aciklamaEn } : {}),
           price: `₺${priceNum.toLocaleString("tr-TR")}`,
           priceNum,
           birim: `/ ${birimRaw}`,
@@ -272,7 +290,18 @@ export default function IsletmeMenuPage() {
   }
 
   function openEdit(u: Urun) {
-    setEditForm({ name: u.name, desc: u.desc, icon: u.icon, kategori: u.kategori, price: String(u.priceNum), birim: u.birim.replace("/ ", ""), badge: u.badges[0] ?? "", aktif: u.aktif });
+    setEditForm({
+      name: u.name,
+      desc: u.desc,
+      ad_en: u.ad_en ?? "",
+      aciklama_en: u.aciklama_en ?? "",
+      icon: u.icon,
+      kategori: u.kategori,
+      price: String(u.priceNum),
+      birim: u.birim.replace("/ ", ""),
+      badge: u.badges[0] ?? "",
+      aktif: u.aktif,
+    });
     setEditPhotos(u.photos ?? []);
     setEditModal(u);
   }
@@ -287,6 +316,8 @@ export default function IsletmeMenuPage() {
       .update({
         ad: editForm.name,
         aciklama: editForm.desc || null,
+        ad_en: editForm.ad_en?.trim() || null,
+        aciklama_en: editForm.aciklama_en?.trim() || null,
         fiyat: priceNum,
         gorsel_url: gorselUrl,
         icon: editForm.icon,
@@ -303,7 +334,21 @@ export default function IsletmeMenuPage() {
     setUrunler((prev) =>
       prev.map((u) =>
         u.id === editModal.id
-          ? { ...u, name: editForm.name, desc: editForm.desc, icon: editForm.icon, kategori: editForm.kategori, price: `₺${priceNum.toLocaleString("tr-TR")}`, priceNum, birim: `/ ${editForm.birim}`, badges: editForm.badge ? [editForm.badge] : [], aktif: editForm.aktif, photos: editPhotos }
+          ? {
+              ...u,
+              name: editForm.name,
+              desc: editForm.desc,
+              ad_en: editForm.ad_en?.trim() || undefined,
+              aciklama_en: editForm.aciklama_en?.trim() || undefined,
+              icon: editForm.icon,
+              kategori: editForm.kategori,
+              price: `₺${priceNum.toLocaleString("tr-TR")}`,
+              priceNum,
+              birim: `/ ${editForm.birim}`,
+              badges: editForm.badge ? [editForm.badge] : [],
+              aktif: editForm.aktif,
+              photos: editPhotos,
+            }
           : u
       )
     );
@@ -323,6 +368,8 @@ export default function IsletmeMenuPage() {
         kategori_id: kategoriId,
         ad: yeniForm.name,
         aciklama: yeniForm.desc || null,
+        ad_en: yeniForm.ad_en?.trim() || null,
+        aciklama_en: yeniForm.aciklama_en?.trim() || null,
         fiyat: priceNum,
         gorsel_url: gorselUrl,
         icon: yeniForm.icon,
@@ -331,12 +378,14 @@ export default function IsletmeMenuPage() {
         stok: true,
         aktif: yeniForm.aktif,
       })
-      .select("id, kategori_id, ad, aciklama, fiyat, gorsel_url, aktif, icon, birim, badges, stok")
+      .select("id, kategori_id, ad, ad_en, aciklama, aciklama_en, fiyat, gorsel_url, aktif, icon, birim, badges, stok")
       .single();
     if (error) {
       console.error("saveUrun error:", error);
       return;
     }
+    const rowAdEn = (row as any).ad_en != null ? String((row as any).ad_en).trim() : "";
+    const rowAciklamaEn = (row as any).aciklama_en != null ? String((row as any).aciklama_en).trim() : "";
     const newUrun: Urun = {
       id: String(row.id),
       icon: (row as any).icon ?? yeniForm.icon,
@@ -344,6 +393,8 @@ export default function IsletmeMenuPage() {
       stok: true,
       name: (row as any).ad ?? yeniForm.name,
       desc: (row as any).aciklama ?? yeniForm.desc,
+      ...(rowAdEn ? { ad_en: rowAdEn } : {}),
+      ...(rowAciklamaEn ? { aciklama_en: rowAciklamaEn } : {}),
       price: `₺${priceNum.toLocaleString("tr-TR")}`,
       priceNum,
       birim: `/ ${(row as any).birim ?? yeniForm.birim}`,
@@ -374,14 +425,20 @@ export default function IsletmeMenuPage() {
     if (!catForm.name || !tesisId) return;
     const { data: row, error } = await supabase
       .from("menu_kategorileri")
-      .insert({ tesis_id: tesisId, ad: catForm.name, icon: catForm.icon, sira: 0 })
-      .select("id, ad, icon")
+      .insert({ tesis_id: tesisId, ad: catForm.name, ad_en: catForm.ad_en?.trim() || null, icon: catForm.icon, sira: 0 })
+      .select("id, ad, ad_en, icon")
       .single();
     if (error) {
       console.error("saveKategori error:", error);
       return;
     }
-    const newKat: KategoriItem = { id: String(row.id), icon: (row as any).icon ?? catForm.icon, name: (row as any).ad ?? catForm.name };
+    const rowAdEn = (row as any).ad_en != null ? String((row as any).ad_en).trim() : "";
+    const newKat: KategoriItem = {
+      id: String(row.id),
+      icon: (row as any).icon ?? catForm.icon,
+      name: (row as any).ad ?? catForm.name,
+      ...(rowAdEn ? { ad_en: rowAdEn } : {}),
+    };
     setKategoriler((prev) => prev.filter((k) => k.id !== "tumu").length ? [prev[0], ...prev.slice(1), newKat] : [{ id: "tumu", icon: "📋", name: "Tümü" }, newKat]);
     setCatForm(emptyCatForm);
     setCatModalOpen(false);
@@ -390,12 +447,18 @@ export default function IsletmeMenuPage() {
 
   async function updateKategori() {
     if (!editCatModal || !catForm.name) return;
-    const { error } = await supabase.from("menu_kategorileri").update({ ad: catForm.name, icon: catForm.icon }).eq("id", editCatModal.id);
+    const { error } = await supabase
+      .from("menu_kategorileri")
+      .update({ ad: catForm.name, ad_en: catForm.ad_en?.trim() || null, icon: catForm.icon })
+      .eq("id", editCatModal.id);
     if (error) {
       console.error("updateKategori error:", error);
       return;
     }
-    setKategoriler((prev) => prev.map((k) => (k.id === editCatModal.id ? { ...k, name: catForm.name, icon: catForm.icon } : k)));
+    const adEnNext = catForm.ad_en?.trim() || undefined;
+    setKategoriler((prev) =>
+      prev.map((k) => (k.id === editCatModal.id ? { ...k, name: catForm.name, icon: catForm.icon, ad_en: adEnNext } : k))
+    );
     setEditCatModal(null);
     setCatForm(emptyCatForm);
     showToast(`✅ "${catForm.name}" kategorisi güncellendi`);
@@ -542,7 +605,7 @@ export default function IsletmeMenuPage() {
                               </div>
                               {hoveredCatId === k.id ? (
                                 <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                                  <button type="button" title="Düzenle" onClick={() => { setCatForm({ name: k.name, icon: k.icon }); setEditCatModal(k); }} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: GRAY100, color: GRAY800, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✏️</button>
+                                  <button type="button" title="Düzenle" onClick={() => { setCatForm({ name: k.name, icon: k.icon, ad_en: k.ad_en ?? "" }); setEditCatModal(k); }} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: GRAY100, color: GRAY800, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✏️</button>
                                   <button type="button" title="Sil" onClick={() => deleteKategori(k)} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#FEE2E2", color: RED, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑️</button>
                                 </div>
                               ) : (
@@ -648,10 +711,13 @@ export default function IsletmeMenuPage() {
       {catModalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setCatModalOpen(false)}>
           <div style={{ background: "white", borderRadius: 16, padding: 24, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>➕ Yeni Kategori</h3>
               <button onClick={() => setCatModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
+            <p style={{ fontSize: 11, color: GRAY400, marginBottom: 16, lineHeight: 1.45 }}>
+              💡 İngilizce çeviriler opsiyoneldir. Boş bırakırsanız müşteriye Türkçe metin gösterilir.
+            </p>
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Kategori İkonu</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -663,6 +729,10 @@ export default function IsletmeMenuPage() {
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Kategori Adı *</label>
               <input type="text" value={catForm.name} onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))} placeholder="örn: Smoothieler" style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Kategori adı (EN) — opsiyonel</label>
+              <input type="text" value={catForm.ad_en} onChange={(e) => setCatForm((f) => ({ ...f, ad_en: e.target.value }))} placeholder="örn: Beverages" style={inputStyle} />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
               <button onClick={() => setCatModalOpen(false)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -676,10 +746,13 @@ export default function IsletmeMenuPage() {
       {editCatModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setEditCatModal(null)}>
           <div style={{ background: "white", borderRadius: 16, padding: 24, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>✏️ Kategori Düzenle</h3>
               <button onClick={() => setEditCatModal(null)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
+            <p style={{ fontSize: 11, color: GRAY400, marginBottom: 16, lineHeight: 1.45 }}>
+              💡 İngilizce çeviriler opsiyoneldir. Boş bırakırsanız müşteriye Türkçe metin gösterilir.
+            </p>
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Kategori İkonu</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -691,6 +764,10 @@ export default function IsletmeMenuPage() {
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Kategori Adı *</label>
               <input type="text" value={catForm.name} onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))} placeholder="örn: Smoothieler" style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Kategori adı (EN) — opsiyonel</label>
+              <input type="text" value={catForm.ad_en} onChange={(e) => setCatForm((f) => ({ ...f, ad_en: e.target.value }))} placeholder="örn: Beverages" style={inputStyle} />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
               <button onClick={() => setEditCatModal(null)} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
@@ -969,6 +1046,9 @@ function UrunForm({
 
   return (
     <>
+      <p style={{ fontSize: 11, color: GRAY400, marginBottom: 14, lineHeight: 1.45 }}>
+        💡 İngilizce çeviriler opsiyoneldir. Boş bırakırsanız müşteriye Türkçe metin gösterilir.
+      </p>
       {/* Fotoğraf + Emoji alanı */}
       <div style={{ marginBottom: 16 }}>
         <label style={labelStyle}>Ürün Fotoğrafı{photos.length > 0 ? ` (${photos.length}/3)` : " — en fazla 3"}</label>
@@ -1036,6 +1116,8 @@ function UrunForm({
         <div>
           <label style={labelStyle}>Ürün Adı *</label>
           <input type="text" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="örn: Mojito" style={inputStyle} />
+          <label style={{ ...labelStyle, marginTop: 10 }}>Ürün adı (EN) — opsiyonel</label>
+          <input type="text" value={f.ad_en} onChange={(e) => set("ad_en", e.target.value)} placeholder="örn: Mango Smoothie" style={inputStyle} />
         </div>
         <div>
           <label style={labelStyle}>Kategori</label>
@@ -1051,6 +1133,8 @@ function UrunForm({
       <div style={{ marginBottom: 14 }}>
         <label style={labelStyle}>Açıklama</label>
         <textarea rows={2} value={f.desc} onChange={(e) => set("desc", e.target.value)} placeholder="Ürün hakkında kısa açıklama..." style={{ ...inputStyle, resize: "vertical" as const }} />
+        <label style={{ ...labelStyle, marginTop: 10 }}>Açıklama (EN) — opsiyonel</label>
+        <textarea rows={2} value={f.aciklama_en} onChange={(e) => set("aciklama_en", e.target.value)} placeholder="örn: Fresh tropical mango blended with ice" style={{ ...inputStyle, resize: "vertical" as const }} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
