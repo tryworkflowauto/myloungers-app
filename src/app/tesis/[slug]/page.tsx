@@ -13,6 +13,14 @@ const MN = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos
 
 type SzlStatus = "avail" | "full" | "rsv" | "maint" | "lock";
 
+/** sezlong_gruplari — müşteri kartı TR/EN alanları */
+type SezlongGrup = {
+  ad?: string | null;
+  ad_en?: string | null;
+  aciklama?: string | null;
+  aciklama_en?: string | null;
+};
+
 type ZoneDef = {
   key: string;
   prefix: string;
@@ -25,6 +33,8 @@ type ZoneDef = {
   color: string;
   count: number;
   aciklama?: string;
+  ad_en?: string;
+  aciklama_en?: string;
   dolulukPct: number;
 };
 
@@ -251,7 +261,7 @@ export default function TesisDetailPage() {
 
       const { data: grupRows, error: grupErr } = await supabase
         .from("sezlong_gruplari")
-        .select("id, ad, renk, kapasite, fiyat, aciklama")
+        .select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en")
         .eq("tesis_id", tesisId)
         .order("sira", { ascending: true });
 
@@ -281,8 +291,15 @@ export default function TesisDetailPage() {
         const prefix = ad.charAt(0).toUpperCase() || "S";
         const icon = "🏖️";
         const gradient = `linear-gradient(135deg,${renk},${renk}CC)`;
-        const aciklamaRaw = (g as { aciklama?: string | null }).aciklama;
+        const gLoc = g as SezlongGrup;
+        const aciklamaRaw = gLoc.aciklama;
         const aciklama = typeof aciklamaRaw === "string" ? aciklamaRaw.trim() : "";
+        const adEnStr =
+          gLoc.ad_en != null && String(gLoc.ad_en).trim() ? String(gLoc.ad_en).trim() : undefined;
+        const aciklamaEnStr =
+          gLoc.aciklama_en != null && String(gLoc.aciklama_en).trim()
+            ? String(gLoc.aciklama_en).trim()
+            : undefined;
 
         const list = (byGrup.get(key) ?? []).sort((a, b) => a.numara - b.numara);
         const statuses: SzlStatus[] = [];
@@ -316,6 +333,8 @@ export default function TesisDetailPage() {
           color: renk,
           count: kapasite,
           aciklama: aciklama || undefined,
+          ad_en: adEnStr,
+          aciklama_en: aciklamaEnStr,
           dolulukPct,
         };
       });
@@ -1619,7 +1638,17 @@ export default function TesisDetailPage() {
                           style={{ background: z.color }}
                         ></div>
                         <span style={{ fontWeight: 700 }}>
-                          {z.label} ({z.count})
+                          {getLocalizedField(
+                            {
+                              ad: z.label ?? "",
+                              ad_en: z.ad_en,
+                              aciklama: z.aciklama ?? "",
+                              aciklama_en: z.aciklama_en,
+                            },
+                            "ad",
+                            siteLang,
+                          )}{" "}
+                          ({z.count})
                         </span>
                         {typeof z.pw === "number" && z.pw > 0 && (
                           <span style={{ marginLeft: 6, fontSize: ".7rem", color: "var(--i3)" }}>
@@ -1645,13 +1674,24 @@ export default function TesisDetailPage() {
                     <div style={{ color:"rgba(255,255,255,.22)", fontSize:".6rem", fontWeight:900, textTransform:"uppercase", letterSpacing:".2em", marginBottom:4 }}>🌊 🌊 🌊</div>
                     <div style={{ color:"#fff", fontSize:".85rem", fontWeight:900, letterSpacing:".28em", opacity:.85 }}>~ D E N İ Z ~</div>
                   </div>
-                  {zones.map((z, zi) => (
+                  {zones.map((z, zi) => {
+                    const grupLoc = {
+                      ad: z.label ?? "",
+                      ad_en: z.ad_en,
+                      aciklama: z.aciklama ?? "",
+                      aciklama_en: z.aciklama_en,
+                    };
+                    const baslikLoc = getLocalizedField(grupLoc, "ad", siteLang);
+                    const aciklamaLoc = getLocalizedField(grupLoc, "aciklama", siteLang);
+                    return (
                     <div key={z.key} style={{ borderTop: zi > 0 ? "1px solid #E5E7EB" : undefined }}>
                       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, padding:"10px 18px", background:z.gradient, flexWrap:"nowrap", boxSizing:"border-box" }}>
                         <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:6 }}>
-                          <div style={{ fontWeight:800, fontSize:13, color:"white" }}>{z.icon} {z.label}</div>
-                          {z.aciklama ? (
-                            <div style={{ fontSize:10, color:"rgba(255,255,255,.88)", fontWeight:500, whiteSpace:"pre-line", lineHeight:1.45 }}>{z.aciklama}</div>
+                          <div style={{ fontWeight:800, fontSize:13, color:"white" }}>
+                            {z.icon} {baslikLoc}
+                          </div>
+                          {aciklamaLoc ? (
+                            <div style={{ fontSize:10, color:"rgba(255,255,255,.88)", fontWeight:500, whiteSpace:"pre-line", lineHeight:1.45 }}>{aciklamaLoc}</div>
                           ) : null}
                         </div>
                         <div style={{ flexShrink:0, textAlign:"right", fontSize:12, fontWeight:800, color:"white", whiteSpace:"nowrap", alignSelf:"flex-start", maxWidth:"48%", overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -1662,7 +1702,8 @@ export default function TesisDetailPage() {
                         <SzlGrid zoneKey={z.key} prefix={z.prefix} statuses={z.statuses} pw={z.pw} pe={z.pe} />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   <div className="bldz">🏨  TESİS BİNASI</div>
                 </div>
                 <p style={{ fontSize: ".68rem", color: "var(--i3)", marginTop: 12, textAlign: "center", lineHeight: 2, display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center" }}>
