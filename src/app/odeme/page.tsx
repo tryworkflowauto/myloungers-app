@@ -747,7 +747,7 @@ function OdemeContent() {
                     </div>
                     <label className="kvkk">
                       <input type="checkbox" checked={kvkk} onChange={(e) => { setKvkk(e.target.checked); setKvkkErr(false); }} />
-                      <span><a href="#">Kullanım Koşulları</a>'nı ve <a href="#">KVKK Aydınlatma Metni</a>'ni okudum, onaylıyorum.</span>
+                      <span><a href="/kullanim-kosullari" target="_blank" rel="noopener noreferrer">Kullanım Koşulları</a>&apos;nı ve <a href="/kvkk" target="_blank" rel="noopener noreferrer">KVKK Aydınlatma Metni</a>&apos;ni okudum, onaylıyorum.</span>
                     </label>
                     {kvkkErr && <div style={{ fontSize: ".65rem", color: "#EF4444", marginTop: 4 }}>Devam etmek için onay vermeniz gerekmektedir</div>}
                   </div>

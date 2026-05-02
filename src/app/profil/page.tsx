@@ -2440,6 +2440,8 @@ export default function ProfilPage() {
                         setNewPassword("");
                         setConfirmPassword("");
                         setShowPasswordModal(true);
+                      } else if (item.t === "Veri ve Gizlilik") {
+                        window.open("/gizlilik", "_blank");
                       }
                     }}
                   >

@@ -283,7 +283,12 @@ export default function BasvuruPage() {
                     <div className="bav-fgrp">
                       <label className="bav-check-item">
                         <input type="checkbox" checked={gizlilikKabul} onChange={(e) => setGizlilikKabul(e.target.checked)} />
-                        <span>Gizlilik Politikası kabul *</span>
+                        <span>
+                          <Link href="/gizlilik" target="_blank" rel="noopener noreferrer" className="text-[#0ABAB5] hover:underline font-medium">
+                            Gizlilik Politikası
+                          </Link>{" "}
+                          kabul *
+                        </span>
                       </label>
                     </div>
                     <div className="bav-form-nav" style={{ flexDirection: "column", gap: 10, alignItems: "stretch" }}>
