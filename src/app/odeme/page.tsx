@@ -90,7 +90,6 @@ function OdemeContent() {
     email: "",
     tc: "",
     extraGuests: [] as { name: string; surname: string }[],
-    note: "",
   });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [kvkk, setKvkk] = useState(false);
@@ -741,10 +740,6 @@ function OdemeContent() {
                   </div>
 
                   <div style={{ marginTop: 16 }}>
-                    <div className="fg full" style={{ marginBottom: 12 }}>
-                      <label>Özel İstek (opsiyonel)</label>
-                      <input type="text" value={form.note} onChange={(e) => setForm({...form, note: e.target.value})} placeholder="Gölgelik tercih, erken giriş vb." />
-                    </div>
                     <label className="kvkk">
                       <input type="checkbox" checked={kvkk} onChange={(e) => { setKvkk(e.target.checked); setKvkkErr(false); }} />
                       <span><a href="/kullanim-kosullari" target="_blank" rel="noopener noreferrer">Kullanım Koşulları</a>&apos;nı ve <a href="/kvkk" target="_blank" rel="noopener noreferrer">KVKK Aydınlatma Metni</a>&apos;ni okudum, onaylıyorum.</span>
