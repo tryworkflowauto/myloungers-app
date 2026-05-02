@@ -102,8 +102,12 @@ export default function IsletmeTesisPage() {
   const [gunler, setGunler]             = useState<GunItem[]>(INIT_GUNLER);
   const [kurallar, setKurallar]         = useState<ListItem[]>(INIT_KURALLAR);
   const [kampanyaNotlari, setKampanyaNotlari] = useState<ListItem[]>(INIT_KAMPANYA_NOTLARI);
-  const [kisaAciklama, setKisaAciklama] = useState("Bodrum'un en güzel koyunda butik beach club & otel deneyimi");
-  const [detayAciklama, setDetayAciklama] = useState("Zuzuu Beach Hotel, Bodrum'un en güzel koylarından birinde konumlanan butik bir beach club ve oteldir. Kristal berraklığında deniz suyu ve özel iskelesiyle misafirlerine unutulmaz bir deniz deneyimi sunmaktadır.\n\n100 şezlongluk kapasitesiyle İskele, VIP ve Silver olmak üzere üç farklı bölgede hizmet vermekte; sabah kahvaltısından gün batımı kokteyllerine kadar eksiksiz bir beach club deneyimi sağlamaktadır.");
+  const [kisaAciklama, setKisaAciklama] = useState("");
+  const [detayAciklama, setDetayAciklama] = useState("");
+  const [kisaAciklamaEn, setKisaAciklamaEn] = useState("");
+  const [detayAciklamaEn, setDetayAciklamaEn] = useState("");
+  const [aciklamaDil, setAciklamaDil] = useState<"tr" | "en">("tr");
+  const [enAciklamaTouched, setEnAciklamaTouched] = useState(false);
   const [tesisAktif, setTesisAktif]     = useState(true);
   const [videoUrl, setVideoUrl]         = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
   const [videoInput, setVideoInput]     = useState("");
@@ -200,7 +204,9 @@ export default function IsletmeTesisPage() {
 
       const { data, error } = await supabase
         .from("tesisler")
-        .select("id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi")
+        .select(
+          "id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, kisa_aciklama_en, detayli_aciklama_en, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi",
+        )
         .eq("id", tesis_id)
         .limit(1)
         .single();
@@ -254,6 +260,9 @@ export default function IsletmeTesisPage() {
       if (row.web_sitesi) setWebSitesi(row.web_sitesi);
       if (row.kisa_aciklama) setKisaAciklama(row.kisa_aciklama);
       if (row.detayli_aciklama) setDetayAciklama(row.detayli_aciklama);
+      setKisaAciklamaEn(row.kisa_aciklama_en != null && row.kisa_aciklama_en !== "" ? String(row.kisa_aciklama_en) : "");
+      setDetayAciklamaEn(row.detayli_aciklama_en != null && row.detayli_aciklama_en !== "" ? String(row.detayli_aciklama_en) : "");
+      setEnAciklamaTouched(false);
       if (row.aciklama) setAciklama(row.aciklama);
       if (row.video_url) setVideoUrl(row.video_url);
       if (row.enlem) setEnlem(String(row.enlem));
@@ -417,6 +426,11 @@ export default function IsletmeTesisPage() {
     showToast("⏸ Tesis yayından kaldırıldı");
   }
 
+  function trimAciklamaEnNull(s: string): string | null {
+    const t = s.trim();
+    return t.length ? t : null;
+  }
+
   // ── Save all ──────────────────────────────────────────────────────────────
   async function saveAll() {
     if (!tesisId) {
@@ -468,12 +482,17 @@ export default function IsletmeTesisPage() {
       fotograflar: photos,
       iletisim_numarasi: iletisimNumarasi.trim() || null,
     };
+    if (enAciklamaTouched) {
+      payload.kisa_aciklama_en = trimAciklamaEnNull(kisaAciklamaEn);
+      payload.detayli_aciklama_en = trimAciklamaEnNull(detayAciklamaEn);
+    }
     const { error } = await supabase.from("tesisler").update(payload).eq("id", tesisId);
     if (error) {
       console.error("Tesis kaydedilemedi:", error);
       showToast("❌ Kayıt başarısız");
       return;
     }
+    setEnAciklamaTouched(false);
     showToast("✅ Değişiklikler kaydedildi");
   }
 
@@ -662,15 +681,113 @@ export default function IsletmeTesisPage() {
 
         {/* 3. HAKKINDA */}
         <SectionCard open={sections.hakkinda} onToggle={() => toggleSection("hakkinda")} icon="📝" iconBg="#F0FDF4" title="Tesis Hakkında" sub="Açıklama metni">
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Kısa Açıklama <span style={{ color: GRAY400, fontWeight: 400 }}>(Arama sonuçlarında görünür)</span></label>
-            <input type="text" value={kisaAciklama} onChange={(e) => setKisaAciklama(e.target.value)} maxLength={100} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-            <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{kisaAciklama.length}/100</div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 0,
+              marginBottom: 16,
+              borderBottom: `1px solid ${GRAY200}`,
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setAciklamaDil("tr")}
+              style={{
+                flex: "1 1 140px",
+                minWidth: 120,
+                padding: "10px 14px",
+                fontSize: 13,
+                fontWeight: aciklamaDil === "tr" ? 700 : 600,
+                color: aciklamaDil === "tr" ? NAVY : GRAY400,
+                background: "transparent",
+                border: "none",
+                borderBottom: aciklamaDil === "tr" ? `2px solid ${TEAL}` : `2px solid transparent`,
+                marginBottom: -1,
+                cursor: "pointer",
+                transition: "color 0.2s ease, border-color 0.2s ease, font-weight 0.15s ease",
+                textAlign: "center",
+              }}
+            >
+              🇹🇷 Türkçe
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAciklamaDil("en");
+                setEnAciklamaTouched(true);
+              }}
+              style={{
+                flex: "1 1 140px",
+                minWidth: 120,
+                padding: "10px 14px",
+                fontSize: 13,
+                fontWeight: aciklamaDil === "en" ? 700 : 600,
+                color: aciklamaDil === "en" ? NAVY : GRAY400,
+                background: "transparent",
+                border: "none",
+                borderBottom: aciklamaDil === "en" ? `2px solid ${TEAL}` : `2px solid transparent`,
+                marginBottom: -1,
+                cursor: "pointer",
+                transition: "color 0.2s ease, border-color 0.2s ease, font-weight 0.15s ease",
+                textAlign: "center",
+              }}
+            >
+              🇬🇧 English<span style={{ fontWeight: 500, fontSize: 11, color: GRAY400, marginLeft: 6 }}>(opsiyonel)</span>
+            </button>
           </div>
-          <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Detaylı Açıklama <span style={{ color: GRAY400, fontWeight: 400 }}>(Tesis detay sayfasında görünür)</span></label>
-            <textarea value={detayAciklama} onChange={(e) => setDetayAciklama(e.target.value)} rows={5} maxLength={800} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, resize: "vertical", minHeight: 100 }} />
-            <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{detayAciklama.length}/800</div>
+
+          <div key={aciklamaDil} style={{ transition: "opacity 0.22s ease" }}>
+            {aciklamaDil === "tr" ? (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Kısa Açıklama <span style={{ color: GRAY400, fontWeight: 400 }}>(Arama sonuçlarında görünür)</span></label>
+                  <input type="text" value={kisaAciklama} onChange={(e) => setKisaAciklama(e.target.value)} maxLength={100} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{kisaAciklama.length}/100</div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Detaylı Açıklama <span style={{ color: GRAY400, fontWeight: 400 }}>(Tesis detay sayfasında görünür)</span></label>
+                  <textarea value={detayAciklama} onChange={(e) => setDetayAciklama(e.target.value)} rows={5} maxLength={800} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, resize: "vertical", minHeight: 100 }} />
+                  <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{detayAciklama.length}/800</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 11, color: GRAY400, marginBottom: 14, lineHeight: 1.45 }}>
+                  💡 İngilizce çeviri opsiyoneldir. Boş bırakırsanız müşteriye Türkçe metin gösterilir.
+                </p>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Kısa Açıklama (EN) <span style={{ color: GRAY400, fontWeight: 400 }}>(Arama sonuçlarında görünür)</span></label>
+                  <input
+                    type="text"
+                    value={kisaAciklamaEn}
+                    onChange={(e) => {
+                      setKisaAciklamaEn(e.target.value);
+                      setEnAciklamaTouched(true);
+                    }}
+                    maxLength={100}
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
+                  />
+                  <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{kisaAciklamaEn.length}/100</div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Detaylı Açıklama (EN) <span style={{ color: GRAY400, fontWeight: 400 }}>(Tesis detay sayfasında görünür)</span></label>
+                  <textarea
+                    value={detayAciklamaEn}
+                    onChange={(e) => {
+                      setDetayAciklamaEn(e.target.value);
+                      setEnAciklamaTouched(true);
+                    }}
+                    rows={5}
+                    maxLength={800}
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, resize: "vertical", minHeight: 100 }}
+                  />
+                  <div style={{ fontSize: 10, color: GRAY400, textAlign: "right", marginTop: 3 }}>{detayAciklamaEn.length}/800</div>
+                </div>
+              </>
+            )}
           </div>
         </SectionCard>
 

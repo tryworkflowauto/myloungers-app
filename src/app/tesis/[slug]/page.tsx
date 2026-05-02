@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getLocalizedField } from "@/lib/getLocalizedField";
+import { readSiteLangFromStorage, SITE_LANG_STORAGE_KEY } from "@/lib/site-lang";
 
 type TesisRow = Record<string, any>;
 
@@ -105,6 +107,7 @@ export default function TesisDetailPage() {
   const refreshRezervedRef = useRef<(() => void) | null>(null);
   const [resLoading, setResLoading] = useState(false);
   const [userRole, setUserRole] = useState<string>("musteri");
+  const [siteLang, setSiteLang] = useState<"tr" | "en">("tr");
 
   function mapDbDurumToStatus(durum: string | null | undefined): SzlStatus {
     switch ((durum || "").toLowerCase()) {
@@ -185,6 +188,22 @@ export default function TesisDetailPage() {
 
     fetchTesis();
   }, [slug]);
+
+  useEffect(() => {
+    setSiteLang(readSiteLangFromStorage());
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === SITE_LANG_STORAGE_KEY) {
+        setSiteLang(e.newValue === "en" ? "en" : "tr");
+      }
+    };
+    const onLangChange = () => setSiteLang(readSiteLangFromStorage());
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("myloungers_langchange", onLangChange);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("myloungers_langchange", onLangChange);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadRole() {
@@ -1441,19 +1460,27 @@ export default function TesisDetailPage() {
               </div>
               {openPanels.about && (
                 <div className="pb" style={{ padding: 20 }}>
-                  {(((row as any)?.kisa_aciklama) || ((row as any)?.detayli_aciklama)) && (
-                    <p className="about-p">
-                      {(row as any)?.kisa_aciklama && (
-                        <span>{(row as any).kisa_aciklama}</span>
-                      )}
-                      {(row as any)?.detayli_aciklama && (
-                        <>
-                          {(row as any)?.kisa_aciklama && <><br /><br /></>}
-                          <span>{(row as any).detayli_aciklama}</span>
-                        </>
-                      )}
-                    </p>
-                  )}
+                  {(() => {
+                    const kisaLoc = getLocalizedField(row, "kisa_aciklama", siteLang);
+                    const detayLoc = getLocalizedField(row, "detayli_aciklama", siteLang);
+                    if (!kisaLoc && !detayLoc) return null;
+                    return (
+                      <p className="about-p">
+                        {!!kisaLoc && <span>{kisaLoc}</span>}
+                        {!!detayLoc && (
+                          <>
+                            {!!kisaLoc && (
+                              <>
+                                <br />
+                                <br />
+                              </>
+                            )}
+                            <span>{detayLoc}</span>
+                          </>
+                        )}
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
             </div>

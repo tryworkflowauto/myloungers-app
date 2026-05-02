@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, type MouseEvent } from "react";
 import { supabase } from "@/lib/supabase";
+import { persistSiteLang, readSiteLangFromStorage } from "@/lib/site-lang";
 import { homeActiveCategoryMatchesKategori } from "@/lib/tesisKategori";
 import "./myloungers.css";
 
@@ -218,6 +219,10 @@ export default function Home() {
   const router = useRouter();
   const [currentLang, setCurrentLang] = useState<"tr" | "en">("tr");
   const [isLangOpen, setIsLangOpen] = useState(false);
+
+  useEffect(() => {
+    setCurrentLang(readSiteLangFromStorage());
+  }, []);
   const [slideIdx, setSlideIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -686,7 +691,13 @@ export default function Home() {
                       role="option"
                       aria-selected={currentLang === opt.code}
                       className={`lang-drop-item ${currentLang === opt.code ? "active" : ""}`}
-                      onClick={(e) => { e.stopPropagation(); setCurrentLang(opt.code as "tr" | "en"); setIsLangOpen(false); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const code = opt.code as "tr" | "en";
+                        setCurrentLang(code);
+                        persistSiteLang(code);
+                        setIsLangOpen(false);
+                      }}
                     >
                       <span>{opt.flag}</span>
                       <span className="lang-drop-name">{opt.name}</span>
@@ -811,7 +822,16 @@ export default function Home() {
           </div>
           <div className="mob-lang-dropdown">
             {LANG_OPTS.map((opt) => (
-              <button key={opt.code} type="button" className={`mob-lang-item ${currentLang === opt.code ? "active" : ""}`} onClick={() => setCurrentLang(opt.code as "tr" | "en")}>
+              <button
+                key={opt.code}
+                type="button"
+                className={`mob-lang-item ${currentLang === opt.code ? "active" : ""}`}
+                onClick={() => {
+                  const code = opt.code as "tr" | "en";
+                  setCurrentLang(code);
+                  persistSiteLang(code);
+                }}
+              >
                 <span>{opt.flag}</span>
                 <span>{opt.name}</span>
                 {currentLang === opt.code && <span className="lang-check">✓</span>}
