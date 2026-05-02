@@ -21,7 +21,7 @@ const RED = "#EF4444";
 type Photo = { id: number; src?: string; mockBg?: string; mockEmoji?: string; };
 type ImkanItem = { emoji: string; name: string; name_en?: string; active: boolean; custom?: boolean };
 type GunItem = { name: string; acilis: string; kapanis: string; kapali: boolean; vurgu?: boolean };
-type ListItem = { emoji: string; text: string };
+type ListItem = { emoji: string; text: string; text_en?: string };
 
 // ── Initial data (form defaults; Supabase yüklemesiyle üzerine yazılır) ─────
 const INIT_PHOTOS: Photo[] = [
@@ -145,7 +145,9 @@ export default function IsletmeTesisPage() {
   const [imkanInput, setImkanInput]           = useState("");
   const [imkanInputEn, setImkanInputEn]       = useState("");
   const [kuralInput, setKuralInput]           = useState("");
+  const [kuralInputEn, setKuralInputEn]       = useState("");
   const [kampanyaInput, setKampanyaInput]     = useState("");
+  const [kampanyaInputEn, setKampanyaInputEn]   = useState("");
   const [kuralEmojiSel, setKuralEmojiSel]     = useState("🚫");
   const [kampanyaEmojiSel, setKampanyaEmojiSel] = useState("🌟");
 
@@ -380,8 +382,26 @@ export default function IsletmeTesisPage() {
   };
 
   // ── Kurallar & Kampanya ────────────────────────────────────────────────────
-  const addKural = () => { if (!kuralInput.trim()) return; setKurallar(p => [...p, { emoji: kuralEmojiSel, text: kuralInput.trim() }]); setKuralInput(""); };
-  const addKampanya = () => { if (!kampanyaInput.trim()) return; setKampanyaNotlari(p => [...p, { emoji: kampanyaEmojiSel, text: kampanyaInput.trim() }]); setKampanyaInput(""); };
+  const addKural = () => {
+    if (!kuralInput.trim()) return;
+    const en = kuralInputEn.trim();
+    setKurallar((p) => [...p, { emoji: kuralEmojiSel, text: kuralInput.trim(), ...(en ? { text_en: en } : {}) }]);
+    setKuralInput("");
+    setKuralInputEn("");
+  };
+  const addKampanya = () => {
+    if (!kampanyaInput.trim()) return;
+    const en = kampanyaInputEn.trim();
+    setKampanyaNotlari((p) => [...p, { emoji: kampanyaEmojiSel, text: kampanyaInput.trim(), ...(en ? { text_en: en } : {}) }]);
+    setKampanyaInput("");
+    setKampanyaInputEn("");
+  };
+  const setKuralTextEn = (idx: number, text_en: string) => {
+    setKurallar((p) => p.map((item, i) => (i === idx ? { ...item, text_en } : item)));
+  };
+  const setKampanyaTextEn = (idx: number, text_en: string) => {
+    setKampanyaNotlari((p) => p.map((item, i) => (i === idx ? { ...item, text_en } : item)));
+  };
   const delKural = (i: number, list: "kural" | "kampanya") => {
     if (list === "kural") setKurallar(p => p.filter((_, j) => j !== i));
     else setKampanyaNotlari(p => p.filter((_, j) => j !== i));
@@ -1051,15 +1071,38 @@ export default function IsletmeTesisPage() {
 
         {/* 9. KURALLAR & KAMPANYALAR */}
         <SectionCard open={sections.kurallar} onToggle={() => toggleSection("kurallar")} icon="📋" iconBg="#FFF1F2" title="Kurallar & Kampanyalar" sub='Müşteri sayfasında "Bilinmesi Gerekenler" bölümü'>
+          <p style={{ fontSize: 11, color: GRAY400, marginBottom: 14, lineHeight: 1.45 }}>
+            💡 İngilizce çeviriler opsiyoneldir. Boş bırakırsanız müşteriye Türkçe metin gösterilir.
+          </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 10 }}>🚫 Kurallar</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {kurallar.map((k, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: GRAY50, borderRadius: 9, border: `1px solid ${GRAY200}` }}>
-                    <span style={{ fontSize: 16 }}>{k.emoji}</span>
-                    <span style={{ flex: 1, fontSize: 12, color: NAVY }}>{k.text}</span>
-                    <button onClick={() => delKural(i, "kural")} style={{ background: "none", border: "none", color: GRAY400, cursor: "pointer", fontSize: 14, padding: 2 }}>✕</button>
+                  <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: GRAY50, borderRadius: 9, border: `1px solid ${GRAY200}` }}>
+                      <span style={{ fontSize: 16 }}>{k.emoji}</span>
+                      <span style={{ flex: 1, fontSize: 12, color: NAVY }}>{k.text}</span>
+                      <button onClick={() => delKural(i, "kural")} style={{ background: "none", border: "none", color: GRAY400, cursor: "pointer", fontSize: 14, padding: 2 }}>✕</button>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: GRAY400, letterSpacing: "0.04em" }}>EN</span>
+                      <input
+                        type="text"
+                        placeholder="İngilizce metin (opsiyonel) — örn: No smoking allowed"
+                        value={k.text_en ?? ""}
+                        onChange={(e) => setKuralTextEn(i, e.target.value)}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          padding: "6px 9px",
+                          border: `1px solid ${GRAY300}`,
+                          borderRadius: 7,
+                          fontSize: 11,
+                          color: GRAY600,
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1070,15 +1113,51 @@ export default function IsletmeTesisPage() {
                 <input type="text" placeholder="Kural ekle..." value={kuralInput} onChange={(e) => setKuralInput(e.target.value)} style={{ flex: 1, padding: "8px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 12 }} onKeyDown={(e) => e.key === "Enter" && addKural()} />
                 <button onClick={addKural} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>+ Ekle</button>
               </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+                <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: GRAY400, letterSpacing: "0.04em" }}>EN</span>
+                <input
+                  type="text"
+                  placeholder="İngilizce metin (opsiyonel)"
+                  value={kuralInputEn}
+                  onChange={(e) => setKuralInputEn(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "8px 10px",
+                    border: `1px solid ${GRAY300}`,
+                    borderRadius: 8,
+                    fontSize: 11,
+                    color: GRAY600,
+                  }}
+                />
+              </div>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 10 }}>🎁 Kampanya Notları</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {kampanyaNotlari.map((k, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: GRAY50, borderRadius: 9, border: `1px solid ${GRAY200}` }}>
-                    <span style={{ fontSize: 16 }}>{k.emoji}</span>
-                    <span style={{ flex: 1, fontSize: 12, color: NAVY }}>{k.text}</span>
-                    <button onClick={() => delKural(i, "kampanya")} style={{ background: "none", border: "none", color: GRAY400, cursor: "pointer", fontSize: 14, padding: 2 }}>✕</button>
+                  <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: GRAY50, borderRadius: 9, border: `1px solid ${GRAY200}` }}>
+                      <span style={{ fontSize: 16 }}>{k.emoji}</span>
+                      <span style={{ flex: 1, fontSize: 12, color: NAVY }}>{k.text}</span>
+                      <button onClick={() => delKural(i, "kampanya")} style={{ background: "none", border: "none", color: GRAY400, cursor: "pointer", fontSize: 14, padding: 2 }}>✕</button>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: GRAY400, letterSpacing: "0.04em" }}>EN</span>
+                      <input
+                        type="text"
+                        placeholder="İngilizce metin (opsiyonel) — örn: 20% off on Tuesdays"
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          padding: "6px 9px",
+                          border: `1px solid ${GRAY300}`,
+                          borderRadius: 7,
+                          fontSize: 11,
+                          color: GRAY600,
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1088,6 +1167,24 @@ export default function IsletmeTesisPage() {
                 </select>
                 <input type="text" placeholder="Kampanya notu ekle..." value={kampanyaInput} onChange={(e) => setKampanyaInput(e.target.value)} style={{ flex: 1, padding: "8px 10px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 12 }} onKeyDown={(e) => e.key === "Enter" && addKampanya()} />
                 <button onClick={addKampanya} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>+ Ekle</button>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+                <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: GRAY400, letterSpacing: "0.04em" }}>EN</span>
+                <input
+                  type="text"
+                  placeholder="İngilizce metin (opsiyonel)"
+                  value={kampanyaInputEn}
+                  onChange={(e) => setKampanyaInputEn(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "8px 10px",
+                    border: `1px solid ${GRAY300}`,
+                    borderRadius: 8,
+                    fontSize: 11,
+                    color: GRAY600,
+                  }}
+                />
               </div>
               <div style={{ marginTop: 10, padding: 10, background: "#FFFBEB", borderRadius: 8, fontSize: 11, color: "#92400E" }}>
                 💡 Aktif kampanyalar otomatik olarak buraya yansır.{" "}

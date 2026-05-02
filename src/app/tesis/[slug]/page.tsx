@@ -973,7 +973,7 @@ export default function TesisDetailPage() {
   }
 
   // TESİS İMKANLARI (Supabase)
-  type ImkanRow = { name?: string; emoji?: string; active?: boolean };
+  type ImkanRow = { name?: string; name_en?: string; emoji?: string; active?: boolean };
   let imkanlar: ImkanRow[] = [];
   if ((row as any)?.imkanlar) {
     try {
@@ -1015,27 +1015,44 @@ export default function TesisDetailPage() {
   }
 
   // KURALLAR & KAMPANYALAR (Supabase + fallback)
-  const defaultKurallar: { icon: string; text: string }[] = [
+  type IconTextListItem = {
+    icon?: string;
+    emoji?: string;
+    text: string;
+    text_en?: string;
+  };
+
+  const defaultKurallar: IconTextListItem[] = [
     { icon: "🚫", text: "Evcil hayvan kabul edilmez" },
     { icon: "🚫", text: "Dışarıdan yiyecek/içecek getirilmez" },
     { icon: "🚫", text: "18 yaş altı 21:00'dan sonra tesis içinde bulunamaz" },
     { icon: "✅", text: "Giriş: 09:00 — Çıkış: 19:00" },
   ];
-  const defaultKampanyalar: { icon: string; text: string }[] = [
+  const defaultKampanyalar: IconTextListItem[] = [
     { icon: "🌟", text: "Erken Rezervasyon: 30 gün öncesi %10 indirim" },
     { icon: "🌟", text: "Grup (5+): %15 indirim" },
     { icon: "🌟", text: "Hafta içi 3 gün full: Kahvaltı dahil" },
     { icon: "🌟", text: "Sadakat: 5. rezervasyonda %20 indirim" },
   ];
 
-  function parseIconTextArray(raw: any): { icon: string; text: string }[] {
+  function parseIconTextArray(raw: any): IconTextListItem[] {
     try {
       const parsed =
         Array.isArray(raw) ? raw :
         typeof raw === "string" ? JSON.parse(raw) :
         [];
       if (!Array.isArray(parsed)) return [];
-      return parsed as { icon: string; text: string }[];
+      return parsed
+        .map((it: any): IconTextListItem | null => {
+          const text = it?.text != null ? String(it.text) : "";
+          if (!text.trim()) return null;
+          const row: IconTextListItem = { text };
+          if (typeof it?.icon === "string" && it.icon) row.icon = it.icon;
+          if (typeof it?.emoji === "string" && it.emoji) row.emoji = it.emoji;
+          if (typeof it?.text_en === "string" && it.text_en.trim()) row.text_en = it.text_en.trim();
+          return row;
+        })
+        .filter((x): x is IconTextListItem => x != null);
     } catch {
       return [];
     }
@@ -1045,7 +1062,7 @@ export default function TesisDetailPage() {
   const parsedKampanyalar = row ? parseIconTextArray((row as any).kampanya_notlari) : [];
 
   const iptalPolitikasiText = (row as any)?.iptal_politikasi as string | null;
-  const kurallarFinal: { icon: string; text: string }[] = (() => {
+  const kurallarFinal: IconTextListItem[] = (() => {
     const baseList = parsedKurallar.length > 0 ? [...parsedKurallar] : [...defaultKurallar];
     if (iptalPolitikasiText && iptalPolitikasiText.trim() !== "") {
       baseList.push({ icon: "✅", text: `İptal: ${iptalPolitikasiText}` });
@@ -1499,7 +1516,7 @@ export default function TesisDetailPage() {
                     {imkanlar.map((it) => (
                       <div key={it.name} className="feat-item">
                         <div className="feat-ic">{it.emoji || "•"}</div>
-                        {it.name}
+                        {getLocalizedField(it, "name", siteLang)}
                       </div>
                     ))}
                   </div>
@@ -1818,28 +1835,28 @@ export default function TesisDetailPage() {
                 <div className="rules-grid">
                   <div className="rules-col">
                     <h4>🚫 Kurallar</h4>
-                    {kurallarFinal.map((item) => {
-                      const emoji = (item as any).emoji ?? item.icon;
-                      const text = item.text ?? "";
-                      const startsWithEmoji = emoji && text.startsWith(emoji);
+                    {kurallarFinal.map((item, idx) => {
+                      const emoji = item.emoji ?? item.icon;
+                      const displayText = getLocalizedField(item, "text", siteLang);
+                      const startsWithEmoji = emoji && displayText.startsWith(emoji);
                       return (
-                        <div key={text} className="rule-item">
+                        <div key={`kural-${idx}`} className="rule-item">
                           {!startsWithEmoji && emoji && <span>{emoji}</span>}
-                          {text}
+                          {displayText}
                         </div>
                       );
                     })}
                   </div>
                   <div className="rules-col">
                     <h4>🎁 Kampanyalar</h4>
-                    {(parsedKampanyalar.length ? parsedKampanyalar : defaultKampanyalar).map((item) => {
-                      const emoji = (item as any).emoji ?? item.icon;
-                      const text = item.text ?? "";
-                      const startsWithEmoji = emoji && text.startsWith(emoji);
+                    {(parsedKampanyalar.length ? parsedKampanyalar : defaultKampanyalar).map((item, idx) => {
+                      const emoji = item.emoji ?? item.icon;
+                      const displayText = getLocalizedField(item, "text", siteLang);
+                      const startsWithEmoji = emoji && displayText.startsWith(emoji);
                       return (
-                        <div key={text} className="rule-item">
+                        <div key={`kampanya-${idx}`} className="rule-item">
                           {!startsWithEmoji && emoji && <span>{emoji}</span>}
-                          {text}
+                          {displayText}
                         </div>
                       );
                     })}
