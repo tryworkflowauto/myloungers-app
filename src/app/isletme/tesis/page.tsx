@@ -19,7 +19,7 @@ const RED = "#EF4444";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Photo = { id: number; src?: string; mockBg?: string; mockEmoji?: string; };
-type ImkanItem = { emoji: string; name: string; active: boolean; custom?: boolean };
+type ImkanItem = { emoji: string; name: string; name_en?: string; active: boolean; custom?: boolean };
 type GunItem = { name: string; acilis: string; kapanis: string; kapali: boolean; vurgu?: boolean };
 type ListItem = { emoji: string; text: string };
 
@@ -143,6 +143,7 @@ export default function IsletmeTesisPage() {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [selectedEmoji, setSelectedEmoji]     = useState("😊");
   const [imkanInput, setImkanInput]           = useState("");
+  const [imkanInputEn, setImkanInputEn]       = useState("");
   const [kuralInput, setKuralInput]           = useState("");
   const [kampanyaInput, setKampanyaInput]     = useState("");
   const [kuralEmojiSel, setKuralEmojiSel]     = useState("🚫");
@@ -358,8 +359,24 @@ export default function IsletmeTesisPage() {
   const delImkan    = (i: number) => { setImkanlar(p => p.filter((_, j) => j !== i)); showToast("🗑️ İmkân silindi"); };
   const addImkan = () => {
     if (!imkanInput.trim()) return;
-    setImkanlar(p => [...p, { emoji: selectedEmoji, name: imkanInput.trim(), active: true, custom: true }]);
-    setImkanInput(""); setEmojiPickerOpen(false);
+    const en = imkanInputEn.trim();
+    setImkanlar((p) => [
+      ...p,
+      {
+        emoji: selectedEmoji,
+        name: imkanInput.trim(),
+        ...(en ? { name_en: en } : {}),
+        active: true,
+        custom: true,
+      },
+    ]);
+    setImkanInput("");
+    setImkanInputEn("");
+    setEmojiPickerOpen(false);
+  };
+
+  const setImkanNameEn = (idx: number, name_en: string) => {
+    setImkanlar((p) => p.map((item, j) => (j === idx ? { ...item, name_en } : item)));
   };
 
   // ── Kurallar & Kampanya ────────────────────────────────────────────────────
@@ -793,17 +810,40 @@ export default function IsletmeTesisPage() {
 
         {/* 4. TESİS İMKÂNLARI */}
         <SectionCard open={sections.imkan} onToggle={() => toggleSection("imkan")} icon="✨" iconBg="#F5F3FF" title="Tesis İmkânları" sub={`${imkanlar.filter(x => x.active).length} özellik aktif`}>
+          <p style={{ fontSize: 11, color: GRAY400, marginBottom: 12, lineHeight: 1.45 }}>
+            💡 İngilizce adlar opsiyoneldir. Boş bırakırsanız müşteriye Türkçe ad gösterilir.
+          </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
             {imkanlar.map((im, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: `1.5px solid ${im.active ? TEAL : GRAY200}`, borderRadius: 10, background: im.active ? "#F0FFFE" : "transparent" }}>
-                <span style={{ fontSize: 20 }}>{im.emoji}</span>
-                <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: NAVY }}>{im.name}</span>
-                {im.custom && (
-                  <button onClick={() => delImkan(i)} style={{ background: "none", border: "none", color: GRAY400, cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1 }} title="Kaldır">✕</button>
-                )}
-                <label style={{ cursor: "pointer" }}>
-                  <input type="checkbox" checked={im.active} onChange={() => toggleImkan(i)} style={{ accentColor: TEAL, width: 16, height: 16, cursor: "pointer" }} />
-                </label>
+              <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: `1.5px solid ${im.active ? TEAL : GRAY200}`, borderRadius: 10, background: im.active ? "#F0FFFE" : "transparent" }}>
+                  <span style={{ fontSize: 20 }}>{im.emoji}</span>
+                  <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: NAVY }}>{im.name}</span>
+                  {im.custom && (
+                    <button onClick={() => delImkan(i)} style={{ background: "none", border: "none", color: GRAY400, cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1 }} title="Kaldır">✕</button>
+                  )}
+                  <label style={{ cursor: "pointer" }}>
+                    <input type="checkbox" checked={im.active} onChange={() => toggleImkan(i)} style={{ accentColor: TEAL, width: 16, height: 16, cursor: "pointer" }} />
+                  </label>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: GRAY400, letterSpacing: "0.04em" }}>EN</span>
+                  <input
+                    type="text"
+                    placeholder="İngilizce ad (ops.) — örn: Private Pool"
+                    value={im.name_en ?? ""}
+                    onChange={(e) => setImkanNameEn(i, e.target.value)}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: "6px 9px",
+                      border: `1px solid ${GRAY300}`,
+                      borderRadius: 7,
+                      fontSize: 11,
+                      color: GRAY600,
+                    }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -813,6 +853,24 @@ export default function IsletmeTesisPage() {
               <div onClick={() => setEmojiPickerOpen(!emojiPickerOpen)} style={{ width: 36, height: 36, border: `1.5px solid ${GRAY200}`, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, cursor: "pointer" }}>{selectedEmoji}</div>
               <input type="text" placeholder="İmkan adı yazın..." value={imkanInput} onChange={(e) => setImkanInput(e.target.value)} style={{ flex: 1, padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} onKeyDown={(e) => e.key === "Enter" && addImkan()} />
               <button onClick={addImkan} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: "none", background: TEAL, color: "white", cursor: "pointer" }}>+ Ekle</button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+              <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: GRAY400, letterSpacing: "0.04em" }}>EN</span>
+              <input
+                type="text"
+                placeholder="İngilizce ad (opsiyonel)"
+                value={imkanInputEn}
+                onChange={(e) => setImkanInputEn(e.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: "8px 10px",
+                  border: `1px solid ${GRAY300}`,
+                  borderRadius: 8,
+                  fontSize: 11,
+                  color: GRAY600,
+                }}
+              />
             </div>
             {emojiPickerOpen && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
