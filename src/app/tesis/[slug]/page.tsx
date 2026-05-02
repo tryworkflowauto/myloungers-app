@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getLocalizedField } from "@/lib/getLocalizedField";
+import { translateDayShort } from "@/lib/calismaSaatleri";
 import { readSiteLangFromStorage, SITE_LANG_STORAGE_KEY } from "@/lib/site-lang";
 
 type TesisRow = Record<string, any>;
@@ -1588,7 +1589,11 @@ export default function TesisDetailPage() {
                 {openPanels.hours && (
                   <div className="pb" style={{ padding: 16 }}>
                     <div className="feat-grid">
-                      {calismaSaatleri.map((gun, idx) => (
+                      {calismaSaatleri.map((gun, idx) => {
+                        const dayLabel = translateDayShort(gun.name ?? "", siteLang);
+                        const hoursClosed = siteLang === "en" ? "Closed" : "Kapalı";
+                        const hoursPending = siteLang === "en" ? "Hours coming soon" : "Saat bilgisi yakında";
+                        return (
                         <div
                           key={gun.name || idx}
                           className="feat-item"
@@ -1601,16 +1606,17 @@ export default function TesisDetailPage() {
                               : undefined
                           }
                         >
-                          <div className="feat-ic">{gun.name || "—"}</div>
+                          <div className="feat-ic">{dayLabel || "—"}</div>
                           <div>
                             {gun.kapali
-                              ? "Kapalı"
+                              ? hoursClosed
                               : gun.acilis && gun.kapanis
                               ? `${gun.acilis} – ${gun.kapanis}`
-                              : "Saat bilgisi yakında"}
+                              : hoursPending}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
