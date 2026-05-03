@@ -125,7 +125,6 @@ function GirisContent() {
         setLoading(false);
         return;
       }
-      setSuccessMsg("Kayıt başarılı, otomatik giriş yapılıyor…");
 
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email: regEmail,
@@ -135,7 +134,13 @@ function GirisContent() {
       if (loginError) {
         console.log("Supabase login hatası (register sonrası):", loginError);
         console.log(loginError);
-        router.push("/giris?tab=login");
+        setSuccessMsg(
+          "✅ Kayıt başarılı! E-postanı kontrol et ve doğrulama linkine tıkla. Doğrulama sonrası giriş yapabilirsin."
+        );
+        window.setTimeout(() => {
+          setSuccessMsg(null);
+          router.push("/giris?tab=login");
+        }, 3000);
         return;
       }
 
