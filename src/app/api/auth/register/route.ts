@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { hash } from "bcryptjs";
 import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
@@ -13,7 +12,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Geçersiz alanlar" }, { status: 400 });
     }
 
-    // Supabase Auth tarafında kullanıcı oluştur
+    // Supabase Auth tarafında kullanıcı oluştur (trigger: kullanicilar satırını ekler)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -32,29 +31,19 @@ export async function POST(req: Request) {
     const ad = first;
     const soyad = rest.join(" ") || null;
 
-    // Şifreyi bcrypt ile hashle
-    const passwordHash = await hash(password, 10);
-
-    const { error: insertErr } = await supabase
+    const { error: updateError } = await supabase
       .from("kullanicilar")
-      .insert({
-        id: authData.user.id,
+      .update({
         ad,
         soyad,
         telefon: null,
-        email,
-        rol: "müşteri",
-        password_hash: passwordHash,
-      });
+      })
+      .eq("id", authData.user.id);
 
-    if (insertErr) {
+    if (updateError) {
       console.error(
-        "Supabase kullanıcı insert hatası:",
-        JSON.stringify(insertErr, null, 2)
-      );
-      return NextResponse.json(
-        { ok: false, error: "Kayıt oluşturulamadı", debug: insertErr },
-        { status: 500 }
+        "Kullanıcı bilgileri güncellenemedi:",
+        JSON.stringify(updateError, null, 2)
       );
     }
 
@@ -64,5 +53,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Sunucu hatası" }, { status: 500 });
   }
 }
-
 
