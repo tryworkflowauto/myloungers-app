@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { readSiteLangFromStorage } from "@/lib/site-lang";
+import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import "./basvuru.css";
 
 const ILLER = ["Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin", "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars", "Kastamonu", "Kayseri", "Kilis", "Kırıkkale", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Şırnak", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"];
@@ -48,6 +50,14 @@ export default function BasvuruPage() {
   const [iletisimTercihi, setIletisimTercihi] = useState("phone");
   const [uygunSaat, setUygunSaat] = useState("");
   const [gizlilikKabul, setGizlilikKabul] = useState(false);
+  const [legalFoot, setLegalFoot] = useState<"" | "?lang=en">("");
+
+  useEffect(() => {
+    const sync = () => setLegalFoot(footerLegalQueryFromLang(readSiteLangFromStorage()));
+    sync();
+    window.addEventListener("myloungers_langchange", sync);
+    return () => window.removeEventListener("myloungers_langchange", sync);
+  }, []);
 
   const goStep = (n: number) => {
     if (n === 2) {
@@ -284,7 +294,7 @@ export default function BasvuruPage() {
                       <label className="bav-check-item">
                         <input type="checkbox" checked={gizlilikKabul} onChange={(e) => setGizlilikKabul(e.target.checked)} />
                         <span>
-                          <Link href="/gizlilik" target="_blank" rel="noopener noreferrer" className="text-[#0ABAB5] hover:underline font-medium">
+                          <Link href={"/gizlilik" + legalFoot} target="_blank" rel="noopener noreferrer" className="text-[#0ABAB5] hover:underline font-medium">
                             Gizlilik Politikası
                           </Link>{" "}
                           kabul *

@@ -7,9 +7,11 @@ const TEAL = "#0ABAB5";
 type LegalPageLayoutProps = {
   title: string;
   children: ReactNode;
+  /** `?lang=en` or `` — appended to legal footer links only */
+  footerLegalQuery?: "" | "?lang=en";
 };
 
-export function LegalPageLayout({ title, children }: LegalPageLayoutProps) {
+export function LegalPageLayout({ title, children, footerLegalQuery = "" }: LegalPageLayoutProps) {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* HEADER */}
@@ -115,27 +117,27 @@ export function LegalPageLayout({ title, children }: LegalPageLayoutProps) {
             <h5 id="ft-s">Destek</h5>
             <ul>
               <li>
-                <a href="/kvkk" id="ft-s1">
+                <a href={"/kvkk" + footerLegalQuery} id="ft-s1">
                   KVKK Metni
                 </a>
               </li>
               <li>
-                <a href="/gizlilik" id="ft-s2">
+                <a href={"/gizlilik" + footerLegalQuery} id="ft-s2">
                   Gizlilik
                 </a>
               </li>
               <li>
-                <a href="/iptal-iade" id="ft-s3">
+                <a href={"/iptal-iade" + footerLegalQuery} id="ft-s3">
                   İptal &amp; İade
                 </a>
               </li>
               <li>
-                <a href="/kullanim-kosullari" id="ft-s4">
+                <a href={"/kullanim-kosullari" + footerLegalQuery} id="ft-s4">
                   Kullanım Koşulları
                 </a>
               </li>
               <li>
-                <a href="/cerez-politikasi" id="ft-s5">
+                <a href={"/cerez-politikasi" + footerLegalQuery} id="ft-s5">
                   Çerez Politikası
                 </a>
               </li>

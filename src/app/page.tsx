@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, type MouseEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { persistSiteLang, readSiteLangFromStorage } from "@/lib/site-lang";
+import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { homeActiveCategoryMatchesKategori } from "@/lib/tesisKategori";
 import "./myloungers.css";
 
@@ -619,6 +620,7 @@ export default function Home() {
   const searchTypeKey = srchType ? TYPE_MAP[srchType] : null;
 
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+  const legalFoot = footerLegalQueryFromLang(currentLang);
   const activeLangOpt = LANG_OPTS.find((o) => o.code === currentLang) ?? LANG_OPTS[0];
 
   const scrollToTesisler = () => {
@@ -1439,11 +1441,11 @@ export default function Home() {
           <div className="fcol">
             <h5 id="ft-s">Destek</h5>
             <ul>
-              <li><a href="/kvkk" id="ft-s1">KVKK Metni</a></li>
-              <li><a href="/gizlilik" id="ft-s2">Gizlilik</a></li>
-              <li><a href="/iptal-iade" id="ft-s3">İptal &amp; İade</a></li>
-              <li><a href="/kullanim-kosullari" id="ft-s4">Kullanım Koşulları</a></li>
-              <li><a href="/cerez-politikasi" id="ft-s5">Çerez Politikası</a></li>
+              <li><a href={"/kvkk" + legalFoot} id="ft-s1">KVKK Metni</a></li>
+              <li><a href={"/gizlilik" + legalFoot} id="ft-s2">Gizlilik</a></li>
+              <li><a href={"/iptal-iade" + legalFoot} id="ft-s3">İptal &amp; İade</a></li>
+              <li><a href={"/kullanim-kosullari" + legalFoot} id="ft-s4">Kullanım Koşulları</a></li>
+              <li><a href={"/cerez-politikasi" + legalFoot} id="ft-s5">Çerez Politikası</a></li>
             </ul>
           </div>
         </div>

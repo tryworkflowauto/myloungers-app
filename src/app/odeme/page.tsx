@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { readSiteLangFromStorage } from "@/lib/site-lang";
+import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 
 type ResData = {
   tesis: string;
@@ -107,6 +109,14 @@ function OdemeContent() {
   const [rezerveliKadar, setRezerveliKadar] = useState<Date | null>(null);
   const [kalanSure, setKalanSure] = useState<number>(0); // saniye cinsinden
   const [sureDoldu, setSureDoldu] = useState<boolean>(false);
+  const [legalFoot, setLegalFoot] = useState<"" | "?lang=en">("");
+
+  useEffect(() => {
+    const sync = () => setLegalFoot(footerLegalQueryFromLang(readSiteLangFromStorage()));
+    sync();
+    window.addEventListener("myloungers_langchange", sync);
+    return () => window.removeEventListener("myloungers_langchange", sync);
+  }, []);
 
   useEffect(() => {
     async function checkUser() {
@@ -742,7 +752,7 @@ function OdemeContent() {
                   <div style={{ marginTop: 16 }}>
                     <label className="kvkk">
                       <input type="checkbox" checked={kvkk} onChange={(e) => { setKvkk(e.target.checked); setKvkkErr(false); }} />
-                      <span><a href="/kullanim-kosullari" target="_blank" rel="noopener noreferrer">Kullanım Koşulları</a>&apos;nı ve <a href="/kvkk" target="_blank" rel="noopener noreferrer">KVKK Aydınlatma Metni</a>&apos;ni okudum, onaylıyorum.</span>
+                      <span><a href={"/kullanim-kosullari" + legalFoot} target="_blank" rel="noopener noreferrer">Kullanım Koşulları</a>&apos;nı ve <a href={"/kvkk" + legalFoot} target="_blank" rel="noopener noreferrer">KVKK Aydınlatma Metni</a>&apos;ni okudum, onaylıyorum.</span>
                     </label>
                     {kvkkErr && <div style={{ fontSize: ".65rem", color: "#EF4444", marginTop: 4 }}>Devam etmek için onay vermeniz gerekmektedir</div>}
                   </div>

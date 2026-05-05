@@ -5,6 +5,8 @@ import "./giris.css";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { readSiteLangFromStorage } from "@/lib/site-lang";
+import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 
 function getRedirectPath(rol: string | undefined | null): string {
   const r = (rol ?? "").toLowerCase();
@@ -34,10 +36,18 @@ function GirisContent() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [legalFoot, setLegalFoot] = useState<"" | "?lang=en">("");
 
   useEffect(() => {
     if (tabParam === "register") setTab("register");
   }, [tabParam]);
+
+  useEffect(() => {
+    const sync = () => setLegalFoot(footerLegalQueryFromLang(readSiteLangFromStorage()));
+    sync();
+    window.addEventListener("myloungers_langchange", sync);
+    return () => window.removeEventListener("myloungers_langchange", sync);
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -261,7 +271,7 @@ function GirisContent() {
                     {loading ? "Kayıt oluşturuluyor..." : "Kayıt Ol →"}
                   </button>
                   <p className="giris-kvkk">
-                    Kayıt olarak <Link href="/kvkk" className="giris-link">KVKK</Link> ve <Link href="/gizlilik" className="giris-link">Gizlilik</Link> metinlerini kabul etmiş olursunuz.
+                    Kayıt olarak <Link href={"/kvkk" + legalFoot} className="giris-link">KVKK</Link> ve <Link href={"/gizlilik" + legalFoot} className="giris-link">Gizlilik</Link> metinlerini kabul etmiş olursunuz.
                   </p>
                   <p className="giris-switch">Zaten hesabın var mı? <button type="button" className="giris-link" onClick={() => setTab("login")}>Giriş yap</button></p>
                 </div>

@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { readSiteLangFromStorage } from "@/lib/site-lang";
+import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { SIPARIS_DURUM } from "@/lib/constants";
 import CallWaiterModal from "@/components/CallWaiterModal";
 
@@ -2441,7 +2443,7 @@ export default function ProfilPage() {
                         setConfirmPassword("");
                         setShowPasswordModal(true);
                       } else if (item.t === "Veri ve Gizlilik") {
-                        window.open("/gizlilik", "_blank");
+                        window.open("/gizlilik" + footerLegalQueryFromLang(readSiteLangFromStorage()), "_blank");
                       }
                     }}
                   >
