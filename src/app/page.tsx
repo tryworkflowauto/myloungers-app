@@ -11,7 +11,7 @@ import "./myloungers.css";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   tr: {
-    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_apply: "Başvuru Formu",
+    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restoran", nav_bar: "Bar & Lounge", nav_apply: "Başvuru Formu",
     hero_title: "Bodrum'un En İyi", hero_title2: "Plaj & Otel Deneyimi", hero_subtitle: "Şezlong, plaj kulübü ve otel rezervasyonlarını tek platformda yönetin",
     hero_search_placeholder: "Tesis, bölge veya aktivite ara...", hero_btn: "Ara",
     filter_all: "Tümünü Gör", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
@@ -20,12 +20,13 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Rezervasyon Yap", card_per_day: "/gün", view_all: "Tümünü gör",
     btn_login: "Giriş Yap", btn_signup: "Üye Ol",
     sfl_region: "Bölge", sfl_type: "Tesis Tipi", sfl_date: "Tarih", sfl_name: "Tesis Adı",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restoran, Bar & Lounge...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
     srch_btn: "Tesis Ara", filter_btn: "Filtrele",
     r_search_placeholder: "İl ara...", r_all: "Tümü", r_clear: "Temizle", r_ok: "Tamam", r_select_il: "İl seçin",
     st_active: "Aktif tesis", st_res: "Rezervasyon", st_dest: "Destinasyon", st_rating: "Ortalama puan", st_qr: "Temassız giriş",
     cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
     cat_hotel_sub: "Konfor ve hizmet", cat_beach_sub: "Şezlong & deniz keyfi", cat_aqua_sub: "Eğlence & kaydırak",
+    cat_restoran_sub: "Menü ve ambians", cat_bar_sub: "İçecek ve eğlence",
     badge_popular: "Popüler", badge_new: "Yeni", tag_daily: "Günlük",
     how_title: "Nasıl", how_title2: "Çalışır?", how_sub: "3 adımda şezlong rezervasyonu",
     how1: "Tesis Seç", how2: "Şezlong Seç", how3: "Öde & Uzan",
@@ -35,7 +36,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     footer_desc: "Türkiye'nin şezlong rezervasyon platformu.",
   },
   en: {
-    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_apply: "Apply Now",
+    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restaurant", nav_bar: "Bar & Lounge", nav_apply: "Apply Now",
     hero_title: "Bodrum's Best", hero_title2: "Beach & Hotel Experience", hero_subtitle: "Manage sunbed, beach club and hotel reservations on one platform",
     hero_search_placeholder: "Search facility, region or activity...", hero_btn: "Search",
     filter_all: "View All", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
@@ -44,12 +45,13 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Book Now", card_per_day: "/day", view_all: "View All",
     btn_login: "Log In", btn_signup: "Sign Up",
     sfl_region: "Region", sfl_type: "Facility Type", sfl_date: "Date", sfl_name: "Facility Name",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club...", sfv_date: "Select date", sfv_name: "Search...",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant, Bar & Lounge...", sfv_date: "Select date", sfv_name: "Search...",
     srch_btn: "Search", filter_btn: "Filter",
     r_search_placeholder: "Search city...", r_all: "All", r_clear: "Clear", r_ok: "OK", r_select_il: "Select city",
     st_active: "Active facilities", st_res: "Reservations", st_dest: "Destinations", st_rating: "Average rating", st_qr: "Contactless entry",
     cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
     cat_hotel_sub: "Comfort and service", cat_beach_sub: "Sunbed & sea", cat_aqua_sub: "Fun & slides",
+    cat_restoran_sub: "Dining & ambience", cat_bar_sub: "Drinks & lounge",
     badge_popular: "Popular", badge_new: "New", tag_daily: "Daily",
     how_title: "How", how_title2: "It Works", how_sub: "Sunbed reservation in 3 steps",
     how1: "Choose Facility", how2: "Choose Sunbed", how3: "Pay & Relax",
@@ -68,12 +70,13 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Jetzt buchen", card_per_day: "/Tag", view_all: "Alle anzeigen",
     btn_login: "Anmelden", btn_signup: "Registrieren",
     sfl_region: "Region", sfl_type: "Einrichtungstyp", sfl_date: "Datum", sfl_name: "Einrichtungsname",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club...", sfv_date: "Datum wählen", sfv_name: "Suchen...",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant...", sfv_date: "Datum wählen", sfv_name: "Suchen...",
     srch_btn: "Suchen", filter_btn: "Filtern",
     r_search_placeholder: "Stadt suchen...", r_all: "Alle", r_clear: "Löschen", r_ok: "OK", r_select_il: "Stadt wählen",
     st_active: "Aktive Einrichtungen", st_res: "Reservierungen", st_dest: "Reiseziele", st_rating: "Durchschnittsbewertung", st_qr: "Berührungsloser Eintritt",
     cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
     cat_hotel_sub: "Komfort und Service", cat_beach_sub: "Liegestuhl & Meer", cat_aqua_sub: "Spaß & Rutschen",
+    cat_restoran_sub: "Kulinarik & Ambiente", cat_bar_sub: "Drinks & Lounge",
     badge_popular: "Beliebt", badge_new: "Neu", tag_daily: "Täglich",
     how_title: "Wie", how_title2: "es funktioniert", how_sub: "Liegestuhlreservierung in 3 Schritten",
     how1: "Einrichtung wählen", how2: "Liegestuhl wählen", how3: "Bezahlen & Entspannen",
@@ -92,12 +95,13 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Забронировать", card_per_day: "/день", view_all: "Все",
     btn_login: "Войти", btn_signup: "Регистрация",
     sfl_region: "Регион", sfl_type: "Тип объекта", sfl_date: "Дата", sfl_name: "Название",
-    sfv_region: "Бодрум, Анталья, Мармарис...", sfv_type: "Отель, Пляжный клуб...", sfv_date: "Выберите дату", sfv_name: "Поиск...",
+    sfv_region: "Бодрум, Анталья, Мармарис...", sfv_type: "Отель, Пляжный клуб, Аквапарк...", sfv_date: "Выберите дату", sfv_name: "Поиск...",
     srch_btn: "Поиск", filter_btn: "Фильтр",
     r_search_placeholder: "Поиск города...", r_all: "Все", r_clear: "Очистить", r_ok: "OK", r_select_il: "Выберите город",
     st_active: "Активные объекты", st_res: "Бронирования", st_dest: "Направления", st_rating: "Средний рейтинг", st_qr: "Бесконтактный вход",
     cat_hotel: "Отель", cat_beach: "Пляжный клуб", cat_aqua: "Аквапарк",
     cat_hotel_sub: "Комфорт и сервис", cat_beach_sub: "Шезлонг и море", cat_aqua_sub: "Развлечения и горки",
+    cat_restoran_sub: "Кухня и атмосфера", cat_bar_sub: "Бар и отдых",
     badge_popular: "Популярный", badge_new: "Новый", tag_daily: "Ежедневно",
     how_title: "Как", how_title2: "это работает", how_sub: "Бронирование шезлонга за 3 шага",
     how1: "Выберите объект", how2: "Выберите шезлонг", how3: "Оплатите и расслабьтесь",
@@ -114,6 +118,7 @@ const LANG_OPTS = [
 ];
 
 const SLIDER_IMGS = [
+  "/images/11.png",
   "/images/1.png",
   "/images/2.png",
   "/images/5.png",
@@ -148,13 +153,38 @@ const ILLER: Record<string, string[]> = {
   Eskişehir: ["Tepebaşı", "Odunpazarı", "Sivrihisar", "Mahmudiye", "Seyitgazi"],
 };
 
-const FACILITY_TYPES = [
-  { icon: "🏨", label: "Hotel" },
-  { icon: "🏖️", label: "Beach Club" },
-  { icon: "💦", label: "Aqua Park" },
-];
+type HomeFacilityTypeKey = "hotel" | "beach" | "aqua" | "restoran" | "bar";
 
-const TYPE_MAP: Record<string, string> = { "Hotel": "hotel", "Beach Club": "beach", "Aqua Park": "aqua" };
+function facilityTypeLabel(key: HomeFacilityTypeKey, tr: Record<string, string>): string {
+  switch (key) {
+    case "hotel":
+      return tr.filter_hotel;
+    case "beach":
+      return tr.filter_beach;
+    case "aqua":
+      return tr.filter_aqua;
+    case "restoran":
+      return tr.nav_restoran;
+    case "bar":
+      return tr.nav_bar;
+  }
+}
+
+const SEARCH_FACILITY_PARAM: Record<HomeFacilityTypeKey, string> = {
+  hotel: "hotel",
+  beach: "beach",
+  aqua: "aqua",
+  restoran: "restoran",
+  bar: "bar",
+};
+
+const FACILITY_TYPE_DEFS: Array<{ key: HomeFacilityTypeKey; emoji: string }> = [
+  { key: "hotel", emoji: "🏨" },
+  { key: "beach", emoji: "🏖️" },
+  { key: "aqua", emoji: "💦" },
+  { key: "restoran", emoji: "🍽️" },
+  { key: "bar", emoji: "🍸" },
+];
 
 const SORT_OPTS = [
   { icon: "⭐", label: "Popüler" },
@@ -231,7 +261,7 @@ export default function Home() {
   const [bmPane, setBmPane] = useState(1);
   const [activeCategory, setActiveCategory] = useState("all");
   const [srchRegion, setSrchRegion] = useState("");
-  const [srchType, setSrchType] = useState("");
+  const [srchFacilityKey, setSrchFacilityKey] = useState<"" | HomeFacilityTypeKey>("");
   const [srchDate, setSrchDate] = useState("");
   const [srchName, setSrchName] = useState("");
   const [panelRegion, setPanelRegion] = useState(false);
@@ -606,18 +636,16 @@ export default function Home() {
     const params = new URLSearchParams();
     const konum = activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince;
     if (konum) params.set("konum", konum);
-    if (srchType) params.set("tip", TYPE_MAP[srchType] ?? srchType.toLowerCase());
+    if (srchFacilityKey) params.set("tip", SEARCH_FACILITY_PARAM[srchFacilityKey]);
     if (srchDate) params.set("tarih", srchDate);
     const qs = params.toString();
     router.push(qs ? `/arama?${qs}` : "/arama");
-  }, [selectedProvince, activeIlce, srchType, srchDate, router]);
+  }, [selectedProvince, activeIlce, srchFacilityKey, srchDate, router]);
 
   const ilceler = selectedProvince && ILLER[selectedProvince] ? ILLER[selectedProvince] : [];
   const filteredIller = Object.keys(ILLER).filter((il) =>
     !ilSearch || il.toLowerCase().includes(ilSearch.toLowerCase())
   );
-
-  const searchTypeKey = srchType ? TYPE_MAP[srchType] : null;
 
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
   const legalFoot = footerLegalQueryFromLang(currentLang);
@@ -626,6 +654,11 @@ export default function Home() {
   const scrollToTesisler = () => {
     const el = document.getElementById("tesisler-section");
     if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const filterByCategory = (cat: string) => {
+    setActiveCategory(cat);
+    scrollToTesisler();
   };
 
   const goToCategoryListing = (e: MouseEvent<HTMLElement>) => {
@@ -665,6 +698,34 @@ export default function Home() {
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
               {t.nav_aqua}
+            </button>
+            <button
+              type="button"
+              id="nc4"
+              className={`nc ${activeCategory === "restoran" ? "on" : ""}`}
+              onClick={() => filterByCategory("restoran")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
+                <path d="M7 2v20" />
+                <path d="M17 2v20" />
+                <path d="M21 2c-1.5 0-3 1-3 3v7h3" />
+              </svg>
+              {t.nav_restoran}
+            </button>
+            <button
+              type="button"
+              id="nc5"
+              className={`nc ${activeCategory === "bar" ? "on" : ""}`}
+              onClick={() => filterByCategory("bar")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 21h8" />
+                <path d="M12 15v6" />
+                <path d="M17 3H7l5 8 5-8z" />
+                <line x1="9" y1="6" x2="15" y2="6" />
+              </svg>
+              {t.nav_bar}
             </button>
             <Link href="/basvuru" className="nc">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -811,6 +872,24 @@ export default function Home() {
           <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => { setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
           <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => { setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>
           <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => { setActiveCategory("aqua"); scrollToTesisler(); }}>{t.nav_aqua}</button>
+          <button type="button" id="mc4" className={`mcat ${activeCategory === "restoran" ? "on" : ""}`} onClick={() => filterByCategory("restoran")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
+              <path d="M7 2v20" />
+              <path d="M17 2v20" />
+              <path d="M21 2c-1.5 0-3 1-3 3v7h3" />
+            </svg>
+            {t.nav_restoran}
+          </button>
+          <button type="button" id="mc5" className={`mcat ${activeCategory === "bar" ? "on" : ""}`} onClick={() => filterByCategory("bar")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 21h8" />
+              <path d="M12 15v6" />
+              <path d="M17 3H7l5 8 5-8z" />
+              <line x1="9" y1="6" x2="15" y2="6" />
+            </svg>
+            {t.nav_bar}
+          </button>
           <Link href="/basvuru" className="mcat">{t.nav_apply}</Link>
         </div>
       </div>
@@ -894,6 +973,24 @@ export default function Home() {
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>
           <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); scrollToTesisler(); }}>{t.nav_aqua}</button>
+          <button type="button" id="ml4" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("restoran"); }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
+              <path d="M7 2v20" />
+              <path d="M17 2v20" />
+              <path d="M21 2c-1.5 0-3 1-3 3v7h3" />
+            </svg>
+            {t.nav_restoran}
+          </button>
+          <button type="button" id="ml5" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("bar"); }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 21h8" />
+              <path d="M12 15v6" />
+              <path d="M17 3H7l5 8 5-8z" />
+              <line x1="9" y1="6" x2="15" y2="6" />
+            </svg>
+            {t.nav_bar}
+          </button>
           <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>{t.nav_apply}</Link>
         </div>
       </div>
@@ -972,26 +1069,37 @@ export default function Home() {
             {/* TESİS TİPİ */}
             <div className="srch-field-wrap">
               <div
-                className={`sf ${panelType ? "active" : ""} ${srchType ? "filled" : ""}`}
+                className={`sf ${panelType ? "active" : ""} ${srchFacilityKey ? "filled" : ""}`}
                 onClick={(e) => { e.stopPropagation(); openPanel("type"); }}
                 role="button"
                 tabIndex={0}
               >
                 <span className="sfl">{t.sfl_type}</span>
-                <span className="sfv">{srchType || t.sfv_type}</span>
+                <span className="sfv">{srchFacilityKey ? facilityTypeLabel(srchFacilityKey, t) : t.sfv_type}</span>
               </div>
               {panelType && (
                 <div className="srch-dropdown type-dropdown" onClick={(e) => e.stopPropagation()}>
                   <div className="type-title">TESİS TÜRÜ SEÇİN</div>
                   <div className="type-grid">
-                    {FACILITY_TYPES.map((ft, i) => (
-                      <button key={i} type="button" className={`type-btn ${srchType === ft.label ? "sel" : ""}`} onClick={() => setSrchType(srchType === ft.label ? "" : ft.label)}>
-                        <span>{ft.icon}</span><span>{ft.label}</span>
-                      </button>
-                    ))}
+                    {FACILITY_TYPE_DEFS.map((ft) => {
+                      const label = facilityTypeLabel(ft.key, t);
+                      const sel = srchFacilityKey === ft.key;
+                      return (
+                        <button
+                          key={ft.key}
+                          type="button"
+                          id={ft.key === "restoran" ? "tp-restoran" : ft.key === "bar" ? "tp-bar" : undefined}
+                          className={`type-btn ${sel ? "sel" : ""}`}
+                          onClick={() => setSrchFacilityKey(sel ? "" : ft.key)}
+                        >
+                          <span>{ft.emoji}</span>
+                          <span>{label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="srch-drop-footer">
-                    <button type="button" className="srch-drop-btn" onClick={() => setSrchType("")}>{t.r_clear}</button>
+                    <button type="button" className="srch-drop-btn" onClick={() => setSrchFacilityKey("")}>{t.r_clear}</button>
                     <button type="button" className="srch-drop-btn primary" onClick={() => closePanels()}>Uygula</button>
                   </div>
                 </div>
@@ -1220,6 +1328,22 @@ export default function Home() {
               <div className="cat-sub" id="cat3-sub">{t.cat_aqua_sub}</div>
             </div>
             <div className="cat-badge co" id="cat3-badge">{t.badge_new}</div>
+          </div>
+          <div id="cat-restoran" className="cat-card" onClick={() => filterByCategory("restoran")}>
+            <img src="/images/tesis_kategorisi-restoran.jpg" alt={t.nav_restoran} />
+            <div className="cat-ov">
+              <div className="cat-name" id="cat4-name">{t.nav_restoran}</div>
+              <div className="cat-sub" id="cat4-sub">{t.cat_restoran_sub}</div>
+            </div>
+            <div className="cat-badge co" id="cat4-badge">{t.badge_new}</div>
+          </div>
+          <div id="cat-bar" className="cat-card" onClick={() => filterByCategory("bar")}>
+            <img src="/images/tesis_kategorisi-bar.jpg" alt={t.nav_bar} />
+            <div className="cat-ov">
+              <div className="cat-name" id="cat5-name">{t.nav_bar}</div>
+              <div className="cat-sub" id="cat5-sub">{t.cat_bar_sub}</div>
+            </div>
+            <div className="cat-badge co" id="cat5-badge">{t.badge_new}</div>
           </div>
         </div>
       </section>
