@@ -170,7 +170,7 @@ button.mob-link{width:calc(100% - 12px);appearance:none;-webkit-appearance:none}
 .sec-a{font-size:.8rem;font-weight:700;color:var(--teal-dk);text-decoration:none;cursor:pointer}
 button.sec-a{background:none;border:none;padding:0;font-family:inherit;appearance:none;-webkit-appearance:none}
 button.sec-a:hover{color:var(--teal)}
-.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .cat-card{border-radius:var(--rl);overflow:hidden;position:relative;cursor:pointer;aspect-ratio:3/2;transition:transform .22s,box-shadow .22s}
 .cat-card:hover{transform:translateY(-4px);box-shadow:var(--shl)}
 .cat-card img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
@@ -180,7 +180,7 @@ button.sec-a:hover{color:var(--teal)}
 .cat-sub{font-size:.72rem;color:rgba(255,255,255,.72)}
 .cat-badge{position:absolute;top:10px;right:10px;color:#fff;font-size:.6rem;font-weight:800;padding:3px 9px;border-radius:50px}
 .ct{background:var(--teal)}.co{background:var(--orange)}
-#oteller,#beach-club,#aqua-park,#cat-restoran,#cat-bar{scroll-margin-top:100px}
+#oteller,#beach-club,#aqua-park,#cat-restoran,#cat-bar,#cat-tekne,#cat-spa{scroll-margin-top:100px}
 .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .pc{cursor:pointer}
 a.pc,a.pc-link{text-decoration:none;color:inherit;display:block}

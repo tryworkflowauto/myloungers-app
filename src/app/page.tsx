@@ -11,7 +11,7 @@ import "./myloungers.css";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   tr: {
-    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restoran", nav_bar: "Bar & Lounge", nav_apply: "Başvuru Formu",
+    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restoran", nav_bar: "Bar & Lounge", nav_tekne: "Tekne Turu", nav_spa: "Spa", nav_apply: "Başvuru Formu",
     hero_title: "Bodrum'un En İyi", hero_title2: "Plaj & Otel Deneyimi", hero_subtitle: "Şezlong, plaj kulübü ve otel rezervasyonlarını tek platformda yönetin",
     hero_search_placeholder: "Tesis, bölge veya aktivite ara...", hero_btn: "Ara",
     filter_all: "Tümünü Gör", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
@@ -20,13 +20,14 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Rezervasyon Yap", card_per_day: "/gün", view_all: "Tümünü gör",
     btn_login: "Giriş Yap", btn_signup: "Üye Ol",
     sfl_region: "Bölge", sfl_type: "Tesis Tipi", sfl_date: "Tarih", sfl_name: "Tesis Adı",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restoran, Bar & Lounge...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restoran, Bar & Lounge, Tekne Turu, Spa...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
     srch_btn: "Tesis Ara", filter_btn: "Filtrele",
     r_search_placeholder: "İl ara...", r_all: "Tümü", r_clear: "Temizle", r_ok: "Tamam", r_select_il: "İl seçin",
     st_active: "Aktif tesis", st_res: "Rezervasyon", st_dest: "Destinasyon", st_rating: "Ortalama puan", st_qr: "Temassız giriş",
     cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
     cat_hotel_sub: "Konfor ve hizmet", cat_beach_sub: "Şezlong & deniz keyfi", cat_aqua_sub: "Eğlence & kaydırak",
     cat_restoran_sub: "Menü ve ambians", cat_bar_sub: "İçecek ve eğlence",
+    cat_tekne_sub: "Deniz turu & balık avı", cat_spa_sub: "Masaj & wellness",
     badge_popular: "Popüler", badge_new: "Yeni", tag_daily: "Günlük",
     how_title: "Nasıl", how_title2: "Çalışır?", how_sub: "3 adımda şezlong rezervasyonu",
     how1: "Tesis Seç", how2: "Şezlong Seç", how3: "Öde & Uzan",
@@ -36,7 +37,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     footer_desc: "Türkiye'nin şezlong rezervasyon platformu.",
   },
   en: {
-    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restaurant", nav_bar: "Bar & Lounge", nav_apply: "Apply Now",
+    nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restaurant", nav_bar: "Bar & Lounge", nav_tekne: "Boat Tour", nav_spa: "Spa", nav_apply: "Apply Now",
     hero_title: "Bodrum's Best", hero_title2: "Beach & Hotel Experience", hero_subtitle: "Manage sunbed, beach club and hotel reservations on one platform",
     hero_search_placeholder: "Search facility, region or activity...", hero_btn: "Search",
     filter_all: "View All", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
@@ -45,13 +46,14 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Book Now", card_per_day: "/day", view_all: "View All",
     btn_login: "Log In", btn_signup: "Sign Up",
     sfl_region: "Region", sfl_type: "Facility Type", sfl_date: "Date", sfl_name: "Facility Name",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant, Bar & Lounge...", sfv_date: "Select date", sfv_name: "Search...",
+    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant, Bar & Lounge, Boat Tour, Spa...", sfv_date: "Select date", sfv_name: "Search...",
     srch_btn: "Search", filter_btn: "Filter",
     r_search_placeholder: "Search city...", r_all: "All", r_clear: "Clear", r_ok: "OK", r_select_il: "Select city",
     st_active: "Active facilities", st_res: "Reservations", st_dest: "Destinations", st_rating: "Average rating", st_qr: "Contactless entry",
     cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
     cat_hotel_sub: "Comfort and service", cat_beach_sub: "Sunbed & sea", cat_aqua_sub: "Fun & slides",
     cat_restoran_sub: "Dining & ambience", cat_bar_sub: "Drinks & lounge",
+    cat_tekne_sub: "Sea tours & fishing", cat_spa_sub: "Massage & wellness",
     badge_popular: "Popular", badge_new: "New", tag_daily: "Daily",
     how_title: "How", how_title2: "It Works", how_sub: "Sunbed reservation in 3 steps",
     how1: "Choose Facility", how2: "Choose Sunbed", how3: "Pay & Relax",
@@ -153,7 +155,9 @@ const ILLER: Record<string, string[]> = {
   Eskişehir: ["Tepebaşı", "Odunpazarı", "Sivrihisar", "Mahmudiye", "Seyitgazi"],
 };
 
-type HomeFacilityTypeKey = "hotel" | "beach" | "aqua" | "restoran" | "bar";
+type HomeFacilityTypeKey = "hotel" | "beach" | "aqua" | "restoran" | "bar" | "tekne" | "spa";
+
+type HomeActiveCategory = "all" | HomeFacilityTypeKey;
 
 function facilityTypeLabel(key: HomeFacilityTypeKey, tr: Record<string, string>): string {
   switch (key) {
@@ -167,6 +171,10 @@ function facilityTypeLabel(key: HomeFacilityTypeKey, tr: Record<string, string>)
       return tr.nav_restoran;
     case "bar":
       return tr.nav_bar;
+    case "tekne":
+      return tr.nav_tekne;
+    case "spa":
+      return tr.nav_spa;
   }
 }
 
@@ -176,14 +184,18 @@ const SEARCH_FACILITY_PARAM: Record<HomeFacilityTypeKey, string> = {
   aqua: "aqua",
   restoran: "restoran",
   bar: "bar",
+  tekne: "tekne",
+  spa: "spa",
 };
 
-const FACILITY_TYPE_DEFS: Array<{ key: HomeFacilityTypeKey; emoji: string }> = [
+const FACILITY_TYPE_DEFS: Array<{ key: HomeFacilityTypeKey; emoji?: string }> = [
   { key: "hotel", emoji: "🏨" },
   { key: "beach", emoji: "🏖️" },
   { key: "aqua", emoji: "💦" },
   { key: "restoran", emoji: "🍽️" },
   { key: "bar", emoji: "🍸" },
+  { key: "tekne" },
+  { key: "spa" },
 ];
 
 const SORT_OPTS = [
@@ -259,7 +271,7 @@ export default function Home() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [basvuruOpen, setBasvuruOpen] = useState(false);
   const [bmPane, setBmPane] = useState(1);
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState<HomeActiveCategory>("all");
   const [srchRegion, setSrchRegion] = useState("");
   const [srchFacilityKey, setSrchFacilityKey] = useState<"" | HomeFacilityTypeKey>("");
   const [srchDate, setSrchDate] = useState("");
@@ -656,7 +668,7 @@ export default function Home() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
-  const filterByCategory = (cat: string) => {
+  const filterByCategory = (cat: Exclude<HomeActiveCategory, "all">) => {
     setActiveCategory(cat);
     scrollToTesisler();
   };
@@ -726,6 +738,33 @@ export default function Home() {
                 <line x1="9" y1="6" x2="15" y2="6" />
               </svg>
               {t.nav_bar}
+            </button>
+            <button
+              type="button"
+              id="nc6"
+              className={`nc ${activeCategory === "tekne" ? "on" : ""}`}
+              onClick={() => filterByCategory("tekne")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
+                <path d="M20 18l-1.4-7H5.4L4 18" />
+                <path d="M12 11V4M9 4h6" />
+              </svg>
+              {t.nav_tekne}
+            </button>
+            <button
+              type="button"
+              id="nc7"
+              className={`nc ${activeCategory === "spa" ? "on" : ""}`}
+              onClick={() => filterByCategory("spa")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
+                <path d="M7 4C5 7 5 10 7 12" />
+                <path d="M17 4c2 3 2 6 0 8" />
+                <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
+              </svg>
+              {t.nav_spa}
             </button>
             <Link href="/basvuru" className="nc">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -890,6 +929,23 @@ export default function Home() {
             </svg>
             {t.nav_bar}
           </button>
+          <button type="button" id="mc6" className={`mcat ${activeCategory === "tekne" ? "on" : ""}`} onClick={() => filterByCategory("tekne")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
+              <path d="M20 18l-1.4-7H5.4L4 18" />
+              <path d="M12 11V4M9 4h6" />
+            </svg>
+            {t.nav_tekne}
+          </button>
+          <button type="button" id="mc7" className={`mcat ${activeCategory === "spa" ? "on" : ""}`} onClick={() => filterByCategory("spa")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
+              <path d="M7 4C5 7 5 10 7 12" />
+              <path d="M17 4c2 3 2 6 0 8" />
+              <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
+            </svg>
+            {t.nav_spa}
+          </button>
           <Link href="/basvuru" className="mcat">{t.nav_apply}</Link>
         </div>
       </div>
@@ -991,6 +1047,39 @@ export default function Home() {
             </svg>
             {t.nav_bar}
           </button>
+          <button
+            type="button"
+            id="ml6"
+            className="mob-link"
+            onClick={() => {
+              setMenuOpen(false);
+              filterByCategory("tekne");
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
+              <path d="M20 18l-1.4-7H5.4L4 18" />
+              <path d="M12 11V4M9 4h6" />
+            </svg>
+            {t.nav_tekne}
+          </button>
+          <button
+            type="button"
+            id="ml7"
+            className="mob-link"
+            onClick={() => {
+              setMenuOpen(false);
+              filterByCategory("spa");
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
+              <path d="M7 4C5 7 5 10 7 12" />
+              <path d="M17 4c2 3 2 6 0 8" />
+              <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
+            </svg>
+            {t.nav_spa}
+          </button>
           <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>{t.nav_apply}</Link>
         </div>
       </div>
@@ -1084,15 +1173,40 @@ export default function Home() {
                     {FACILITY_TYPE_DEFS.map((ft) => {
                       const label = facilityTypeLabel(ft.key, t);
                       const sel = srchFacilityKey === ft.key;
+                      const tpId =
+                        ft.key === "restoran"
+                          ? "tp-restoran"
+                          : ft.key === "bar"
+                            ? "tp-bar"
+                            : ft.key === "tekne"
+                              ? "tp-tekne"
+                              : ft.key === "spa"
+                                ? "tp-spa"
+                                : undefined;
                       return (
                         <button
                           key={ft.key}
                           type="button"
-                          id={ft.key === "restoran" ? "tp-restoran" : ft.key === "bar" ? "tp-bar" : undefined}
+                          id={tpId}
                           className={`type-btn ${sel ? "sel" : ""}`}
                           onClick={() => setSrchFacilityKey(sel ? "" : ft.key)}
                         >
-                          <span>{ft.emoji}</span>
+                          {ft.emoji ? (
+                            <span>{ft.emoji}</span>
+                          ) : ft.key === "tekne" ? (
+                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
+                              <path d="M20 18l-1.4-7H5.4L4 18" />
+                              <path d="M12 11V4M9 4h6" />
+                            </svg>
+                          ) : (
+                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
+                              <path d="M7 4C5 7 5 10 7 12" />
+                              <path d="M17 4c2 3 2 6 0 8" />
+                              <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
+                            </svg>
+                          )}
                           <span>{label}</span>
                         </button>
                       );
@@ -1344,6 +1458,22 @@ export default function Home() {
               <div className="cat-sub" id="cat5-sub">{t.cat_bar_sub}</div>
             </div>
             <div className="cat-badge co" id="cat5-badge">{t.badge_new}</div>
+          </div>
+          <div id="cat-tekne" className="cat-card" onClick={() => filterByCategory("tekne")}>
+            <img src="/images/tesis_kategorisi-tekne.jpg" alt={t.nav_tekne} />
+            <div className="cat-ov">
+              <div className="cat-name" id="cat6-name">{t.nav_tekne}</div>
+              <div className="cat-sub" id="cat6-sub">{t.cat_tekne_sub}</div>
+            </div>
+            <div className="cat-badge co" id="cat6-badge">{t.badge_new}</div>
+          </div>
+          <div id="cat-spa" className="cat-card" onClick={() => filterByCategory("spa")}>
+            <img src="/images/tesis_kategorisi-spa.jpg" alt={t.nav_spa} />
+            <div className="cat-ov">
+              <div className="cat-name" id="cat7-name">{t.nav_spa}</div>
+              <div className="cat-sub" id="cat7-sub">{t.cat_spa_sub}</div>
+            </div>
+            <div className="cat-badge co" id="cat7-badge">{t.badge_new}</div>
           </div>
         </div>
       </section>
