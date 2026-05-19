@@ -6,15 +6,53 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import "./arama.css";
 import { supabase } from "@/lib/supabase";
+import { readSiteLangFromStorage, type SiteLang } from "@/lib/site-lang";
 import { aramaTabMatchesKategori, normalizeKategoriList } from "@/lib/tesisKategori";
 
 const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 
+/** Arama sekmesi iç anahtarları — `activeTab` ve `TIP_QUERY_TO_TAB` ile uyumlu */
+type AramaTabKey =
+  | "Tümü"
+  | "Hotel"
+  | "Beach Club"
+  | "Aqua Park"
+  | "Restoran"
+  | "Bar & Lounge"
+  | "Tekne Turu"
+  | "Spa";
+
+const ARAMA_TAB_LABEL_TR: Record<AramaTabKey, string> = {
+  "Tümü": "Tümü",
+  Hotel: "Hotel",
+  "Beach Club": "Beach Club",
+  "Aqua Park": "Aqua Park",
+  Restoran: "Restoran",
+  "Bar & Lounge": "Bar & Lounge",
+  "Tekne Turu": "Tekne Turu",
+  Spa: "Spa",
+};
+
+const ARAMA_TAB_LABEL_EN: Record<AramaTabKey, string> = {
+  "Tümü": "All",
+  Hotel: "Hotel",
+  "Beach Club": "Beach Club",
+  "Aqua Park": "Aqua Park",
+  Restoran: "Restaurant",
+  "Bar & Lounge": "Bar & Lounge",
+  "Tekne Turu": "Boat Tour",
+  Spa: "Spa",
+};
+
 /** Ana sayfa `data-cat` / arama `tip` sorgusu → sekme; `tesisler.kategori` ile eşleşir */
-const TIP_QUERY_TO_TAB: Record<string, string> = {
+const TIP_QUERY_TO_TAB: Record<string, AramaTabKey> = {
   hotel: "Hotel",
   beach: "Beach Club",
   aqua: "Aqua Park",
+  restoran: "Restoran",
+  bar: "Bar & Lounge",
+  tekne: "Tekne Turu",
+  spa: "Spa",
 };
 
 type Card = {
@@ -76,12 +114,22 @@ function AramaContent() {
   const [viewMode, setViewMode] = useState<"list"|"grid">("list");
   const [fpOpen, setFpOpen] = useState(false);
   const [favs, setFavs] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState("Tümü");
+  const [activeTab, setActiveTab] = useState<AramaTabKey>("Tümü");
   const [filterBadge, setFilterBadge] = useState(0);
   const [priceMax, setPriceMax] = useState(5000);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
+  const [siteLang, setSiteLang] = useState<SiteLang>(() =>
+    typeof window !== "undefined" ? readSiteLangFromStorage() : "tr"
+  );
+
+  useEffect(() => {
+    const sync = () => setSiteLang(readSiteLangFromStorage());
+    sync();
+    window.addEventListener("myloungers_langchange", sync);
+    return () => window.removeEventListener("myloungers_langchange", sync);
+  }, []);
 
   useEffect(() => {
     async function fetchTesisler() {
@@ -227,24 +275,49 @@ function AramaContent() {
     .filter((c) => c.price == null || c.price <= priceMax);
 
   const tabCounts = useMemo(() => {
-    if (!cards.length) return { all: 0, beach: 0, hotel: 0, aqua: 0 };
+    const empty = {
+      all: 0,
+      Hotel: 0,
+      "Beach Club": 0,
+      "Aqua Park": 0,
+      Restoran: 0,
+      "Bar & Lounge": 0,
+      "Tekne Turu": 0,
+      Spa: 0,
+    };
+    if (!cards.length) return empty;
+    const c = (tabKey: AramaTabKey) =>
+      cards.filter((card) => aramaTabMatchesKategori(tabKey, card.kategoriRaw)).length;
     return {
       all: cards.length,
-      beach: cards.filter((c) => aramaTabMatchesKategori("Beach Club", c.kategoriRaw)).length,
-      hotel: cards.filter((c) => aramaTabMatchesKategori("Hotel", c.kategoriRaw)).length,
-      aqua: cards.filter((c) => aramaTabMatchesKategori("Aqua Park", c.kategoriRaw)).length,
+      Hotel: c("Hotel"),
+      "Beach Club": c("Beach Club"),
+      "Aqua Park": c("Aqua Park"),
+      Restoran: c("Restoran"),
+      "Bar & Lounge": c("Bar & Lounge"),
+      "Tekne Turu": c("Tekne Turu"),
+      Spa: c("Spa"),
     };
   }, [cards]);
 
-  const TABS = useMemo(
-    () => [
-      { label: "🏖️ Tümü", key: "Tümü", count: tabCounts.all },
-      { label: "🌊 Beach Club", key: "Beach Club", count: tabCounts.beach },
-      { label: "🏨 Hotel", key: "Hotel", count: tabCounts.hotel },
-      { label: "💦 Aqua Park", key: "Aqua Park", count: tabCounts.aqua },
-    ],
-    [tabCounts]
-  );
+  const TABS = useMemo(() => {
+    const labels = siteLang === "en" ? ARAMA_TAB_LABEL_EN : ARAMA_TAB_LABEL_TR;
+    const defs: { key: AramaTabKey; emoji: string }[] = [
+      { key: "Tümü", emoji: "🏖️" },
+      { key: "Hotel", emoji: "🏨" },
+      { key: "Beach Club", emoji: "🌊" },
+      { key: "Aqua Park", emoji: "💦" },
+      { key: "Restoran", emoji: "🍽️" },
+      { key: "Bar & Lounge", emoji: "🍸" },
+      { key: "Tekne Turu", emoji: "⛵" },
+      { key: "Spa", emoji: "💆" },
+    ];
+    return defs.map(({ key, emoji }) => ({
+      key,
+      label: `${emoji} ${labels[key]}`,
+      count: key === "Tümü" ? tabCounts.all : tabCounts[key],
+    }));
+  }, [tabCounts, siteLang]);
 
   const uniqueCities = useMemo(() => {
     const s = new Set<string>();
@@ -470,9 +543,13 @@ function AramaContent() {
             <div className="fg">
               <div className="fg-title">🏖️ Tesis Tipi</div>
               {[
-                ["Beach Club", tabCounts.beach],
-                ["Hotel", tabCounts.hotel],
-                ["Aqua Park", tabCounts.aqua],
+                ["Hotel", tabCounts.Hotel],
+                ["Beach Club", tabCounts["Beach Club"]],
+                ["Aqua Park", tabCounts["Aqua Park"]],
+                ["Restoran", tabCounts.Restoran],
+                ["Bar & Lounge", tabCounts["Bar & Lounge"]],
+                ["Tekne Turu", tabCounts["Tekne Turu"]],
+                ["Spa", tabCounts.Spa],
               ].map(([label, cnt]) => (
                 <label key={label} className="fc">
                   <input type="checkbox" readOnly />

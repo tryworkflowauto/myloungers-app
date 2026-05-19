@@ -668,9 +668,21 @@ export default function Home() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
+  /** Ana sayfa kategori → /arama `tip` (arama `TIP_QUERY_TO_TAB` ile uyumlu; kart `data-cat` ile aynı değerler). */
+  const HOME_CATEGORY_ARAMA_TIP: Record<Exclude<HomeActiveCategory, "all">, string> = {
+    hotel: "hotel",
+    beach: "beach",
+    aqua: "aqua",
+    restoran: "restoran",
+    bar: "bar",
+    tekne: "tekne",
+    spa: "spa",
+  };
+
   const filterByCategory = (cat: Exclude<HomeActiveCategory, "all">) => {
+    const tip = HOME_CATEGORY_ARAMA_TIP[cat];
     setActiveCategory(cat);
-    scrollToTesisler();
+    router.push(`/arama?tip=${encodeURIComponent(tip)}`);
   };
 
   const goToCategoryListing = (e: MouseEvent<HTMLElement>) => {
@@ -690,7 +702,7 @@ export default function Home() {
             <button
               type="button"
               className={`nc ${activeCategory === "hotel" ? "on" : ""}`}
-              onClick={() => { setActiveCategory("hotel"); scrollToTesisler(); }}
+              onClick={() => filterByCategory("hotel")}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 22V12H8v10"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
               {t.nav_hotel}
@@ -698,7 +710,7 @@ export default function Home() {
             <button
               type="button"
               className={`nc ${activeCategory === "beach" ? "on" : ""}`}
-              onClick={() => { setActiveCategory("beach"); scrollToTesisler(); }}
+              onClick={() => filterByCategory("beach")}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 4C14 4 11 6 10 9L3 21"/><path d="M22 4C19 4 16 6 15 9L8 21"/><path d="M7 21h14"/><circle cx="19" cy="4" r="1" fill="currentColor"/></svg>
               {t.nav_beach}
@@ -706,7 +718,7 @@ export default function Home() {
             <button
               type="button"
               className={`nc ${activeCategory === "aqua" ? "on" : ""}`}
-              onClick={() => { setActiveCategory("aqua"); scrollToTesisler(); }}
+              onClick={() => filterByCategory("aqua")}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
               {t.nav_aqua}
@@ -908,9 +920,9 @@ export default function Home() {
       {/* MOB CATS */}
       <div className="mob-cats">
         <div className="mob-cats-in">
-          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => { setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
-          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => { setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>
-          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => { setActiveCategory("aqua"); scrollToTesisler(); }}>{t.nav_aqua}</button>
+          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => filterByCategory("hotel")}>{t.nav_hotel}</button>
+          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => filterByCategory("beach")}>{t.nav_beach}</button>
+          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => filterByCategory("aqua")}>{t.nav_aqua}</button>
           <button type="button" id="mc4" className={`mcat ${activeCategory === "restoran" ? "on" : ""}`} onClick={() => filterByCategory("restoran")}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
@@ -1026,9 +1038,9 @@ export default function Home() {
               </>
             )}
           </div>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("hotel"); scrollToTesisler(); }}>{t.nav_hotel}</button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("beach"); scrollToTesisler(); }}>{t.nav_beach}</button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); setActiveCategory("aqua"); scrollToTesisler(); }}>{t.nav_aqua}</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("hotel"); }}>{t.nav_hotel}</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("beach"); }}>{t.nav_beach}</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("aqua"); }}>{t.nav_aqua}</button>
           <button type="button" id="ml4" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("restoran"); }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />

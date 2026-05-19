@@ -56,6 +56,10 @@ export default function SearchBar({
             <option value="beach">Beach Club</option>
             <option value="hotel">Hotel</option>
             <option value="aqua">Aqua Park</option>
+            <option value="restoran">Restoran</option>
+            <option value="bar">Bar & Lounge</option>
+            <option value="tekne">Tekne Turu</option>
+            <option value="spa">Spa</option>
           </select>
         </div>
         <div className="arama-sf" style={{ minWidth: 130 }}>
