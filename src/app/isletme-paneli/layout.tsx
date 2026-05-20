@@ -162,7 +162,7 @@ export default function IsletmePaneliLayout({
             {
               href: "/isletme-paneli/sezlong-haritasi",
               icon: "🏖️",
-              label: "Şezlong Haritası",
+              label: "Yerleşim Haritası",
             },
             {
               href: "/isletme-paneli/rezervasyonlar",

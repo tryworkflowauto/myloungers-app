@@ -21,6 +21,41 @@ const YELLOW = "#F59E0B";
 const TABLE_COLS = "50px 1fr 140px 120px 110px 120px 110px 100px";
 const SAYFA_BASINA = 7;
 
+/** DB time → HH:mm */
+function fmtRezSaatHHmm(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "object" && raw !== null && "hours" in raw && "minutes" in raw) {
+    const o = raw as { hours?: unknown; minutes?: unknown };
+    const ha = Number(o.hours);
+    const mi = Number(o.minutes);
+    if (!Number.isFinite(ha) || !Number.isFinite(mi)) return null;
+    return `${String(ha).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
+  }
+  const s = String(raw).trim();
+  if (!s || s === "null") return null;
+  const m = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?/);
+  if (!m) return null;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
+/** created_at → kısa metin, Europe/Istanbul (örn. "20 Mayıs 10:06") */
+function fmtCreatedAtIstanbul(raw: string | null | undefined): string {
+  if (raw == null || String(raw).trim() === "") return "";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeZone: "Europe/Istanbul",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(d)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 type Rezervasyon = {
   id: string;
   rezervasyonKodu?: string;
@@ -34,6 +69,8 @@ type Rezervasyon = {
   tarih: string;
   tarihISO: string;
   tarihSub: string;
+  /** DB saat — kart/drawer (HH:mm) */
+  rezSaatLabel?: string | null;
   tip: string;
   tipLabel: string;
   tutar: string;
@@ -100,6 +137,8 @@ function mapRowToRezervasyon(
     durum?: string | null;
     giris_yapildi?: boolean | null;
     rezervasyon_kodu?: string | null;
+    saat?: string | null;
+    created_at?: string | null;
   },
   index: number
 ): Rezervasyon {
@@ -126,7 +165,14 @@ function mapRowToRezervasyon(
         : { status: "bekliyor", statusLabel: "◷ Bekliyor", disabled: false };
   const tutarNum = Number(r.toplam_tutar ?? 0);
   const tutar = `₺${tutarNum.toLocaleString("tr-TR")}`;
-  let tarihSub = saatPart ? `${saatPart} — ${statusLabel.replace(/^[●◔◷✓✖]\s*/, "")}` : (disabled ? "İptal edildi" : "—");
+  const statusText = statusLabel.replace(/^[●◔◷✓✖]\s*/, "");
+  const createdFmt = fmtCreatedAtIstanbul(r.created_at);
+  let tarihSub: string;
+  if (createdFmt) {
+    tarihSub = `Rez: ${createdFmt} — ${statusText}`;
+  } else {
+    tarihSub = disabled ? "İptal edildi" : `— — ${statusText}`;
+  }
   let tutarSub = "Yeni";
   let tutarColor = NAVY;
   if (disabled) {
@@ -143,6 +189,7 @@ function mapRowToRezervasyon(
   const sezlong = grupAd && sezlongNo ? `${grupAd.charAt(0)}-${sezlongNo}` : sezlongNo || "—";
   const sezlongSub = grupAd ? `${grupAd} • ${kisi} Kişi` : `${kisi} Kişi`;
   const drawerSezlong = grupAd && sezlongNo ? `${grupAd}-${sezlongNo} (${grupAd})` : sezlongNo ? `${sezlongNo}` : "—";
+  const rezSaatLabel = fmtRezSaatHHmm(r.saat);
 
   return {
     id: idStr,
@@ -157,6 +204,7 @@ function mapRowToRezervasyon(
     tarih,
     tarihISO,
     tarihSub,
+    rezSaatLabel: rezSaatLabel ?? undefined,
     baslangicTarih: startStr,
     bitisTarih: endStr,
     tip: "on",
@@ -323,7 +371,7 @@ export default function IsletmeRezervasyonlarPage() {
     setLoading(true);
     supabase
       .from("rezervasyonlar")
-      .select("id, rezervasyon_kodu, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, giris_yapildi, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
+      .select("id, rezervasyon_kodu, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, saat, kisi_sayisi, toplam_tutar, durum, giris_yapildi, created_at, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
       .eq("tesis_id", tesisId)
       .not("pgtranid", "is", null)
       .order("baslangic_tarih", { ascending: false })
@@ -430,14 +478,21 @@ export default function IsletmeRezervasyonlarPage() {
   }
 
   function openEdit(r: Rezervasyon) {
-    const saatMatch = r.tarihSub.match(/^\d{2}:\d{2}/);
+    const editSaat =
+      r.rezSaatLabel && /^\d{2}:\d{2}$/.test(r.rezSaatLabel)
+        ? r.rezSaatLabel
+        : (() => {
+            const bt = r.baslangicTarih ?? "";
+            const m = bt.match(/T(\d{2}):(\d{2})/);
+            return m ? `${m[1]}:${m[2]}` : "";
+          })();
     setEditForm({
       musteriAdi: r.musteri,
       telefon: r.telefon,
       grup: r.sezlongSub.split(" •")[0],
       sezlongNo: r.sezlong,
       tarih: r.tarihISO,
-      saat: saatMatch ? saatMatch[0] : "",
+      saat: editSaat,
       kisiSayisi: "2",
       odeme: r.tip,
     });
@@ -471,7 +526,7 @@ export default function IsletmeRezervasyonlarPage() {
               telefon: editForm.telefon,
               sezlong: editForm.sezlongNo,
               tip: editForm.odeme,
-              tipLabel: editForm.odeme === "on" ? "💰 Ön Ödemeli" : "🏖️ Sadece Sezlong",
+              tipLabel: editForm.odeme === "on" ? "💰 Ön Ödemeli" : "🏖️ Sadece Yer Kiralama",
             }
           : r
       )
@@ -613,7 +668,7 @@ export default function IsletmeRezervasyonlarPage() {
   async function saveYeni() {
     if (!tesisId) return;
     if (!yeniForm.sezlongId) {
-      alert("Lütfen bir şezlong seçin.");
+      alert("Lütfen bir yer seçin.");
       return;
     }
     const baslangicStr = `${yeniForm.tarih}T${(yeniForm.saat || "09:00").padEnd(5, "0")}:00`;
@@ -634,7 +689,7 @@ export default function IsletmeRezervasyonlarPage() {
     const { data: row, error } = await supabase
       .from("rezervasyonlar")
       .insert(payload as any)
-      .select("id, tesis_id, kullanici_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum")
+      .select("id, tesis_id, kullanici_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, created_at")
       .single();
     if (error) {
       console.error("Rezervasyon insert error:", error);
@@ -657,10 +712,10 @@ export default function IsletmeRezervasyonlarPage() {
   }
 
   function excelIndir() {
-    const headers = ["No", "Müşteri", "Telefon", "Şezlong", "Grup", "Tarih", "Saat", "Tip", "Tutar", "Durum"];
+    const headers = ["No", "Müşteri", "Telefon", "Yer", "Grup", "Tarih", "Saat", "Tip", "Tutar", "Durum"];
     const rows = filtrelenmis.map((r) => [
       r.no, r.musteri, r.telefon, r.sezlong, r.sezlongSub.split(" •")[0],
-      r.tarih, r.tarihSub.split(" — ")[0], r.tipLabel.replace(/[^\w\s]/g, ""),
+      r.tarih, r.rezSaatLabel || "", r.tipLabel.replace(/[^\w\s]/g, ""),
       r.tutar, r.statusLabel.replace(/[^\w\s]/g, ""),
     ]);
     const csv = [headers, ...rows].map((row) => row.map((c) => `"${c}"`).join(",")).join("\n");
@@ -783,7 +838,7 @@ export default function IsletmeRezervasyonlarPage() {
           >
             <option value="">Tüm Tipler</option>
             <option value="on">Ön Ödemeli</option>
-            <option value="sezlong">Sadece Sezlong</option>
+            <option value="sezlong">Sadece Yer Kiralama</option>
           </select>
           <select
             value={filtreDurum}
@@ -827,7 +882,7 @@ export default function IsletmeRezervasyonlarPage() {
         {/* TABLO */}
         <div style={{ background: "white", borderRadius: 14, border: `1px solid ${GRAY200}`, overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: TABLE_COLS, padding: "12px 18px", background: GRAY50, borderBottom: `1px solid ${GRAY200}`, gap: 8 }}>
-            {["#", "Müşteri", "Şezlong", "Tarih", "Tip", "Tutar / Bakiye", "Durum", "İşlem"].map((h, i) => (
+            {["#", "Müşteri", "Yer", "Tarih", "Tip", "Tutar / Bakiye", "Durum", "İşlem"].map((h, i) => (
               <div key={h} style={{ fontSize: 11, fontWeight: 700, color: GRAY400, letterSpacing: 0.5, textTransform: "uppercase", textAlign: i === 7 ? "right" : "left" }}>{h}</div>
             ))}
           </div>
@@ -864,6 +919,9 @@ export default function IsletmeRezervasyonlarPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: GRAY800 }}>{r.tarih}</div>
+                  {r.rezSaatLabel ? (
+                    <div style={{ fontSize: 10, color: GRAY600, fontWeight: 600 }}>Saat: {r.rezSaatLabel}</div>
+                  ) : null}
                   <div style={{ fontSize: 10, color: GRAY400 }}>{r.tarihSub}</div>
                 </div>
                 <div>
@@ -986,7 +1044,8 @@ export default function IsletmeRezervasyonlarPage() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       {[
-                        { label: "Şezlong", val: drawerRez.drawerData.sezlong },
+                        { label: "Yer", val: drawerRez.drawerData.sezlong },
+                        ...(drawerRez.rezSaatLabel ? [{ label: "Rezervasyon saati", val: `Saat: ${drawerRez.rezSaatLabel}` }] as { label: string; val: string }[] : []),
                         { label: "Giriş Saati", val: drawerRez.drawerData.giris },
                         { label: "Süre", val: drawerRez.drawerData.sure },
                         { label: "Tip", val: drawerRez.tipLabel },
@@ -1053,7 +1112,7 @@ export default function IsletmeRezervasyonlarPage() {
                         💰 Bakiye Yükle
                       </button>
                       <button onClick={sezlongDegistirAc} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
-                        🏖️ Şezlong Değiştir
+                        🏖️ Yer Değiştir
                       </button>
                       <button onClick={() => setCikisYaptirModal(true)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, border: `1px solid ${GRAY200}`, background: "white", cursor: "pointer", fontSize: 13, fontWeight: 600, color: GRAY800, textAlign: "left" }}>
                         📤 Çıkış Yaptır
@@ -1095,7 +1154,7 @@ export default function IsletmeRezervasyonlarPage() {
               <span style={{ fontSize: 20 }}>💰</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>Ön Ödemeli Sistem Aktif</div>
-                <div style={{ fontSize: 11, color: GRAY600, marginTop: 2 }}>Sezlong bedeli müşterinin bakiyesine yüklenir.</div>
+                <div style={{ fontSize: 11, color: GRAY600, marginTop: 2 }}>Yer bedeli müşterinin bakiyesine yüklenir.</div>
               </div>
             </div>
 
@@ -1112,7 +1171,7 @@ export default function IsletmeRezervasyonlarPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
-                <label style={labelStyle}>Şezlong Grubu</label>
+                <label style={labelStyle}>Yer Grubu</label>
                 <select value={yeniForm.grup} onChange={(e) => setYeniForm((f) => ({ ...f, grup: e.target.value, sezlongId: "" }))} style={inputStyle}>
                   <option value="">Seçiniz</option>
                   {gruplarForForm.map((g) => (
@@ -1121,7 +1180,7 @@ export default function IsletmeRezervasyonlarPage() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Şezlong</label>
+                <label style={labelStyle}>Yer</label>
                 <select value={yeniForm.sezlongId} onChange={(e) => setYeniForm((f) => ({ ...f, sezlongId: e.target.value }))} style={inputStyle}>
                   <option value="">Seçiniz</option>
                   {sezlonglarForForm.filter((s) => s.grupAd === yeniForm.grup).map((s) => (
@@ -1156,7 +1215,7 @@ export default function IsletmeRezervasyonlarPage() {
               <label style={labelStyle}>Ödeme Tipi</label>
               <select value={yeniForm.odeme} onChange={(e) => setYeniForm((f) => ({ ...f, odeme: e.target.value }))} style={inputStyle}>
                 <option value="on">💰 Ön Ödemeli</option>
-                <option value="sezlong">🏖️ Sadece Şezlong</option>
+                <option value="sezlong">🏖️ Sadece Yer Kiralama</option>
               </select>
             </div>
 
@@ -1198,7 +1257,7 @@ export default function IsletmeRezervasyonlarPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
-                <label style={labelStyle}>Şezlong Grubu</label>
+                <label style={labelStyle}>Yer Grubu</label>
                 <select value={editForm.grup} onChange={(e) => setEditForm((f) => ({ ...f, grup: e.target.value }))} style={inputStyle}>
                   <option>Silver</option>
                   <option>VIP</option>
@@ -1207,7 +1266,7 @@ export default function IsletmeRezervasyonlarPage() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Şezlong No</label>
+                <label style={labelStyle}>Yer No</label>
                 <input type="text" value={editForm.sezlongNo} onChange={(e) => setEditForm((f) => ({ ...f, sezlongNo: e.target.value }))} style={inputStyle} />
               </div>
             </div>
@@ -1237,7 +1296,7 @@ export default function IsletmeRezervasyonlarPage() {
               <label style={labelStyle}>Ödeme Tipi</label>
               <select value={editForm.odeme} onChange={(e) => setEditForm((f) => ({ ...f, odeme: e.target.value }))} style={inputStyle}>
                 <option value="on">💰 Ön Ödemeli</option>
-                <option value="sezlong">🏖️ Sadece Şezlong</option>
+                <option value="sezlong">🏖️ Sadece Yer Kiralama</option>
               </select>
             </div>
 
@@ -1296,9 +1355,9 @@ export default function IsletmeRezervasyonlarPage() {
       {sezlongDegistirModal && drawerRez && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }} onClick={(e) => e.target === e.currentTarget && setSezlongDegistirModal(false)}>
           <div style={{ background: "white", borderRadius: 16, padding: 24, width: 380, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>🏖️ Şezlong Değiştir</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>🏖️ Yer Değiştir</h3>
             <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Şezlong</label>
+              <label style={labelStyle}>Yer</label>
               <select value={selectedSezlongId} onChange={(e) => setSelectedSezlongId(e.target.value)} style={inputStyle}>
                 <option value="">Seçiniz</option>
                 {sezlongList.map((s) => (
@@ -1320,7 +1379,7 @@ export default function IsletmeRezervasyonlarPage() {
           <div style={{ background: "white", borderRadius: 16, padding: 28, width: 400, maxWidth: "95vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>📤</div>
             <h3 style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Çıkış Yaptır</h3>
-            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 6 }}>Rezervasyon tamamlanacak ve şezlong boşaltılacak.</p>
+            <p style={{ fontSize: 13, color: GRAY600, marginBottom: 6 }}>Rezervasyon tamamlanacak ve yer boşaltılacak.</p>
             <p style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 24 }}>{drawerRez.no} — {drawerRez.musteri}</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setCikisYaptirModal(false)} style={{ padding: "9px 22px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Vazgeç</button>
@@ -1341,7 +1400,7 @@ export default function IsletmeRezervasyonlarPage() {
                 <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600, width: "40%" }}>Rezervasyon No</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.no}</td></tr>
                 <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Müşteri Adı</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.musteri}</td></tr>
                 <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Telefon</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.telefon}</td></tr>
-                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Şezlong</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.drawerData.sezlong}</td></tr>
+                <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Yer</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.drawerData.sezlong}</td></tr>
                 <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Tarih</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.tarih}</td></tr>
                 <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Kişi Sayısı</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>{printReceipt.rez.kisiSayisi ?? "—"}</td></tr>
                 <tr><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>Toplam Tutar</td><td style={{ padding: "6px 0", borderBottom: "1px solid #e2e8f0", fontWeight: 700 }}>{printReceipt.rez.tutar}</td></tr>

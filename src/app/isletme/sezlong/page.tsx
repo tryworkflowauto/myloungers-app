@@ -44,6 +44,32 @@ function clampDenizSirasi(raw: unknown): number {
   return Math.max(1, Math.min(20, Math.floor(n)));
 }
 
+/** rezervasyonlar.saat → HH:mm */
+function fmtRezSaatSezlong(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "object" && raw !== null && "hours" in raw && "minutes" in raw) {
+    const o = raw as { hours?: unknown; minutes?: unknown };
+    const ha = Number(o.hours);
+    const mi = Number(o.minutes);
+    if (!Number.isFinite(ha) || !Number.isFinite(mi)) return null;
+    return `${String(ha).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
+  }
+  const s = String(raw).trim();
+  if (!s || s === "null") return null;
+  const m = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?/);
+  if (!m) return null;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
+type DoluRezPanelDetay = {
+  musteri_adi: string;
+  telefon: string | null;
+  saatLabel: string | null;
+  rezervasyon_kodu: string | null;
+  baslangic_tarih: string;
+  bitis_tarih: string;
+};
+
 // Harita bloğu + şezlong listesi (key = grup id)
 type SezlongSlot = { id: string; numara: number; durum: string };
 type HaritaGrup = {
@@ -272,6 +298,8 @@ export default function IsletmeSezlongPage() {
     kilitli: new Set(),
     dolu: new Set(),
   });
+  /** Dolu şezlong seçildiğinde panelde gösterilecek müşteri rez. bilgisi (şezlong UUID → detay) */
+  const [doluRezDetayBySezlongId, setDoluRezDetayBySezlongId] = useState<Record<string, DoluRezPanelDetay>>({});
   const [cikisModal, setCikisModal] = useState(false);
   const [rezModal, setRezModal] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", tarih: new Date().toISOString().slice(0, 10), kisiSayisi: "" });
@@ -526,13 +554,14 @@ export default function IsletmeSezlongPage() {
         kilitli: new Set(),
         dolu: new Set(),
       });
+      setDoluRezDetayBySezlongId({});
       return;
     }
     let cancelled = false;
     async function loadRezervedIds() {
       const { data, error } = await supabase
         .from("rezervasyonlar")
-        .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi")
+        .select("sezlong_ids, baslangic_tarih, bitis_tarih, musteri_adi, telefon, saat, rezervasyon_kodu")
         .eq("tesis_id", tesisId)
         .in("durum", ["aktif", "onaylandi"])
         .lte("baslangic_tarih", selectedDate)
@@ -548,18 +577,40 @@ export default function IsletmeSezlongPage() {
         kilitli: new Set<string>(),
         dolu: new Set<string>(),
       };
+      const detayMap: Record<string, DoluRezPanelDetay> = {};
       (data ?? []).forEach((r: any) => {
         const ids = Array.isArray(r.sezlong_ids) ? r.sezlong_ids : [];
-        const musteriAdi = (r.musteri_adi || "").toUpperCase();
+        const musteriAdiUpper = (r.musteri_adi || "").toUpperCase();
         let tip: "rezerve" | "bakim" | "kilitli" | "dolu" = "dolu";
-        if (musteriAdi === "İŞLETME REZERVİ") tip = "rezerve";
-        else if (musteriAdi === "BAKIM") tip = "bakim";
-        else if (musteriAdi === "İŞLETME KİLİDİ") tip = "kilitli";
+        if (musteriAdiUpper === "İŞLETME REZERVİ") tip = "rezerve";
+        else if (musteriAdiUpper === "BAKIM") tip = "bakim";
+        else if (musteriAdiUpper === "İŞLETME KİLİDİ") tip = "kilitli";
+        const musteriGosterim = String(r.musteri_adi ?? "").trim() || "Misafir";
+        const saatLabel = fmtRezSaatSezlong(r.saat);
+        const tel = r.telefon != null && String(r.telefon).trim() !== "" ? String(r.telefon).trim() : null;
+        const kod = r.rezervasyon_kodu != null && String(r.rezervasyon_kodu).trim() !== "" ? String(r.rezervasyon_kodu).trim() : null;
+        const bas = String(r.baslangic_tarih ?? "").slice(0, 10);
+        const bit = String(r.bitis_tarih ?? "").slice(0, 10);
         ids.forEach((id: string) => {
-          if (typeof id === "string" && id.trim()) newByType[tip].add(id);
+          if (typeof id === "string" && id.trim()) {
+            newByType[tip].add(id);
+            if (tip === "dolu") {
+              detayMap[id] = {
+                musteri_adi: musteriGosterim,
+                telefon: tel,
+                saatLabel,
+                rezervasyon_kodu: kod,
+                baslangic_tarih: bas || "—",
+                bitis_tarih: bit || "—",
+              };
+            }
+          }
         });
       });
-      if (!cancelled) setRezervedByType(newByType);
+      if (!cancelled) {
+        setRezervedByType(newByType);
+        setDoluRezDetayBySezlongId(detayMap);
+      }
     }
     loadRezervedIds();
     return () => { cancelled = true; };
@@ -740,7 +791,7 @@ export default function IsletmeSezlongPage() {
       .eq("grup_id", silModal.id)
       .eq("tesis_id", tesisId);
     if (sezErr) {
-      showToast("❌ Şezlonglar silinemedi");
+      showToast("❌ Yerler silinemedi");
       return;
     }
 
@@ -908,7 +959,7 @@ export default function IsletmeSezlongPage() {
 
   async function handleTopluKaydet() {
     if (topluSecilenIds.size === 0) {
-      showToast("⚠️ Önce şezlong seçin");
+      showToast("⚠️ Önce yer seçin");
       return;
     }
     
@@ -958,7 +1009,7 @@ export default function IsletmeSezlongPage() {
         return next;
       });
       
-      showToast(`✅ ${secilenIdArray.length} şezlong serbest bırakıldı`);
+      showToast(`✅ ${secilenIdArray.length} yer serbest bırakıldı`);
     } else if (topluDurum === "rezerve" || topluDurum === "bakim" || topluDurum === "kilitli") {
       const musteriAdiMap: Record<string, string> = {
         rezerve: "İŞLETME REZERVİ",
@@ -1004,7 +1055,7 @@ export default function IsletmeSezlongPage() {
         });
       }
       
-      showToast(`✅ ${secilenIdArray.length} şezlong kaydedildi`);
+      showToast(`✅ ${secilenIdArray.length} yer kaydedildi`);
     }
     
     // Seçimi temizle
@@ -1118,7 +1169,7 @@ export default function IsletmeSezlongPage() {
     }));
     const { error: sErr } = await supabase.from("sezlonglar").insert(sezlongInserts);
     if (sErr) {
-      showToast("❌ Şezlonglar eklenemedi");
+      showToast("❌ Yerler eklenemedi");
       return;
     }
     const { data: newSez } = await supabase.from("sezlonglar").select("id, numara, durum").eq("grup_id", g.id).order("numara", { ascending: true });
@@ -1207,7 +1258,7 @@ export default function IsletmeSezlongPage() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Şezlong Haritası</h1>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Yerleşim Haritası</h1>
         <div style={{ 
           display: "flex", 
           alignItems: "center", 
@@ -1254,7 +1305,7 @@ export default function IsletmeSezlongPage() {
             Bugün
           </button>
           <span style={{ fontSize: 12, color: "#6B7280", marginLeft: "auto" }}>
-            Seçilen tarihteki şezlong durumu gösteriliyor
+            Seçilen tarihteki yer durumu gösteriliyor
           </span>
         </div>
             {topluMod && (
@@ -1377,11 +1428,11 @@ export default function IsletmeSezlongPage() {
                   fontSize: 13,
                   marginLeft: 8,
                 }}>
-                  {topluSecilenIds.size} şezlong seçili
+                  {topluSecilenIds.size} yer seçili
                 </span>
               </div>
             )}
-          <span style={{ fontSize: 11, color: GRAY400 }}>{toplamSezlong} şezlong • {toplamDolu} dolu • {toplamBos} boş • {legendCounts.bakim} bakımda</span>
+          <span style={{ fontSize: 11, color: GRAY400 }}>{toplamSezlong} yer • {toplamDolu} dolu • {toplamBos} boş • {legendCounts.bakim} bakımda</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
@@ -1614,7 +1665,7 @@ export default function IsletmeSezlongPage() {
                     </div>
                     <div style={{ width: 12, height: 12, borderRadius: 4, background: g.color, flexShrink: 0 }} />
                     <span style={{ fontSize: 12, fontWeight: 700, color: NAVY, flex: 1 }}>{g.name}</span>
-                    <span style={{ fontSize: 11, color: GRAY400 }}>{g.count} şezlong</span>
+                    <span style={{ fontSize: 11, color: GRAY400 }}>{g.count} yer</span>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
                         onClick={() => {
@@ -1839,7 +1890,7 @@ export default function IsletmeSezlongPage() {
                         ) : null}
                       </div>
                       <div style={{ flexShrink: 0, textAlign: "right", fontSize: 12, fontWeight: 800, whiteSpace: "nowrap", alignSelf: "flex-start", maxWidth: "48%", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {row.fiyat} / gün · {row.count} Şezlong · {row.doluluk} Dolu
+                        {row.fiyat} / gün · {row.count} Yer · {row.doluluk} Dolu
                       </div>
                     </div>
                     <div style={{ background: "white", padding: 16 }}>
@@ -1895,8 +1946,8 @@ export default function IsletmeSezlongPage() {
             </h3>
             <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 16 }}>
               {topluSecilenIds.size > 0 
-                ? `${topluSecilenIds.size} şezlong seçili` 
-                : "Henüz şezlong seçilmedi"}
+                ? `${topluSecilenIds.size} yer seçili` 
+                : "Henüz yer seçilmedi"}
             </div>
             
             {topluSecilenIds.size > 0 && (
@@ -1966,9 +2017,9 @@ export default function IsletmeSezlongPage() {
           ) : (
           <>
           <div style={{ padding: 16, background: mod === "musteri" ? "#7C3AED" : mod === "goruntulem" ? TEAL : NAVY, color: "white" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Şezlong Detayı</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Yer Detayı</h3>
             <span style={{ fontSize: 11, opacity: 0.6 }}>
-              {mod === "musteri" ? "👤 Müşteri Görünümü" : mod === "goruntulem" ? "👁️ Görüntüleme" : "Bir şezlonga tıklayın"}
+              {mod === "musteri" ? "👤 Müşteri Görünümü" : mod === "goruntulem" ? "👁️ Görüntüleme" : "Bir yere tıklayın"}
             </span>
           </div>
 
@@ -2081,7 +2132,7 @@ export default function IsletmeSezlongPage() {
                         />
                       </div>
                       <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>
-                        Bu şezlong seçilen tarihlerde dolu görünecek
+                        Bu yer seçilen tarihlerde dolu görünecek
                       </div>
                     </div>
                   )}
@@ -2125,11 +2176,36 @@ export default function IsletmeSezlongPage() {
                   padding: 12,
                 }}
               >
-                <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Ahmet Yılmaz</div>
-                <div style={{ fontSize: 11, color: GRAY400, marginBottom: 2 }}>📱 Giriş: 10:30</div>
-                <div style={{ fontSize: 11, color: GRAY400, marginBottom: 2 }}>⏱️ Süre: 3 saat 20 dk</div>
-                <div style={{ fontSize: 11, color: GRAY400, marginBottom: 2 }}>🍽️ Sipariş: 3 adet</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: TEAL, marginTop: 8 }}>₺1.350 Bakiye</div>
+                {seciliSezlongId && doluRezDetayBySezlongId[seciliSezlongId] ? (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 4 }}>
+                      {doluRezDetayBySezlongId[seciliSezlongId].musteri_adi}
+                    </div>
+                    {doluRezDetayBySezlongId[seciliSezlongId].rezervasyon_kodu ? (
+                      <div style={{ fontSize: 11, color: GRAY600, marginBottom: 2 }}>
+                        🏷️ {doluRezDetayBySezlongId[seciliSezlongId].rezervasyon_kodu}
+                      </div>
+                    ) : null}
+                    <div style={{ fontSize: 11, color: GRAY400, marginBottom: 2 }}>
+                      📅 {doluRezDetayBySezlongId[seciliSezlongId].baslangic_tarih}
+                      {doluRezDetayBySezlongId[seciliSezlongId].bitis_tarih !== doluRezDetayBySezlongId[seciliSezlongId].baslangic_tarih
+                        ? ` – ${doluRezDetayBySezlongId[seciliSezlongId].bitis_tarih}`
+                        : ""}
+                    </div>
+                    {doluRezDetayBySezlongId[seciliSezlongId].saatLabel ? (
+                      <div style={{ fontSize: 11, color: GRAY400, marginBottom: 2 }}>
+                        🕐 Saat: {doluRezDetayBySezlongId[seciliSezlongId].saatLabel}
+                      </div>
+                    ) : null}
+                    {doluRezDetayBySezlongId[seciliSezlongId].telefon ? (
+                      <div style={{ fontSize: 11, color: GRAY400, marginBottom: 2 }}>
+                        📱 {doluRezDetayBySezlongId[seciliSezlongId].telefon}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 11, color: GRAY400 }}>Bu yer için seçilen günde rezervasyon detayı bulunamadı.</div>
+                )}
               </div>
             )}
           </div>
@@ -2160,7 +2236,7 @@ export default function IsletmeSezlongPage() {
                   action: () => {
                     if (mod === "goruntulem") { showToast("Düzenleme moduna geçin"); return; }
                     if (seciliNo) { setSeciliDurum("bakim"); showToast(`🔧 ${seciliNo} bakıma alındı`); }
-                    else { showToast("Önce bir şezlong seçin"); }
+                    else { showToast("Önce yer seçin"); }
                   },
                 },
                 {
@@ -2168,7 +2244,7 @@ export default function IsletmeSezlongPage() {
                   disabled: mod === "goruntulem",
                   action: () => {
                     if (mod === "goruntulem") { showToast("Düzenleme moduna geçin"); return; }
-                    if (seciliNo) { setCikisModal(true); } else { showToast("Önce bir şezlong seçin"); }
+                    if (seciliNo) { setCikisModal(true); } else { showToast("Önce yer seçin"); }
                   },
                 },
               ].map(({ label, action, disabled }) => (
@@ -2259,7 +2335,7 @@ export default function IsletmeSezlongPage() {
             gap: 8,
           }}
         >
-          🔒 {kilitliToastNo} — Bu şezlong işletme tarafından rezerve edilmiştir
+          🔒 {kilitliToastNo} — Bu yer işletme tarafından rezerve edilmiştir
         </div>
       )}
 
@@ -2313,7 +2389,7 @@ export default function IsletmeSezlongPage() {
               />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Şezlong Sayısı</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Yer Sayısı</label>
               <input
                 type="number"
                 value={grupEkleForm.kapasite}
@@ -2381,7 +2457,7 @@ export default function IsletmeSezlongPage() {
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Ön Ödeme Tipi</label>
               <select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}>
                 <option>Ön Ödemeli (Bakiye yüklenir)</option>
-                <option>Sadece Sezlong Kiralama</option>
+                <option>Sadece Yer Kiralama</option>
               </select>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
@@ -2433,7 +2509,7 @@ export default function IsletmeSezlongPage() {
               <div style={{ fontSize: 32, marginBottom: 12 }}>📤</div>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Çıkış Yaptır</h3>
               <p style={{ fontSize: 13, color: GRAY600, lineHeight: 1.5 }}>
-                <strong style={{ color: NAVY }}>{seciliNo}</strong> numaralı şezlongtaki müşteriyi çıkış yaptırmak istediğinize emin misiniz?
+                <strong style={{ color: NAVY }}>{seciliNo}</strong> numaralı yerdeki müşteriyi çıkış yaptırmak istediğinize emin misiniz?
               </p>
             </div>
             <div style={{ padding: "12px 20px 20px", display: "flex", gap: 8, justifyContent: "center" }}>
@@ -2464,7 +2540,7 @@ export default function IsletmeSezlongPage() {
                     }
                   }
                   setSeciliDurum("bos");
-                  showToast(`✅ ${seciliNo} şezlongu boşaltıldı`);
+                  showToast(`✅ ${seciliNo} yeri boşaltıldı`);
                 }}
                 style={{ padding: "8px 20px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: TEAL, color: "white", cursor: "pointer" }}
               >
@@ -2492,7 +2568,7 @@ export default function IsletmeSezlongPage() {
             <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
               {seciliNo && (
                 <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#1E40AF", fontWeight: 600 }}>
-                  🏖️ Seçili Şezlong: {seciliNo}
+                  🏖️ Seçili Yer: {seciliNo}
                 </div>
               )}
               <div>
@@ -2521,7 +2597,7 @@ export default function IsletmeSezlongPage() {
                     return;
                   }
                   if (!seciliSezlongId) {
-                    showToast("⚠️ Lütfen bir şezlong seçin.");
+                    showToast("⚠️ Lütfen bir yer seçin.");
                     return;
                   }
                   const tarih = rezForm.tarih || new Date().toISOString().slice(0, 10);
@@ -2597,7 +2673,7 @@ export default function IsletmeSezlongPage() {
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Şezlong Sayısı</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Yer Sayısı</label>
                 <input
                   type="number"
                   min={1}

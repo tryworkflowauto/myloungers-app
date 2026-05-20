@@ -83,7 +83,7 @@ function removePhotoFromStorage(id: string) {
 }
 
 const YETKI_SECTIONS = [
-  { section: "🏖️ Şezlong Haritası", items: [{ name: "Haritayı Görüntüle", desc: "Şezlong durumlarını görebilir" }, { name: "Şezlong Durumu Değiştir", desc: "Dolu/boş/bakımda yapabilir" }, { name: "İşletme Rezervi Ayarla", desc: "Şezlong kilitleme/açma" }] },
+  { section: "🏖️ Yerleşim Haritası", items: [{ name: "Haritayı Görüntüle", desc: "Şezlong durumlarını görebilir" }, { name: "Şezlong Durumu Değiştir", desc: "Dolu/boş/bakımda yapabilir" }, { name: "İşletme Rezervi Ayarla", desc: "Şezlong kilitleme/açma" }] },
   { section: "📋 Rezervasyonlar", items: [{ name: "Rezervasyonları Görüntüle", desc: "Listeyi okuyabilir" }, { name: "Rezervasyon Oluştur", desc: "Manuel rezervasyon ekleyebilir" }, { name: "Rezervasyon İptal Et", desc: "İptal işlemi yapabilir" }] },
   { section: "🍽️ Siparişler", items: [{ name: "Siparişleri Görüntüle", desc: "Aktif siparişleri görebilir" }, { name: "Sipariş Durumu Güncelle", desc: "Hazırlandı / Teslim edildi yapabilir" }] },
   { section: "🍹 Menü Yönetimi", items: [{ name: "Menüyü Görüntüle", desc: "Ürün listesini görebilir" }, { name: "Ürün Ekle / Düzenle", desc: "Menü içeriğini değiştirebilir" }] },

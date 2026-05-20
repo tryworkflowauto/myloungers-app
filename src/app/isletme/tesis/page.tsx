@@ -109,6 +109,8 @@ export default function IsletmeTesisPage() {
   const [aciklamaDil, setAciklamaDil] = useState<"tr" | "en">("tr");
   const [enAciklamaTouched, setEnAciklamaTouched] = useState(false);
   const [tesisAktif, setTesisAktif]     = useState(true);
+  /** Rezervasyon akışında müşteriden saat seçimi zorunlu mu (tesisler.saat_zorunlu) */
+  const [saatZorunlu, setSaatZorunlu]   = useState(false);
   const [videoUrl, setVideoUrl]         = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
   const [videoInput, setVideoInput]     = useState("");
   const [enlem, setEnlem]               = useState("37.032048");
@@ -208,7 +210,7 @@ export default function IsletmeTesisPage() {
       const { data, error } = await supabase
         .from("tesisler")
         .select(
-          "id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, kisa_aciklama_en, detayli_aciklama_en, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi",
+          "id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, kisa_aciklama_en, detayli_aciklama_en, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi, saat_zorunlu",
         )
         .eq("id", tesis_id)
         .limit(1)
@@ -286,6 +288,7 @@ export default function IsletmeTesisPage() {
       setKampanyaNotlari(kampanyaDb ?? []);
 
       if (typeof row.aktif === "boolean") setTesisAktif(row.aktif);
+      setSaatZorunlu(row.saat_zorunlu === true);
 
       const fotosDb = (row.fotograflar as Photo[] | null | undefined) || [];
       setPhotos(fotosDb.length ? fotosDb : INIT_PHOTOS);
@@ -516,6 +519,7 @@ export default function IsletmeTesisPage() {
         not: dolmusNot,
       },
       aktif: tesisAktif,
+      saat_zorunlu: saatZorunlu,
       fotograflar: photos,
       iletisim_numarasi: iletisimNumarasi.trim() || null,
     };
@@ -904,6 +908,22 @@ export default function IsletmeTesisPage() {
 
         {/* 5. ÇALIŞMA SAATLERİ */}
         <SectionCard open={sections.saat} onToggle={() => toggleSection("saat")} icon="🕐" iconBg="#FFFBEB" title="Çalışma Saatleri" sub="09:00 — 19:00 hafta içi, 09:00 — 21:00 hafta sonu">
+          <div style={{ marginBottom: 16, padding: 14, border: `1.5px solid ${GRAY200}`, borderRadius: 10, background: GRAY50 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Müşteriden rezervasyon saati iste</div>
+                <p style={{ fontSize: 11, color: GRAY400, lineHeight: 1.5, margin: 0 }}>
+                  Restoran, bar, spa gibi saat bazlı rezervasyon alan işletmeler için. Açıksa müşteri rezervasyon yaparken saat seçmek zorunda kalır. Kayıt için üstteki &quot;Tümünü Kaydet&quot; butonunu kullanın.
+                </p>
+              </div>
+              <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer", flexShrink: 0 }} title={saatZorunlu ? "Saat zorunlu" : "Saat opsiyonel"}>
+                <input type="checkbox" checked={saatZorunlu} onChange={(e) => setSaatZorunlu(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+                <span style={{ position: "absolute", inset: 0, background: saatZorunlu ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+                  <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: saatZorunlu ? "translateX(16px)" : "translateX(0)" }} />
+                </span>
+              </label>
+            </div>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
             {gunler.map((g, i) => (
               <div key={i} style={{ background: g.kapali ? GRAY100 : GRAY50, border: `1.5px solid ${g.kapali ? GRAY300 : g.vurgu ? TEAL : GRAY200}`, borderRadius: 10, padding: "10px 8px", textAlign: "center", opacity: g.kapali ? 0.7 : 1, transition: "all 0.2s" }}>

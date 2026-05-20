@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 const menuItems = [
   { section: 'ANA MENÜ' },
   { icon: '📊', label: 'Dashboard', href: '/isletme' },
-  { icon: '🏖️', label: 'Şezlong Haritası', href: '/isletme/sezlong' },
+  { icon: '🏖️', label: 'Yerleşim Haritası', href: '/isletme/sezlong' },
   { icon: '📋', label: 'Rezervasyonlar', href: '/isletme/rezervasyonlar' },
   { icon: '🍽️', label: 'Siparişler', href: '/isletme/siparisler' },
   { section: 'YÖNETİM' },

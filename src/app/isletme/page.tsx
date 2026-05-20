@@ -106,7 +106,7 @@ const RENK_PALETI = [GOLD_PURPLE, ORANGE, YELLOW, TEAL, BLUE, PURPLE];
 // TODO: API'den çekilecek
 const HIZLI_EYLEMLER = [
   { ikon: "📋", label: "Rezervasyon Oluştur", href: "/isletme/rezervasyonlar" },
-  { ikon: "🏖️", label: "Şezlong Haritası", href: "/isletme/sezlong-haritasi" },
+  { ikon: "🏖️", label: "Yerleşim Haritası", href: "/isletme/sezlong-haritasi" },
   { ikon: "🍽️", label: "Siparişlere Git", href: "/isletme/siparisler" },
   { ikon: "💬", label: "Yorumları Cevapla", href: "/isletme/yorumlar" },
 ];
@@ -338,7 +338,7 @@ export default function IsletmeDashboardPage() {
 
       setStatData([
         { etiket: "Günlük Gelir", ikon: "💰", deger: `₺${gunlukGelir.toLocaleString("tr-TR")}`, sub: "Bugün", change: "—", changeClass: "neutral", renk: "teal" },
-        { etiket: "Aktif Şezlonglar", ikon: "🏖️", deger: String(doluSezlong), ek: `/${toplamSezlong}`, sub: `${toplamSezlong - doluSezlong} boş şezlong`, change: "= Veri", changeClass: "neutral", renk: "orange" },
+        { etiket: "Aktif Yerler", ikon: "🏖️", deger: String(doluSezlong), ek: `/${toplamSezlong}`, sub: `${toplamSezlong - doluSezlong} boş yer`, change: "= Veri", changeClass: "neutral", renk: "orange" },
         { etiket: "Tamamlanan Sipariş", ikon: "🍽️", deger: String(siparisBugun.filter((s) => s.durum === "verildi").length), sub: "Bugün", change: "—", changeClass: "neutral", renk: "green" },
         { etiket: "Aktif Müşteri", ikon: "👥", deger: String(aktifMusteri), sub: "Tesiste", change: "—", changeClass: "neutral", renk: "purple" },
       ]);
@@ -894,7 +894,7 @@ export default function IsletmeDashboardPage() {
                 />
               </div>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Şezlong Grubu</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Yer Grubu</label>
                 <select
                   value={rezForm.sezlongGrubu}
                   onChange={(e) => setRezForm((f) => ({ ...f, sezlongGrubu: e.target.value }))}
@@ -907,7 +907,7 @@ export default function IsletmeDashboardPage() {
                 </select>
               </div>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Şezlong No</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Yer No</label>
                 <input
                   type="text"
                   value={rezForm.sezlongNo}

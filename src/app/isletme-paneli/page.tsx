@@ -548,7 +548,7 @@ export default function IsletmePaneliPage() {
             </Link>
             <Link href="/isletme-paneli/sezlong-haritasi" className="hizli-btn">
               <div className="hb-icon">🏖️</div>
-              <div className="hb-label">Şezlong Haritası</div>
+              <div className="hb-label">Yerleşim Haritası</div>
             </Link>
             <Link href="/isletme-paneli/siparisler" className="hizli-btn">
               <div className="hb-icon">🍽️</div>

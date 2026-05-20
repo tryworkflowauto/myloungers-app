@@ -18,6 +18,8 @@ type Reservation = {
   loc: string;
   code: string;
   dates: string;
+  /** DB saat — yalnızca doluysa kartta gösterilir */
+  saatLabel?: string | null;
   tarihBaslangic?: string;
   tarihBitis?: string;
   durum?: string;
@@ -103,6 +105,23 @@ function formatZamanOnce(createdAt: Date | string): string {
   if (sa > 0) return `${sa} sa önce`;
   if (dk > 0) return `${dk} dk önce`;
   return "Az önce";
+}
+
+/** rezervasyonlar.saat → HH:mm (Postgres TIME, ISO vb.) */
+function fmtRezSaatForKart(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "object" && raw !== null && "hours" in raw && "minutes" in raw) {
+    const o = raw as { hours?: unknown; minutes?: unknown };
+    const ha = Number(o.hours);
+    const mi = Number(o.minutes);
+    if (!Number.isFinite(ha) || !Number.isFinite(mi)) return null;
+    return `${String(ha).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
+  }
+  const s = String(raw).trim();
+  if (!s || s === "null") return null;
+  const m = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?/);
+  if (!m) return null;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
 }
 
 const STATUS_META: Record<
@@ -300,7 +319,7 @@ export default function ProfilPage() {
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .select(
-            "id, tesis_id, baslangic_tarih, bitis_tarih, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, sezlong_ids, pgtranid, created_at, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
+            "id, tesis_id, baslangic_tarih, bitis_tarih, saat, kisi_sayisi, toplam_tutar, durum, rezervasyon_kodu, giris_yapildi, bakiye_yuklenen, bakiye_harcanan, bakiye_kalan, sezlong_ids, pgtranid, created_at, sezlong:sezlonglar(numara, grup:sezlong_gruplari(ad))"
           )
           .eq("kullanici_id", userId)
           .in("durum", ["aktif", "onaylandi", "iptal", "tamamlandi"])
@@ -516,6 +535,8 @@ export default function ProfilPage() {
           const codeStr =
             r.rezervasyon_kodu == null ? "" : String(r.rezervasyon_kodu);
 
+          const saatLabel = fmtRezSaatForKart((r as Record<string, unknown>).saat);
+
           const slugDb = tesisInfo?.slug?.trim();
           const slugFromAd = tesisInfo?.ad
             ? tesisInfo.ad.trim().toLowerCase().replace(/\s+/g, "-")
@@ -534,6 +555,7 @@ export default function ProfilPage() {
             loc: tesisInfo?.loc || "-",
             code: codeStr,
             dates,
+            saatLabel: saatLabel ?? undefined,
             tarihBaslangic: startStr || undefined,
             tarihBitis: endStr || undefined,
             durum: r.durum ?? undefined,
@@ -1762,6 +1784,9 @@ export default function ProfilPage() {
                     </div>
                     <div className="rc-rows">
                       <div className="rc-row"><span>📅</span><span className="rc-row-t">Tarih</span><span className="rc-row-v">{r.dates}</span></div>
+                      {r.saatLabel ? (
+                        <div className="rc-row"><span>🕐</span><span className="rc-row-t">Saat</span><span className="rc-row-v">Saat: {r.saatLabel}</span></div>
+                      ) : null}
                       <div className="rc-row"><span>🛏</span><span className="rc-row-t">Şezlong</span><span className="rc-row-v" style={{ whiteSpace: 'pre-line' }}>{r.szl}</span></div>
                       <div className="rc-row"><span>📆</span><span className="rc-row-t">Süre</span><span className="rc-row-v">{r.gun}</span></div>
                       <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>₺{((r as any).bakiyeYuklenen ?? 0).toLocaleString("tr-TR")}</span></div>

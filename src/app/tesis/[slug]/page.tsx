@@ -115,6 +115,8 @@ export default function TesisDetailPage() {
   const [calDt, setCalDt] = useState(new Date());
   const [selStart, setSelStart] = useState<Date | null>(null);
   const [selEnd, setSelEnd] = useState<Date | null>(null);
+  /** HTML time input (HH:MM); yalnızca row.saat_zorunlu === true iken zorunlu */
+  const [rezervasyonSaati, setRezervasyonSaati] = useState("");
   const [paxCount, setPaxCount] = useState(1);
   const [selSzls, setSelSzls] = useState<SelSzl[]>([]);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -753,7 +755,7 @@ export default function TesisDetailPage() {
       return;
     }
     if (selSzls.length >= paxCount) {
-      showToast("Maksimum "+paxCount+" şezlong seçebilirsiniz. Kişi sayısını artırmak için + butonunu kullanın.","⚠️");
+      showToast("Maksimum "+paxCount+" yer seçebilirsiniz. Kişi sayısını artırmak için + butonunu kullanın.","⚠️");
       return;
     }
     setSelSzls((prev) => [...prev, { no, zoneKey, price }]);
@@ -764,12 +766,20 @@ export default function TesisDetailPage() {
     setSelEnd(null);
     setSelSzls([]);
     setPaxCount(1);
+    setRezervasyonSaati("");
   }
 
   async function goRes() {
     if (resInFlightRef.current) return;
     if (!selStart) { alert("Lütfen giriş tarihini seçin."); return; }
-    if (selSzls.length === 0) { alert("Lütfen en az 1 şezlong seçin."); return; }
+    if (selSzls.length === 0) { alert("Lütfen en az 1 yer seçin."); return; }
+    if (row?.saat_zorunlu === true) {
+      const t = rezervasyonSaati.trim();
+      if (!t) {
+        showToast("Lütfen rezervasyon saati seçin", "⚠️");
+        return;
+      }
+    }
     resInFlightRef.current = true;
     setResLoading(true);
     function padZ(n: number) { return String(n).padStart(2, "0"); }
@@ -813,6 +823,10 @@ export default function TesisDetailPage() {
           }
         }
 
+        const saatVal =
+          row?.saat_zorunlu === true && rezervasyonSaati.trim()
+            ? rezervasyonSaati.trim()
+            : null;
         const { data: rezData, error: rezError } = await supabase
           .from("rezervasyonlar")
           .insert({
@@ -826,6 +840,7 @@ export default function TesisDetailPage() {
             toplam_tutar: satırFiyat,
             durum: "bekliyor",
             rezerveli_kadar: rezerveliKadar,
+            ...(saatVal ? { saat: saatVal } : {}),
           })
           .select("id")
           .single();
@@ -851,6 +866,9 @@ export default function TesisDetailPage() {
       fiyat: String(toplamFiyat),
     });
     if (rezervasyonIdParam) params.set("rezervasyonId", rezervasyonIdParam);
+    if (row?.saat_zorunlu === true && rezervasyonSaati.trim()) {
+      params.set("saat", rezervasyonSaati.trim());
+    }
     router.push("/odeme?" + params.toString());
     // Yönlendirme başladı; bayrağı resetlemiyoruz — sayfa zaten değişecek.
     // Hata durumunda (rezervasyonIdParam null ise) butonu tekrar aktif et.
@@ -1136,10 +1154,14 @@ export default function TesisDetailPage() {
     }
   }
 
-  const btnDisabled = !selStart || selSzls.length === 0 || resLoading;
+  const btnDisabled =
+    !selStart ||
+    selSzls.length === 0 ||
+    resLoading ||
+    (row?.saat_zorunlu === true && !rezervasyonSaati.trim());
   const btnText = resLoading ? "İşleniyor..."
     : !selStart ? "Tarih Seçerek Başlayın"
-    : selSzls.length === 0 ? "🛏 Haritadan Şezlong Seç"
+    : selSzls.length === 0 ? "🛏 Haritadan Yer Seç"
     : "📅 Rezervasyonu Tamamla →";
 
   if (loading) {
@@ -1349,6 +1371,7 @@ export default function TesisDetailPage() {
         .pax-btn:hover:not(:disabled){border-color:var(--or);color:var(--or);background:#FFF8F2}
         .pax-btn:disabled{color:var(--bd);cursor:not-allowed}
         .pax-num{width:40px;text-align:center;font-size:1rem;font-weight:900;color:var(--navy)}
+        .pax-time-inp{font:inherit;font-size:.85rem;font-weight:800;color:var(--navy);padding:6px 10px;border:1.5px solid var(--bd);border-radius:8px;background:var(--wh);min-width:7.5rem}
         .szl-bar{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;background:var(--tlt);border-top:1px solid #B2EBEA}
         .szl-bar-t{font-size:.7rem;font-weight:800;color:var(--tdk)}
         .szl-bar-n{font-size:.8rem;font-weight:900;color:var(--tdk)}
@@ -1626,7 +1649,7 @@ export default function TesisDetailPage() {
             {/* YERLEŞİM PLANI */}
             <div className="panel panel-yerlesim">
               <div className="ph" onClick={() => togglePanel("plan")}>
-                <div className="ph-l"><span className="ph-ic">🗺️</span><div><div className="ph-title">Tesis Yerleşim Planı</div><div className="ph-sub">Bölgeye tıklayarak şezlong seçin</div></div></div>
+                <div className="ph-l"><span className="ph-ic">🗺️</span><div><div className="ph-title">Tesis Yerleşim Planı</div><div className="ph-sub">Bölgeye tıklayarak yer seçin</div></div></div>
                 <svg className={`ch${openPanels.plan ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {openPanels.plan && <div className="pb" style={{ padding: 16 }}>
@@ -1671,7 +1694,7 @@ export default function TesisDetailPage() {
             {/* ŞEZLONG DÜZENİ */}
             <div className="panel panel-szl" ref={szlRef}>
               <div className={`ph${!openPanels.szl ? " ph-teal" : ""}`} onClick={() => togglePanel("szl")}>
-                <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Şezlong Seç</div><div className="ph-sub">100 şezlong · İskele · VIP · Silver</div></div></div>
+                <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Yer Seç</div><div className="ph-sub">100 yer · İskele · VIP · Silver</div></div></div>
                 <svg className={`ch${openPanels.szl ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {openPanels.szl && <div className="pb" style={{ padding: 22 }}>
@@ -1701,7 +1724,7 @@ export default function TesisDetailPage() {
                           ) : null}
                         </div>
                         <div style={{ flexShrink:0, textAlign:"right", fontSize:12, fontWeight:800, color:"white", whiteSpace:"nowrap", alignSelf:"flex-start", maxWidth:"48%", overflow:"hidden", textOverflow:"ellipsis" }}>
-                          ₺{z.pw.toLocaleString("tr-TR")} / gün · {z.count} Şezlong · %{z.dolulukPct} Dolu
+                          ₺{z.pw.toLocaleString("tr-TR")} / gün · {z.count} Yer · %{z.dolulukPct} Dolu
                         </div>
                       </div>
                       <div style={{ background:"white" }}>
@@ -2165,7 +2188,7 @@ export default function TesisDetailPage() {
                 </div>
                 <div className={`sb-step${selSzls.length > 0 ? " act" : ""}`}>
                   <div className="sb-step-ic">🛏</div>
-                  <div className="sb-step-n">Şezlong</div>
+                  <div className="sb-step-n">Yer</div>
                   <div className="sb-step-v">{selSzls.length > 0 ? selSzls.length + " seçildi" : "Seç"}</div>
                 </div>
                 <div className="sb-step">
@@ -2201,9 +2224,26 @@ export default function TesisDetailPage() {
 
               {selStart && !selEnd && <div className="cal-hint">📅 İsteğe bağlı: bitiş tarihi seçin (seçmezseniz tek gün)</div>}
 
+              {selStart && row?.saat_zorunlu === true && (
+                <div className="pax-row">
+                  <div>
+                    <div className="pax-lbl">Rezervasyon Saati</div>
+                  </div>
+                  <div className="pax-ctrl">
+                    <input
+                      type="time"
+                      className="pax-time-inp"
+                      value={rezervasyonSaati}
+                      onChange={(e) => setRezervasyonSaati(e.target.value)}
+                      aria-label="Rezervasyon Saati"
+                    />
+                  </div>
+                </div>
+              )}
+
               {selStart && (
                 <div className="pax-row">
-                  <div><div className="pax-lbl">👥 Kişi Sayısı</div><div className="pax-sub">Maks. 5 · Her kişi 1 şezlong</div></div>
+                  <div><div className="pax-lbl">👥 Kişi Sayısı</div><div className="pax-sub">Maks. 5 · Her kişi 1 yer</div></div>
                   <div className="pax-ctrl">
                     <button className="pax-btn" disabled={paxCount === 1} onClick={() => setPaxCount((p) => Math.max(1, p - 1))}>−</button>
                     <span className="pax-num">{paxCount}</span>
@@ -2214,7 +2254,7 @@ export default function TesisDetailPage() {
 
               {selStart && (
                 <div className="szl-bar">
-                  <span className="szl-bar-t">Seçilen şezlong</span>
+                  <span className="szl-bar-t">Seçilen yer</span>
                   <span className="szl-bar-n">{selSzls.length} / {paxCount}</span>
                 </div>
               )}
@@ -2227,9 +2267,12 @@ export default function TesisDetailPage() {
                   </div>
                   <div className="bsum-rows">
                     <div className="bsum-row"><span>Tarih</span><b>{fmtRange(selStart, selEnd)}{!selEnd ? " (tek gün)" : ""}</b></div>
+                    {row?.saat_zorunlu === true && !!rezervasyonSaati.trim() && (
+                      <div className="bsum-row"><span></span><b>Saat: {rezervasyonSaati.trim()}</b></div>
+                    )}
                     <div className="bsum-row"><span>Süre</span><b>{days} gün</b></div>
-                    <div className="bsum-row"><span>Şezlong(lar)</span><b>{szlNames}</b></div>
-                    <div className="bsum-row"><span>Kişi sayısı</span><b>{selSzls.length} kişi / şezlong</b></div>
+                    <div className="bsum-row"><span>Yer(ler)</span><b>{szlNames}</b></div>
+                    <div className="bsum-row"><span>Kişi sayısı</span><b>{selSzls.length} kişi / yer</b></div>
                     <div className="bsum-row"><span>Birim fiyat / gün</span><b>{units} / gün</b></div>
                     <div className="bsum-row bsum-total"><span>Toplam</span><span>₺{total.toLocaleString("tr-TR")}</span></div>
                   </div>

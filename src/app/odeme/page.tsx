@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
@@ -12,6 +12,8 @@ type ResData = {
   tarihBaslangic: string;
   tarihBitis: string;
   tarih: string;
+  /** URL &saat=HH:mm — yalnızca saat_zorunlu tesiste */
+  saat: string;
   gun: number;
   sezlonglar: string;
   szl: string;
@@ -25,6 +27,7 @@ const DEFAULT_RES: ResData = {
   tarihBaslangic: "",
   tarihBitis: "",
   tarih: "",
+  saat: "",
   gun: 0,
   sezlonglar: "",
   szl: "",
@@ -81,7 +84,7 @@ const QR_PATTERN = [
 
 function OdemeContent() {
   const router = useRouter();
-  const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [res, setRes] = useState<ResData>(DEFAULT_RES);
   const [payMethod, setPayMethod] = useState("pm-card");
@@ -127,24 +130,71 @@ function OdemeContent() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tarihBaslangic = params.get('tarihBaslangic') || '';
-    const tarihBitis = params.get('tarihBitis') || '';
+    const tarihBaslangic = searchParams.get('tarihBaslangic') || '';
+    const tarihBitis = searchParams.get('tarihBitis') || '';
+    const saatRaw = (searchParams.get("saat") || "").trim();
+    const saatNorm =
+      saatRaw && /^\d{1,2}:\d{2}$/.test(saatRaw)
+        ? `${saatRaw.split(":")[0].padStart(2, "0")}:${saatRaw.split(":")[1].padStart(2, "0")}`
+        : "";
     setRes({
-      tesis: params.get('tesis') || '',
+      tesis: searchParams.get('tesis') || '',
       tarihBaslangic,
       tarihBitis,
       tarih: tarihBaslangic
         ? (tarihBitis && tarihBitis !== tarihBaslangic ? `${fmtISO(tarihBaslangic)} – ${fmtISO(tarihBitis)}` : fmtISO(tarihBaslangic))
         : '',
-      gun: parseInt(params.get('gun') || '1'),
-      sezlonglar: params.get('sezlonglar') || '',
-      szl: (params.get('sezlonglar') || '').replace(/,/g, ', '),
-      kisi: parseInt(params.get('kisi') || '1'),
-      fiyat: parseInt(params.get('fiyat') || '0'),
-      toplam: parseInt(params.get('fiyat') || '0'),
+      saat: saatNorm,
+      gun: parseInt(searchParams.get('gun') || '1'),
+      sezlonglar: searchParams.get('sezlonglar') || '',
+      szl: (searchParams.get('sezlonglar') || '').replace(/,/g, ', '),
+      kisi: parseInt(searchParams.get('kisi') || '1'),
+      fiyat: parseInt(searchParams.get('fiyat') || '0'),
+      toplam: parseInt(searchParams.get('fiyat') || '0'),
     });
-  }, []);
+  }, [searchParams]);
+
+  // URL'de saat varsa tüm eş-zamanlı rezervasyon satırlarına yaz (kardeş şezlonglar; tesis sayfası insert ile uyum)
+  useEffect(() => {
+    const rezId = (searchParams.get("rezervasyonId") || searchParams.get("id") || "").trim();
+    const saatParam = (searchParams.get("saat") || "").trim();
+    if (!rezId || !saatParam || !/^\d{1,2}:\d{2}$/.test(saatParam)) return;
+
+    const saatDb = `${saatParam.split(":")[0].padStart(2, "0")}:${saatParam.split(":")[1].padStart(2, "0")}`;
+    let cancelled = false;
+
+    (async () => {
+      const { data: rezRow, error } = await supabase
+        .from("rezervasyonlar")
+        .select("id, kullanici_id, tesis_id, baslangic_tarih, created_at")
+        .eq("id", rezId)
+        .maybeSingle();
+
+      if (cancelled || error || !rezRow?.id) return;
+
+      const ids = new Set<string>([String(rezRow.id)]);
+      if (rezRow.kullanici_id && rezRow.tesis_id && rezRow.baslangic_tarih && rezRow.created_at) {
+        const merkez = new Date(rezRow.created_at as string).getTime();
+        const windowStart = new Date(merkez - 30_000).toISOString();
+        const windowEnd = new Date(merkez + 30_000).toISOString();
+        const { data: kardesRows } = await supabase
+          .from("rezervasyonlar")
+          .select("id")
+          .eq("kullanici_id", rezRow.kullanici_id)
+          .eq("tesis_id", rezRow.tesis_id)
+          .eq("baslangic_tarih", rezRow.baslangic_tarih)
+          .gte("created_at", windowStart)
+          .lte("created_at", windowEnd);
+        (kardesRows ?? []).forEach((row: { id: string }) => ids.add(String(row.id)));
+      }
+
+      for (const id of ids) {
+        await supabase.from("rezervasyonlar").update({ saat: saatDb }).eq("id", id);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [searchParams]);
 
   useEffect(() => {
     const tesisParam = res.tesis?.trim();
@@ -210,16 +260,15 @@ function OdemeContent() {
   }, [guestCount]);
 
   useEffect(() => {
-    const sonuc = queryParams?.get("sonuc");
+    const sonuc = searchParams.get("sonuc");
     if (sonuc === "basarili" || sonuc === "hata") {
       setStep(4);
     }
-  }, []);
+  }, [searchParams]);
 
   // Rezervasyon rezerveli_kadar'ı DB'den çek
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const rezId = params.get("rezervasyonId") || params.get("id");
+    const rezId = searchParams.get("rezervasyonId") || searchParams.get("id");
     if (!rezId) return;
     
     async function fetchRezerveliKadar() {
@@ -243,7 +292,7 @@ function OdemeContent() {
     }
     
     fetchRezerveliKadar();
-  }, []);
+  }, [searchParams]);
 
   // Geri sayım - her saniye güncelle
   useEffect(() => {
@@ -270,8 +319,7 @@ function OdemeContent() {
     if (!sureDoldu) return;
     
     async function iptalEt() {
-      const params = new URLSearchParams(window.location.search);
-      const rezId = params.get("rezervasyonId") || params.get("id");
+      const rezId = searchParams.get("rezervasyonId") || searchParams.get("id");
       if (!rezId) return;
       
       await supabase
@@ -285,7 +333,7 @@ function OdemeContent() {
     }
     
     iptalEt();
-  }, [sureDoldu]);
+  }, [sureDoldu, searchParams]);
 
   function validate() {
     const e: Record<string, boolean> = {};
@@ -324,8 +372,8 @@ function OdemeContent() {
 
   const szlChips = res.szl.split(", ").filter(Boolean);
   const unitPrice = res.toplam / (res.gun * Math.max(res.kisi, 1));
-  const tesisSlug = (queryParams?.get("tesis") || "reklamotv").toLowerCase();
-  const paymentResult = queryParams?.get("sonuc");
+  const tesisSlug = (searchParams.get("tesis") || "reklamotv").toLowerCase();
+  const paymentResult = searchParams.get("sonuc");
 
   async function startParatikaPayment() {
     if (paymentInFlightRef.current) return;
@@ -333,7 +381,7 @@ function OdemeContent() {
     setPaymentError(false);
     setPaymentLoading(true);
     try {
-      const orderId = queryParams?.get("rezervasyonId")?.trim() || queryParams?.get("id")?.trim() || "";
+      const orderId = searchParams.get("rezervasyonId")?.trim() || searchParams.get("id")?.trim() || "";
       if (!orderId) {
         console.error("[startParatikaPayment] orderId boş — rezervasyon DB'ye kaydedilemedi veya URL'de eksik");
         paymentInFlightRef.current = false;
@@ -623,7 +671,11 @@ function OdemeContent() {
                   <div className="res-rows">
                     <div className="res-row">
                       <div className="res-row-l"><span className="res-row-ic">📅</span><span className="res-row-t">Tarih Aralığı</span></div>
-                      <div><div className="res-row-v">{res.tarih}</div><div className="res-row-sub">{res.gun} gün</div></div>
+                      <div>
+                        <div className="res-row-v">{res.tarih}</div>
+                        {!!res.saat && <div className="res-row-sub">Saat: {res.saat}</div>}
+                        <div className="res-row-sub">{res.gun} gün</div>
+                      </div>
                     </div>
                     <div className="res-row">
                       <div className="res-row-l"><span className="res-row-ic">👥</span><span className="res-row-t">Kişi Sayısı</span></div>
@@ -886,6 +938,7 @@ function OdemeContent() {
                   {[
                     ["🏖️ Tesis", res.tesis],
                     ["📅 Tarih", res.tarih],
+                    ...(res.saat ? [["🕐 Saat", `Saat: ${res.saat}`] as [string, string]] : []),
                     ["🛏 Şezlong", res.szl],
                     ["👤 Misafir", (form.name + " " + form.surname).trim() || "Misafir"],
                     ["💰 Ödenen", "₺" + res.toplam.toLocaleString("tr-TR") + " ✓"],
@@ -912,7 +965,7 @@ function OdemeContent() {
                   <Link href="/" style={{ flex: 1, background: "var(--bg)", border: "1.5px solid var(--bd)", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--navy)", textDecoration: "none", textAlign: "center" }}>🏠 Ana Sayfaya Dön</Link>
                   <button
                     onClick={() => {
-                      const tesis = new URLSearchParams(window.location.search).get('tesis') || 'reklamotv';
+                      const tesis = searchParams.get("tesis") || "reklamotv";
                       window.location.href = `/tesis/${tesis.toLowerCase()}`;
                     }}
                     style={{ flex: 1, background: "var(--tlt)", border: "1.5px solid #B2EBEA", borderRadius: 11, padding: 12, fontSize: ".78rem", fontWeight: 700, color: "var(--tdk)", textDecoration: "none", textAlign: "center", cursor: "pointer" }}
@@ -936,6 +989,9 @@ function OdemeContent() {
               </div>
               <div className="sum-rows">
                 <div className="sum-row"><span className="sum-row-l">📅 Tarih</span><span className="sum-row-v">{res.tarih}</span></div>
+                {!!res.saat && (
+                  <div className="sum-row"><span className="sum-row-l">🕐 Saat</span><span className="sum-row-v">Saat: {res.saat}</span></div>
+                )}
                 <div className="sum-row"><span className="sum-row-l">🛏 Şezlong</span><span className="sum-row-v">{res.szl}</span></div>
                 <div className="sum-row"><span className="sum-row-l">👥 Kişi</span><span className="sum-row-v">{res.kisi} kişi</span></div>
                 <div className="sum-row"><span className="sum-row-l">📆 Süre</span><span className="sum-row-v">{res.gun} gün</span></div>
