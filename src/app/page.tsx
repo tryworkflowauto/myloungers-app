@@ -127,7 +127,12 @@ const SLIDER_IMGS = [
   "/images/6.png",
   "/images/9.png",
   "/images/10.png",
-];
+] as const;
+
+/** Mobil hero: /images/X-m.png (768px ve altı, picture/source). Dosya yoksa onError ile geniş görsel. */
+function sliderMobileSrc(desktopSrc: string): string {
+  return desktopSrc.replace(/\.png$/i, "-m.png");
+}
 
 const CAT_IMGS = [
   "/images/tesis_kategorisi-otel.png",
@@ -1038,9 +1043,18 @@ export default function Home() {
               </>
             )}
           </div>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("hotel"); }}>{t.nav_hotel}</button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("beach"); }}>{t.nav_beach}</button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("aqua"); }}>{t.nav_aqua}</button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("hotel"); }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 22V12H8v10"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
+            {t.nav_hotel}
+          </button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("beach"); }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 4C14 4 11 6 10 9L3 21"/><path d="M22 4C19 4 16 6 15 9L8 21"/><path d="M7 21h14"/><circle cx="19" cy="4" r="1" fill="currentColor"/></svg>
+            {t.nav_beach}
+          </button>
+          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("aqua"); }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
+            {t.nav_aqua}
+          </button>
           <button type="button" id="ml4" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("restoran"); }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
@@ -1092,15 +1106,33 @@ export default function Home() {
             </svg>
             {t.nav_spa}
           </button>
-          <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>{t.nav_apply}</Link>
+          <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            {t.nav_apply}
+          </Link>
         </div>
       </div>
 
       {/* SLIDER */}
       <div className="bwrap" id="bwrap">
         {SLIDER_IMGS.map((src, i) => (
-          <div key={i} className={`slide ${i === slideIdx ? "on" : ""}`}>
-  <img src={src} alt="" className="slide-img" />
+          <div key={src} className={`slide ${i === slideIdx ? "on" : ""}`}>
+            <picture>
+              <source media="(max-width:768px)" srcSet={sliderMobileSrc(src)} />
+              <img
+                src={src}
+                alt=""
+                className="slide-img"
+                data-slider-desktop={src}
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  const desk = img.dataset.sliderDesktop;
+                  if (!desk || !img.currentSrc.includes("-m.png")) return;
+                  img.onerror = null;
+                  img.src = desk;
+                }}
+              />
+            </picture>
           </div>
         ))}
         <button type="button" className="sarr prev" id="sprev" onClick={() => setSlideIdx((s) => (s - 1 + SLIDER_IMGS.length) % SLIDER_IMGS.length)}>‹</button>
