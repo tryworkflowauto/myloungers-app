@@ -11,11 +11,11 @@ type FaqItem = {
 const FAQS: FaqItem[] = [
   {
     q: "MyLoungers nedir?",
-    a: "Türkiye'nin plaj kulüpleri, beach club'lar ve otel havuzları için online şezlong rezervasyon platformudur. Tek tıkla önceden rezervasyon yaptırabilir, gideceğiniz tesiste şezlongunuzun hazır olmasını sağlayabilirsiniz.",
+    a: "Türkiye'deki tatil tesisleri için online tatil rezervasyon platformudur. Hotel, beach club, aqua park, restoran, bar, tekne turu ve spa işletmelerinde tek tıkla ön rezervasyon yapabilir; gideceğiniz tesiste yerinizin veya deneyiminizin hazır olmasını sağlayabilirsiniz.",
   },
   {
     q: "Rezervasyon nasıl yapılır?",
-    a: "Ana sayfadan bölge, tesis tipi ve tarih seçerek arama yapın. Beğendiğiniz tesisi seçin, şezlong konumunuzu belirleyin ve ödemeyi tamamlayın. Rezervasyon onayınız e-posta ile iletilir.",
+    a: "Ana sayfadan bölge, tesis tipi ve tarih seçerek arama yapın. Beğendiğiniz tesisi seçin; masanızı, şezlongunuzu, seansınızı veya turunuzu belirleyip ödemeyi tamamlayın. Rezervasyon onayınız e-posta ile iletilir.",
   },
   {
     q: "Ödeme güvenli mi?",

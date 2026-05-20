@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Myloungers | Plaj ve Otel Şezlong Rezervasyonu",
-  description: "Türkiye'deki beach ve otel tesislerinde şezlong rezervasyonu yapın. Hayalindeki plajı Myloungers ile rezerve et.",
+  title: "MyLoungers | Tatil Rezervasyon Platformu",
+  description:
+    "Hotel, beach club, aqua park, restoran, bar, tekne turu ve spa rezervasyonlarınızı online yapın. Türkiye'nin tatil rezervasyon platformu MyLoungers.",
   icons: {
     icon: "/favicon.ico",
   },

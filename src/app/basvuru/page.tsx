@@ -25,6 +25,17 @@ const FEATURES = [
 const GOREV_OPTS = ["İşletme Sahibi", "Müdür", "Pazarlama", "Diğer"];
 const SAAT_OPTS = ["Sabah 09-12", "Öğleden sonra 12-17", "Akşam 17-20", "Fark etmez"];
 
+/** Ana sayfa / arama `tip` değerleri ile uyumlu (hotel, beach, aqua — "otel" değil). */
+const BASVURU_TESIS_TIP_PILLS = [
+  { value: "beach", emoji: "🏖️", label: "Beach Club" },
+  { value: "hotel", emoji: "🏨", label: "Otel" },
+  { value: "aqua", emoji: "💦", label: "Aqua Park" },
+  { value: "restoran", emoji: "🍽️", label: "Restoran" },
+  { value: "bar", emoji: "🍸", label: "Bar & Lounge" },
+  { value: "tekne", emoji: "⛵", label: "Tekne Turu" },
+  { value: "spa", emoji: "💆", label: "Spa" },
+] as const;
+
 export default function BasvuruPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -193,13 +204,20 @@ export default function BasvuruPage() {
                     <div className="bav-fgrp">
                       <label>Tesis Tipi</label>
                       <div className="bav-type-pills">
-                        <button type="button" className={`bav-type-pill ${tesisTipi === "beach" ? "sel" : ""}`} onClick={() => setTesisTipi("beach")}>🏖️ Beach Club</button>
-                        <button type="button" className={`bav-type-pill ${tesisTipi === "hotel" ? "sel" : ""}`} onClick={() => setTesisTipi("hotel")}>🏨 Otel</button>
-                        <button type="button" className={`bav-type-pill ${tesisTipi === "aqua" ? "sel" : ""}`} onClick={() => setTesisTipi("aqua")}>💦 Aqua Park</button>
+                        {BASVURU_TESIS_TIP_PILLS.map((pill) => (
+                          <button
+                            key={pill.value}
+                            type="button"
+                            className={`bav-type-pill ${tesisTipi === pill.value ? "sel" : ""}`}
+                            onClick={() => setTesisTipi(pill.value)}
+                          >
+                            {pill.emoji} {pill.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     <div className="bav-fgrp">
-                      <label>Şezlong Kapasitesi: <span className="bav-cap-val">{kapasite}</span> adet</label>
+                      <label>Kapasite: <span className="bav-cap-val">{kapasite}</span> adet</label>
                       <div className="bav-cap-wrap">
                         <input type="range" min={10} max={200} value={kapasite} step={5} onChange={(e) => setKapasite(Number(e.target.value))} className="bav-cap-slider" />
                       </div>

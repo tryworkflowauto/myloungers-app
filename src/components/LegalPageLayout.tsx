@@ -49,7 +49,7 @@ export function LegalPageLayout({ title, children, footerLegalQuery = "" }: Lega
           <div>
             <img src="/logo.png" alt="MyLoungers" className="fl-logo" />
             <p className="fd" id="footer-desc">
-              Türkiye&apos;nin şezlong rezervasyon platformu.
+              Türkiye&apos;nin tatil rezervasyon platformu.
             </p>
             <div className="fa">
               <a href="#" className="fapp">

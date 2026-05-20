@@ -4,17 +4,17 @@ const SECTIONS = [
   {
     title: "Biz Kimiz",
     icon: "🏢",
-    text: "2014 yılında Sakarya Teknokent'te kurulan Reklamotv Bilişim Teknoloji olarak, Türkiye'nin dijital dönüşümüne katkı sağlayan yenilikçi çözümler geliştiriyoruz. On yılı aşkın teknoloji deneyimimizi turizm sektörüne taşıyarak 2024 yılında MyLoungers'ı hayata geçirdik. MyLoungers; plaj kulüpleri, beach club'lar ve otel havuzlarında şezlong rezervasyonunu dijitalleştiren, hem misafirlere hem tesis sahiplerine kolaylık sunan Türkiye'nin ilk ve lider platformudur.",
+    text: "2014 yılında Sakarya Teknokent'te kurulan Reklamotv Bilişim Teknoloji olarak, Türkiye'nin dijital dönüşümüne katkı sağlayan yenilikçi çözümler geliştiriyoruz. On yılı aşkın teknoloji deneyimimizi turizm sektörüne taşıyarak 2024 yılında MyLoungers'ı hayata geçirdik. MyLoungers; otel, beach club, aqua park, restoran, bar, tekne turu ve spa gibi tatil tesislerinde rezervasyonu dijitalleştiren, hem misafirlere hem tesis sahiplerine kolaylık sunan Türkiye'nin yenilikçi platformlarındandır.",
   },
   {
     title: "Misyonumuz",
     icon: "🎯",
-    text: "Türkiye'nin tüm kıyı destinasyonlarında şezlong rezervasyonunu standart hale getirmek, tatilcilere stressiz bir deniz keyfi yaşatmak, tesis sahiplerine ise güçlü bir dijital yönetim altyapısı sunmak.",
+    text: "Türkiye'nin tatil destinasyonlarında online rezervasyon deneyimini yaygınlaştırmak, misafirlere stressiz bir tatil deneyimi sunmak, tesis sahiplerine ise güçlü bir dijital yönetim altyapısı sağlamak.",
   },
   {
     title: "Vizyonumuz",
     icon: "🚀",
-    text: "Akdeniz'in lider şezlong rezervasyon platformu olarak, Türkiye'den dünyaya açılan bir turizm teknolojisi markası olmak.",
+    text: "Türkiye'nin önde gelen tatil rezervasyon platformlarından biri olarak, dünyaya açılan güçlü bir turizm teknolojisi markası olmak.",
   },
 ];
 
@@ -44,7 +44,7 @@ export default function HakkimizdaPage() {
                 Hakkımızda
               </h1>
               <p style={{ margin: 0, fontSize: 14, opacity: 0.95 }}>
-                Türkiye'nin şezlong rezervasyon platformu
+                Türkiye'nin tatil rezervasyon platformu
               </p>
             </div>
             <img

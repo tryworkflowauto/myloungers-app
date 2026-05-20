@@ -7,14 +7,14 @@ const STEPS = [
     text: "Konum, tesis tipi veya tarihe göre filtrele. Gerçek kullanıcı yorumlarını ve puanlarını gör. Anlık müsaitlik durumunu kontrol et.",
   },
   {
-    title: "Şezlong Seç",
-    icon: "🏖️",
-    text: "Tesis planı üzerinden istediğin şezlongu seç. Denize yakınlık, gölge ve VIP bölge tercini yap. Birden fazla şezlongu aynı anda rezerve et.",
+    title: "Yerini Seç",
+    icon: "📍",
+    text: "Harita veya tesis planı üzerinden masanızı, şezlongunuzu, kabin veya seansınızı seçin. Konum, kategori veya paket tercihini yapın. İsterseniz birden fazla yeri aynı anda rezerve edin.",
   },
   {
-    title: "Öde & Uzan",
+    title: "Öde & Onayla",
     icon: "✅",
-    text: "Güvenli ödeme yap, QR kodunu göster. 256-bit SSL şifreli güvenli ödeme. QR kod ile temassız, kasasız tesis girişi.",
+    text: "Güvenli ödeme yap, QR kodunu veya onayını göster. 256-bit SSL şifreli güvenli ödeme. Destekleyen tesislerde QR kod ile temassız giriş.",
   },
 ];
 
@@ -44,7 +44,7 @@ export default function NasilCalisirPage() {
                 Nasıl Çalışır?
               </h1>
               <p style={{ margin: 0, fontSize: 15, opacity: 0.95 }}>
-                3 adımda şezlong rezervasyonu
+                3 adımda tatil rezervasyonu
               </p>
             </div>
             <img

@@ -10,12 +10,13 @@
 html{scroll-behavior:smooth}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .nav{position:sticky;top:0;z-index:300;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
-.nav-in{max-width:1400px;margin:0 auto;padding:0 32px;height:72px;display:flex;align-items:center;gap:20px}
-.logo-img{height:90px;width:auto;display:block;flex-shrink:0}
-.nav-cats{display:flex;gap:4px;flex:1;justify-content:center}
-.nc{display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:50px;font-size:.78rem;font-weight:600;color:var(--ink2);background:none;border:1.5px solid transparent;cursor:pointer;transition:all .18s;white-space:nowrap;font-family:inherit;text-decoration:none}
+.nav-in{max-width:1400px;margin:0 auto;padding:0 20px;height:72px;display:flex;align-items:center;gap:12px}
+.logo-img-wrap{flex-shrink:0;display:flex;align-items:center}
+.logo-img{height:56px;width:auto;display:block;flex-shrink:0}
+.nav-cats{display:flex;gap:1px;flex:1;justify-content:center;min-width:0}
+.nc{display:flex;align-items:center;gap:4px;padding:6px 9px;border-radius:50px;font-size:.7rem;font-weight:600;color:var(--ink2);background:none;border:1.5px solid transparent;cursor:pointer;transition:all .18s;white-space:nowrap;font-family:inherit;text-decoration:none}
 button.nc{border:1.5px solid transparent;appearance:none;-webkit-appearance:none}
-.nc svg{width:19px;height:19px;flex-shrink:0}
+.nc svg{width:16px;height:16px;flex-shrink:0}
 .nc.on,.nc:hover{color:var(--navy);background:var(--teal-lt);border-color:var(--teal)}
 .home-page .nc.on,.home-page .nc:hover{color:#0066FF;background:rgba(0,102,255,.08);border-color:#0066FF}
 .nc.on svg,.nc:hover svg{opacity:1}
@@ -397,7 +398,9 @@ footer{background:var(--navy);padding:48px 24px 22px}
 .bm-ok p{font-size:.79rem;color:var(--ink3);line-height:1.7;max-width:240px;margin:0 auto 18px}
 .bm-ok-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:var(--r);font-family:'Inter',sans-serif;font-size:.8rem;font-weight:700;color:#fff;background:var(--teal);border:none;cursor:pointer}
 @media(max-width:1024px){.pgrid{grid-template-columns:repeat(2,1fr)}.ft{grid-template-columns:repeat(2,1fr)}.plan-sec{grid-template-columns:1fr;gap:22px}.b2b-in{grid-template-columns:1fr;gap:22px}}
-@media(max-width:768px){.nav-cats,.nav-r{display:none}.ham{display:flex}.nav-in{padding:0 14px;height:62px}.logo-img{height:52px}.mob-cats{display:block;top:62px}.home-page .mob-cats{display:none}.slide-img{height:260px}.sec{padding:24px 14px}.cat-grid{grid-template-columns:1fr;gap:10px}.cat-card{aspect-ratio:16/7}.pgrid{grid-template-columns:1fr;gap:12px}.pw0{aspect-ratio:16/7}.how{padding:32px 14px}.hgrid{grid-template-columns:1fr}.plan-sec{padding:32px 14px}.b2b{padding:32px 14px}.b2b-in{grid-template-columns:1fr}.rev{padding:32px 14px}.rgrid{grid-template-columns:1fr}footer{padding:28px 14px 14px}.ft{grid-template-columns:1fr 1fr;gap:18px}.fb{flex-direction:column;gap:5px;text-align:center}.basvuru-modal{grid-template-columns:1fr}.bm-left{display:none}.bm-right{max-height:none;padding:20px}}
+/* Navbar: kategori satırı 1280px altında gizlenir, hamburger + nav-r (TR / giriş) kalır; 768px altı mobil düzen aynı */
+@media(max-width:1279px) and (min-width:769px){.nav-cats{display:none}.ham{display:flex;order:1;margin-left:0}.nav-r{order:2;margin-left:auto}}
+@media(max-width:768px){.nav-cats,.nav-r{display:none}.ham{display:flex;order:0;margin-left:auto}.nav-in{padding:0 14px;height:62px}.logo-img{height:52px}.mob-cats{display:block;top:62px}.home-page .mob-cats{display:none}.slide-img{height:260px}.sec{padding:24px 14px}.cat-grid{grid-template-columns:1fr;gap:10px}.cat-card{aspect-ratio:16/7}.pgrid{grid-template-columns:1fr;gap:12px}.pw0{aspect-ratio:16/7}.how{padding:32px 14px}.hgrid{grid-template-columns:1fr}.plan-sec{padding:32px 14px}.b2b{padding:32px 14px}.b2b-in{grid-template-columns:1fr}.rev{padding:32px 14px}.rgrid{grid-template-columns:1fr}footer{padding:28px 14px 14px}.ft{grid-template-columns:1fr 1fr;gap:18px}.fb{flex-direction:column;gap:5px;text-align:center}.basvuru-modal{grid-template-columns:1fr}.bm-left{display:none}.bm-right{max-height:none;padding:20px}}
 @media(max-width:480px){.nav-in{height:56px}.logo-img{height:46px}.mob-cats{top:56px}.slide-img{height:55vw;min-height:180px;max-height:250px}.tgrid{grid-template-columns:repeat(2,1fr)}.bfg2{grid-template-columns:1fr}.chk-grid{grid-template-columns:1fr}.copts{grid-template-columns:1fr 1fr}footer{padding:24px 14px 12px}.ft{grid-template-columns:1fr;gap:16px}}
 
 /* ══ FİLTRE BUTONU ══ */

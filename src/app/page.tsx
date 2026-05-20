@@ -12,7 +12,7 @@ import "./myloungers.css";
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   tr: {
     nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restoran", nav_bar: "Bar & Lounge", nav_tekne: "Tekne Turu", nav_spa: "Spa", nav_apply: "Başvuru Formu",
-    hero_title: "Bodrum'un En İyi", hero_title2: "Plaj & Otel Deneyimi", hero_subtitle: "Şezlong, plaj kulübü ve otel rezervasyonlarını tek platformda yönetin",
+    hero_title: "Bodrum'un En İyi", hero_title2: "Tesis & Tatil Deneyimi", hero_subtitle: "Otel, beach club, spa, restoran, bar, tekne turu ve daha fazlası için rezervasyonlarınızı tek platformda yönetin",
     hero_search_placeholder: "Tesis, bölge veya aktivite ara...", hero_btn: "Ara",
     filter_all: "Tümünü Gör", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
     cat_title: "Tesis Kategorileri", cat_subtitle: "İhtiyacınıza göre tesis türü seçin",
@@ -29,16 +29,16 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     cat_restoran_sub: "Menü ve ambians", cat_bar_sub: "İçecek ve eğlence",
     cat_tekne_sub: "Deniz turu & balık avı", cat_spa_sub: "Masaj & wellness",
     badge_popular: "Popüler", badge_new: "Yeni", tag_daily: "Günlük",
-    how_title: "Nasıl", how_title2: "Çalışır?", how_sub: "3 adımda şezlong rezervasyonu",
-    how1: "Tesis Seç", how2: "Şezlong Seç", how3: "Öde & Uzan",
-    plan_tag: "Şezlong Planı", plan_title: "Tam istediğin şezlongu harita üzerinden seç",
+    how_title: "Nasıl", how_title2: "Çalışır?", how_sub: "3 adımda tatil rezervasyonu",
+    how1: "Tesis Seç", how2: "Yerini Seç", how3: "Öde & Onayla",
+    plan_tag: "Rezervasyon Planı", plan_title: "Harita veya tesisten istediğin yeri seç",
     b2b_tag: "Tesis Sahipleri İçin", b2b_title: "Tesisinizi MyLoungers'a ekleyin",
     rev_title: "Kullanıcılar Ne Diyor?", rev_all: "Tüm yorumlar",
-    footer_desc: "Türkiye'nin şezlong rezervasyon platformu.",
+    footer_desc: "Türkiye'nin tatil rezervasyon platformu.",
   },
   en: {
     nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_restoran: "Restaurant", nav_bar: "Bar & Lounge", nav_tekne: "Boat Tour", nav_spa: "Spa", nav_apply: "Apply Now",
-    hero_title: "Bodrum's Best", hero_title2: "Beach & Hotel Experience", hero_subtitle: "Manage sunbed, beach club and hotel reservations on one platform",
+    hero_title: "Bodrum's Best", hero_title2: "Holiday & Property Experience", hero_subtitle: "Manage hotel, beach club, spa, restaurant, bar, boat tour and more on one platform",
     hero_search_placeholder: "Search facility, region or activity...", hero_btn: "Search",
     filter_all: "View All", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
     cat_title: "Facility Categories", cat_subtitle: "Choose the facility type that suits your needs",
@@ -55,16 +55,16 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     cat_restoran_sub: "Dining & ambience", cat_bar_sub: "Drinks & lounge",
     cat_tekne_sub: "Sea tours & fishing", cat_spa_sub: "Massage & wellness",
     badge_popular: "Popular", badge_new: "New", tag_daily: "Daily",
-    how_title: "How", how_title2: "It Works", how_sub: "Sunbed reservation in 3 steps",
-    how1: "Choose Facility", how2: "Choose Sunbed", how3: "Pay & Relax",
-    plan_tag: "Sunbed Plan", plan_title: "Choose your sunbed on the map",
+    how_title: "How", how_title2: "It Works", how_sub: "Holiday reservations in 3 steps",
+    how1: "Choose Facility", how2: "Choose your spot", how3: "Pay & Confirm",
+    plan_tag: "Reservation layout", plan_title: "Pick your spot on the map or venue layout",
     b2b_tag: "For Facility Owners", b2b_title: "Add your facility to MyLoungers",
     rev_title: "What Users Say?", rev_all: "All reviews",
-    footer_desc: "Turkey's sunbed reservation platform.",
+    footer_desc: "Turkey's holiday reservation platform.",
   },
   de: {
     nav_hotel: "Hotel", nav_beach: "Beach Club", nav_aqua: "Aqua Park", nav_apply: "Jetzt Bewerben",
-    hero_title: "Bodrums Bestes", hero_title2: "Strand & Hotel Erlebnis", hero_subtitle: "Verwalten Sie Liegestuhl-, Strandclub- und Hotelreservierungen auf einer Plattform",
+    hero_title: "Bodrums Bestes", hero_title2: "Urlaubs- & Anlagen-Erlebnis", hero_subtitle: "Verwalten Sie Hotel-, Beach-Club-, Spa-, Restaurant-, Bar-, Bootstour- und weitere Reservierungen auf einer Plattform",
     hero_search_placeholder: "Einrichtung, Region oder Aktivität suchen...", hero_btn: "Suchen",
     filter_all: "Alle anzeigen", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
     cat_title: "Einrichtungskategorien", cat_subtitle: "Wählen Sie den Einrichtungstyp",
@@ -80,16 +80,16 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     cat_hotel_sub: "Komfort und Service", cat_beach_sub: "Liegestuhl & Meer", cat_aqua_sub: "Spaß & Rutschen",
     cat_restoran_sub: "Kulinarik & Ambiente", cat_bar_sub: "Drinks & Lounge",
     badge_popular: "Beliebt", badge_new: "Neu", tag_daily: "Täglich",
-    how_title: "Wie", how_title2: "es funktioniert", how_sub: "Liegestuhlreservierung in 3 Schritten",
-    how1: "Einrichtung wählen", how2: "Liegestuhl wählen", how3: "Bezahlen & Entspannen",
-    plan_tag: "Liegestuhl-Plan", plan_title: "Wählen Sie Ihren Liegestuhl auf der Karte",
+    how_title: "Wie", how_title2: "es funktioniert", how_sub: "Urlaubsbuchung in 3 Schritten",
+    how1: "Einrichtung wählen", how2: "Platz wählen", how3: "Bezahlen & Bestätigen",
+    plan_tag: "Reservierungsplan", plan_title: "Wählen Sie Ihren Platz auf der Karte oder im Plan der Einrichtung",
     b2b_tag: "Für Einrichtungsinhaber", b2b_title: "Fügen Sie Ihre Einrichtung zu MyLoungers hinzu",
     rev_title: "Was Nutzer sagen?", rev_all: "Alle Bewertungen",
-    footer_desc: "Die Liegestuhl-Reservierungsplattform der Türkei.",
+    footer_desc: "Die Urlaubs-Reservierungsplattform der Türkei.",
   },
   ru: {
     nav_hotel: "Отель", nav_beach: "Пляжный клуб", nav_aqua: "Аквапарк", nav_apply: "Подать заявку",
-    hero_title: "Лучшее в Бодруме", hero_title2: "Пляж и Отель", hero_subtitle: "Управляйте бронированием шезлонгов, пляжных клубов и отелей на одной платформе",
+    hero_title: "Лучшее в Бодруме", hero_title2: "Отдых и объекты", hero_subtitle: "Управляйте бронированием отелей, пляжных клубов, спа, ресторанов, баров, морских туров и другого на одной платформе",
     hero_search_placeholder: "Поиск объекта, региона или активности...", hero_btn: "Поиск",
     filter_all: "Все", filter_hotel: "Отель", filter_beach: "Пляжный клуб", filter_aqua: "Аквапарк",
     cat_title: "Категории объектов", cat_subtitle: "Выберите тип объекта",
@@ -105,12 +105,12 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     cat_hotel_sub: "Комфорт и сервис", cat_beach_sub: "Шезлонг и море", cat_aqua_sub: "Развлечения и горки",
     cat_restoran_sub: "Кухня и атмосфера", cat_bar_sub: "Бар и отдых",
     badge_popular: "Популярный", badge_new: "Новый", tag_daily: "Ежедневно",
-    how_title: "Как", how_title2: "это работает", how_sub: "Бронирование шезлонга за 3 шага",
-    how1: "Выберите объект", how2: "Выберите шезлонг", how3: "Оплатите и расслабьтесь",
-    plan_tag: "План шезлонгов", plan_title: "Выберите шезлонг на карте",
+    how_title: "Как", how_title2: "это работает", how_sub: "Бронирование отдыха за 3 шага",
+    how1: "Выберите объект", how2: "Выберите место", how3: "Оплатите и подтвердите",
+    plan_tag: "План бронирования", plan_title: "Выберите место на карте или схеме заведения",
     b2b_tag: "Для владельцев", b2b_title: "Добавьте свой объект в MyLoungers",
     rev_title: "Что говорят пользователи?", rev_all: "Все отзывы",
-    footer_desc: "Платформа бронирования шезлонгов в Турции.",
+    footer_desc: "Платформа бронирования отдыха в Турции.",
   },
 };
 
@@ -1576,15 +1576,15 @@ export default function Home() {
                 <div className="hn"><span className="hn-num">2</span></div>
                 <span className="hadim">ADIM 02</span>
               </div>
-              <span className="hi">🏖️</span>
+              <span className="hi">📍</span>
               <h3 id="how2-title">{t.how2}</h3>
-              <p className="hs-desc" id="how2-desc">Tesis planı üzerinden istediğin şezlongu seç.</p>
+              <p className="hs-desc" id="how2-desc">Harita veya tesis planı üzerinden yerinizi, masanızı veya seansınızı seçin.</p>
               <ul className="hs-list">
-                <li>Denize yakınlık, gölge ve VIP bölge tercini yap</li>
-                <li>Silver, Gold ve VIP kategoriler arasından seç</li>
-                <li>Birden fazla şezlongu aynı anda rezerve et</li>
+                <li>Konum, kategori, gün/saat veya paket tercihinizi yapın</li>
+                <li>Standart veya premium seçenekler arasından seçin (tesise göre değişir)</li>
+                <li>Birden fazla yeri veya kişiyi aynı anda rezerve edin</li>
               </ul>
-              <div className="hs-badge">🏖️ 100+ Şezlong / Tesis</div>
+              <div className="hs-badge">📍 100+ Rezervasyon seçeneği / tesis</div>
             </div>
             <div className="hs">
               <div className="hs-top">
@@ -1615,7 +1615,7 @@ export default function Home() {
           <div>
             <div className="bm-tag" id="b2b-tag">{t.b2b_tag}</div>
             <h2 id="b2b-title">{t.b2b_title}</h2>
-            <p className="desc" id="b2b-desc">Otel, beach club veya plaj işletmenizi platforma ekleyin.</p>
+            <p className="desc" id="b2b-desc">Otel, beach club, restoran, spa, tekne veya aqua park işletmenizi platforma ekleyin.</p>
             <div className="b2b-acts">
               <Link href="/basvuru" className="btn-solid" id="b2b-btn1">Başvuru Formu →</Link>
             </div>
@@ -1625,7 +1625,7 @@ export default function Home() {
               <div className="b2bi">📈</div>
               <div>
                 <h4 id="b2b1-title">Doluluk Oranını Artır</h4>
-                <p id="b2b1-desc">Sezon boyunca %90+ doluluk oranı hedefleyin, her şezlong gelir getirsin.</p>
+                <p id="b2b1-desc">Sezon boyunca %90+ doluluk oranı hedefleyin; her rezervasyon noktanız gelir üretsin.</p>
               </div>
             </div>
             <div className="b2bc">
@@ -1639,7 +1639,7 @@ export default function Home() {
               <div className="b2bi">🌟</div>
               <div>
                 <h4 id="b2b3-title">Ücretsiz Tesis Sayfası</h4>
-                <p id="b2b3-desc">Fotoğraf, harita, şezlong planı — tesisiniz 10 dakikada yayında.</p>
+                <p id="b2b3-desc">Fotoğraf, harita ve yerleşim planı — tesisiniz 10 dakikada yayında.</p>
               </div>
             </div>
           </div>
@@ -1789,7 +1789,7 @@ export default function Home() {
               <div className="bm-pane on">
                 <div className="bm-pttl">Tesis Detayları</div>
                 <div className="bm-psub">Kapasite ve özellikler hakkında bilgi verin.</div>
-                <div className="bfg"><label className="bfl">Şezlong Kapasitesi: <span>50</span> adet</label><div className="cap-w"><input type="range" className="cap-s" min={5} max={500} defaultValue={50} step={5} /><div className="cap-v">50</div></div></div>
+                <div className="bfg"><label className="bfl">Kapasite (yaklaşık): <span>50</span> adet</label><div className="cap-w"><input type="range" className="cap-s" min={5} max={500} defaultValue={50} step={5} /><div className="cap-v">50</div></div></div>
                 <div className="bm-nav">
                   <button type="button" className="bm-prev" onClick={() => setBmPane(1)}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg> Geri</button>
                   <button type="button" className="bm-next" onClick={() => setBmPane(3)}>Devam Et <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg></button>
