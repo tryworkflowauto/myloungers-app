@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminToastProvider } from "./AdminToastContext";
 import { supabase } from "@/lib/supabase";
+import { getAllFacilityTypes } from "@/lib/tesisFacilityTypes";
 
 // CSV export helper (komisyon summary)
 function komisyonCsvIndir() {
@@ -34,6 +35,29 @@ const GREEN = "#10B981";
 const NAVY = "#0A1628";
 const RED = "#EF4444";
 const SIDEBAR_W = 240;
+
+const ISLETME_MODU_OPTS = ["Ön Ödemeli Bakiye Sistemi", "Sadece Şezlong Kiralama"] as const;
+const ABONELIK_OPTS = ["Başlangıç 990 TL/ay", "Büyüme 2.490 TL/ay", "Kurumsal 4.990 TL/ay"] as const;
+
+function splitSehirIlce(raw: string): { sehir: string; ilce: string | null } {
+  const t = raw.trim();
+  if (!t) return { sehir: "", ilce: null };
+  const normalized = t.replace(/\s*\/\s*/g, ",");
+  const parts = normalized.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 1) return { sehir: parts[0], ilce: null };
+  return { sehir: parts[0], ilce: parts.slice(1).join(", ") || null };
+}
+
+function komisyonSecToNumber(komisyonSec: string, ozelKomisyon: string): number | null {
+  if (komisyonSec === "ozel") {
+    const n = Number.parseFloat(String(ozelKomisyon).replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+  if (komisyonSec === "%15 Standart") return 15;
+  if (komisyonSec === "%12 Premium Partner") return 12;
+  if (komisyonSec === "%10 Özel Anlaşma") return 10;
+  return null;
+}
 
 const NAV_ITEMS = [
   { href: "/admin",               label: "Dashboard",         icon: "📊", activePath: "/admin"          },
@@ -84,6 +108,88 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sifre, setSifre] = useState("MyL2026beach");
   const [komisyonSec, setKomisyonSec] = useState("%15 Standart");
   const [ozelKomisyon, setOzelKomisyon] = useState("");
+  const [modalTesisAdi, setModalTesisAdi] = useState("");
+  const [modalTesisTurId, setModalTesisTurId] = useState("");
+  const [modalIsletmeSahibi, setModalIsletmeSahibi] = useState("");
+  const [modalTelefon, setModalTelefon] = useState("");
+  const [modalEmail, setModalEmail] = useState("");
+  const [modalSehirIlce, setModalSehirIlce] = useState("");
+  const [modalKapasite, setModalKapasite] = useState<number | "">("");
+  const [modalIsletmeModu, setModalIsletmeModu] = useState<string>(ISLETME_MODU_OPTS[0]);
+  const [modalAbonelik, setModalAbonelik] = useState<string>(ABONELIK_OPTS[0]);
+  const [modalTesisSubmitting, setModalTesisSubmitting] = useState(false);
+
+  const resetTesisModalForm = useCallback(() => {
+    setKomisyonSec("%15 Standart");
+    setOzelKomisyon("");
+    setModalTesisAdi("");
+    setModalTesisTurId("");
+    setModalIsletmeSahibi("");
+    setModalTelefon("");
+    setModalEmail("");
+    setModalSehirIlce("");
+    setModalKapasite("");
+    setModalIsletmeModu(ISLETME_MODU_OPTS[0]);
+    setModalAbonelik(ABONELIK_OPTS[0]);
+    setSifre("MyL2026beach");
+  }, []);
+
+  const handleTesisModalSubmit = async () => {
+    if (!modalTesisAdi.trim()) {
+      showToast("Lütfen tesis adını girin.", RED);
+      return;
+    }
+    if (!modalTesisTurId) {
+      showToast("Lütfen tesis türünü seçin.", RED);
+      return;
+    }
+    const { sehir, ilce } = splitSehirIlce(modalSehirIlce);
+    const komisyonOrani = komisyonSecToNumber(komisyonSec, ozelKomisyon);
+    const body: Record<string, unknown> = {
+      isletmeAdi: modalTesisAdi.trim(),
+      kategoriler: modalTesisTurId,
+      sehir,
+      ilce,
+      adres: null,
+      telefon: modalTelefon.trim(),
+      email: modalEmail.trim() || null,
+      kapasite: modalKapasite === "" ? null : Number(modalKapasite),
+      abonelikPaketi: modalAbonelik,
+      isletmeModu: modalIsletmeModu,
+      isletmeSahibiAdSoyad: modalIsletmeSahibi.trim() || null,
+    };
+    if (komisyonOrani != null && Number.isFinite(komisyonOrani)) body.komisyonOrani = komisyonOrani;
+
+    setModalTesisSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/tesis-olustur", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        tesisId?: string;
+        slug?: string;
+        error?: string;
+      };
+      if (res.ok && data.success) {
+        const slugTxt = data.slug ? ` (${data.slug})` : "";
+        showToast(`✅ Tesis oluşturuldu${slugTxt}! Davet için e-posta gönderilmiş olabilir.`, GREEN);
+        resetTesisModalForm();
+        setModalOpen(false);
+        router.refresh();
+        return;
+      }
+      showToast(`❌ ${data.error ?? "Tesis oluşturulamadı."}`, RED);
+    } catch (e) {
+      console.error("tesis-olustur fetch", e);
+      showToast("❌ Bağlantı veya sunucu hatası.", RED);
+    } finally {
+      setModalTesisSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchBekleyenYorumlar = async () => {
@@ -177,44 +283,61 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* MODAL */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={(e) => { if (e.target === e.currentTarget) { setModalOpen(false); setKomisyonSec("%15 Standart"); setOzelKomisyon(""); } }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={(e) => { if (e.target === e.currentTarget) { resetTesisModalForm(); setModalOpen(false); } }}>
           <div style={{ background: "white", borderRadius: 16, width: 680, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: "18px 24px", borderBottom: `1px solid ${GRAY100}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "white", zIndex: 10 }}>
               <div>
                 <h2 style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>➕ Yeni Tesis Ekle</h2>
                 <p style={{ fontSize: 11, color: GRAY400, marginTop: 2 }}>Bilgileri siz doldurun, işletme sonradan tamamlayabilir</p>
               </div>
-              <button onClick={() => { setModalOpen(false); setKomisyonSec("%15 Standart"); setOzelKomisyon(""); }} style={{ background: GRAY100, border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => { resetTesisModalForm(); setModalOpen(false); }} style={{ background: GRAY100, border: "none", borderRadius: 8, width: 30, height: 30, fontSize: 16, cursor: "pointer" }}>✕</button>
             </div>
             <div style={{ padding: "20px 24px" }}>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${GRAY100}` }}>Temel Bilgiler</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  {["Tesis Adı", "Tesis Türü", "İşletme Sahibi", "Telefon", "E-posta", "Şehir / İlçe"].map((l, i) => (
-                    <div key={i} style={{ marginBottom: 12 }}>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>{l}</label>
-                      {l === "Tesis Türü" ? (
-                        <select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
-                          <option>Beach Club</option><option>Otel Plajı</option><option>Havuz Alanı</option>
-                        </select>
-                      ) : (
-                        <input type="text" placeholder={l === "Tesis Adı" ? "örn: Aqua Beach Club" : l === "İşletme Sahibi" ? "Ad Soyad" : l === "Telefon" ? "+90 5xx xxx xx xx" : l === "E-posta" ? "isletme@email.com" : "örn: Bodrum / Yalıkavak"} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
-                      )}
-                    </div>
-                  ))}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Tesis Adı</label>
+                    <input type="text" value={modalTesisAdi} onChange={(e) => setModalTesisAdi(e.target.value)} placeholder="örn: Aqua Beach Club" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Tesis Türü</label>
+                    <select value={modalTesisTurId} onChange={(e) => setModalTesisTurId(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
+                      <option value="">Seçiniz</option>
+                      {getAllFacilityTypes().map((ft) => (
+                        <option key={ft.id} value={ft.id}>{ft.emoji} {ft.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>İşletme Sahibi</label>
+                    <input type="text" value={modalIsletmeSahibi} onChange={(e) => setModalIsletmeSahibi(e.target.value)} placeholder="Ad Soyad" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Telefon</label>
+                    <input type="text" value={modalTelefon} onChange={(e) => setModalTelefon(e.target.value)} placeholder="+90 5xx xxx xx xx" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>E-posta</label>
+                    <input type="text" value={modalEmail} onChange={(e) => setModalEmail(e.target.value)} placeholder="isletme@email.com" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Şehir / İlçe</label>
+                    <input type="text" value={modalSehirIlce} onChange={(e) => setModalSehirIlce(e.target.value)} placeholder="örn: Bodrum / Yalıkavak" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
+                  </div>
                 </div>
               </div>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${GRAY100}` }}>Kapasite ve Model</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Toplam Şezlong</label><input type="number" placeholder="örn: 80" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} /></div>
-                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>İşletme Modu</label><select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}><option>Ön Ödemeli Bakiye Sistemi</option><option>Sadece Şezlong Kiralama</option></select></div>
+                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Toplam Şezlong</label><input type="number" placeholder="örn: 80" value={modalKapasite === "" ? "" : String(modalKapasite)} min={0} onChange={(e) => { const v = e.target.value; if (v === "") setModalKapasite(""); else { const n = Number.parseInt(v, 10); if (!Number.isNaN(n)) setModalKapasite(n); } }} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} /></div>
+                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>İşletme Modu</label><select value={modalIsletmeModu} onChange={(e) => setModalIsletmeModu(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>{ISLETME_MODU_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Komisyon Oranı</label>
-                    <select value={komisyonSec} onChange={e => setKomisyonSec(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
-                      <option>%15 Standart</option>
-                      <option>%12 Premium Partner</option>
-                      <option>%10 Özel Anlaşma</option>
+                    <select value={komisyonSec} onChange={(e) => setKomisyonSec(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
+                      <option value="%15 Standart">%15 Standart</option>
+                      <option value="%12 Premium Partner">%12 Premium Partner</option>
+                      <option value="%10 Özel Anlaşma">%10 Özel Anlaşma</option>
                       <option value="ozel">✏️ Özel Oran Gir</option>
                     </select>
                     {komisyonSec === "ozel" && (
@@ -231,7 +354,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       </div>
                     )}
                   </div>
-                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Abonelik Paketi</label><select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}><option>Başlangıç 990 TL/ay</option><option>Büyüme 2.490 TL/ay</option><option>Kurumsal 4.990 TL/ay</option></select></div>
+                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Abonelik Paketi</label><select value={modalAbonelik} onChange={(e) => setModalAbonelik(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>{ABONELIK_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                 </div>
               </div>
               <div style={{ marginBottom: 0 }}>
@@ -241,9 +364,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
             <div style={{ padding: "14px 24px", borderTop: `1px solid ${GRAY100}`, display: "flex", justifyContent: "flex-end", gap: 8, position: "sticky", bottom: 0, background: "white" }}>
-              <button onClick={() => { setModalOpen(false); setKomisyonSec("%15 Standart"); setOzelKomisyon(""); }} style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
-              <button style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Taslak Kaydet</button>
-              <button onClick={() => { setModalOpen(false); showToast("Tesis oluşturuldu! Erişim bilgileri e-posta ile gönderildi.", ORANGE); }} style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: "pointer" }}>✓ Tesis Oluştur ve Paneli Aç</button>
+              <button type="button" onClick={() => { resetTesisModalForm(); setModalOpen(false); }} style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>İptal</button>
+              <button type="button" style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>Taslak Kaydet</button>
+              <button type="button" disabled={modalTesisSubmitting} onClick={handleTesisModalSubmit} style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "none", background: ORANGE, color: "white", cursor: modalTesisSubmitting ? "not-allowed" : "pointer", opacity: modalTesisSubmitting ? 0.85 : 1 }}>{modalTesisSubmitting ? "Oluşturuluyor..." : "✓ Tesis Oluştur ve Paneli Aç"}</button>
             </div>
           </div>
         </div>
