@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AdminToastProvider } from "./AdminToastContext";
 import { supabase } from "@/lib/supabase";
 import { getAllFacilityTypes } from "@/lib/tesisFacilityTypes";
+import { ODEME_MODLARI, KOMISYON_TIPLERI } from "@/lib/odemeModlari";
 
 // CSV export helper (komisyon summary)
 function komisyonCsvIndir() {
@@ -36,7 +37,6 @@ const NAVY = "#0A1628";
 const RED = "#EF4444";
 const SIDEBAR_W = 240;
 
-const ISLETME_MODU_OPTS = ["Ön Ödemeli Bakiye Sistemi", "Sadece Şezlong Kiralama"] as const;
 const ABONELIK_OPTS = ["Başlangıç 990 TL/ay", "Büyüme 2.490 TL/ay", "Kurumsal 4.990 TL/ay"] as const;
 
 function splitSehirIlce(raw: string): { sehir: string; ilce: string | null } {
@@ -115,7 +115,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [modalEmail, setModalEmail] = useState("");
   const [modalSehirIlce, setModalSehirIlce] = useState("");
   const [modalKapasite, setModalKapasite] = useState<number | "">("");
-  const [modalIsletmeModu, setModalIsletmeModu] = useState<string>(ISLETME_MODU_OPTS[0]);
+  const [modalOdemeModu, setModalOdemeModu] = useState<string>("harcama_limitli");
+  const [modalKaporaTutari, setModalKaporaTutari] = useState<string>("");
+  const [modalKomisyonTipi, setModalKomisyonTipi] = useState<string>("yuzde");
+  const [modalIslemBedeli, setModalIslemBedeli] = useState<string>("");
   const [modalAbonelik, setModalAbonelik] = useState<string>(ABONELIK_OPTS[0]);
   const [modalTesisSubmitting, setModalTesisSubmitting] = useState(false);
 
@@ -129,7 +132,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setModalEmail("");
     setModalSehirIlce("");
     setModalKapasite("");
-    setModalIsletmeModu(ISLETME_MODU_OPTS[0]);
+    setModalOdemeModu("harcama_limitli");
+    setModalKaporaTutari("");
+    setModalKomisyonTipi("yuzde");
+    setModalIslemBedeli("");
     setModalAbonelik(ABONELIK_OPTS[0]);
     setSifre("MyL2026beach");
   }, []);
@@ -144,7 +150,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
     const { sehir, ilce } = splitSehirIlce(modalSehirIlce);
-    const komisyonOrani = komisyonSecToNumber(komisyonSec, ozelKomisyon);
+    const komisyonOrani =
+      modalKomisyonTipi === "yuzde" ? komisyonSecToNumber(komisyonSec, ozelKomisyon) : null;
     const body: Record<string, unknown> = {
       isletmeAdi: modalTesisAdi.trim(),
       kategoriler: modalTesisTurId,
@@ -155,7 +162,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       email: modalEmail.trim() || null,
       kapasite: modalKapasite === "" ? null : Number(modalKapasite),
       abonelikPaketi: modalAbonelik,
-      isletmeModu: modalIsletmeModu,
+      odemeModu: modalOdemeModu,
+      isletmeModu: modalOdemeModu,
+      komisyonTipi: modalKomisyonTipi,
+      kaporaTutari:
+        modalOdemeModu === "kapora" && modalKaporaTutari.trim() !== ""
+          ? Number(modalKaporaTutari)
+          : null,
+      islemBedeli:
+        modalKomisyonTipi === "islem_bedeli" && modalIslemBedeli.trim() !== ""
+          ? Number(modalIslemBedeli)
+          : null,
       isletmeSahibiAdSoyad: modalIsletmeSahibi.trim() || null,
     };
     if (komisyonOrani != null && Number.isFinite(komisyonOrani)) body.komisyonOrani = komisyonOrani;
@@ -331,26 +348,55 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${GRAY100}` }}>Kapasite ve Model</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Toplam Şezlong</label><input type="number" placeholder="örn: 80" value={modalKapasite === "" ? "" : String(modalKapasite)} min={0} onChange={(e) => { const v = e.target.value; if (v === "") setModalKapasite(""); else { const n = Number.parseInt(v, 10); if (!Number.isNaN(n)) setModalKapasite(n); } }} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} /></div>
-                  <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>İşletme Modu</label><select value={modalIsletmeModu} onChange={(e) => setModalIsletmeModu(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>{ISLETME_MODU_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>
                   <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Komisyon Oranı</label>
-                    <select value={komisyonSec} onChange={(e) => setKomisyonSec(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
-                      <option value="%15 Standart">%15 Standart</option>
-                      <option value="%12 Premium Partner">%12 Premium Partner</option>
-                      <option value="%10 Özel Anlaşma">%10 Özel Anlaşma</option>
-                      <option value="ozel">✏️ Özel Oran Gir</option>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Ödeme Modu</label>
+                    <select value={modalOdemeModu} onChange={(e) => setModalOdemeModu(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
+                      {ODEME_MODLARI.map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
                     </select>
-                    {komisyonSec === "ozel" && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                        <span style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap" }}>Özel oran:</span>
-                        <input
-                          type="number" min={0} max={50} value={ozelKomisyon}
-                          onChange={e => setOzelKomisyon(e.target.value.replace(/[^0-9.]/g, ""))}
-                          placeholder="örn: 8"
-                          style={{ width: 80, padding: "7px 10px", border: `1.5px solid ${ORANGE}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "center" }}
-                        />
-                        <span style={{ fontSize: 12, color: "#475569" }}>%</span>
-                        {ozelKomisyon && <span style={{ fontSize: 11, color: ORANGE, fontWeight: 600 }}>→ %{ozelKomisyon} uygulanacak</span>}
+                    {modalOdemeModu === "kapora" && (
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Kapora Tutarı (TL)</label>
+                        <input type="number" min="0" value={modalKaporaTutari} onChange={(e) => setModalKaporaTutari(e.target.value)} placeholder="örn. 200" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }} />
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Komisyon Tipi</label>
+                    <select value={modalKomisyonTipi} onChange={(e) => setModalKomisyonTipi(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
+                      {KOMISYON_TIPLERI.map((k) => (
+                        <option key={k.id} value={k.id}>{k.label}</option>
+                      ))}
+                    </select>
+                    {modalKomisyonTipi === "yuzde" && (
+                      <div style={{ marginTop: 8 }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Komisyon Oranı</label>
+                        <select value={komisyonSec} onChange={(e) => setKomisyonSec(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
+                          <option value="%15 Standart">%15 Standart</option>
+                          <option value="%12 Premium Partner">%12 Premium Partner</option>
+                          <option value="%10 Özel Anlaşma">%10 Özel Anlaşma</option>
+                          <option value="ozel">✏️ Özel Oran Gir</option>
+                        </select>
+                        {komisyonSec === "ozel" && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                            <span style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap" }}>Özel oran:</span>
+                            <input
+                              type="number" min={0} max={50} value={ozelKomisyon}
+                              onChange={e => setOzelKomisyon(e.target.value.replace(/[^0-9.]/g, ""))}
+                              placeholder="örn: 8"
+                              style={{ width: 80, padding: "7px 10px", border: `1.5px solid ${ORANGE}`, borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: "center" }}
+                            />
+                            <span style={{ fontSize: 12, color: "#475569" }}>%</span>
+                            {ozelKomisyon && <span style={{ fontSize: 11, color: ORANGE, fontWeight: 600 }}>→ %{ozelKomisyon} uygulanacak</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {modalKomisyonTipi === "islem_bedeli" && (
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>İşlem Bedeli (TL)</label>
+                        <input type="number" min="0" value={modalIslemBedeli} onChange={(e) => setModalIslemBedeli(e.target.value)} placeholder="örn. 200" style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }} />
                       </div>
                     )}
                   </div>

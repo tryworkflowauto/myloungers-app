@@ -8,6 +8,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
 import { getFacilityType, normalizeToCanonical, type FacilityTypeId } from "@/lib/tesisFacilityTypes";
+import { getOdemeModu, getKomisyonTipi, DEFAULT_ODEME_MODU, DEFAULT_KOMISYON_TIPI } from "./odemeModlari";
 
 export type CreateTesisWithOwnerInput = {
   isletmeAdi: string;
@@ -24,6 +25,10 @@ export type CreateTesisWithOwnerInput = {
   /** Şimdilik yalnızca DB’de uygun kolon varsa yazılır */
   isletmeModu?: string | null;
   isletmeSahibiAdSoyad?: string | null;
+  odemeModu?: string | null; // 'harcama_limitli' | 'hizmet_bedeli' | 'kapora' | 'on_siparis'
+  kaporaTutari?: number | null; // Tip kapora ise avans tutarı
+  komisyonTipi?: string | null; // 'yuzde' | 'islem_bedeli' | 'yok'
+  islemBedeli?: number | null; // Komisyon tipi islem_bedeli ise sabit tutar
 };
 
 export type CreateTesisWithOwnerResult = {
@@ -184,6 +189,9 @@ export async function createTesisWithOwner(
   const emailVal =
     input.email != null && String(input.email).trim() !== "" ? String(input.email).trim().toLowerCase() : null;
 
+  const odemeModuVal = getOdemeModu(input.odemeModu).id;
+  const komisyonTipiVal = getKomisyonTipi(input.komisyonTipi).id;
+
   const { data: tesis, error: insErr } = await admin
     .from("tesisler")
     .insert({
@@ -196,6 +204,8 @@ export async function createTesisWithOwner(
       telefon,
       email: emailVal,
       aktif: true,
+      odeme_modu: odemeModuVal,
+      komisyon_tipi: komisyonTipiVal,
     })
     .select("id, slug")
     .single();
@@ -223,6 +233,12 @@ export async function createTesisWithOwner(
   }
   if (input.isletmeModu != null && String(input.isletmeModu).trim() !== "") {
     optionalPatch.isletme_modu = String(input.isletmeModu).trim();
+  }
+  if (input.kaporaTutari != null && Number.isFinite(Number(input.kaporaTutari))) {
+    optionalPatch.kapora_tutari = Number(input.kaporaTutari);
+  }
+  if (input.islemBedeli != null && Number.isFinite(Number(input.islemBedeli))) {
+    optionalPatch.islem_bedeli = Number(input.islemBedeli);
   }
   await safeOptionalTesisUpdate(admin, tesisId, optionalPatch);
 

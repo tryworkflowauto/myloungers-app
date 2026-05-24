@@ -86,6 +86,10 @@ export async function POST(req: Request) {
       abonelikPaketi: raw?.abonelikPaketi ?? null,
       isletmeModu: raw?.isletmeModu ?? null,
       isletmeSahibiAdSoyad: raw?.isletmeSahibiAdSoyad ?? null,
+      odemeModu: raw?.odemeModu ?? null,
+      kaporaTutari: raw?.kaporaTutari ?? null,
+      komisyonTipi: raw?.komisyonTipi ?? null,
+      islemBedeli: raw?.islemBedeli ?? null,
     };
 
     const result = await createTesisWithOwner(input);
