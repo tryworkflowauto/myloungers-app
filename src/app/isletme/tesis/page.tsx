@@ -111,6 +111,9 @@ export default function IsletmeTesisPage() {
   const [tesisAktif, setTesisAktif]     = useState(true);
   /** Rezervasyon akışında müşteriden saat seçimi zorunlu mu (tesisler.saat_zorunlu) */
   const [saatZorunlu, setSaatZorunlu]   = useState(false);
+  /** Yer/koltuk seçimi olmadan rezervasyon (tekne vb.) — tesisler.yer_secimsiz */
+  const [yerSecimsiz, setYerSecimsiz]   = useState(false);
+  const [yerSecimsizAciklama, setYerSecimsizAciklama] = useState("");
   const [videoUrl, setVideoUrl]         = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
   const [videoInput, setVideoInput]     = useState("");
   const [enlem, setEnlem]               = useState("37.032048");
@@ -210,7 +213,7 @@ export default function IsletmeTesisPage() {
       const { data, error } = await supabase
         .from("tesisler")
         .select(
-          "id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, kisa_aciklama_en, detayli_aciklama_en, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi, saat_zorunlu",
+          "id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, kisa_aciklama_en, detayli_aciklama_en, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi, saat_zorunlu, yer_secimsiz, yer_secimsiz_aciklama",
         )
         .eq("id", tesis_id)
         .limit(1)
@@ -289,6 +292,8 @@ export default function IsletmeTesisPage() {
 
       if (typeof row.aktif === "boolean") setTesisAktif(row.aktif);
       setSaatZorunlu(row.saat_zorunlu === true);
+      setYerSecimsiz(row.yer_secimsiz === true);
+      setYerSecimsizAciklama(row.yer_secimsiz_aciklama ?? "");
 
       const fotosDb = (row.fotograflar as Photo[] | null | undefined) || [];
       setPhotos(fotosDb.length ? fotosDb : INIT_PHOTOS);
@@ -520,6 +525,8 @@ export default function IsletmeTesisPage() {
       },
       aktif: tesisAktif,
       saat_zorunlu: saatZorunlu,
+      yer_secimsiz: yerSecimsiz,
+      yer_secimsiz_aciklama: yerSecimsizAciklama.trim() || null,
       fotograflar: photos,
       iletisim_numarasi: iletisimNumarasi.trim() || null,
     };
@@ -923,6 +930,34 @@ export default function IsletmeTesisPage() {
                 </span>
               </label>
             </div>
+          </div>
+          <div style={{ marginBottom: 16, padding: 14, border: `1.5px solid ${GRAY200}`, borderRadius: 10, background: GRAY50 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Yer seçimsiz rezervasyon (tekne, etkinlik vb.)</div>
+                <p style={{ fontSize: 11, color: GRAY400, lineHeight: 1.5, margin: 0 }}>
+                  Tekne turu, etkinlik gibi müşterinin belirli bir yer/koltuk seçmediği tesisler için. Açıksa müşteri sadece kişi sayısı seçer, sistem otomatik atar.
+                </p>
+              </div>
+              <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer", flexShrink: 0 }} title={yerSecimsiz ? "Yer seçimsiz açık" : "Yer seçimsiz kapalı"}>
+                <input type="checkbox" checked={yerSecimsiz} onChange={(e) => setYerSecimsiz(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+                <span style={{ position: "absolute", inset: 0, background: yerSecimsiz ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+                  <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: yerSecimsiz ? "translateX(16px)" : "translateX(0)" }} />
+                </span>
+              </label>
+            </div>
+            {yerSecimsiz && (
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${GRAY100}` }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Müşteriye gösterilecek bilgi (opsiyonel)</label>
+                <textarea
+                  value={yerSecimsizAciklama}
+                  onChange={(e) => setYerSecimsizAciklama(e.target.value)}
+                  placeholder="Örn. Koltuk yerleriniz teknede belirlenecektir."
+                  rows={3}
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                />
+              </div>
+            )}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
             {gunler.map((g, i) => (

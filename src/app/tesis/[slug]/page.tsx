@@ -772,7 +772,12 @@ export default function TesisDetailPage() {
   async function goRes() {
     if (resInFlightRef.current) return;
     if (!selStart) { alert("Lütfen giriş tarihini seçin."); return; }
-    if (selSzls.length === 0) { alert("Lütfen en az 1 yer seçin."); return; }
+    if (row?.yer_secimsiz !== true) {
+      if (selSzls.length === 0) {
+        alert("Lütfen en az 1 yer seçin.");
+        return;
+      }
+    }
     if (row?.saat_zorunlu === true) {
       const t = rezervasyonSaati.trim();
       if (!t) {
@@ -780,6 +785,40 @@ export default function TesisDetailPage() {
         return;
       }
     }
+
+    let kullanilacakSzls: SelSzl[];
+    if (row?.yer_secimsiz === true) {
+      const { data: tumKoltuklar, error: tumKoltukErr } = await supabase
+        .from("sezlonglar")
+        .select("id, grup_id, numara")
+        .eq("tesis_id", row?.id);
+      if (tumKoltukErr) {
+        console.error("[goRes] sezlonglar liste hatası:", tumKoltukErr);
+        showToast("Yer bilgisi yüklenemedi. Lütfen tekrar deneyin.", "⚠️");
+        return;
+      }
+      const doluSet = new Set<string>([
+        ...rezervedByType.dolu,
+        ...rezervedByType.rezerve,
+        ...rezervedByType.bakim,
+        ...rezervedByType.kilitli,
+      ]);
+      const bosKoltuklar = (tumKoltuklar ?? []).filter((k: { id?: unknown }) => !doluSet.has(String(k.id)));
+      if (bosKoltuklar.length < paxCount) {
+        showToast("Bu tarihte yeterli yer kalmadı. Lütfen kişi sayısını azaltın veya farklı tarih seçin.", "⚠️");
+        return;
+      }
+      const otomatikSecim = bosKoltuklar.slice(0, paxCount).map((k: { grup_id?: unknown; numara?: unknown }) => {
+        const z = zones.find((zn) => zn.key === String(k.grup_id));
+        const prefix = z?.prefix ?? "";
+        const price = selStart && isWE(selStart) ? (z?.pe ?? 0) : (z?.pw ?? 0);
+        return { no: prefix + String(k.numara), zoneKey: String(k.grup_id), price };
+      });
+      kullanilacakSzls = otomatikSecim;
+    } else {
+      kullanilacakSzls = selSzls;
+    }
+
     resInFlightRef.current = true;
     setResLoading(true);
     function padZ(n: number) { return String(n).padStart(2, "0"); }
@@ -788,8 +827,8 @@ export default function TesisDetailPage() {
       ? selEnd.getFullYear() + "-" + padZ(selEnd.getMonth() + 1) + "-" + padZ(selEnd.getDate())
       : startStr;
     const gunSayisi = days;
-    const sezlonglar = selSzls.map(s => s.no).join(",");
-    const toplamFiyat = total;
+    const sezlonglar = kullanilacakSzls.map(s => s.no).join(",");
+    const toplamFiyat = kullanilacakSzls.reduce((a, s) => a + s.price * Math.max(gunSayisi, 1), 0);
 
     const { data: authRez } = await supabase.auth.getUser();
     const kullaniciId = authRez?.user?.id ?? null;
@@ -801,8 +840,8 @@ export default function TesisDetailPage() {
     // İlk satırın ID'si Paratika session referansı olarak kullanılır.
     let rezervasyonIdParam: string | null = null;
     try {
-      for (let i = 0; i < selSzls.length; i++) {
-        const s = selSzls[i];
+      for (let i = 0; i < kullanilacakSzls.length; i++) {
+        const s = kullanilacakSzls[i];
         const satırFiyat = s.price * Math.max(gunSayisi, 1);
 
         // Bu şezlongun DB UUID'sini çek
@@ -846,7 +885,7 @@ export default function TesisDetailPage() {
           .single();
 
         if (rezError) {
-          console.error(`[goRes] Rezervasyon ${i + 1}/${selSzls.length} oluşturma hatası:`, rezError);
+          console.error(`[goRes] Rezervasyon ${i + 1}/${kullanilacakSzls.length} oluşturma hatası:`, rezError);
         } else if (rezData?.id && rezervasyonIdParam === null) {
           // İlk başarılı satırın ID'si Paratika session için referans olarak kullanılır
           rezervasyonIdParam = String(rezData.id);
@@ -862,7 +901,7 @@ export default function TesisDetailPage() {
       tarihBitis: endStr,
       gun: String(gunSayisi),
       sezlonglar,
-      kisi: String(selSzls.length),
+      kisi: String(kullanilacakSzls.length),
       fiyat: String(toplamFiyat),
     });
     if (rezervasyonIdParam) params.set("rezervasyonId", rezervasyonIdParam);
@@ -908,6 +947,12 @@ export default function TesisDetailPage() {
   const total = selSzls.reduce((a, s) => a + s.price * Math.max(days, 1), 0);
   const szlNames = selSzls.map((s) => s.no).join(", ");
   const units = [...new Set(selSzls.map((s) => "₺" + s.price.toLocaleString("tr-TR")))].join(" / ");
+
+  const yerSecimsizMi = row?.yer_secimsiz === true;
+  const ozetFiyatBirim = zones.length > 0 ? (selStart && isWE(selStart) ? (zones[0].pe ?? 0) : (zones[0].pw ?? 0)) : 0;
+  const efektifAdet = yerSecimsizMi ? paxCount : selSzls.length;
+  const efektifTotal = yerSecimsizMi ? (ozetFiyatBirim * paxCount * Math.max(days, 1)) : total;
+  const ozetGorunsun = selStart && (yerSecimsizMi ? paxCount > 0 : selSzls.length > 0);
 
   const calYear = calDt.getFullYear();
   const calMonth = calDt.getMonth();
@@ -1156,12 +1201,12 @@ export default function TesisDetailPage() {
 
   const btnDisabled =
     !selStart ||
-    selSzls.length === 0 ||
+    (!yerSecimsizMi && selSzls.length === 0) ||
     resLoading ||
     (row?.saat_zorunlu === true && !rezervasyonSaati.trim());
   const btnText = resLoading ? "İşleniyor..."
     : !selStart ? "Tarih Seçerek Başlayın"
-    : selSzls.length === 0 ? "🛏 Haritadan Yer Seç"
+    : (!yerSecimsizMi && selSzls.length === 0) ? "🛏 Haritadan Yer Seç"
     : "📅 Rezervasyonu Tamamla →";
 
   if (loading) {
@@ -1692,6 +1737,7 @@ export default function TesisDetailPage() {
             </div>
 
             {/* ŞEZLONG DÜZENİ */}
+            {!yerSecimsizMi && (
             <div className="panel panel-szl" ref={szlRef}>
               <div className={`ph${!openPanels.szl ? " ph-teal" : ""}`} onClick={() => togglePanel("szl")}>
                 <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Yer Seç</div><div className="ph-sub">100 yer · İskele · VIP · Silver</div></div></div>
@@ -1745,6 +1791,22 @@ export default function TesisDetailPage() {
                 </p>
               </div>}
             </div>
+            )}
+            {yerSecimsizMi && (
+              <div className="panel" style={{ padding: 22 }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"16px 18px", background:"#F0F9FF", border:"1.5px solid #BAE6FD", borderRadius:12 }}>
+                  <span style={{ fontSize:22 }}>ℹ️</span>
+                  <div>
+                    <div style={{ fontWeight:800, fontSize:14, color:"#0C4A6E", marginBottom:6 }}>Yer Seçimi Yok</div>
+                    <div style={{ fontSize:13, color:"#075985", lineHeight:1.5 }}>
+                      {row?.yer_secimsiz_aciklama && String(row.yer_secimsiz_aciklama).trim()
+                        ? String(row.yer_secimsiz_aciklama)
+                        : "Bu tesiste yer/koltuk seçimi yapılmaz. Yerleriniz tesiste belirlenecektir. Lütfen tarih ve kişi sayısı seçerek rezervasyonunuzu tamamlayın."}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* VİDEO */}
             {(videoUrl || videoEmbed) && (
@@ -2186,10 +2248,10 @@ export default function TesisDetailPage() {
                   <div className="sb-step-n">Tarih</div>
                   <div className="sb-step-v">{selStart ? selStart.getDate() + " " + MN[selStart.getMonth()].substr(0,3) + (selEnd ? " – " + selEnd.getDate() + " " + MN[selEnd.getMonth()].substr(0,3) : " →") : "Seç"}</div>
                 </div>
-                <div className={`sb-step${selSzls.length > 0 ? " act" : ""}`}>
+                <div className={`sb-step${(yerSecimsizMi ? !!(selStart && paxCount > 0) : selSzls.length > 0) ? " act" : ""}`}>
                   <div className="sb-step-ic">🛏</div>
                   <div className="sb-step-n">Yer</div>
-                  <div className="sb-step-v">{selSzls.length > 0 ? selSzls.length + " seçildi" : "Seç"}</div>
+                  <div className="sb-step-v">{yerSecimsizMi ? (paxCount + " kişi") : (selSzls.length > 0 ? selSzls.length + " seçildi" : "Seç")}</div>
                 </div>
                 <div className="sb-step">
                   <div className="sb-step-ic">👥</div>
@@ -2252,14 +2314,14 @@ export default function TesisDetailPage() {
                 </div>
               )}
 
-              {selStart && (
+              {selStart && !yerSecimsizMi && (
                 <div className="szl-bar">
                   <span className="szl-bar-t">Seçilen yer</span>
                   <span className="szl-bar-n">{selSzls.length} / {paxCount}</span>
                 </div>
               )}
 
-              {selSzls.length > 0 && selStart && (
+              {ozetGorunsun && (
                 <div className="bsum">
                   <div className="bsum-head">
                     <span className="bsum-ht">Rezervasyon Özeti</span>
@@ -2271,10 +2333,12 @@ export default function TesisDetailPage() {
                       <div className="bsum-row"><span></span><b>Saat: {rezervasyonSaati.trim()}</b></div>
                     )}
                     <div className="bsum-row"><span>Süre</span><b>{days} gün</b></div>
-                    <div className="bsum-row"><span>Yer(ler)</span><b>{szlNames}</b></div>
-                    <div className="bsum-row"><span>Kişi sayısı</span><b>{selSzls.length} kişi / yer</b></div>
-                    <div className="bsum-row"><span>Birim fiyat / gün</span><b>{units} / gün</b></div>
-                    <div className="bsum-row bsum-total"><span>Toplam</span><span>₺{total.toLocaleString("tr-TR")}</span></div>
+                    {!yerSecimsizMi && (
+                      <div className="bsum-row"><span>Yer(ler)</span><b>{szlNames}</b></div>
+                    )}
+                    <div className="bsum-row"><span>Kişi sayısı</span><b>{efektifAdet}{yerSecimsizMi ? " kişi" : " kişi / yer"}</b></div>
+                    <div className="bsum-row"><span>Birim fiyat / gün</span><b>{yerSecimsizMi ? ("₺" + ozetFiyatBirim.toLocaleString("tr-TR") + " / gün") : (units + " / gün")}</b></div>
+                    <div className="bsum-row bsum-total"><span>Toplam</span><span>₺{efektifTotal.toLocaleString("tr-TR")}</span></div>
                   </div>
                 </div>
               )}
@@ -2353,7 +2417,7 @@ export default function TesisDetailPage() {
       </div>
 
       {/* BOTTOM BANNER */}
-      {selSzls.length > 0 && selStart && (
+      {ozetGorunsun && (
         <div className="bb">
           <div
             className="bb-i"
@@ -2368,7 +2432,7 @@ export default function TesisDetailPage() {
                 : undefined
             }
           >
-            Seçilen: <b>{szlNames}</b> &nbsp;·&nbsp;{" "}
+            Seçilen: <b>{yerSecimsizMi ? (paxCount + " kişi") : szlNames}</b> &nbsp;·&nbsp;{" "}
             {days >= 2 ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: "0.95rem", color: "#fff" }}>
                 <span aria-hidden>📅</span>
@@ -2380,7 +2444,7 @@ export default function TesisDetailPage() {
               </>
             )}
           </div>
-          <div className="bb-p">₺{total.toLocaleString("tr-TR")}</div>
+          <div className="bb-p">₺{efektifTotal.toLocaleString("tr-TR")}</div>
           <button className="bb-btn" onClick={goRes} disabled={resLoading} style={resLoading ? { opacity: 0.7, cursor: "not-allowed" } : undefined}>{resLoading ? "İşleniyor..." : "Rezervasyonu Tamamla →"}</button>
         </div>
       )}
