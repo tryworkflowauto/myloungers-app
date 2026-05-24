@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getOdemeModu } from "@/lib/odemeModlari";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,6 +54,24 @@ async function redirectForResponseCode(
       });
       return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
     }
+
+    let tesisOdemeModu: string | null = null;
+    let tesisKaporaTutari: number | null = null;
+    if (rezRow.tesis_id) {
+      const { data: tesisRow, error: tesisErr } = await supabaseAdmin
+        .from("tesisler")
+        .select("odeme_modu, kapora_tutari")
+        .eq("id", rezRow.tesis_id)
+        .maybeSingle();
+      if (tesisErr) {
+        console.error("[paratika/callback] tesis odeme_modu cekme hatasi:", tesisErr);
+      } else if (tesisRow) {
+        tesisOdemeModu = (tesisRow as any).odeme_modu ?? null;
+        tesisKaporaTutari = (tesisRow as any).kapora_tutari ?? null;
+      }
+    }
+    const bakiyeDavranisi = getOdemeModu(tesisOdemeModu).bakiyeDavranisi;
+    console.log("[paratika/callback] tesis odeme modu:", tesisOdemeModu, "davranis:", bakiyeDavranisi);
 
     // Aynı satın almadan gelen kardeş satırları bul.
     // goRes() döngüsündeki INSERT'ler birbirinden saniyeler içinde oluşur;
@@ -110,7 +129,9 @@ async function redirectForResponseCode(
       const rowPayload = {
         ...basePayload,
         ...(!Number.isNaN(satırTutar)
-          ? { bakiye_yuklenen: satırTutar, bakiye_kalan: satırTutar, bakiye_harcanan: 0 }
+          ? (bakiyeDavranisi === "kapali"
+              ? { bakiye_yuklenen: satırTutar, bakiye_harcanan: satırTutar, bakiye_kalan: 0 }
+              : { bakiye_yuklenen: satırTutar, bakiye_kalan: satırTutar, bakiye_harcanan: 0 })
           : {}),
       };
 

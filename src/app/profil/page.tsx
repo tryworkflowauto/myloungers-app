@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { SIPARIS_DURUM } from "@/lib/constants";
+import { getOdemeModu } from "@/lib/odemeModlari";
 import CallWaiterModal from "@/components/CallWaiterModal";
 
 type Reservation = {
@@ -38,6 +39,8 @@ type Reservation = {
   review?: boolean;
   iptalSaatOncesi?: number;
   calismaSaatleri?: any;
+  /** tesisten okunan odeme_modu (null = bilinmiyor → getOdemeModu fallback) */
+  odemeModu?: string | null;
 };
 
 type UserReview = {
@@ -201,7 +204,7 @@ export default function ProfilPage() {
   const [kodModal, setKodModal] = useState(false);
   const [kodVal, setKodVal] = useState("");
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [toast, setToast] = useState<{msg: string, type: "success" | "error"} | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
   const [saveOk, setSaveOk] = useState(false);
   const [totalReservations, setTotalReservations] = useState<number | null>(null);
   const [totalSpent, setTotalSpent] = useState<number | null>(null);
@@ -339,12 +342,24 @@ export default function ProfilPage() {
           )
         );
 
-        const tesisMap: Record<number, { ad: string; loc: string; slug: string | null; iptal_saat_oncesi?: number; calisma_saatleri?: any }> = {};
+        const tesisMap: Record<
+          number | string,
+          {
+            ad: string;
+            loc: string;
+            slug: string | null;
+            iptal_saat_oncesi?: number;
+            calisma_saatleri?: any;
+            odeme_modu?: string | null;
+          }
+        > = {};
 
         if (tesisIds.length) {
           const { data: tesisData, error: tesisError } = await supabase
             .from("tesisler")
-            .select("id, ad, sehir, ilce, slug, iptal_saat_oncesi, calisma_saatleri")
+            .select(
+              "id, ad, sehir, ilce, slug, iptal_saat_oncesi, calisma_saatleri, odeme_modu",
+            )
             .in("id", tesisIds);
 
           if (tesisError) {
@@ -358,6 +373,7 @@ export default function ProfilPage() {
                 slug: typeof t.slug === "string" && t.slug.trim() ? t.slug.trim() : null,
                 iptal_saat_oncesi: typeof t.iptal_saat_oncesi === "number" ? t.iptal_saat_oncesi : undefined,
                 calisma_saatleri: t.calisma_saatleri ?? undefined,
+                odeme_modu: typeof t.odeme_modu === "string" && t.odeme_modu.trim() !== "" ? t.odeme_modu.trim() : null,
               };
             });
           }
@@ -574,6 +590,7 @@ export default function ProfilPage() {
             review: false,
             iptalSaatOncesi: tesisInfo?.iptal_saat_oncesi,
             calismaSaatleri: tesisInfo?.calisma_saatleri,
+            odemeModu: r.tesis_id != null ? tesisInfo?.odeme_modu ?? null : null,
           };
         });
 
@@ -914,7 +931,7 @@ export default function ProfilPage() {
     : r.status === resFilter
   );
 
-  function showToast(msg: string, type: "success" | "error" = "success") {
+  function showToast(msg: string, type: "success" | "error" | "info" = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }
@@ -1180,7 +1197,8 @@ export default function ProfilPage() {
           top: 20,
           left: "50%",
           transform: "translateX(-50%)",
-          background: toast.type === "success" ? "#16A34A" : "#DC2626",
+          background:
+            toast.type === "success" ? "#16A34A" : toast.type === "error" ? "#DC2626" : "#64748B",
           color: "#fff",
           padding: "12px 20px",
           borderRadius: 12,
@@ -1192,7 +1210,7 @@ export default function ProfilPage() {
           alignItems: "center",
           gap: 8,
         }}>
-          <span>{toast.type === "success" ? "✅" : "⚠️"}</span>
+          <span>{toast.type === "success" ? "✅" : toast.type === "info" ? "ℹ️" : "⚠️"}</span>
           <span>{toast.msg}</span>
         </div>
       )}
@@ -1859,27 +1877,53 @@ export default function ProfilPage() {
                             </button>
                           );
                         })()}
-                        {r.status === "active" && (r.durum === "aktif" || r.durum === "onaylandi") && (
-                          <button
-                            type="button"
-                            className="btn-detail"
-                            style={{
-                              background: r.girisYapildi === true && r.durum === "onaylandi" ? "#F59E0B" : "#9CA3AF",
-                              color: "#fff",
-                              borderColor: r.girisYapildi === true && r.durum === "onaylandi" ? "#F59E0B" : "#9CA3AF",
-                              opacity: r.girisYapildi === true && r.durum === "onaylandi" ? 1 : 0.75,
-                            }}
-                            onClick={() => {
-                              if (r.girisYapildi === true && r.durum === "onaylandi") {
-                                router.push("/siparis/" + r.id + "?tesis_id=" + (r.tesisId || ""));
-                                return;
-                              }
-                              showToast("🔒 Önce şezlong girişinizi yapın. Yukarıdaki QR Oku veya Kod Gir ile şezlong kodunuzu doğrulayın.", "error");
-                            }}
-                          >
-                            {r.girisYapildi === true && r.durum === "onaylandi" ? "🍽️ Sipariş Ver" : "🔒 Sipariş Ver"}
-                          </button>
-                        )}
+                        {r.status === "active" && (r.durum === "aktif" || r.durum === "onaylandi") && (() => {
+                          const siparisAcik = getOdemeModu(r.odemeModu ?? null).siparisAcik;
+                          if (!siparisAcik) {
+                            return (
+                              <button
+                                type="button"
+                                className="btn-detail"
+                                style={{
+                                  background: "#9CA3AF",
+                                  color: "#fff",
+                                  borderColor: "#9CA3AF",
+                                  opacity: 0.75,
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => {
+                                  showToast(
+                                    "Bu tesiste hizmet bedeli dahildir, ekstra istekler için garsonu çağırabilirsiniz.",
+                                    "info",
+                                  );
+                                }}
+                              >
+                                🍽️ Sipariş Ver
+                              </button>
+                            );
+                          }
+                          return (
+                            <button
+                              type="button"
+                              className="btn-detail"
+                              style={{
+                                background: r.girisYapildi === true && r.durum === "onaylandi" ? "#F59E0B" : "#9CA3AF",
+                                color: "#fff",
+                                borderColor: r.girisYapildi === true && r.durum === "onaylandi" ? "#F59E0B" : "#9CA3AF",
+                                opacity: r.girisYapildi === true && r.durum === "onaylandi" ? 1 : 0.75,
+                              }}
+                              onClick={() => {
+                                if (r.girisYapildi === true && r.durum === "onaylandi") {
+                                  router.push("/siparis/" + r.id + "?tesis_id=" + (r.tesisId || ""));
+                                  return;
+                                }
+                                showToast("🔒 Önce şezlong girişinizi yapın. Yukarıdaki QR Oku veya Kod Gir ile şezlong kodunuzu doğrulayın.", "error");
+                              }}
+                            >
+                              {r.girisYapildi === true && r.durum === "onaylandi" ? "🍽️ Sipariş Ver" : "🔒 Sipariş Ver"}
+                            </button>
+                          );
+                        })()}
                         {aktifVeOnayli && (
                           <button
                             type="button"

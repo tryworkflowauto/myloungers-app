@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { getOdemeModu } from "@/lib/odemeModlari";
 
 type KategoriRow = { id: string; ad: string; icon: string | null };
 type UrunRow = {
@@ -51,12 +52,13 @@ export default function SiparisPage() {
   const [sepet, setSepet] = useState<Record<string, number>>({});
   const [sepetAcik, setSepetAcik] = useState(false);
   const [gonderiliyor, setGonderiliyor] = useState(false);
+  const [siparisAcikMi, setSiparisAcikMi] = useState(true);
   const [toast, setToast] = useState<{
     msg: string;
-    type: "success" | "error";
+    type: "success" | "error" | "info";
   } | null>(null);
 
-  function showToast(msg: string, type: "success" | "error" = "success") {
+  function showToast(msg: string, type: "success" | "error" | "info" = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }
@@ -87,7 +89,7 @@ export default function SiparisPage() {
             .select("id, kategori_id, ad, aciklama, fiyat, gorsel_url, icon, badges")
             .eq("tesis_id", tesisId)
             .order("sira", { ascending: true }),
-          supabase.from("tesisler").select("ad").eq("id", tesisId).maybeSingle(),
+          supabase.from("tesisler").select("ad, odeme_modu").eq("id", tesisId).maybeSingle(),
         ]);
 
         if (rezRes.error) throw rezRes.error;
@@ -110,6 +112,7 @@ export default function SiparisPage() {
         setKategoriler((katRes.data ?? []) as KategoriRow[]);
         setUrunler((urunRes.data ?? []) as UrunRow[]);
         setTesisAd((tesisRes.data as any)?.ad || "Tesis Menusu");
+        setSiparisAcikMi(getOdemeModu((tesisRes.data as any)?.odeme_modu ?? null).siparisAcik);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Veriler yuklenemedi.";
         showToast(msg, "error");
@@ -160,6 +163,13 @@ export default function SiparisPage() {
     }
     if (sepetAdetToplam <= 0) {
       showToast("Sepetiniz bos.", "error");
+      return;
+    }
+    if (!siparisAcikMi) {
+      showToast(
+        "Bu tesiste hizmet bedeli dahildir, ekstra istekler için garsonu çağırabilirsiniz.",
+        "info",
+      );
       return;
     }
     if (sepetToplam > bakiyeKalan) {
@@ -304,7 +314,7 @@ export default function SiparisPage() {
             top: 16,
             left: "50%",
             transform: "translateX(-50%)",
-            background: toast.type === "success" ? "#16A34A" : "#DC2626",
+            background: toast.type === "success" ? "#16A34A" : toast.type === "error" ? "#DC2626" : "#64748B",
             color: "#fff",
             padding: "12px 18px",
             borderRadius: 12,
@@ -317,7 +327,7 @@ export default function SiparisPage() {
             gap: 8,
           }}
         >
-          <span>{toast.type === "success" ? "✅" : "⚠️"}</span>
+          <span>{toast.type === "success" ? "✅" : toast.type === "info" ? "ℹ️" : "⚠️"}</span>
           <span>{toast.msg}</span>
         </div>
       )}
