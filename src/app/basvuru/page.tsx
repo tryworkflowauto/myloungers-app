@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
+import { getAllFacilityTypes } from "@/lib/tesisFacilityTypes";
 import "./basvuru.css";
 
 const ILLER = ["Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin", "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars", "Kastamonu", "Kayseri", "Kilis", "Kırıkkale", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Şırnak", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"];
@@ -24,17 +25,6 @@ const FEATURES = [
 ];
 const GOREV_OPTS = ["İşletme Sahibi", "Müdür", "Pazarlama", "Diğer"];
 const SAAT_OPTS = ["Sabah 09-12", "Öğleden sonra 12-17", "Akşam 17-20", "Fark etmez"];
-
-/** Ana sayfa / arama `tip` değerleri ile uyumlu (hotel, beach, aqua — "otel" değil). */
-const BASVURU_TESIS_TIP_PILLS = [
-  { value: "beach", emoji: "🏖️", label: "Beach Club" },
-  { value: "hotel", emoji: "🏨", label: "Otel" },
-  { value: "aqua", emoji: "💦", label: "Aqua Park" },
-  { value: "restoran", emoji: "🍽️", label: "Restoran" },
-  { value: "bar", emoji: "🍸", label: "Bar & Lounge" },
-  { value: "tekne", emoji: "⛵", label: "Tekne Turu" },
-  { value: "spa", emoji: "💆", label: "Spa" },
-] as const;
 
 export default function BasvuruPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -204,12 +194,12 @@ export default function BasvuruPage() {
                     <div className="bav-fgrp">
                       <label>Tesis Tipi</label>
                       <div className="bav-type-pills">
-                        {BASVURU_TESIS_TIP_PILLS.map((pill) => (
+                        {getAllFacilityTypes().map((pill) => (
                           <button
-                            key={pill.value}
+                            key={pill.id}
                             type="button"
-                            className={`bav-type-pill ${tesisTipi === pill.value ? "sel" : ""}`}
-                            onClick={() => setTesisTipi(pill.value)}
+                            className={`bav-type-pill ${tesisTipi === pill.id ? "sel" : ""}`}
+                            onClick={() => setTesisTipi(pill.id)}
                           >
                             {pill.emoji} {pill.label}
                           </button>
