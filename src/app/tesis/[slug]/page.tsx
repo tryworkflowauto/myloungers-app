@@ -1310,7 +1310,7 @@ export default function TesisDetailPage() {
         .ch{width:18px;height:18px;flex-shrink:0;color:var(--i3);transition:transform .2s}
         .ch-open{transform:rotate(180deg)}
         .pb{border-top:1px solid var(--bd)}
-        .about-p{font-size:.85rem;color:var(--i2);line-height:1.7;margin-bottom:10px}
+        .about-p{font-size:.85rem;color:var(--i2);line-height:1.7;margin-bottom:10px;white-space:pre-line}
         .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .feat-item{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--i2)}
         .feat-ic{width:32px;height:32px;background:var(--tlt);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
