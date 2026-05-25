@@ -265,13 +265,13 @@ export async function createTesisWithOwner(
     emailVal.split("@")[0] ||
     "İşletme";
 
-  const { error: userInsErr } = await admin.from("kullanicilar").insert({
+  const { error: userInsErr } = await admin.from("kullanicilar").upsert({
     id: authUserId,
     ad: adSahip,
     email: emailVal,
     rol: "isletmeci",
     tesis_id: tesisId,
-  });
+  }, { onConflict: "id" });
 
   if (userInsErr) {
     console.error("[adminCreateTesis] YARIM DURUM: auth daveti başarılı, kullanicilar insert başarısız", userInsErr);
