@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getAllFacilityTypes, normalizeToCanonical, getFacilityType } from "@/lib/tesisFacilityTypes";
+import { normalizeKategoriList } from "@/lib/tesisKategori";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -41,12 +43,6 @@ const INIT_GUNLER: GunItem[] = [
 const INIT_KURALLAR: ListItem[] = [];
 
 const INIT_KAMPANYA_NOTLARI: ListItem[] = [];
-
-const KATEGORILER = [
-  { name: "BEACH CLUB", emoji: "🏖️", checked: true },
-  { name: "OTEL",       emoji: "🏨", checked: true  },
-  { name: "AQUA PARK",  emoji: "🌊", checked: false },
-];
 
 const EMOJI_PICKER = ["🏄","🎯","🎪","🛁","🔒","🌿","🎠","🏋️","🧊","🎭","🌅","🍷"];
 
@@ -201,29 +197,18 @@ export default function IsletmeTesisPage() {
 
       const kategoriRaw = row.kategori as string | string[] | null | undefined;
       if (kategoriRaw) {
-        let parsed: string[] = [];
-        if (Array.isArray(kategoriRaw)) {
-          parsed = kategoriRaw;
-        } else if (typeof kategoriRaw === "string") {
-          try {
-            const maybeArr = JSON.parse(kategoriRaw);
-            if (Array.isArray(maybeArr)) {
-              parsed = maybeArr.map((v) => String(v));
-            } else {
-              parsed = String(kategoriRaw)
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean);
-            }
-          } catch {
-            parsed = kategoriRaw
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
+        const parts = normalizeKategoriList(kategoriRaw);
+        const dbValues: string[] = [];
+        const seen = new Set<string>();
+        for (const p of parts) {
+          const id = normalizeToCanonical(p);
+          const dv = id ? getFacilityType(id).dbValue : p.toUpperCase().replace(/\s+/g, " ").trim();
+          if (dv && !seen.has(dv)) {
+            seen.add(dv);
+            dbValues.push(dv);
           }
         }
-        const normalized = parsed.map((k) => k.toUpperCase());
-        if (normalized.length > 0) setKategoriler(normalized);
+        if (dbValues.length > 0) setKategoriler(dbValues);
       }
 
       if (row.sehir) setSehir(row.sehir);
@@ -465,7 +450,7 @@ export default function IsletmeTesisPage() {
     }
     const payload: any = {
       ad: tesisAdi,
-      kategori: kategoriler.map((k) => k.toUpperCase()),
+      kategori: kategoriler,
       sehir,
       ilce,
       adres,
@@ -608,34 +593,34 @@ export default function IsletmeTesisPage() {
           <div style={{ marginTop: 8 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tesis Kategorisi</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {KATEGORILER.map((k, i) => (
+              {getAllFacilityTypes().map((ft) => (
                 <label
-                  key={i}
+                  key={ft.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                     padding: "8px 14px",
-                    border: `1.5px solid ${kategoriler.includes(k.name) ? TEAL : GRAY200}`,
+                    border: `1.5px solid ${kategoriler.includes(ft.dbValue) ? TEAL : GRAY200}`,
                     borderRadius: 20,
                     cursor: "pointer",
-                    background: kategoriler.includes(k.name) ? "#F0FFFE" : "transparent",
+                    background: kategoriler.includes(ft.dbValue) ? "#F0FFFE" : "transparent",
                     fontSize: 12,
                     fontWeight: 600,
-                    color: kategoriler.includes(k.name) ? NAVY : GRAY600,
+                    color: kategoriler.includes(ft.dbValue) ? NAVY : GRAY600,
                   }}
                 >
                   <input
                     type="checkbox"
-                    checked={kategoriler.includes(k.name)}
+                    checked={kategoriler.includes(ft.dbValue)}
                     onChange={() => {
                       setKategoriler((prev) =>
-                        prev.includes(k.name) ? prev.filter((x) => x !== k.name) : [...prev, k.name]
+                        prev.includes(ft.dbValue) ? prev.filter((x) => x !== ft.dbValue) : [...prev, ft.dbValue]
                       );
                     }}
                     style={{ accentColor: TEAL }}
                   />{" "}
-                  {k.emoji} {k.name}
+                  {ft.emoji} {ft.label}
                 </label>
               ))}
             </div>
