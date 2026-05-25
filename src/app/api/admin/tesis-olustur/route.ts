@@ -17,7 +17,7 @@ async function assertAdmin(req: Request): Promise<{ ok: true } | { ok: false; st
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  let user: { id: string } | null = null;
+  let user: { id: string; email: string } | null = null;
   let supabaseForRol: Awaited<ReturnType<typeof createServerSupabase>> | ReturnType<typeof createClient> | null =
     null;
 
@@ -30,7 +30,8 @@ async function assertAdmin(req: Request): Promise<{ ok: true } | { ok: false; st
     });
     const { data: authData, error: authErr } = await supabaseUser.auth.getUser();
     if (!authErr && authData?.user) {
-      user = { id: authData.user.id };
+      const u = authData.user;
+      user = { id: u.id, email: String(u.email ?? "").trim() };
       supabaseForRol = supabaseUser;
     }
   }
@@ -45,7 +46,7 @@ async function assertAdmin(req: Request): Promise<{ ok: true } | { ok: false; st
     if (cookieErr || !cookieUser) {
       return { ok: false, status: 401, message: "Oturum gerekli veya geçersiz." };
     }
-    user = { id: cookieUser.id };
+    user = { id: cookieUser.id, email: String(cookieUser.email ?? "").trim() };
     supabaseForRol = supabaseCookie;
   }
 
@@ -56,7 +57,7 @@ async function assertAdmin(req: Request): Promise<{ ok: true } | { ok: false; st
   const { data: row, error: rowErr } = await supabaseForRol
     .from("kullanicilar")
     .select("rol")
-    .eq("id", user.id)
+    .eq("email", user.email)
     .maybeSingle();
 
   if (rowErr) {
