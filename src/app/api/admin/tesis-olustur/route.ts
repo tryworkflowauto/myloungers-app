@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerSupabase } from "@/utils/supabase/server";
 import {
   createTesisWithOwner,
@@ -8,21 +9,51 @@ import {
 /**
  * NOT: repo’daki diğer /api/admin/* route’ları (onayla, tesis-durum, vb.) yalnızca
  * service role ile çalışıyor — tarafında session kontrolü yok. Bu endpoint admin panelden
- * çağrılacağı için cookie oturumu + kullanicilar.rol ile en azından admin doğrulanır.
+ * çağrılacağı için Authorization Bearer (browser oturumu) veya cookie oturumu +
+ * kullanicilar.rol ile admin doğrulanır.
  */
 
-async function assertAdmin(): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
+async function assertAdmin(req: Request): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  if (authErr || !user) {
+  let user: { id: string } | null = null;
+  let supabaseForRol: Awaited<ReturnType<typeof createServerSupabase>> | ReturnType<typeof createClient> | null =
+    null;
+
+  // 1) Önce Authorization header (hesap-olustur pattern — localStorage oturumu)
+  const authHeader = req.headers.get("authorization");
+  const accessToken = authHeader?.replace("Bearer ", "").trim();
+  if (accessToken) {
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    });
+    const { data: authData, error: authErr } = await supabaseUser.auth.getUser();
+    if (!authErr && authData?.user) {
+      user = { id: authData.user.id };
+      supabaseForRol = supabaseUser;
+    }
+  }
+
+  // 2) Header yoksa veya geçersizse cookie oturumu (geriye dönük)
+  if (!user) {
+    const supabaseCookie = await createServerSupabase();
+    const {
+      data: { user: cookieUser },
+      error: cookieErr,
+    } = await supabaseCookie.auth.getUser();
+    if (cookieErr || !cookieUser) {
+      return { ok: false, status: 401, message: "Oturum gerekli veya geçersiz." };
+    }
+    user = { id: cookieUser.id };
+    supabaseForRol = supabaseCookie;
+  }
+
+  if (!supabaseForRol || !user) {
     return { ok: false, status: 401, message: "Oturum gerekli veya geçersiz." };
   }
 
-  const { data: row, error: rowErr } = await supabase
+  const { data: row, error: rowErr } = await supabaseForRol
     .from("kullanicilar")
     .select("rol")
     .eq("id", user.id)
@@ -57,7 +88,7 @@ function isLikelyClientError(msg: string | undefined): boolean {
 
 export async function POST(req: Request) {
   try {
-    const gate = await assertAdmin();
+    const gate = await assertAdmin(req);
     if (!gate.ok) {
       return NextResponse.json({ success: false, error: gate.message }, { status: gate.status });
     }
