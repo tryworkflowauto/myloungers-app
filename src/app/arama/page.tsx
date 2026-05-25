@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -254,6 +254,19 @@ function AramaContent() {
     }
   }, [searchParams]);
 
+  const handleAraClick = useCallback(() => {
+    const params = new URLSearchParams();
+    if (gpsOn) {
+      params.set("gps", "1");
+    } else if (locInput.trim()) {
+      params.set("konum", locInput.trim());
+    }
+    if (typeVal) params.set("tip", typeVal);
+    if (dateVal) params.set("tarih", dateVal);
+    const qs = params.toString();
+    router.push(qs ? `/arama?${qs}` : "/arama");
+  }, [gpsOn, locInput, typeVal, dateVal, router]);
+
   function toggleGPS() {
     setGpsOn(!gpsOn);
     if (!gpsOn) setLocInput("");
@@ -398,6 +411,7 @@ function AramaContent() {
             onKisiValChange={setKisiVal}
             km={km}
             onKmChange={setKm}
+            onSearch={handleAraClick}
           />
         </div>
       </div>

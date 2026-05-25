@@ -13,6 +13,7 @@ export interface SearchBarProps {
   onKisiValChange: (v: string) => void;
   km: number;
   onKmChange: (v: number) => void;
+  onSearch: () => void;
 }
 
 export default function SearchBar({
@@ -28,6 +29,7 @@ export default function SearchBar({
   onKisiValChange,
   km,
   onKmChange,
+  onSearch,
 }: SearchBarProps) {
   return (
     <>
@@ -72,7 +74,7 @@ export default function SearchBar({
             {["1 Kişi","2 Kişi","3 Kişi","4 Kişi","5+ Kişi"].map(k => <option key={k}>{k}</option>)}
           </select>
         </div>
-        <button type="button" className="arama-sbtn">
+        <button type="button" className="arama-sbtn" onClick={onSearch}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Ara
         </button>
