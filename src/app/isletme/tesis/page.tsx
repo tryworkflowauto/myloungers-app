@@ -432,6 +432,13 @@ export default function IsletmeTesisPage() {
     return t.length ? t : null;
   }
 
+  function parseCoord(s: string): number | null {
+    const t = s.trim();
+    if (t === "") return null;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  }
+
   // ── Save all ──────────────────────────────────────────────────────────────
   async function saveAll() {
     if (!tesisId) {
@@ -461,8 +468,8 @@ export default function IsletmeTesisPage() {
       detayli_aciklama: detayAciklama,
       aciklama,
       video_url: videoUrl,
-      enlem,
-      boylam,
+      enlem: parseCoord(enlem),
+      boylam: parseCoord(boylam),
       maps_link: mapsLink,
       imkanlar,
       calisma_saatleri: gunler,
