@@ -37,7 +37,7 @@ const NAVY = "#0A1628";
 const RED = "#EF4444";
 const SIDEBAR_W = 240;
 
-const ABONELIK_OPTS = ["Başlangıç 990 TL/ay", "Büyüme 2.490 TL/ay", "Kurumsal 4.990 TL/ay"] as const;
+const ABONELIK_OPTS = ["Abonelik Yok", "Başlangıç 990 TL/ay", "Büyüme 2.490 TL/ay", "Kurumsal 4.990 TL/ay"] as const;
 
 function splitSehirIlce(raw: string): { sehir: string; ilce: string | null } {
   const t = raw.trim();
@@ -161,7 +161,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       telefon: modalTelefon.trim(),
       email: modalEmail.trim() || null,
       kapasite: modalKapasite === "" ? null : Number(modalKapasite),
-      abonelikPaketi: modalAbonelik,
+      abonelikPaketi: modalAbonelik === "Abonelik Yok" ? null : modalAbonelik,
       odemeModu: modalOdemeModu,
       isletmeModu: modalOdemeModu,
       komisyonTipi: modalKomisyonTipi,
