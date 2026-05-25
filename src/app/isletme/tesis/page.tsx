@@ -24,52 +24,23 @@ type GunItem = { name: string; acilis: string; kapanis: string; kapali: boolean;
 type ListItem = { emoji: string; text: string; text_en?: string };
 
 // ── Initial data (form defaults; Supabase yüklemesiyle üzerine yazılır) ─────
-const INIT_PHOTOS: Photo[] = [
-  { id: 1, mockBg: "linear-gradient(135deg,#0A1628,#0ABAB5)", mockEmoji: "🏖️" },
-  { id: 2, mockBg: "linear-gradient(135deg,#1a3a5c,#2d6a4f)", mockEmoji: "☕" },
-  { id: 3, mockBg: "linear-gradient(135deg,#1e4d8c,#0ABAB5)", mockEmoji: "🏊" },
-  { id: 4, mockBg: "linear-gradient(135deg,#2d1b69,#0A1628)", mockEmoji: "🌙" },
-];
+const INIT_PHOTOS: Photo[] = [];
 
-const INIT_IMKANLAR: ImkanItem[] = [
-  { emoji: "🏊", name: "Özel Yüzme Havuzu", active: true },
-  { emoji: "☕", name: "Kahvaltı Dahil", active: true },
-  { emoji: "🍽️", name: "Beach Bar & Restoran", active: true },
-  { emoji: "🚗", name: "Ücretsiz Vale Park", active: true },
-  { emoji: "🎶", name: "Canlı Müzik (Haftasonları)", active: true },
-  { emoji: "🚤", name: "Su Sporları Merkezi", active: true },
-  { emoji: "🌍", name: "TR / EN / RU Personel", active: true },
-  { emoji: "📱", name: "Ücretsiz Wi-Fi", active: true },
-  { emoji: "🅿️", name: "Otopark", active: false },
-  { emoji: "♿", name: "Engelli Erişimi", active: false },
-  { emoji: "🐾", name: "Evcil Hayvan Kabul", active: false },
-  { emoji: "🧖", name: "Spa & Masaj", active: false },
-];
+const INIT_IMKANLAR: ImkanItem[] = [];
 
 const INIT_GUNLER: GunItem[] = [
-  { name: "Pzt", acilis: "09:00", kapanis: "19:00", kapali: false },
-  { name: "Sal", acilis: "09:00", kapanis: "19:00", kapali: false },
-  { name: "Çar", acilis: "09:00", kapanis: "19:00", kapali: false },
-  { name: "Per", acilis: "09:00", kapanis: "19:00", kapali: false },
-  { name: "Cum", acilis: "09:00", kapanis: "21:00", kapali: false },
-  { name: "Cmt", acilis: "09:00", kapanis: "21:00", kapali: false, vurgu: true },
-  { name: "Paz", acilis: "09:00", kapanis: "21:00", kapali: false, vurgu: true },
+  { name: "Pzt", acilis: "", kapanis: "", kapali: false },
+  { name: "Sal", acilis: "", kapanis: "", kapali: false },
+  { name: "Çar", acilis: "", kapanis: "", kapali: false },
+  { name: "Per", acilis: "", kapanis: "", kapali: false },
+  { name: "Cum", acilis: "", kapanis: "", kapali: false },
+  { name: "Cmt", acilis: "", kapanis: "", kapali: false, vurgu: true },
+  { name: "Paz", acilis: "", kapanis: "", kapali: false, vurgu: true },
 ];
 
-const INIT_KURALLAR: ListItem[] = [
-  { emoji: "🚫", text: "Evcil hayvan kabul edilmez" },
-  { emoji: "🚫", text: "Dışarıdan yiyecek/içecek getirilmez" },
-  { emoji: "🚫", text: "18 yaş altı 21:00'dan sonra tesis içinde bulunamaz" },
-  { emoji: "✅", text: "Giriş: 09:00 — Çıkış: 19:00" },
-  { emoji: "✅", text: "İptal: 48 saat öncesine kadar ücretsiz" },
-];
+const INIT_KURALLAR: ListItem[] = [];
 
-const INIT_KAMPANYA_NOTLARI: ListItem[] = [
-  { emoji: "🌟", text: "Erken Rezervasyon: 30 gün öncesi %10 indirim" },
-  { emoji: "🌟", text: "Grup (5+): %15 indirim" },
-  { emoji: "🌟", text: "Hafta içi 3 gün full: Kahvaltı dahil" },
-  { emoji: "🌟", text: "Sadakat: 5. rezervasyonda %20 indirim" },
-];
+const INIT_KAMPANYA_NOTLARI: ListItem[] = [];
 
 const KATEGORILER = [
   { name: "BEACH CLUB", emoji: "🏖️", checked: true },
@@ -114,34 +85,34 @@ export default function IsletmeTesisPage() {
   /** Yer/koltuk seçimi olmadan rezervasyon (tekne vb.) — tesisler.yer_secimsiz */
   const [yerSecimsiz, setYerSecimsiz]   = useState(false);
   const [yerSecimsizAciklama, setYerSecimsizAciklama] = useState("");
-  const [videoUrl, setVideoUrl]         = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
+  const [videoUrl, setVideoUrl]         = useState("");
   const [videoInput, setVideoInput]     = useState("");
-  const [enlem, setEnlem]               = useState("37.032048");
-  const [boylam, setBoylam]             = useState("27.430012");
+  const [enlem, setEnlem]               = useState("");
+  const [boylam, setBoylam]             = useState("");
 
-  const [tesisAdi, setTesisAdi]         = useState("Zuzuu Beach Hotel");
-  const [sehir, setSehir]               = useState("Bodrum");
-  const [ilce, setIlce]                 = useState("Muğla");
-  const [sehirIlce, setSehirIlce]       = useState("Bodrum, Muğla");
-  const [adres, setAdres]               = useState("Kumbahçe Mah. Neyzen Tevfik Cad. No:12, Bodrum");
-  const [telefon, setTelefon]           = useState("+90 252 316 XX XX");
-  const [email, setEmail]               = useState("info@zuzuubeach.com");
-  const [webSitesi, setWebSitesi]       = useState("https://zuzuubeach.com");
-  const [mapsLink, setMapsLink]         = useState("https://maps.google.com/?q=Zuzuu+Beach+Hotel+Bodrum");
+  const [tesisAdi, setTesisAdi]         = useState("");
+  const [sehir, setSehir]               = useState("");
+  const [ilce, setIlce]                 = useState("");
+  const [sehirIlce, setSehirIlce]       = useState("");
+  const [adres, setAdres]               = useState("");
+  const [telefon, setTelefon]           = useState("");
+  const [email, setEmail]               = useState("");
+  const [webSitesi, setWebSitesi]       = useState("");
+  const [mapsLink, setMapsLink]         = useState("");
   const [aciklama, setAciklama]         = useState("");
-  const [kategoriler, setKategoriler]   = useState<string[]>(["BEACH CLUB", "OTEL"]);
+  const [kategoriler, setKategoriler]   = useState<string[]>([]);
   const [iletisimNumarasi, setIletisimNumarasi] = useState("");
   const [tesisId, setTesisId]           = useState<string | null>(null);
 
   // Ulaşım Rehberi
-  const [taksiMerkeze, setTaksiMerkeze]       = useState("Bodrum merkeze 7 dk");
-  const [taksiHavalimanı, setTaksiHavalimanı] = useState("Milas-Bodrum Havalimanı 45 dk");
-  const [taksiTel1, setTaksiTel1]             = useState("+90 252 316 XX XX");
+  const [taksiMerkeze, setTaksiMerkeze]       = useState("");
+  const [taksiHavalimanı, setTaksiHavalimanı] = useState("");
+  const [taksiTel1, setTaksiTel1]             = useState("");
   const [taksiTel2, setTaksiTel2]             = useState("");
-  const [dolmusHat, setDolmusHat]             = useState("Bodrum - Turgutreis hattı");
-  const [dolmusDurak, setDolmusDurak]         = useState("Zuzuu Beach durağı");
-  const [dolmusSaatBas, setDolmusSaatBas]     = useState("07:00");
-  const [dolmusSaatBit, setDolmusSaatBit]     = useState("22:00");
+  const [dolmusHat, setDolmusHat]             = useState("");
+  const [dolmusDurak, setDolmusDurak]         = useState("");
+  const [dolmusSaatBas, setDolmusSaatBas]     = useState("");
+  const [dolmusSaatBit, setDolmusSaatBit]     = useState("");
   const [dolmusNot, setDolmusNot]             = useState("");
 
   // Form inputs
@@ -914,7 +885,7 @@ export default function IsletmeTesisPage() {
         </SectionCard>
 
         {/* 5. ÇALIŞMA SAATLERİ */}
-        <SectionCard open={sections.saat} onToggle={() => toggleSection("saat")} icon="🕐" iconBg="#FFFBEB" title="Çalışma Saatleri" sub="09:00 — 19:00 hafta içi, 09:00 — 21:00 hafta sonu">
+        <SectionCard open={sections.saat} onToggle={() => toggleSection("saat")} icon="🕐" iconBg="#FFFBEB" title="Çalışma Saatleri" sub="Tesisinizin çalışma saatlerini girin">
           <div style={{ marginBottom: 16, padding: 14, border: `1.5px solid ${GRAY200}`, borderRadius: 10, background: GRAY50 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -985,7 +956,7 @@ export default function IsletmeTesisPage() {
           ) : (
             <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 10, background: GRAY100, overflow: "hidden", marginBottom: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, border: `2px dashed ${GRAY200}` }}>
               <span style={{ fontSize: 36 }}>🎬</span>
-              <p style={{ fontSize: 12, color: GRAY400, fontWeight: 600 }}>Video yüklenmedi</p>
+              <p style={{ fontSize: 12, color: GRAY400, fontWeight: 600 }}>Henüz video eklenmedi</p>
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
