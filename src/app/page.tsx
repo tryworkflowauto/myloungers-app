@@ -472,6 +472,7 @@ export default function Home() {
       const { data } = await supabase
         .from("tesisler")
         .select("id, ad, slug, ilce, sehir, puan, fotograflar, kategori")
+        .eq("aktif", true)
         .order("puan", { ascending: false })
         .limit(120);
       if (data) setPopularTesisler(data);

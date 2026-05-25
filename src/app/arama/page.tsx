@@ -135,7 +135,8 @@ function AramaContent() {
     async function fetchTesisler() {
       const { data, error } = await supabase
         .from("tesisler")
-        .select("*");
+        .select("*")
+        .eq("aktif", true);
 
       if (error) {
         console.error("Supabase 'tesisler' sorgu hatası:", error);
