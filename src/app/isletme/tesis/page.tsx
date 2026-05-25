@@ -81,6 +81,8 @@ export default function IsletmeTesisPage() {
   /** Yer/koltuk seçimi olmadan rezervasyon (tekne vb.) — tesisler.yer_secimsiz */
   const [yerSecimsiz, setYerSecimsiz]   = useState(false);
   const [yerSecimsizAciklama, setYerSecimsizAciklama] = useState("");
+  /** Hizmet seçimli rezervasyon (spa, restoran) — müşteri önce hizmet seçer — tesisler.hizmet_secimli */
+  const [hizmetSecimli, setHizmetSecimli] = useState(false);
   const [videoUrl, setVideoUrl]         = useState("");
   const [videoInput, setVideoInput]     = useState("");
   const [enlem, setEnlem]               = useState("");
@@ -180,7 +182,7 @@ export default function IsletmeTesisPage() {
       const { data, error } = await supabase
         .from("tesisler")
         .select(
-          "id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, kisa_aciklama_en, detayli_aciklama_en, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi, saat_zorunlu, yer_secimsiz, yer_secimsiz_aciklama",
+          "id, ad, kategori, sehir, ilce, adres, telefon, email, web_sitesi, kisa_aciklama, detayli_aciklama, kisa_aciklama_en, detayli_aciklama_en, aciklama, video_url, enlem, boylam, maps_link, imkanlar, calisma_saatleri, kurallar, kampanya_notlari, ulasim, aktif, fotograflar, iletisim_numarasi, saat_zorunlu, yer_secimsiz, yer_secimsiz_aciklama, hizmet_secimli",
         )
         .eq("id", tesis_id)
         .limit(1)
@@ -250,6 +252,7 @@ export default function IsletmeTesisPage() {
       setSaatZorunlu(row.saat_zorunlu === true);
       setYerSecimsiz(row.yer_secimsiz === true);
       setYerSecimsizAciklama(row.yer_secimsiz_aciklama ?? "");
+      setHizmetSecimli(row.hizmet_secimli === true);
 
       const fotosDb = (row.fotograflar as Photo[] | null | undefined) || [];
       setPhotos(fotosDb.length ? fotosDb : INIT_PHOTOS);
@@ -490,6 +493,7 @@ export default function IsletmeTesisPage() {
       saat_zorunlu: saatZorunlu,
       yer_secimsiz: yerSecimsiz,
       yer_secimsiz_aciklama: yerSecimsizAciklama.trim() || null,
+      hizmet_secimli: hizmetSecimli,
       fotograflar: photos,
       iletisim_numarasi: iletisimNumarasi.trim() || null,
     };
@@ -921,6 +925,22 @@ export default function IsletmeTesisPage() {
                 />
               </div>
             )}
+          </div>
+          <div style={{ marginBottom: 16, padding: 14, border: `1.5px solid ${GRAY200}`, borderRadius: 10, background: GRAY50 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Hizmet seçimli rezervasyon (spa, restoran vb.)</div>
+                <p style={{ fontSize: 11, color: GRAY400, lineHeight: 1.5, margin: 0 }}>
+                  Spa, restoran gibi farklı hizmet/fiyat sunan tesisler için. Açıksa müşteri önce bir hizmet seçer (her hizmet ayrı fiyatlı bir yer grubudur), sonra tarih ve saat belirler. Hizmet bedelini öder, içeride ekstra harcama olmaz.
+                </p>
+              </div>
+              <label style={{ position: "relative", width: 36, height: 20, cursor: "pointer", flexShrink: 0 }} title={hizmetSecimli ? "Hizmet seçimli açık" : "Hizmet seçimli kapalı"}>
+                <input type="checkbox" checked={hizmetSecimli} onChange={(e) => setHizmetSecimli(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+                <span style={{ position: "absolute", inset: 0, background: hizmetSecimli ? TEAL : GRAY300, borderRadius: 20, transition: "0.3s" }}>
+                  <span style={{ position: "absolute", width: 14, height: 14, left: 3, top: 3, background: "white", borderRadius: "50%", transition: "0.3s", transform: hizmetSecimli ? "translateX(16px)" : "translateX(0)" }} />
+                </span>
+              </label>
+            </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
             {gunler.map((g, i) => (
