@@ -26,6 +26,7 @@ type ZoneDef = {
   key: string;
   prefix: string;
   label?: string;
+  gorsel: string | null;
   icon: string;
   pw: number;
   pe: number;
@@ -119,6 +120,7 @@ export default function TesisDetailPage() {
   const [rezervasyonSaati, setRezervasyonSaati] = useState("");
   const [paxCount, setPaxCount] = useState(1);
   const [selSzls, setSelSzls] = useState<SelSzl[]>([]);
+  const [secilenHizmetKey, setSecilenHizmetKey] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
@@ -264,7 +266,7 @@ export default function TesisDetailPage() {
 
       const { data: grupRows, error: grupErr } = await supabase
         .from("sezlong_gruplari")
-        .select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en")
+        .select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en, gorsel")
         .eq("tesis_id", tesisId)
         .order("sira", { ascending: true });
 
@@ -328,6 +330,7 @@ export default function TesisDetailPage() {
           key,
           prefix,
           label: ad,
+          gorsel: (g.gorsel ?? null),
           icon,
           pw: fiyatNum,
           pe: fiyatNum,
@@ -949,6 +952,7 @@ export default function TesisDetailPage() {
   const units = [...new Set(selSzls.map((s) => "₺" + s.price.toLocaleString("tr-TR")))].join(" / ");
 
   const yerSecimsizMi = row?.yer_secimsiz === true;
+  const hizmetSecimliMi = row?.hizmet_secimli === true;
   const ozetFiyatBirim = zones.length > 0 ? (selStart && isWE(selStart) ? (zones[0].pe ?? 0) : (zones[0].pw ?? 0)) : 0;
   const efektifAdet = yerSecimsizMi ? paxCount : selSzls.length;
   const efektifTotal = yerSecimsizMi ? (ozetFiyatBirim * paxCount * Math.max(days, 1)) : total;
@@ -1737,7 +1741,7 @@ export default function TesisDetailPage() {
             </div>
 
             {/* ŞEZLONG DÜZENİ */}
-            {!yerSecimsizMi && (
+            {!yerSecimsizMi && !hizmetSecimliMi && (
             <div className="panel panel-szl" ref={szlRef}>
               <div className={`ph${!openPanels.szl ? " ph-teal" : ""}`} onClick={() => togglePanel("szl")}>
                 <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Yer Seç</div><div className="ph-sub">100 yer · İskele · VIP · Silver</div></div></div>
@@ -1792,7 +1796,46 @@ export default function TesisDetailPage() {
               </div>}
             </div>
             )}
-            {yerSecimsizMi && (
+            {hizmetSecimliMi && (
+              <div className="panel" style={{ padding: 22 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 14, color: "#0F172A" }}>Hizmet Seçin</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+                  {zones.map((z) => {
+                    const secili = secilenHizmetKey === z.key;
+                    const fiyatGoster = selStart && isWE(selStart) ? (z.pe ?? 0) : (z.pw ?? 0);
+                    return (
+                      <div
+                        key={z.key}
+                        onClick={() => setSecilenHizmetKey(z.key)}
+                        style={{
+                          cursor: "pointer",
+                          border: secili ? "2.5px solid #0EA5E9" : "1.5px solid #E2E8F0",
+                          borderRadius: 14,
+                          overflow: "hidden",
+                          background: "#fff",
+                          boxShadow: secili ? "0 4px 16px rgba(14,165,233,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {z.gorsel ? (
+                          <img src={z.gorsel} alt={z.label} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: 130, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🧖</div>
+                        )}
+                        <div style={{ padding: "12px 14px" }}>
+                          <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", marginBottom: 4 }}>{z.label}</div>
+                          {z.aciklama ? (
+                            <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.4, marginBottom: 8 }}>{z.aciklama}</div>
+                          ) : null}
+                          <div style={{ fontWeight: 800, fontSize: 15, color: "#0EA5E9" }}>₺{fiyatGoster.toLocaleString("tr-TR")}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {yerSecimsizMi && !hizmetSecimliMi && (
               <div className="panel" style={{ padding: 22 }}>
                 <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"16px 18px", background:"#F0F9FF", border:"1.5px solid #BAE6FD", borderRadius:12 }}>
                   <span style={{ fontSize:22 }}>ℹ️</span>
