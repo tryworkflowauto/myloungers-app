@@ -61,7 +61,7 @@ export const ODEME_MODLARI: OdemeModu[] = [
   },
   {
     id: "hizmet_secimli",
-    label: "Hizmet Seçimli (Spa/Restoran)",
+    label: "Hizmet Seçimli",
     aciklama: "Müşteri önce hizmet seçer, tarih ve saat ile rezervasyon yapar. Hizmet bedeli başta ödenir, içeride harcama yoktur.",
     kaporaGerekir: false,
     siparisAcik: false,
