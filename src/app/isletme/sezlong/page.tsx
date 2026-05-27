@@ -36,6 +36,7 @@ type GrupRow = {
   aciklama?: string;
   sira?: number;
   deniz_sirasi?: number;
+  gorsel?: string | null;
 } & SezlongGrupForm;
 
 function clampDenizSirasi(raw: unknown): number {
@@ -103,6 +104,8 @@ const DURUM_LABELS: Record<string, string> = {
 };
 
 const COLOR_OPTS = ["#0ABAB5", "#F5821F", "#F59E0B", "#8B5CF6", "#EF4444", "#10B981", "#3B82F6", "#EC4899", "#0A1628"];
+const GRUP_GORSEL_BUCKET = "menu-gorseller";
+const MAX_GRUP_GORSEL_BYTES = 2 * 1024 * 1024; // 2MB
 
 const LEGEND_DURUM_MAP: Record<string, string> = {
   "Boş": "bos",
@@ -275,7 +278,7 @@ export default function IsletmeSezlongPage() {
   const [seciliRenk, setSeciliRenk] = useState("#0ABAB5");
   const [grupEkleForm, setGrupEkleForm] = useState({ ad: "", ad_en: "", kapasite: "10", fiyat: "1000", renk: "#0ABAB5", aciklama: "", aciklama_en: "", deniz_sirasi: "1" });
   const [duzenleModal, setDuzenleModal] = useState<GrupRow | null>(null);
-  const [duzenleForm, setDuzenleForm] = useState({ name: "", count: "", color: "", fiyat: "", aciklama: "", ad_en: "", aciklama_en: "", deniz_sirasi: "1" });
+  const [duzenleForm, setDuzenleForm] = useState<{ name: string; count: string; color: string; fiyat: string; aciklama: string; ad_en: string; aciklama_en: string; deniz_sirasi: string; gorsel: string | null }>({ name: "", count: "", color: "", fiyat: "", aciklama: "", ad_en: "", aciklama_en: "", deniz_sirasi: "1", gorsel: null });
   const [silModal, setSilModal] = useState<GrupRow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   // Tarih filtresi için seçili tarih (default: bugün)
@@ -442,7 +445,7 @@ export default function IsletmeSezlongPage() {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      supabase.from("sezlong_gruplari").select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en, sira, deniz_sirasi").eq("tesis_id", tesisId).order("sira", { ascending: true }),
+      supabase.from("sezlong_gruplari").select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en, sira, deniz_sirasi, gorsel").eq("tesis_id", tesisId).order("sira", { ascending: true }),
       supabase.from("sezlonglar").select("id, grup_id, numara, durum").eq("tesis_id", tesisId),
     ]).then(([gRes, sRes]) => {
       if (cancelled) return;
@@ -457,6 +460,7 @@ export default function IsletmeSezlongPage() {
         aciklama_en?: string | null;
         sira?: number | null;
         deniz_sirasi?: number | null;
+        gorsel?: string | null;
       }[];
       grupRows.sort((a, b) => {
         const sa = Number(a.sira ?? 0);
@@ -503,6 +507,8 @@ export default function IsletmeSezlongPage() {
         const aciklamaEnRaw = g.aciklama_en != null ? String(g.aciklama_en).trim() : "";
         const siraVal = Number(g.sira ?? 0);
         const denizVal = clampDenizSirasi(g.deniz_sirasi);
+        const gorselRaw = g.gorsel != null ? String(g.gorsel).trim() : "";
+        const gorselVal = gorselRaw !== "" ? gorselRaw : null;
         grList.push({
           id: g.id,
           name: g.ad,
@@ -517,6 +523,7 @@ export default function IsletmeSezlongPage() {
           ...(aciklamaEnRaw ? { aciklama_en: aciklamaEnRaw } : {}),
           sira: siraVal,
           deniz_sirasi: denizVal,
+          gorsel: gorselVal,
         });
         harita[g.id] = {
           id: g.id,
@@ -691,8 +698,38 @@ export default function IsletmeSezlongPage() {
       ad_en: g.ad_en ?? "",
       aciklama_en: g.aciklama_en ?? "",
       deniz_sirasi: String(clampDenizSirasi(g.deniz_sirasi)),
+      gorsel: g.gorsel ?? null,
     });
     setDuzenleModal(g);
+  }
+
+  async function handleGrupGorselUpload(file: File | null) {
+    if (!file) return;
+    if (!tesisId) {
+      showToast("❌ Tesis bilgisi yüklenemedi");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      showToast("❌ Sadece görsel dosyası yükleyebilirsiniz");
+      return;
+    }
+    if (file.size > MAX_GRUP_GORSEL_BYTES) {
+      showToast(`❌ Dosya 2MB'dan büyük olamaz: ${file.name}`);
+      return;
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${tesisId}/grup-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from(GRUP_GORSEL_BUCKET).upload(path, file, {
+      contentType: file.type || "image/jpeg",
+      upsert: true,
+    });
+    if (error) {
+      console.error("Storage upload error:", error);
+      showToast("❌ Görsel yüklenemedi");
+      return;
+    }
+    const { data: urlData } = supabase.storage.from(GRUP_GORSEL_BUCKET).getPublicUrl(path);
+    setDuzenleForm((f) => ({ ...f, gorsel: urlData.publicUrl }));
   }
 
   async function saveDuzenle() {
@@ -712,6 +749,7 @@ export default function IsletmeSezlongPage() {
         aciklama_en: aciklamaEnVal,
         kapasite: Number(duzenleForm.count),
         deniz_sirasi: clampDenizSirasi(duzenleForm.deniz_sirasi),
+        gorsel: duzenleForm.gorsel ?? null,
       })
       .eq("id", duzenleModal.id);
     if (error) { showToast("❌ Güncellenemedi"); return; }
@@ -729,6 +767,7 @@ export default function IsletmeSezlongPage() {
               aciklama_en: aciklamaEnVal ?? undefined,
               count: Number(duzenleForm.count),
               deniz_sirasi: clampDenizSirasi(duzenleForm.deniz_sirasi),
+              gorsel: duzenleForm.gorsel ?? null,
             }
           : g
       )
@@ -1678,6 +1717,7 @@ export default function IsletmeSezlongPage() {
                             ad_en: g.ad_en ?? "",
                             aciklama_en: g.aciklama_en ?? "",
                             deniz_sirasi: String(clampDenizSirasi(g.deniz_sirasi)),
+                            gorsel: g.gorsel ?? null,
                           });
                           setDuzenleModal(g);
                         }}
@@ -2731,6 +2771,36 @@ export default function IsletmeSezlongPage() {
                   rows={3}
                   style={{ width: "100%", minHeight: 72, padding: "8px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13, resize: "vertical", fontFamily: "inherit", lineHeight: 1.45, boxSizing: "border-box" }}
                 />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Görsel</label>
+                {duzenleForm.gorsel ? (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={duzenleForm.gorsel} alt="" style={{ width: 80, height: 80, borderRadius: 10, objectFit: "cover", border: `2px solid ${GRAY200}` }} />
+                    <button
+                      type="button"
+                      onClick={() => setDuzenleForm((f) => ({ ...f, gorsel: null }))}
+                      style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: "1px solid #FECACA", background: "#FEF2F2", color: "#EF4444", cursor: "pointer" }}
+                    >
+                      Kaldır
+                    </button>
+                  </div>
+                ) : null}
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: TEAL, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>
+                  dosya seç
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      void handleGrupGorselUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <p style={{ fontSize: 11, color: GRAY400, margin: "4px 0 0" }}>Maks. 2MB • PNG, JPG</p>
               </div>
             </div>
             <div style={{ padding: "12px 20px", borderTop: `1px solid ${GRAY100}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>

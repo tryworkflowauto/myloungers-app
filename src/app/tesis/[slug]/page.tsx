@@ -93,7 +93,7 @@ export default function TesisDetailPage() {
   const [toast, setToast] = useState<{msg:string;icon:string}|null>(null);
   const [lbIdx, setLbIdx] = useState(0);
   const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
-    about: false, feats: false, plan: false, szl: false,
+    about: false, feats: false, plan: false, szl: false, hizmet: false,
     video: false, transport: false, rules: false, menu: false, reviews: false,
   });
   const [menuKategoriler, setMenuKategoriler] = useState<MenuKategoriRow[]>([]);
@@ -1324,6 +1324,11 @@ export default function TesisDetailPage() {
         .ph-teal .ph-title{color:#fff}
         .ph-teal .ph-sub{color:rgba(255,255,255,.78)}
         .ph-teal svg{stroke:#fff}
+        .ph-hizmet{background:linear-gradient(135deg,#FFF7ED 0%,#FFEDD5 100%);border-left:4px solid #F5821F}
+        .ph-hizmet:hover{background:#FFEDD5}
+        .ph-hizmet .ph-title{color:#9A3412}
+        .ph-hizmet .ph-sub{color:#C2410C}
+        .ph-hizmet svg{stroke:#EA580C}
         .ph-l{display:flex;align-items:center;gap:12px}
         .ph-ic{font-size:1.3rem;flex-shrink:0}
         .ph-title{font-size:.92rem;font-weight:800;color:var(--navy)}
@@ -1814,42 +1819,55 @@ export default function TesisDetailPage() {
             </div>
             )}
             {hizmetSecimliMi && (
-              <div className="panel" style={{ padding: 22 }}>
-                <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 14, color: "#0F172A" }}>Hizmet Seçin</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-                  {zones.map((z) => {
-                    const secili = secilenHizmetKey === z.key;
-                    const fiyatGoster = selStart && isWE(selStart) ? (z.pe ?? 0) : (z.pw ?? 0);
-                    return (
-                      <div
-                        key={z.key}
-                        onClick={() => setSecilenHizmetKey(z.key)}
-                        style={{
-                          cursor: "pointer",
-                          border: secili ? "2.5px solid #0EA5E9" : "1.5px solid #E2E8F0",
-                          borderRadius: 14,
-                          overflow: "hidden",
-                          background: "#fff",
-                          boxShadow: secili ? "0 4px 16px rgba(14,165,233,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        {z.gorsel ? (
-                          <img src={z.gorsel} alt={z.label} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
-                        ) : (
-                          <div style={{ width: "100%", height: 130, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🧖</div>
-                        )}
-                        <div style={{ padding: "12px 14px" }}>
-                          <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", marginBottom: 4 }}>{z.label}</div>
-                          {z.aciklama ? (
-                            <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.4, marginBottom: 8 }}>{z.aciklama}</div>
-                          ) : null}
-                          <div style={{ fontWeight: 800, fontSize: 15, color: "#0EA5E9" }}>₺{fiyatGoster.toLocaleString("tr-TR")}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="panel panel-hizmet">
+                <div className="ph ph-hizmet" onClick={() => togglePanel("hizmet")}>
+                  <div className="ph-l">
+                    <span className="ph-ic">🧖</span>
+                    <div>
+                      <div className="ph-title">Hizmet Seçin</div>
+                      <div className="ph-sub">Almak istediğiniz hizmeti seçin</div>
+                    </div>
+                  </div>
+                  <svg className={`ch${openPanels.hizmet ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
+                {openPanels.hizmet && (
+                  <div className="pb" style={{ padding: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+                      {zones.map((z) => {
+                        const secili = secilenHizmetKey === z.key;
+                        const fiyatGoster = selStart && isWE(selStart) ? (z.pe ?? 0) : (z.pw ?? 0);
+                        return (
+                          <div
+                            key={z.key}
+                            onClick={() => setSecilenHizmetKey(z.key)}
+                            style={{
+                              cursor: "pointer",
+                              border: secili ? "2.5px solid #0EA5E9" : "1.5px solid #E2E8F0",
+                              borderRadius: 14,
+                              overflow: "hidden",
+                              background: "#fff",
+                              boxShadow: secili ? "0 4px 16px rgba(14,165,233,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {z.gorsel ? (
+                              <img src={z.gorsel} alt={z.label} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
+                            ) : (
+                              <div style={{ width: "100%", height: 130, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🧖</div>
+                            )}
+                            <div style={{ padding: "12px 14px" }}>
+                              <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", marginBottom: 4 }}>{z.label}</div>
+                              {z.aciklama ? (
+                                <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.4, marginBottom: 8 }}>{z.aciklama}</div>
+                              ) : null}
+                              <div style={{ fontWeight: 800, fontSize: 15, color: "#0EA5E9" }}>₺{fiyatGoster.toLocaleString("tr-TR")}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {yerSecimsizMi && !hizmetSecimliMi && (
