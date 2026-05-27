@@ -351,6 +351,7 @@ export default function ProfilPage() {
             iptal_saat_oncesi?: number;
             calisma_saatleri?: any;
             odeme_modu?: string | null;
+            hizmet_secimli?: boolean;
           }
         > = {};
 
@@ -358,7 +359,7 @@ export default function ProfilPage() {
           const { data: tesisData, error: tesisError } = await supabase
             .from("tesisler")
             .select(
-              "id, ad, sehir, ilce, slug, iptal_saat_oncesi, calisma_saatleri, odeme_modu",
+              "id, ad, sehir, ilce, slug, iptal_saat_oncesi, calisma_saatleri, odeme_modu, hizmet_secimli",
             )
             .in("id", tesisIds);
 
@@ -374,6 +375,7 @@ export default function ProfilPage() {
                 iptal_saat_oncesi: typeof t.iptal_saat_oncesi === "number" ? t.iptal_saat_oncesi : undefined,
                 calisma_saatleri: t.calisma_saatleri ?? undefined,
                 odeme_modu: typeof t.odeme_modu === "string" && t.odeme_modu.trim() !== "" ? t.odeme_modu.trim() : null,
+                hizmet_secimli: t.hizmet_secimli === true,
               };
             });
           }
@@ -513,6 +515,7 @@ export default function ProfilPage() {
 
           const meta = STATUS_META[statusKey];
           const tesisInfo = r.tesis_id ? tesisMap[r.tesis_id] : undefined;
+          const tesisHizmetSecimli = tesisInfo?.hizmet_secimli === true;
           const sl = (r as {
             sezlong?: {
               numara?: number | string | null;
@@ -530,7 +533,9 @@ export default function ProfilPage() {
             const s = sezlongMap[ilkSzlId];
             const gAd = (s.grupAd || "").trim();
             const num = s.numara;
-            if (gAd && num != null && String(num).trim() !== "") {
+            if (tesisHizmetSecimli && gAd) {
+              szlLabel = gAd;
+            } else if (gAd && num != null && String(num).trim() !== "") {
               szlLabel = `${gAd} ${gAd.charAt(0).toUpperCase()}${num}`;
             }
           }
@@ -539,7 +544,9 @@ export default function ProfilPage() {
             const grupAd = (sl.grup?.ad || "").trim();
             const sezlongNum = sl.numara;
             const hasNum = sezlongNum != null && String(sezlongNum).trim() !== "";
-            if (grupAd && hasNum) {
+            if (tesisHizmetSecimli && grupAd) {
+              szlLabel = grupAd;
+            } else if (grupAd && hasNum) {
               szlLabel = `${grupAd} ${grupAd.charAt(0).toUpperCase()}${sezlongNum}`;
             } else if (hasNum) {
               szlLabel = `No: ${sezlongNum}`;
