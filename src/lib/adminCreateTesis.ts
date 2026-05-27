@@ -25,7 +25,7 @@ export type CreateTesisWithOwnerInput = {
   /** Şimdilik yalnızca DB’de uygun kolon varsa yazılır */
   isletmeModu?: string | null;
   isletmeSahibiAdSoyad?: string | null;
-  odemeModu?: string | null; // 'harcama_limitli' | 'hizmet_bedeli' | 'kapora' | 'on_siparis'
+  odemeModu?: string | null; // 'harcama_limitli' | 'hizmet_bedeli' | 'kapora' | 'on_siparis' | 'hizmet_secimli'
   kaporaTutari?: number | null; // Tip kapora ise avans tutarı
   komisyonTipi?: string | null; // 'yuzde' | 'islem_bedeli' | 'yok'
   islemBedeli?: number | null; // Komisyon tipi islem_bedeli ise sabit tutar
@@ -190,6 +190,9 @@ export async function createTesisWithOwner(
     input.email != null && String(input.email).trim() !== "" ? String(input.email).trim().toLowerCase() : null;
 
   const odemeModuVal = getOdemeModu(input.odemeModu).id;
+  const hizmetSecimliVal = odemeModuVal === "hizmet_secimli";
+  // Tip 3: ödeme davranışı hizmet_bedeli ile aynı; müşteri akışı hizmet_secimli bayrağı ile açılır.
+  const odemeModuDb = hizmetSecimliVal ? "hizmet_bedeli" : odemeModuVal;
   const komisyonTipiVal = getKomisyonTipi(input.komisyonTipi).id;
 
   const { data: tesis, error: insErr } = await admin
@@ -204,7 +207,8 @@ export async function createTesisWithOwner(
       telefon,
       email: emailVal,
       aktif: true,
-      odeme_modu: odemeModuVal,
+      odeme_modu: odemeModuDb,
+      hizmet_secimli: hizmetSecimliVal,
       komisyon_tipi: komisyonTipiVal,
     })
     .select("id, slug")

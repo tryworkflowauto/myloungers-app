@@ -3,7 +3,7 @@
 // Tüm sistem buradan okur. Yeni tip = buraya tek blok ekle.
 // ============================================================
 
-export type OdemeModuId = "harcama_limitli" | "hizmet_bedeli" | "kapora" | "on_siparis";
+export type OdemeModuId = "harcama_limitli" | "hizmet_bedeli" | "kapora" | "on_siparis" | "hizmet_secimli";
 export type KomisyonTipiId = "yuzde" | "islem_bedeli" | "yok";
 
 export interface OdemeModu {
@@ -55,6 +55,14 @@ export const ODEME_MODLARI: OdemeModu[] = [
     id: "on_siparis",
     label: "Ön Sipariş / Park",
     aciklama: "Müşteri başta menüden seçip giriş + sipariş toplamını komple öder. Rezerve saatinde hazır, gelip teslim alır.",
+    kaporaGerekir: false,
+    siparisAcik: false,
+    bakiyeDavranisi: "kapali",
+  },
+  {
+    id: "hizmet_secimli",
+    label: "Hizmet Seçimli (Spa/Restoran)",
+    aciklama: "Müşteri önce hizmet seçer, tarih ve saat ile rezervasyon yapar. Hizmet bedeli başta ödenir, içeride harcama yoktur.",
     kaporaGerekir: false,
     siparisAcik: false,
     bakiyeDavranisi: "kapali",
