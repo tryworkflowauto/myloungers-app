@@ -12,6 +12,7 @@ import { normalizeKategoriList } from "@/lib/tesisKategori";
 import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
 import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import CallWaiterModal from "@/components/CallWaiterModal";
+import { getPanelPathForRole, isMusteriRole } from "@/lib/rolePanelPath";
 
 /** tesisler.kategori → kart etiketi (Spa, Beach Club, Tekne Turu vb.) */
 function profilTesisKategoriLabel(kategori: unknown): string {
@@ -276,14 +277,31 @@ export default function ProfilPage() {
 
   useEffect(() => {
     async function loadUser() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        setUser(null);
+        setUserLoading(false);
+        return;
+      }
+
+      const { data: kullanici } = await supabase
+        .from("kullanicilar")
+        .select("rol")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+
+      const rol = (kullanici as { rol?: string } | null)?.rol ?? null;
+      if (!isMusteriRole(rol)) {
+        const panelPath = getPanelPathForRole(rol);
+        router.replace(panelPath !== "/profil" ? panelPath : "/");
+        return;
+      }
+
+      setUser(authData.user);
       setUserLoading(false);
     }
     loadUser();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const iv = setInterval(() => setTick((t) => t + 1), 10000);
@@ -1225,6 +1243,10 @@ export default function ProfilPage() {
     const aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
     return `Üye: ${aylar[d.getMonth()]} ${d.getFullYear()}`;
   })();
+
+  if (userLoading) {
+    return null;
+  }
 
   return (
     <>

@@ -7,15 +7,7 @@ import { Suspense, useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
-
-function getRedirectPath(rol: string | undefined | null): string {
-  const r = (rol ?? "").toLowerCase();
-  if (r === "admin") return "/admin";
-  if (r === "isletmeci") return "/isletme";
-  if (r === "garson") return "/garson";
-  if (r === "mutfak") return "/mutfak";
-  return "/profil";
-}
+import { getPanelPathForRole } from "@/lib/rolePanelPath";
 
 function isSafeRedirectPath(path: string): boolean {
   return path.startsWith("/") && !path.startsWith("//");
@@ -30,7 +22,7 @@ function postLoginPath(rol: string | undefined | null, redirectParam: string | n
       return stored;
     }
   }
-  return getRedirectPath(rol);
+  return getPanelPathForRole(rol);
 }
 
 function GirisContent() {
