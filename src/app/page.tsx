@@ -7,6 +7,11 @@ import { supabase } from "@/lib/supabase";
 import { persistSiteLang, readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
+import {
+  ensurePeriyotEtiketiYuklendi,
+  getPeriyotEtiketiDinamik,
+  type PeriyotEtiketiHaritasi,
+} from "@/lib/tesisTipleriDb";
 import "./myloungers.css";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -309,6 +314,7 @@ export default function Home() {
   const [popularTesisler, setPopularTesisler] = useState<any[]>([]);
   const [popularLoading, setPopularLoading] = useState(true);
   const [aktifTiplerLoading, setAktifTiplerLoading] = useState(true);
+  const [periyotEtiketiHaritasi, setPeriyotEtiketiHaritasi] = useState<PeriyotEtiketiHaritasi | null>(null);
   const [bizUser, setBizUser] = useState<{ name: string; tesisAd?: string } | null>(null);
   const [supabaseNavUser, setSupabaseNavUser] = useState<{ name: string; rol: string } | null>(null);
   const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
@@ -516,6 +522,10 @@ export default function Home() {
       }
     }
     void fetchPopular();
+  }, []);
+
+  useEffect(() => {
+    void ensurePeriyotEtiketiYuklendi(supabase).then(setPeriyotEtiketiHaritasi);
   }, []);
 
   useEffect(() => {
@@ -1484,6 +1494,7 @@ export default function Home() {
                 : "/logo.png";
 
             const slugValue = (tesisRow.slug && String(tesisRow.slug).trim()) || String(tesisRow.id);
+            const periyotEtiketi = getPeriyotEtiketiDinamik(tesisRow.kategori, periyotEtiketiHaritasi);
 
             const cardContent = (
               <>
@@ -1493,7 +1504,9 @@ export default function Home() {
                   {puan !== null && (
                     <span className="prat">★ {puan.toFixed(1)}</span>
                   )}
-                  <span className="ptag ct">{t.tag_daily}</span>
+                  {periyotEtiketi ? (
+                    <span className="ptag ct">{periyotEtiketi}</span>
+                  ) : null}
                 </div>
                 <div className="pn">{name}</div>
                 <div className="pl">

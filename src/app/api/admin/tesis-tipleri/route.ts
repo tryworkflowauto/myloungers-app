@@ -92,7 +92,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabaseAdmin
       .from("tesis_tipleri")
-      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif, gorsel, ikon")
+      .select("id, slug, ad, db_value, yer_etiketi, periyot_etiketi, sira, aktif, gorsel, ikon")
       .order("sira", { ascending: true });
 
     if (error) {
@@ -121,6 +121,9 @@ export async function POST(req: Request) {
     const yerRaw = body.yer_etiketi;
     const yer_etiketi =
       yerRaw == null || String(yerRaw).trim() === "" ? null : String(yerRaw).trim();
+    const periyotRaw = body.periyot_etiketi;
+    const periyot_etiketi =
+      periyotRaw == null || String(periyotRaw).trim() === "" ? null : String(periyotRaw).trim();
     const siraNum = Number(body.sira);
     const sira = Number.isFinite(siraNum) ? Math.floor(siraNum) : 0;
     const gorselRaw = body.gorsel;
@@ -146,12 +149,13 @@ export async function POST(req: Request) {
         ad,
         db_value,
         yer_etiketi,
+        periyot_etiketi,
         sira,
         aktif: body.aktif === false ? false : true,
         gorsel,
         ikon,
       })
-      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif, gorsel, ikon")
+      .select("id, slug, ad, db_value, yer_etiketi, periyot_etiketi, sira, aktif, gorsel, ikon")
       .single();
 
     if (error) {
@@ -195,6 +199,12 @@ export async function PATCH(req: Request) {
         yerRaw == null || String(yerRaw).trim() === "" ? null : String(yerRaw).trim();
     }
 
+    if (body.periyot_etiketi !== undefined) {
+      const periyotRaw = body.periyot_etiketi;
+      patch.periyot_etiketi =
+        periyotRaw == null || String(periyotRaw).trim() === "" ? null : String(periyotRaw).trim();
+    }
+
     if (body.sira !== undefined) {
       const siraNum = Number(body.sira);
       if (!Number.isFinite(siraNum)) {
@@ -229,7 +239,7 @@ export async function PATCH(req: Request) {
       .from("tesis_tipleri")
       .update(patch)
       .eq("id", id)
-      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif, gorsel, ikon")
+      .select("id, slug, ad, db_value, yer_etiketi, periyot_etiketi, sira, aktif, gorsel, ikon")
       .single();
 
     if (error) {

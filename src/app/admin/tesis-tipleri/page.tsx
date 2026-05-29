@@ -25,6 +25,7 @@ type TesisTipi = {
   ad: string;
   db_value: string;
   yer_etiketi: string | null;
+  periyot_etiketi: string | null;
   sira: number;
   aktif: boolean;
   gorsel: string | null;
@@ -34,6 +35,7 @@ type TesisTipi = {
 type EditDraft = {
   ad: string;
   yer_etiketi: string;
+  periyot_etiketi: string;
   sira: string;
   ikon: string;
   gorsel: string | null;
@@ -178,6 +180,7 @@ const BOS_YENI = {
   ad: "",
   db_value: "",
   yer_etiketi: "",
+  periyot_etiketi: "",
   sira: "0",
   ikon: "",
   gorsel: null as string | null,
@@ -196,6 +199,7 @@ function YeniTipEklePanel({
   const adInputRef = useRef<HTMLInputElement>(null);
   const dbValueInputRef = useRef<HTMLInputElement>(null);
   const yerInputRef = useRef<HTMLInputElement>(null);
+  const periyotInputRef = useRef<HTMLInputElement>(null);
   const siraInputRef = useRef<HTMLInputElement>(null);
   const ikonInputRef = useRef<HTMLInputElement>(null);
 
@@ -204,6 +208,7 @@ function YeniTipEklePanel({
     const ad = (adInputRef.current?.value ?? yeni.ad).trim();
     const db_value = (dbValueInputRef.current?.value ?? yeni.db_value).trim().toUpperCase().replace(/\s+/g, " ");
     const yer_etiketi = (yerInputRef.current?.value ?? yeni.yer_etiketi).trim();
+    const periyot_etiketi = (periyotInputRef.current?.value ?? yeni.periyot_etiketi).trim();
     const ikon = (ikonInputRef.current?.value ?? yeni.ikon).trim();
     const siraRaw = siraInputRef.current?.value ?? yeni.sira;
     const gorsel = yeni.gorsel;
@@ -225,6 +230,7 @@ function YeniTipEklePanel({
         ad,
         db_value,
         yer_etiketi: yer_etiketi === "" ? null : yer_etiketi,
+        periyot_etiketi: periyot_etiketi === "" ? null : periyot_etiketi,
         sira,
         aktif: true,
         ikon: ikon === "" ? null : ikon,
@@ -244,7 +250,7 @@ function YeniTipEklePanel({
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, alignItems: "end" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, alignItems: "end" }}>
         <div>
           <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>slug</label>
           <input
@@ -286,6 +292,17 @@ function YeniTipEklePanel({
             value={yeni.yer_etiketi}
             onChange={(e) => setYeni((p) => ({ ...p, yer_etiketi: e.target.value }))}
             placeholder="Şezlong (boş=Yer)"
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>periyot_etiketi</label>
+          <input
+            ref={periyotInputRef}
+            type="text"
+            value={yeni.periyot_etiketi}
+            onChange={(e) => setYeni((p) => ({ ...p, periyot_etiketi: e.target.value }))}
+            placeholder="Günlük / Tur / Seans (boş=rozet yok)"
             style={inputStyle}
           />
         </div>
@@ -375,6 +392,7 @@ export default function AdminTesisTipleriPage() {
       drafts[r.id] = {
         ad: r.ad,
         yer_etiketi: r.yer_etiketi ?? "",
+        periyot_etiketi: r.periyot_etiketi ?? "",
         sira: String(r.sira),
         ikon: r.ikon ?? "",
         gorsel: r.gorsel ?? null,
@@ -428,6 +446,7 @@ export default function AdminTesisTipleriPage() {
         id,
         ad,
         yer_etiketi: d.yer_etiketi.trim() === "" ? null : d.yer_etiketi.trim(),
+        periyot_etiketi: d.periyot_etiketi.trim() === "" ? null : d.periyot_etiketi.trim(),
         sira: Math.floor(siraNum),
         ikon: d.ikon.trim() === "" ? null : d.ikon.trim(),
         gorsel: d.gorsel,
@@ -449,6 +468,7 @@ export default function AdminTesisTipleriPage() {
         [id]: {
           ad: json.data!.ad,
           yer_etiketi: json.data!.yer_etiketi ?? "",
+          periyot_etiketi: json.data!.periyot_etiketi ?? "",
           sira: String(json.data!.sira),
           ikon: json.data!.ikon ?? "",
           gorsel: json.data!.gorsel ?? null,
@@ -536,7 +556,7 @@ export default function AdminTesisTipleriPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>
-                {["", "ikon", "görsel", "slug", "ad", "db_value", "birim", "sira", "aktif", ""].map((h) => (
+                {["", "ikon", "görsel", "slug", "ad", "db_value", "birim", "periyot", "sira", "aktif", ""].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -659,6 +679,20 @@ export default function AdminTesisTipleriPage() {
                           setDraftlar((prev) => ({
                             ...prev,
                             [row.id]: { ...prev[row.id], yer_etiketi: e.target.value },
+                          }))
+                        }
+                        placeholder="—"
+                        style={inputStyle}
+                      />
+                    </td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <input
+                        type="text"
+                        value={d.periyot_etiketi}
+                        onChange={(e) =>
+                          setDraftlar((prev) => ({
+                            ...prev,
+                            [row.id]: { ...prev[row.id], periyot_etiketi: e.target.value },
                           }))
                         }
                         placeholder="—"

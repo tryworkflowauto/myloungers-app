@@ -84,8 +84,10 @@ export function kategoriInputToDbValues(input: unknown, catalog: TesisTipiCatalo
 }
 
 export type YerEtiketiHaritasi = ReadonlyMap<string, string>;
+export type PeriyotEtiketiHaritasi = ReadonlyMap<string, string>;
 
 let yerEtiketiCache: YerEtiketiHaritasi | null = null;
+let periyotEtiketiCache: PeriyotEtiketiHaritasi | null = null;
 let yerEtiketiLoadPromise: Promise<YerEtiketiHaritasi> | null = null;
 
 /** `tesis_tipleri` satırlarından db_value → yer_etiketi haritası */
@@ -103,7 +105,22 @@ export function buildYerEtiketiHaritasi(
   return map;
 }
 
-function findYerEtiketiInHarita(token: string, harita: YerEtiketiHaritasi): string | null {
+/** `tesis_tipleri` satırlarından db_value → periyot_etiketi haritası */
+export function buildPeriyotEtiketiHaritasi(
+  rows: readonly { db_value: string; periyot_etiketi?: string | null }[],
+): PeriyotEtiketiHaritasi {
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    const dv = row.db_value?.trim();
+    const periyot = row.periyot_etiketi?.trim();
+    if (!dv || !periyot) continue;
+    map.set(dv, periyot);
+    map.set(normDbValue(dv), periyot);
+  }
+  return map;
+}
+
+function findEtiketInHarita(token: string, harita: ReadonlyMap<string, string>): string | null {
   const t = token.trim();
   if (!t || harita.size === 0) return null;
   const direct = harita.get(t);
@@ -117,6 +134,14 @@ function findYerEtiketiInHarita(token: string, harita: YerEtiketiHaritasi): stri
   return null;
 }
 
+function findYerEtiketiInHarita(token: string, harita: YerEtiketiHaritasi): string | null {
+  return findEtiketInHarita(token, harita);
+}
+
+function findPeriyotEtiketiInHarita(token: string, harita: PeriyotEtiketiHaritasi): string | null {
+  return findEtiketInHarita(token, harita);
+}
+
 /** Modül cache — tesis_tipleri (tüm satırlar) bir kez yüklenir */
 export async function ensureTesisTipleriYuklendi(client: SupabaseClient): Promise<YerEtiketiHaritasi> {
   if (yerEtiketiCache) return yerEtiketiCache;
@@ -125,19 +150,27 @@ export async function ensureTesisTipleriYuklendi(client: SupabaseClient): Promis
   yerEtiketiLoadPromise = (async () => {
     const { data, error } = await client
       .from("tesis_tipleri")
-      .select("db_value, yer_etiketi");
+      .select("db_value, yer_etiketi, periyot_etiketi");
 
     if (error) {
       console.error("[tesisTipleriDb] ensureTesisTipleriYuklendi", error);
       yerEtiketiCache = new Map();
+      periyotEtiketiCache = new Map();
       return yerEtiketiCache;
     }
 
     yerEtiketiCache = buildYerEtiketiHaritasi(data ?? []);
+    periyotEtiketiCache = buildPeriyotEtiketiHaritasi(data ?? []);
     return yerEtiketiCache;
   })();
 
   return yerEtiketiLoadPromise;
+}
+
+/** yer_etiketi cache ile aynı fetch — periyot_etiketi haritası */
+export async function ensurePeriyotEtiketiYuklendi(client: SupabaseClient): Promise<PeriyotEtiketiHaritasi> {
+  await ensureTesisTipleriYuklendi(client);
+  return periyotEtiketiCache ?? new Map();
 }
 
 /**
@@ -156,4 +189,21 @@ export function getSeatUnitLabelDinamik(
     }
   }
   return getSeatUnitLabel(kategori);
+}
+
+/**
+ * `tesisler.kategori` → popüler kart periyot rozeti (Günlük / Tur / Seans).
+ * İlk dolu periyot_etiketi; yoksa "" (rozet gizlenir).
+ */
+export function getPeriyotEtiketiDinamik(
+  kategori: unknown,
+  harita: PeriyotEtiketiHaritasi | null | undefined,
+): string {
+  if (!harita || harita.size === 0) return "";
+  const parts = normalizeKategoriList(kategori);
+  for (const p of parts) {
+    const label = findPeriyotEtiketiInHarita(p, harita);
+    if (label) return label;
+  }
+  return "";
 }
