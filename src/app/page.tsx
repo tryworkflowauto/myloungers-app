@@ -17,6 +17,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     filter_all: "Tümünü Gör", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
     cat_title: "Tesis Kategorileri", cat_subtitle: "İhtiyacınıza göre tesis türü seçin",
     popular_title: "En Çok Tercih Edilenler", popular_subtitle: "Misafirlerimizin en beğendiği tesisler",
+    popular_empty: "Henüz listelenecek tesis bulunamadı.", cat_empty: "Kategori bulunamadı.",
     card_btn: "Rezervasyon Yap", card_per_day: "/gün", view_all: "Tümünü gör",
     btn_login: "Giriş Yap", btn_signup: "Üye Ol",
     sfl_region: "Bölge", sfl_type: "Tesis Tipi", sfl_date: "Tarih", sfl_name: "Tesis Adı",
@@ -43,6 +44,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     filter_all: "View All", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
     cat_title: "Facility Categories", cat_subtitle: "Choose the facility type that suits your needs",
     popular_title: "Most Popular", popular_subtitle: "Our guests' most loved facilities",
+    popular_empty: "No facilities to show yet.", cat_empty: "No categories found.",
     card_btn: "Book Now", card_per_day: "/day", view_all: "View All",
     btn_login: "Log In", btn_signup: "Sign Up",
     sfl_region: "Region", sfl_type: "Facility Type", sfl_date: "Date", sfl_name: "Facility Name",
@@ -69,6 +71,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     filter_all: "Alle anzeigen", filter_hotel: "Hotel", filter_beach: "Beach Club", filter_aqua: "Aqua Park",
     cat_title: "Einrichtungskategorien", cat_subtitle: "Wählen Sie den Einrichtungstyp",
     popular_title: "Am beliebtesten", popular_subtitle: "Die beliebtesten Einrichtungen unserer Gäste",
+    popular_empty: "Noch keine Einrichtungen verfügbar.", cat_empty: "Keine Kategorien gefunden.",
     card_btn: "Jetzt buchen", card_per_day: "/Tag", view_all: "Alle anzeigen",
     btn_login: "Anmelden", btn_signup: "Registrieren",
     sfl_region: "Region", sfl_type: "Einrichtungstyp", sfl_date: "Datum", sfl_name: "Einrichtungsname",
@@ -94,6 +97,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     filter_all: "Все", filter_hotel: "Отель", filter_beach: "Пляжный клуб", filter_aqua: "Аквапарк",
     cat_title: "Категории объектов", cat_subtitle: "Выберите тип объекта",
     popular_title: "Самые популярные", popular_subtitle: "Самые любимые объекты наших гостей",
+    popular_empty: "Пока нет объектов для отображения.", cat_empty: "Категории не найдены.",
     card_btn: "Забронировать", card_per_day: "/день", view_all: "Все",
     btn_login: "Войти", btn_signup: "Регистрация",
     sfl_region: "Регион", sfl_type: "Тип объекта", sfl_date: "Дата", sfl_name: "Название",
@@ -160,6 +164,30 @@ function matchesHomeCategory(
   const tip = aktifTipler.find((t) => t.slug === activeCategory);
   if (!tip) return true;
   return tesisHasDbValue(kategoriRaw, tip.db_value);
+}
+
+const HOME_SKEL_COUNT = 4;
+
+function PopularCardSkeleton() {
+  return (
+    <div className="pc home-skel-pc" aria-hidden="true">
+      <div className="pw0 home-skel-shimmer" />
+      <div className="home-skel-line home-skel-line--lg" />
+      <div className="home-skel-line home-skel-line--sm" />
+      <div className="pf">
+        <span className="home-skel-pill" />
+        <span className="home-skel-pill" />
+      </div>
+    </div>
+  );
+}
+
+function CategoryCardSkeleton() {
+  return (
+    <div className="cat-card home-skel-cat" aria-hidden="true">
+      <div className="home-skel-shimmer home-skel-cat-fill" />
+    </div>
+  );
 }
 
 const ILLER: Record<string, string[]> = {
@@ -279,6 +307,8 @@ export default function Home() {
   const [radius, setRadius] = useState(5);
   const [tesisSlugMap, setTesisSlugMap] = useState<Record<string, TesisSlugInfo>>({});
   const [popularTesisler, setPopularTesisler] = useState<any[]>([]);
+  const [popularLoading, setPopularLoading] = useState(true);
+  const [aktifTiplerLoading, setAktifTiplerLoading] = useState(true);
   const [bizUser, setBizUser] = useState<{ name: string; tesisAd?: string } | null>(null);
   const [supabaseNavUser, setSupabaseNavUser] = useState<{ name: string; rol: string } | null>(null);
   const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
@@ -322,21 +352,27 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchAktifTipler() {
-      const { data, error } = await supabase
-        .from("tesis_tipleri")
-        .select("id, slug, ad, db_value, sira, ikon, gorsel")
-        .eq("aktif", true)
-        .order("sira", { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from("tesis_tipleri")
+          .select("id, slug, ad, db_value, sira, ikon, gorsel")
+          .eq("aktif", true)
+          .order("sira", { ascending: true });
 
-      if (error) {
-        console.error("[home] tesis_tipleri sorgu hatası:", error);
-        return;
+        if (error) {
+          console.error("[home] tesis_tipleri sorgu hatası:", error);
+          return;
+        }
+        if (!cancelled) setAktifTipler((data ?? []) as AktifTesisTipi[]);
+      } finally {
+        if (!cancelled) setAktifTiplerLoading(false);
       }
-      setAktifTipler((data ?? []) as AktifTesisTipi[]);
     }
 
     void fetchAktifTipler();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -467,15 +503,19 @@ export default function Home() {
   // Ana sayfa için en çok tercih edilen tesisleri Supabase'den çek
   useEffect(() => {
     async function fetchPopular() {
-      const { data } = await supabase
-        .from("tesisler")
-        .select("id, ad, slug, ilce, sehir, puan, fotograflar, kategori")
-        .eq("aktif", true)
-        .order("puan", { ascending: false })
-        .limit(120);
-      if (data) setPopularTesisler(data);
+      try {
+        const { data } = await supabase
+          .from("tesisler")
+          .select("id, ad, slug, ilce, sehir, puan, fotograflar, kategori")
+          .eq("aktif", true)
+          .order("puan", { ascending: false })
+          .limit(120);
+        if (data) setPopularTesisler(data);
+      } finally {
+        setPopularLoading(false);
+      }
     }
-    fetchPopular();
+    void fetchPopular();
   }, []);
 
   useEffect(() => {
@@ -730,6 +770,45 @@ export default function Home() {
 
   return (
     <div className="home-page">
+      <style>{`
+        @keyframes homeSkelShimmer {
+          0% { opacity: 1; }
+          50% { opacity: 0.55; }
+          100% { opacity: 1; }
+        }
+        .home-skel-shimmer {
+          background: #E8ECF0;
+          animation: homeSkelShimmer 1.4s ease-in-out infinite;
+        }
+        .home-skel-pc .pw0.home-skel-shimmer { display: block; width: 100%; height: 100%; min-height: 0; }
+        .home-skel-line {
+          height: 12px;
+          border-radius: 6px;
+          margin-bottom: 8px;
+          background: #E8ECF0;
+          animation: homeSkelShimmer 1.4s ease-in-out infinite;
+        }
+        .home-skel-line--lg { width: 72%; height: 14px; }
+        .home-skel-line--sm { width: 48%; margin-bottom: 10px; }
+        .home-skel-pill {
+          display: inline-block;
+          width: 52px;
+          height: 22px;
+          border-radius: 50px;
+          background: #EEF1F5;
+          animation: homeSkelShimmer 1.4s ease-in-out infinite;
+        }
+        .home-skel-cat { cursor: default; pointer-events: none; }
+        .home-skel-cat-fill { width: 100%; height: 100%; border-radius: inherit; }
+        .home-sec-empty {
+          grid-column: 1 / -1;
+          padding: 28px 16px;
+          text-align: center;
+          font-size: 0.88rem;
+          color: #94A3B8;
+          font-weight: 600;
+        }
+      `}</style>
       {/* NAV */}
       <nav className="nav">
         <div className="nav-in">
@@ -1333,7 +1412,13 @@ export default function Home() {
 <h2 className="sec-h" id="cat-title">{t.cat_title}</h2>
         <button type="button" className="sec-a" id="cat-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
-        {aktifTipler.length > 0 && (
+        {aktifTiplerLoading ? (
+        <div className="cat-grid">
+          {Array.from({ length: HOME_SKEL_COUNT }, (_, i) => (
+            <CategoryCardSkeleton key={`cat-skel-${i}`} />
+          ))}
+        </div>
+        ) : aktifTipler.length > 0 ? (
         <div className="cat-grid">
           {aktifTipler.map((tip) => (
             <div
@@ -1366,6 +1451,8 @@ export default function Home() {
             </div>
           ))}
         </div>
+        ) : (
+        <div className="home-sec-empty">{t.cat_empty}</div>
         )}
       </section>
 
@@ -1376,20 +1463,27 @@ export default function Home() {
           <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="pgrid" id="tesisGrid">
-          {popularGridTesisler.map((t) => {
-            const name = t.ad as string;
-            const ilce = (t.ilce as string) || "";
-            const sehir = (t.sehir as string) || "";
-            const puan = typeof t.puan === "number" ? t.puan : null;
+          {popularLoading ? (
+            Array.from({ length: HOME_SKEL_COUNT }, (_, i) => (
+              <PopularCardSkeleton key={`pop-skel-${i}`} />
+            ))
+          ) : popularGridTesisler.length === 0 ? (
+            <div className="home-sec-empty">{t.popular_empty}</div>
+          ) : (
+          popularGridTesisler.map((tesisRow) => {
+            const name = tesisRow.ad as string;
+            const ilce = (tesisRow.ilce as string) || "";
+            const sehir = (tesisRow.sehir as string) || "";
+            const puan = typeof tesisRow.puan === "number" ? tesisRow.puan : null;
 
             // Fotoğraf: fotograflar kolonunun ilk elemanı
-            const fotos = (t as any).fotograflar;
+            const fotos = (tesisRow as any).fotograflar;
             const imageSrc =
               Array.isArray(fotos) && fotos.length > 0 && fotos[0]?.src
                 ? (fotos[0].src as string)
                 : "/logo.png";
 
-            const slugValue = (t.slug && String(t.slug).trim()) || String(t.id);
+            const slugValue = (tesisRow.slug && String(tesisRow.slug).trim()) || String(tesisRow.id);
 
             const cardContent = (
               <>
@@ -1414,7 +1508,7 @@ export default function Home() {
 
             return (
               <Link
-                key={t.id}
+                key={tesisRow.id}
                 href={`/tesis/${encodeURIComponent(slugValue)}`}
                 className="pc pc-link"
                 data-type="hotel"
@@ -1422,7 +1516,8 @@ export default function Home() {
                 {cardContent}
               </Link>
             );
-          })}
+          })
+          )}
         </div>
       </section>
 
