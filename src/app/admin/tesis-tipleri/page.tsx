@@ -189,7 +189,8 @@ export default function AdminTesisTipleriPage() {
     gorsel: null as string | null,
   });
   const [draftlar, setDraftlar] = useState<Record<string, EditDraft>>({});
-  const yeniFormRef = useRef<HTMLFormElement>(null);
+  const yeniRef = useRef(yeni);
+  yeniRef.current = yeni;
 
   const siraliListe = [...liste].sort((a, b) => a.sira - b.sira);
 
@@ -302,33 +303,22 @@ export default function AdminTesisTipleriPage() {
     }
   }
 
-  function readYeniAlanlari(form: HTMLFormElement | null) {
-    const fd = form ? new FormData(form) : null;
-    const fromFd = (name: string, fallback: string) => {
-      if (!fd) return fallback;
-      const v = fd.get(name);
-      return v == null ? fallback : String(v);
-    };
-    const slug = fromFd("yeni_slug", yeni.slug).trim();
-    const ad = fromFd("yeni_ad", yeni.ad).trim();
-    const dbRaw = fromFd("yeni_db_value", yeni.db_value).trim();
-    const db_value = dbRaw.toUpperCase().replace(/\s+/g, " ");
-    const yer_etiketi = fromFd("yeni_yer_etiketi", yeni.yer_etiketi).trim();
-    const siraStr = fromFd("yeni_sira", yeni.sira).trim();
-    const ikon = fromFd("yeni_ikon", yeni.ikon).trim();
-    return { slug, ad, db_value, yer_etiketi, siraStr, ikon, gorsel: yeni.gorsel };
-  }
+  async function yeniEkle() {
+    const kaynak = yeniRef.current;
+    const slug = kaynak.slug.trim();
+    const ad = kaynak.ad.trim();
+    const db_value = kaynak.db_value.trim().toUpperCase().replace(/\s+/g, " ");
+    const yer_etiketi = kaynak.yer_etiketi.trim();
+    const ikon = kaynak.ikon.trim();
+    const gorsel = kaynak.gorsel;
 
-  async function yeniEkleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const { slug, ad, db_value, yer_etiketi, siraStr, ikon, gorsel } = readYeniAlanlari(form);
+    console.log("[tesis-tipleri/yeniEkle]", { slug, ad, db_value });
 
     if (!slug || !ad || !db_value) {
       showToast("slug, ad ve db_value zorunlu", RED);
       return;
     }
-    const siraNum = Number(siraStr);
+    const siraNum = Number(kaynak.sira);
     const sira = Number.isFinite(siraNum) ? Math.floor(siraNum) : 0;
 
     setYeniKayit(true);
@@ -352,7 +342,6 @@ export default function AdminTesisTipleriPage() {
       return;
     }
     showToast("✓ Yeni tip eklendi", GREEN);
-    form.reset();
     setYeni(bosYeni());
     await yukle();
   }
@@ -422,17 +411,12 @@ export default function AdminTesisTipleriPage() {
         }}
       >
         <div style={{ fontSize: 13, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Yeni tip ekle</div>
-        <form
-          ref={yeniFormRef}
-          autoComplete="off"
-          onSubmit={(e) => void yeniEkleSubmit(e)}
-        >
+        <div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, alignItems: "end" }}>
             <div>
               <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>slug</label>
               <input
                 type="text"
-                name="yeni_slug"
                 value={yeni.slug}
                 onChange={(e) => setYeni((p) => ({ ...p, slug: e.target.value }))}
                 placeholder="ornek-tip"
@@ -443,7 +427,6 @@ export default function AdminTesisTipleriPage() {
               <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>ad</label>
               <input
                 type="text"
-                name="yeni_ad"
                 value={yeni.ad}
                 onChange={(e) => setYeni((p) => ({ ...p, ad: e.target.value }))}
                 placeholder="Görünen ad"
@@ -454,7 +437,6 @@ export default function AdminTesisTipleriPage() {
               <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>db_value</label>
               <input
                 type="text"
-                name="yeni_db_value"
                 value={yeni.db_value}
                 onChange={(e) => setYeni((p) => ({ ...p, db_value: e.target.value }))}
                 placeholder="BEACH CLUB"
@@ -465,7 +447,6 @@ export default function AdminTesisTipleriPage() {
               <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>yer_etiketi</label>
               <input
                 type="text"
-                name="yeni_yer_etiketi"
                 value={yeni.yer_etiketi}
                 onChange={(e) => setYeni((p) => ({ ...p, yer_etiketi: e.target.value }))}
                 placeholder="Şezlong (boş=Yer)"
@@ -477,14 +458,14 @@ export default function AdminTesisTipleriPage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <input
                   type="number"
-                  name="yeni_sira"
                   value={yeni.sira}
                   onChange={(e) => setYeni((p) => ({ ...p, sira: e.target.value }))}
                   style={{ ...inputStyle, width: 70 }}
                 />
                 <button
-                  type="submit"
+                  type="button"
                   disabled={yeniKayit}
+                  onClick={() => void yeniEkle()}
                   style={{
                     flex: 1,
                     padding: "8px 12px",
@@ -508,7 +489,6 @@ export default function AdminTesisTipleriPage() {
               <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>ikon</label>
               <input
                 type="text"
-                name="yeni_ikon"
                 value={yeni.ikon}
                 onChange={(e) => setYeni((p) => ({ ...p, ikon: e.target.value }))}
                 placeholder="🏖️"
@@ -527,7 +507,7 @@ export default function AdminTesisTipleriPage() {
               <p style={{ fontSize: 10, color: GRAY400, margin: "4px 0 0" }}>Maks. 2MB • PNG, JPG</p>
             </div>
           </div>
-        </form>
+        </div>
       </div>
 
       <div style={{ background: "white", border: `1px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden" }}>
