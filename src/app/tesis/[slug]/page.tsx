@@ -835,6 +835,15 @@ export default function TesisDetailPage() {
       kullanilacakSzls = selSzls;
     }
 
+    const { data: authRez } = await supabase.auth.getUser();
+    if (!authRez?.user) {
+      const slugStr = slug ? String(slug) : "";
+      const tesisPath = slugStr ? `/tesis/${encodeURIComponent(slugStr)}` : "/";
+      router.push(`/giris?redirect=${encodeURIComponent(tesisPath)}`);
+      return;
+    }
+    const kullaniciId = authRez.user.id;
+
     resInFlightRef.current = true;
     setResLoading(true);
     function padZ(n: number) { return String(n).padStart(2, "0"); }
@@ -846,8 +855,6 @@ export default function TesisDetailPage() {
     const sezlonglar = kullanilacakSzls.map(s => s.no).join(",");
     const toplamFiyat = kullanilacakSzls.reduce((a, s) => a + s.price * Math.max(gunSayisi, 1), 0);
 
-    const { data: authRez } = await supabase.auth.getUser();
-    const kullaniciId = authRez?.user?.id ?? null;
     const tesisIdForSez = row?.id as string | undefined;
     // Tüm satırlar aynı tutma süresini paylaşır (tek ödeme akışı)
     const rezerveliKadar = new Date(Date.now() + 10 * 60 * 1000).toISOString();

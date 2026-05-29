@@ -122,6 +122,7 @@ function OdemeContent() {
   const paymentInFlightRef = useRef(false);
   const [paymentError, setPaymentError] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [authAllowed, setAuthAllowed] = useState<boolean | null>(null);
   const [loginError, setLoginError] = useState(false);
   const [cardDate, setCardDate] = useState("");
   const [tesisCover, setTesisCover] = useState("/logo.png");
@@ -149,10 +150,19 @@ function OdemeContent() {
   useEffect(() => {
     async function checkUser() {
       const { data } = await supabase.auth.getUser();
-      setUser(data?.user ?? null);
+      const u = data?.user ?? null;
+      setUser(u);
+      if (!u) {
+        const qs = searchParams.toString();
+        const dest = qs ? `/odeme?${qs}` : "/odeme";
+        router.replace(`/giris?redirect=${encodeURIComponent(dest)}`);
+        setAuthAllowed(false);
+        return;
+      }
+      setAuthAllowed(true);
     }
     checkUser();
-  }, []);
+  }, [searchParams, router]);
 
   useEffect(() => {
     const tarihBaslangic = searchParams.get('tarihBaslangic') || '';
@@ -392,7 +402,9 @@ function OdemeContent() {
     if (!validate()) return;
     if (!user) {
       setLoginError(true);
-      setTimeout(() => router.push("/giris"), 1000);
+      const qs = searchParams.toString();
+      const dest = qs ? `/odeme?${qs}` : "/odeme";
+      setTimeout(() => router.push(`/giris?redirect=${encodeURIComponent(dest)}`), 1000);
       return;
     }
     setLoginError(false);
@@ -464,6 +476,8 @@ function OdemeContent() {
       setPaymentError(true);
     }
   }
+
+  if (authAllowed !== true) return null;
 
   return (
     <>

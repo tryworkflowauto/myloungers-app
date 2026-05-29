@@ -17,6 +17,22 @@ function getRedirectPath(rol: string | undefined | null): string {
   return "/profil";
 }
 
+function isSafeRedirectPath(path: string): boolean {
+  return path.startsWith("/") && !path.startsWith("//");
+}
+
+function postLoginPath(rol: string | undefined | null, redirectParam: string | null): string {
+  if (redirectParam && isSafeRedirectPath(redirectParam)) return redirectParam;
+  if (typeof window !== "undefined") {
+    const stored = sessionStorage.getItem("myloungers_login_redirect");
+    if (stored && isSafeRedirectPath(stored)) {
+      sessionStorage.removeItem("myloungers_login_redirect");
+      return stored;
+    }
+  }
+  return getRedirectPath(rol);
+}
+
 function GirisContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -25,6 +41,7 @@ function GirisContent() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
   const tabParam = searchParams.get("tab");
+  const redirectParam = searchParams.get("redirect");
   const [pane, setPane] = useState<1 | 4 | 5>(1);
   const [tab, setTab] = useState<"login" | "register">("login");
   const [showPass, setShowPass] = useState(false);
@@ -65,15 +82,18 @@ function GirisContent() {
           });
         }
         const { data: kullanici } = await supabase.from("kullanicilar").select("rol").eq("email", session.user.email).single();
-        window.location.href = getRedirectPath((kullanici as any)?.rol);
+        window.location.href = postLoginPath((kullanici as any)?.rol, redirectParam);
       }
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [redirectParam]);
 
   async function handleGoogleLogin() {
     setErrorMsg(null);
     setLoading(true);
+    if (redirectParam && isSafeRedirectPath(redirectParam)) {
+      sessionStorage.setItem("myloungers_login_redirect", redirectParam);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -105,7 +125,7 @@ function GirisContent() {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData?.user) {
         console.log("Supabase auth hatası veya kullanıcı yok:", authError);
-        router.push("/profil");
+        router.push(postLoginPath(null, redirectParam));
         return;
       }
 
@@ -115,7 +135,7 @@ function GirisContent() {
         .eq('email', authData.user.email)
         .single();
 
-      router.push(getRedirectPath((kullanici as any)?.rol));
+      router.push(postLoginPath((kullanici as any)?.rol, redirectParam));
     }
   }
 
@@ -157,7 +177,7 @@ function GirisContent() {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError || !authData?.user) {
         console.log("Supabase auth hatası veya kullanıcı yok (register sonrası):", authError);
-        router.push("/profil");
+        router.push(postLoginPath(null, redirectParam));
         return;
       }
 
@@ -167,7 +187,7 @@ function GirisContent() {
         .eq('email', authData.user.email)
         .single();
 
-      router.push(getRedirectPath((kullanici as any)?.rol));
+      router.push(postLoginPath((kullanici as any)?.rol, redirectParam));
     } catch (e) {
       console.error("Register error:", e);
       setErrorMsg("Sunucu hatası. Lütfen tekrar deneyin.");
