@@ -149,6 +149,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       showToast("Lütfen tesis türünü seçin.", RED);
       return;
     }
+    if (sifre.trim().length < 8) {
+      showToast("Şifre en az 8 karakter olmalıdır.", RED);
+      return;
+    }
     const { sehir, ilce } = splitSehirIlce(modalSehirIlce);
     const komisyonOrani =
       modalKomisyonTipi === "yuzde" ? komisyonSecToNumber(komisyonSec, ozelKomisyon) : null;

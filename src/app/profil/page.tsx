@@ -8,7 +8,26 @@ import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { SIPARIS_DURUM } from "@/lib/constants";
 import { getOdemeModu } from "@/lib/odemeModlari";
+import { normalizeKategoriList } from "@/lib/tesisKategori";
+import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
 import CallWaiterModal from "@/components/CallWaiterModal";
+
+/** tesisler.kategori → kart etiketi (Spa, Beach Club, Tekne Turu vb.) */
+function profilTesisKategoriLabel(kategori: unknown): string {
+  const parts = normalizeKategoriList(kategori);
+  const tokens = parts.length > 0 ? parts : kategori != null ? [kategori] : [];
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  for (const tok of tokens) {
+    if (tok == null) continue;
+    const id = normalizeToCanonical(tok);
+    const label = id ? getLabel(id) : String(tok).trim();
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    labels.push(label);
+  }
+  return labels.length > 0 ? labels.join(", ") : "—";
+}
 
 type Reservation = {
   id: number;
@@ -352,6 +371,7 @@ export default function ProfilPage() {
             calisma_saatleri?: any;
             odeme_modu?: string | null;
             hizmet_secimli?: boolean;
+            kategori?: unknown;
           }
         > = {};
 
@@ -359,7 +379,7 @@ export default function ProfilPage() {
           const { data: tesisData, error: tesisError } = await supabase
             .from("tesisler")
             .select(
-              "id, ad, sehir, ilce, slug, iptal_saat_oncesi, calisma_saatleri, odeme_modu, hizmet_secimli",
+              "id, ad, sehir, ilce, slug, iptal_saat_oncesi, calisma_saatleri, odeme_modu, hizmet_secimli, kategori",
             )
             .in("id", tesisIds);
 
@@ -376,6 +396,7 @@ export default function ProfilPage() {
                 calisma_saatleri: t.calisma_saatleri ?? undefined,
                 odeme_modu: typeof t.odeme_modu === "string" && t.odeme_modu.trim() !== "" ? t.odeme_modu.trim() : null,
                 hizmet_secimli: t.hizmet_secimli === true,
+                kategori: t.kategori ?? null,
               };
             });
           }
@@ -574,7 +595,7 @@ export default function ProfilPage() {
             tesisId: r.tesis_id == null ? undefined : String(r.tesis_id),
             sezlongId: Array.isArray(r.sezlong_ids) && r.sezlong_ids.length > 0 ? String(r.sezlong_ids[0]) : undefined,
             name: tesisInfo?.ad || `Tesis #${r.tesis_id ?? ""}`,
-            cat: "Beach Club",
+            cat: tesisInfo ? profilTesisKategoriLabel(tesisInfo.kategori) : "—",
             loc: tesisInfo?.loc || "-",
             code: codeStr,
             dates,
