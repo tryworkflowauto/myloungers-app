@@ -55,6 +55,26 @@ const TIP_QUERY_TO_TAB: Record<string, AramaTabKey> = {
   spa: "Spa",
 };
 
+const SORT_MESAFE = "📍 Mesafeye Göre";
+
+function parseTesisCoord(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** İki nokta arası mesafe (km) — Haversine */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 type Card = {
   id: string;
   name: string;
@@ -68,6 +88,10 @@ type Card = {
   rev: number | null;
   loc: string;
   dist: string;
+  enlem: number | null;
+  boylam: number | null;
+  /** km; yalnızca GPS modunda dolu */
+  distanceKm: number | null;
   feats: string[];
   price: number | null;
   avail: string;
@@ -119,6 +143,8 @@ function AramaContent() {
   const [priceMax, setPriceMax] = useState(5000);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [loading, setLoading] = useState(true);
   const [siteLang, setSiteLang] = useState<SiteLang>(() =>
     typeof window !== "undefined" ? readSiteLangFromStorage() : "tr"
@@ -172,6 +198,9 @@ function AramaContent() {
               rev,
               loc,
               dist: "",
+              enlem: parseTesisCoord(t.enlem),
+              boylam: parseTesisCoord(t.boylam),
+              distanceKm: null,
               feats: [],
               price,
               avail: aktif === false ? "full" : "ok",
@@ -236,10 +265,15 @@ function AramaContent() {
     const tip = searchParams.get("tip");
     const tarih = searchParams.get("tarih");
     const gps = searchParams.get("gps");
+    const kmParam = searchParams.get("km");
 
     if (gps === "1") {
       setGpsOn(true);
-      setActiveTags(["📍 GPS Konumu"]);
+      setSortVal(SORT_MESAFE);
+      if (kmParam) {
+        const kmNum = Number.parseInt(kmParam, 10);
+        if (Number.isFinite(kmNum) && kmNum >= 1 && kmNum <= 50) setKm(kmNum);
+      }
     } else if (konum) {
       setLocInput(konum);
       setActiveTags([`📍 ${konum}`]);
@@ -255,10 +289,49 @@ function AramaContent() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (searchParams.get("gps") !== "1") {
+      setGpsStatus("idle");
+      setUserCoords(null);
+      return;
+    }
+
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGpsStatus("error");
+      setUserCoords(null);
+      setActiveTags(["📍 Konum alınamadı"]);
+      return;
+    }
+
+    let cancelled = false;
+    setGpsStatus("loading");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsStatus("ready");
+        setActiveTags(["📍 GPS Konumu"]);
+      },
+      () => {
+        if (cancelled) return;
+        setGpsStatus("error");
+        setUserCoords(null);
+        setActiveTags(["📍 Konum alınamadı"]);
+      },
+      { timeout: 10000, enableHighAccuracy: false },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
+
   const handleAraClick = useCallback(() => {
     const params = new URLSearchParams();
     if (gpsOn) {
       params.set("gps", "1");
+      params.set("km", String(km));
     } else if (locInput.trim()) {
       params.set("konum", locInput.trim());
     }
@@ -266,7 +339,7 @@ function AramaContent() {
     if (dateVal) params.set("tarih", dateVal);
     const qs = params.toString();
     router.push(qs ? `/arama?${qs}` : "/arama");
-  }, [gpsOn, locInput, typeVal, dateVal, router]);
+  }, [gpsOn, locInput, typeVal, dateVal, km, router]);
 
   function toggleGPS() {
     setGpsOn(!gpsOn);
@@ -278,15 +351,48 @@ function AramaContent() {
     setFavs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
-  function getFilteredCards(): Card[] {
-    let result = cards.filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw));
-    result = result.filter((c) => c.price == null || c.price <= priceMax);
-    return result;
-  }
+  const gpsMode = searchParams.get("gps") === "1";
 
-  const filtered = cards
-    .filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw))
-    .filter((c) => c.price == null || c.price <= priceMax);
+  const cardsForList = useMemo(() => {
+    if (!gpsMode || gpsStatus !== "ready" || !userCoords) {
+      return cards;
+    }
+    return cards.map((c) => {
+      if (c.enlem == null || c.boylam == null) {
+        return { ...c, dist: "", distanceKm: null };
+      }
+      const distanceKm = haversineKm(userCoords.lat, userCoords.lng, c.enlem, c.boylam);
+      return {
+        ...c,
+        distanceKm,
+        dist: distanceKm.toFixed(1),
+      };
+    });
+  }, [cards, gpsMode, gpsStatus, userCoords]);
+
+  const filtered = useMemo(() => {
+    let list = cardsForList
+      .filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw))
+      .filter((c) => c.price == null || c.price <= priceMax);
+
+    if (gpsMode && gpsStatus === "ready" && userCoords) {
+      const radiusKm = Math.max(1, Math.min(50, km));
+      list = list.filter((c) => c.distanceKm == null || c.distanceKm <= radiusKm);
+    }
+
+    if (sortVal === SORT_MESAFE && gpsMode && gpsStatus === "ready" && userCoords) {
+      list = [...list].sort((a, b) => {
+        const da = a.distanceKm;
+        const db = b.distanceKm;
+        if (da == null && db == null) return 0;
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return da - db;
+      });
+    }
+
+    return list;
+  }, [cardsForList, activeTab, priceMax, gpsMode, gpsStatus, userCoords, km, sortVal]);
 
   const tabCounts = useMemo(() => {
     const empty = {
@@ -438,7 +544,7 @@ function AramaContent() {
             {filterBadge > 0 && <div className="filter-badge">{filterBadge}</div>}
           </button>
           <select className="sort-sel" value={sortVal} onChange={e => setSortVal(e.target.value)}>
-            {["📌 Önerilen","⭐ Puana Göre","💰 Fiyat: Düşük → Yüksek","💰 Fiyat: Yüksek → Düşük","📍 Mesafeye Göre","💬 Yorum Sayısı"].map(s => <option key={s}>{s}</option>)}
+            {["📌 Önerilen","⭐ Puana Göre","💰 Fiyat: Düşük → Yüksek","💰 Fiyat: Yüksek → Düşük",SORT_MESAFE,"💬 Yorum Sayısı"].map(s => <option key={s}>{s}</option>)}
           </select>
           <div className="view-btns">
             <button className={`vbtn${viewMode==="list"?" on":""}`} onClick={() => setViewMode("list")}>
