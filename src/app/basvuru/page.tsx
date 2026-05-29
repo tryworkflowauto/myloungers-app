@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
-import { getAllFacilityTypes } from "@/lib/tesisFacilityTypes";
+import { supabase } from "@/lib/supabase";
+import { fetchAktifTesisTipleri, type TesisTipiCatalogRow } from "@/lib/tesisTipleriDb";
 import "./basvuru.css";
 
 const ILLER = ["Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin", "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars", "Kastamonu", "Kayseri", "Kilis", "Kırıkkale", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Şırnak", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"];
@@ -34,9 +35,10 @@ export default function BasvuruPage() {
   const [isletmeAdi, setIsletmeAdi] = useState("");
   const [sehir, setSehir] = useState("");
   const [ilce, setIlce] = useState("");
-  const [tesisTipi, setTesisTipi] = useState("beach");
+  const [tesisTipi, setTesisTipi] = useState("");
   const [kapasite, setKapasite] = useState(50);
   const [tamAdres, setTamAdres] = useState("");
+  const [aktifTesisTipleri, setAktifTesisTipleri] = useState<TesisTipiCatalogRow[]>([]);
 
   // Step 2
   const [sezon, setSezon] = useState("");
@@ -52,6 +54,10 @@ export default function BasvuruPage() {
   const [uygunSaat, setUygunSaat] = useState("");
   const [gizlilikKabul, setGizlilikKabul] = useState(false);
   const [legalFoot, setLegalFoot] = useState<"" | "?lang=en">("");
+
+  useEffect(() => {
+    void fetchAktifTesisTipleri(supabase).then(setAktifTesisTipleri);
+  }, []);
 
   useEffect(() => {
     const sync = () => setLegalFoot(footerLegalQueryFromLang(readSiteLangFromStorage()));
@@ -194,14 +200,14 @@ export default function BasvuruPage() {
                     <div className="bav-fgrp">
                       <label>Tesis Tipi</label>
                       <div className="bav-type-pills">
-                        {getAllFacilityTypes().map((pill) => (
+                        {aktifTesisTipleri.map((pill) => (
                           <button
-                            key={pill.id}
+                            key={pill.slug}
                             type="button"
-                            className={`bav-type-pill ${tesisTipi === pill.id ? "sel" : ""}`}
-                            onClick={() => setTesisTipi(pill.id)}
+                            className={`bav-type-pill ${tesisTipi === pill.slug ? "sel" : ""}`}
+                            onClick={() => setTesisTipi(pill.slug)}
                           >
-                            {pill.emoji} {pill.label}
+                            {pill.ikon?.trim() ? `${pill.ikon.trim()} ` : ""}{pill.ad}
                           </button>
                         ))}
                       </div>

@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getAllFacilityTypes, normalizeToCanonical, getFacilityType } from "@/lib/tesisFacilityTypes";
+import { fetchAktifTesisTipleri, type TesisTipiCatalogRow } from "@/lib/tesisTipleriDb";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
+import { normalizeToCanonical, getFacilityType } from "@/lib/tesisFacilityTypes";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -99,6 +100,7 @@ export default function IsletmeTesisPage() {
   const [mapsLink, setMapsLink]         = useState("");
   const [aciklama, setAciklama]         = useState("");
   const [kategoriler, setKategoriler]   = useState<string[]>([]);
+  const [aktifTesisTipleri, setAktifTesisTipleri] = useState<TesisTipiCatalogRow[]>([]);
   const [iletisimNumarasi, setIletisimNumarasi] = useState("");
   const [tesisId, setTesisId]           = useState<string | null>(null);
 
@@ -153,6 +155,10 @@ export default function IsletmeTesisPage() {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [router]);
+
+  useEffect(() => {
+    void fetchAktifTesisTipleri(supabase).then(setAktifTesisTipleri);
+  }, []);
 
   // Load tesis from Supabase (current user's tesis_id)
   useEffect(() => {
@@ -604,34 +610,36 @@ export default function IsletmeTesisPage() {
           <div style={{ marginTop: 8 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tesis Kategorisi</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {getAllFacilityTypes().map((ft) => (
+              {aktifTesisTipleri.map((tip) => (
                 <label
-                  key={ft.id}
+                  key={tip.slug}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                     padding: "8px 14px",
-                    border: `1.5px solid ${kategoriler.includes(ft.dbValue) ? TEAL : GRAY200}`,
+                    border: `1.5px solid ${kategoriler.includes(tip.db_value) ? TEAL : GRAY200}`,
                     borderRadius: 20,
                     cursor: "pointer",
-                    background: kategoriler.includes(ft.dbValue) ? "#F0FFFE" : "transparent",
+                    background: kategoriler.includes(tip.db_value) ? "#F0FFFE" : "transparent",
                     fontSize: 12,
                     fontWeight: 600,
-                    color: kategoriler.includes(ft.dbValue) ? NAVY : GRAY600,
+                    color: kategoriler.includes(tip.db_value) ? NAVY : GRAY600,
                   }}
                 >
                   <input
                     type="checkbox"
-                    checked={kategoriler.includes(ft.dbValue)}
+                    checked={kategoriler.includes(tip.db_value)}
                     onChange={() => {
                       setKategoriler((prev) =>
-                        prev.includes(ft.dbValue) ? prev.filter((x) => x !== ft.dbValue) : [...prev, ft.dbValue]
+                        prev.includes(tip.db_value)
+                          ? prev.filter((x) => x !== tip.db_value)
+                          : [...prev, tip.db_value]
                       );
                     }}
                     style={{ accentColor: TEAL }}
                   />{" "}
-                  {ft.emoji} {ft.label}
+                  {tip.ikon?.trim() ? `${tip.ikon.trim()} ` : ""}{tip.ad}
                 </label>
               ))}
             </div>

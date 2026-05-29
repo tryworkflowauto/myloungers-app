@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { normalizeKategoriList } from "@/lib/tesisKategori";
-import { getFacilityType, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
+import { fetchAktifTesisTipleri, kategoriInputToDbValues } from "@/lib/tesisTipleriDb";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,34 +18,13 @@ type BasvuruPayload = {
   isletme_adi: string;
   sehir: string;
   ilce: string | null;
-  /** Canonical facility id (örn. beach) veya çoklu tip için dizi / JSON dizi metni */
+  /** slug, db_value veya legacy canonical id */
   tesis_tipi: string | string[];
   tam_adres: string | null;
   ad_soyad: string;
   telefon: string;
   email: string | null;
 };
-
-/** Başvurudaki tesis tipi alanını `tesisler.kategori` ile uyumlu dbValue[] dizisine çevirir (ReklamoTV tarzı büyük harf token’lar). */
-function basvuruTesisTipiToKategoriDizi(tesis_tipi: unknown): string[] {
-  const parts = normalizeKategoriList(tesis_tipi);
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const p of parts) {
-    const id = normalizeToCanonical(p);
-    if (!id) continue;
-    const dv = getFacilityType(id).dbValue;
-    if (!seen.has(dv)) {
-      seen.add(dv);
-      out.push(dv);
-    }
-  }
-  if (out.length === 0) {
-    const id = normalizeToCanonical(tesis_tipi);
-    if (id) out.push(getFacilityType(id).dbValue);
-  }
-  return out;
-}
 
 export async function POST(req: Request) {
   try {
@@ -66,7 +44,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Başvuru güncellenemedi" }, { status: 500 });
     }
 
-    const kategoriDizi = basvuruTesisTipiToKategoriDizi(b.tesis_tipi);
+    const catalog = await fetchAktifTesisTipleri(supabaseAdmin);
+    const kategoriDizi = kategoriInputToDbValues(b.tesis_tipi, catalog);
     if (kategoriDizi.length === 0) {
       return NextResponse.json({ error: "Geçersiz veya tanınmayan tesis tipi" }, { status: 400 });
     }

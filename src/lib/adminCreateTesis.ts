@@ -6,13 +6,12 @@
  */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { normalizeKategoriList } from "@/lib/tesisKategori";
-import { getFacilityType, normalizeToCanonical, type FacilityTypeId } from "@/lib/tesisFacilityTypes";
+import { fetchAktifTesisTipleri, kategoriInputToDbValues } from "@/lib/tesisTipleriDb";
 import { getOdemeModu, getKomisyonTipi, DEFAULT_ODEME_MODU, DEFAULT_KOMISYON_TIPI } from "./odemeModlari";
 
 export type CreateTesisWithOwnerInput = {
   isletmeAdi: string;
-  /** Canonical facility id(ler): 'tekne' | ['beach','hotel'] | JSON string vb. */
+  /** Canonical facility id, slug veya db_value */
   kategoriler: unknown;
   sehir: string;
   ilce: string | null;
@@ -38,25 +37,15 @@ export type CreateTesisWithOwnerResult = {
   error?: string;
 };
 
-/** onayla API ile aynı kategori dizisi mantığı */
-function kategoriInputToDbValues(input: unknown): string[] {
-  const parts = normalizeKategoriList(input);
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const p of parts) {
-    const id = normalizeToCanonical(p) as FacilityTypeId | null;
-    if (!id) continue;
-    const dv = getFacilityType(id).dbValue;
-    if (!seen.has(dv)) {
-      seen.add(dv);
-      out.push(dv);
-    }
-  }
-  if (out.length === 0) {
-    const id = normalizeToCanonical(input) as FacilityTypeId | null;
-    if (id) out.push(getFacilityType(id).dbValue);
-  }
-  return out;
+/** onayla API ile aynı kategori dizisi mantığı — tesis_tipleri + legacy fallback */
+export { kategoriInputToDbValues } from "@/lib/tesisTipleriDb";
+
+async function resolveKategoriDbValues(
+  admin: SupabaseClient,
+  input: unknown,
+): Promise<string[]> {
+  const catalog = await fetchAktifTesisTipleri(admin);
+  return kategoriInputToDbValues(input, catalog);
 }
 
 const TR_SLUG_CHARS: Record<string, string> = {
@@ -174,7 +163,7 @@ export async function createTesisWithOwner(
 
   let kategoriDizi: string[];
   try {
-    kategoriDizi = kategoriInputToDbValues(input.kategoriler);
+    kategoriDizi = await resolveKategoriDbValues(admin, input.kategoriler);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { success: false, error: `Kategori işlenemedi: ${msg}` };

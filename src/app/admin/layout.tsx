@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminToastProvider } from "./AdminToastContext";
 import { supabase } from "@/lib/supabase";
-import { getAllFacilityTypes } from "@/lib/tesisFacilityTypes";
+import { fetchAktifTesisTipleri, type TesisTipiCatalogRow } from "@/lib/tesisTipleriDb";
 import { ODEME_MODLARI, KOMISYON_TIPLERI } from "@/lib/odemeModlari";
 
 // CSV export helper (komisyon summary)
@@ -122,6 +122,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [modalIslemBedeli, setModalIslemBedeli] = useState<string>("");
   const [modalAbonelik, setModalAbonelik] = useState<string>(ABONELIK_OPTS[0]);
   const [modalTesisSubmitting, setModalTesisSubmitting] = useState(false);
+  const [aktifTesisTipleri, setAktifTesisTipleri] = useState<TesisTipiCatalogRow[]>([]);
+
+  useEffect(() => {
+    void fetchAktifTesisTipleri(supabase).then(setAktifTesisTipleri);
+  }, []);
 
   const resetTesisModalForm = useCallback(() => {
     setKomisyonSec("%15 Standart");
@@ -331,8 +336,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 4 }}>Tesis Türü</label>
                     <select value={modalTesisTurId} onChange={(e) => setModalTesisTurId(e.target.value)} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
                       <option value="">Seçiniz</option>
-                      {getAllFacilityTypes().map((ft) => (
-                        <option key={ft.id} value={ft.id}>{ft.emoji} {ft.label}</option>
+                      {aktifTesisTipleri.map((tip) => (
+                        <option key={tip.slug} value={tip.slug}>{tip.ikon?.trim() ? `${tip.ikon.trim()} ` : ""}{tip.ad}</option>
                       ))}
                     </select>
                   </div>
