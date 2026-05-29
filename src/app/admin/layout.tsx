@@ -62,6 +62,7 @@ function komisyonSecToNumber(komisyonSec: string, ozelKomisyon: string): number 
 const NAV_ITEMS = [
   { href: "/admin",               label: "Dashboard",         icon: "📊", activePath: "/admin"          },
   { href: "/admin/tesisler",      label: "Tesisler",          icon: "🏖️", badge: 2, badgeColor: ORANGE  },
+  { href: "/admin/tesis-tipleri", label: "Kategori Yönetimi", icon: "🏷️"                                 },
   { href: "/admin/kullanicilar",  label: "Kullanıcılar",      icon: "👤"                                 },
   { href: "/admin/komisyon",      label: "Komisyon Takibi",   icon: "💰", activePath: "/admin/komisyon"  },
   { href: "/admin/abonelikler",   label: "Abonelikler",       icon: "📄"                                 },
