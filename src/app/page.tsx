@@ -660,6 +660,40 @@ export default function Home() {
     router.push(qs ? `/arama?${qs}` : "/arama");
   }, [selectedProvince, activeIlce, srchFacilityKey, srchDate, router]);
 
+  /** Filtre paneli → /arama (bölge seçiliyse konum; değilse gps+km) */
+  const handleFilterResults = useCallback(() => {
+    const params = new URLSearchParams();
+    const konum = activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince;
+    const hasKonum = Boolean(konum?.trim());
+    if (hasKonum) {
+      params.set("konum", konum);
+    } else {
+      params.set("gps", "1");
+      params.set("km", String(radius));
+    }
+    if (srchFacilityKey) params.set("tip", SEARCH_FACILITY_PARAM[srchFacilityKey]);
+    if (srchDate) params.set("tarih", srchDate);
+    if (filterSort !== 0) params.set("sira", String(filterSort));
+    if (filterPriceMin !== 0) params.set("fiyatMin", String(filterPriceMin));
+    if (filterPriceMax !== 5000) params.set("fiyatMax", String(filterPriceMax));
+    if (filterRating !== 0) params.set("puan", String(filterRating));
+    if (filterFeatures.length > 0) params.set("ozellik", filterFeatures.join(","));
+    router.push(`/arama?${params.toString()}`);
+    setFilterOpen(false);
+  }, [
+    selectedProvince,
+    activeIlce,
+    radius,
+    srchFacilityKey,
+    srchDate,
+    filterSort,
+    filterPriceMin,
+    filterPriceMax,
+    filterRating,
+    filterFeatures,
+    router,
+  ]);
+
   const ilceler = selectedProvince && ILLER[selectedProvince] ? ILLER[selectedProvince] : [];
   const filteredIller = Object.keys(ILLER).filter((il) =>
     !ilSearch || il.toLowerCase().includes(ilSearch.toLowerCase())
@@ -1438,7 +1472,7 @@ export default function Home() {
           </div>
           <div className="fp-foot">
             <button type="button" className="fp-clear-btn" onClick={() => { setFilterSort(0); setFilterPriceMin(0); setFilterPriceMax(5000); setFilterRating(0); setFilterFeatures([]); }}>Temizle</button>
-            <button type="button" className="fp-apply-btn" onClick={() => setFilterOpen(false)}>Sonuçları Gör</button>
+            <button type="button" className="fp-apply-btn" onClick={handleFilterResults}>Sonuçları Gör</button>
           </div>
         </div>
       </div>

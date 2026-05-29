@@ -57,6 +57,48 @@ const TIP_QUERY_TO_TAB: Record<string, AramaTabKey> = {
 
 const SORT_MESAFE = "📍 Mesafeye Göre";
 
+/** Ana sayfa `filterSort` indeksi → arama `sortVal` */
+const SIRA_PARAM_TO_SORT: Record<number, string> = {
+  0: "📌 Önerilen",
+  1: "💰 Fiyat: Düşük → Yüksek",
+  2: "💰 Fiyat: Yüksek → Düşük",
+  3: "⭐ Puana Göre",
+};
+
+/** Ana sayfa FEATURE_OPTS indeksi → `tesisler.ozellikler` anahtarı (yoksa null) */
+const OZELLIK_INDEX_TO_KEY: (string | null)[] = [
+  "havuz",
+  "wifi",
+  "deniz",
+  "restoran",
+  "bar",
+  null,
+  "otopark",
+  "taksi",
+];
+
+function parseOzelliklerField(v: unknown): string[] | null {
+  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
+  if (typeof v === "string" && v.trim()) {
+    try {
+      const p = JSON.parse(v) as unknown;
+      if (Array.isArray(p)) return p.map((x) => String(x).trim()).filter(Boolean);
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+function minScoreFromPuanParam(puanParam: string | null): number | null {
+  if (!puanParam) return null;
+  const idx = Number.parseInt(puanParam, 10);
+  if (idx === 1) return 3;
+  if (idx === 2) return 4;
+  if (idx === 3) return 4.5;
+  return null;
+}
+
 function parseTesisCoord(v: unknown): number | null {
   if (v == null || v === "") return null;
   const n = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
@@ -93,6 +135,8 @@ type Card = {
   /** km; yalnızca GPS modunda dolu */
   distanceKm: number | null;
   feats: string[];
+  /** `tesisler.ozellikler` — kolon yoksa null */
+  ozellikler: string[] | null;
   price: number | null;
   avail: string;
   availTxt: string;
@@ -140,6 +184,7 @@ function AramaContent() {
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<AramaTabKey>("Tümü");
   const [filterBadge, setFilterBadge] = useState(0);
+  const [priceMin, setPriceMin] = useState(0);
   const [priceMax, setPriceMax] = useState(5000);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -202,6 +247,7 @@ function AramaContent() {
               boylam: parseTesisCoord(t.boylam),
               distanceKm: null,
               feats: [],
+              ozellikler: parseOzelliklerField(t.ozellikler),
               price,
               avail: aktif === false ? "full" : "ok",
               availTxt: aktif === false ? "Kapalı" : "—",
@@ -266,10 +312,13 @@ function AramaContent() {
     const tarih = searchParams.get("tarih");
     const gps = searchParams.get("gps");
     const kmParam = searchParams.get("km");
+    const sira = searchParams.get("sira");
+    const fiyatMinParam = searchParams.get("fiyatMin");
+    const fiyatMaxParam = searchParams.get("fiyatMax");
 
     if (gps === "1") {
       setGpsOn(true);
-      setSortVal(SORT_MESAFE);
+      if (!sira) setSortVal(SORT_MESAFE);
       if (kmParam) {
         const kmNum = Number.parseInt(kmParam, 10);
         if (Number.isFinite(kmNum) && kmNum >= 1 && kmNum <= 50) setKm(kmNum);
@@ -277,6 +326,24 @@ function AramaContent() {
     } else if (konum) {
       setLocInput(konum);
       setActiveTags([`📍 ${konum}`]);
+    }
+    if (sira) {
+      const siraIdx = Number.parseInt(sira, 10);
+      if (Number.isFinite(siraIdx) && SIRA_PARAM_TO_SORT[siraIdx]) {
+        setSortVal(SIRA_PARAM_TO_SORT[siraIdx]);
+      }
+    }
+    if (fiyatMinParam) {
+      const n = Number.parseInt(fiyatMinParam, 10);
+      if (Number.isFinite(n) && n >= 0) setPriceMin(n);
+    } else {
+      setPriceMin(0);
+    }
+    if (fiyatMaxParam) {
+      const n = Number.parseInt(fiyatMaxParam, 10);
+      if (Number.isFinite(n) && n > 0) setPriceMax(n);
+    } else {
+      setPriceMax(5000);
     }
     if (tarih) setDateVal(tarih);
     if (tip) {
@@ -288,6 +355,28 @@ function AramaContent() {
       setActiveTab("Tümü");
     }
   }, [searchParams]);
+
+  const ozellikParam = searchParams.get("ozellik");
+  const requiredOzellikKeys = useMemo(() => {
+    if (!ozellikParam?.trim()) return [];
+    return ozellikParam
+      .split(",")
+      .map((s) => Number.parseInt(s.trim(), 10))
+      .filter((n) => Number.isFinite(n))
+      .map((idx) => OZELLIK_INDEX_TO_KEY[idx])
+      .filter((k): k is string => typeof k === "string" && k.length > 0);
+  }, [ozellikParam]);
+
+  const ozellikColumnAvailable = useMemo(
+    () => cards.some((c) => c.ozellikler != null),
+    [cards],
+  );
+
+  useEffect(() => {
+    if (requiredOzellikKeys.length > 0 && !ozellikColumnAvailable) {
+      console.info("[arama] özellik kolonu yok — ozellik filtresi atlandı");
+    }
+  }, [requiredOzellikKeys, ozellikColumnAvailable]);
 
   useEffect(() => {
     if (searchParams.get("gps") !== "1") {
@@ -370,10 +459,29 @@ function AramaContent() {
     });
   }, [cards, gpsMode, gpsStatus, userCoords]);
 
+  const puanParam = searchParams.get("puan");
+  const minScoreFilter = minScoreFromPuanParam(puanParam);
+
   const filtered = useMemo(() => {
     let list = cardsForList
       .filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw))
-      .filter((c) => c.price == null || c.price <= priceMax);
+      .filter((c) => {
+        if (c.price == null) return true;
+        return c.price >= priceMin && c.price <= priceMax;
+      });
+
+    if (minScoreFilter != null) {
+      list = list.filter((c) => c.score != null && c.score >= minScoreFilter);
+    }
+
+    if (ozellikColumnAvailable && requiredOzellikKeys.length > 0) {
+      list = list.filter((c) => {
+        const oz = c.ozellikler;
+        if (!oz?.length) return false;
+        const set = new Set(oz.map((x) => x.toLowerCase()));
+        return requiredOzellikKeys.every((k) => set.has(k.toLowerCase()));
+      });
+    }
 
     if (gpsMode && gpsStatus === "ready" && userCoords) {
       const radiusKm = Math.max(1, Math.min(50, km));
@@ -389,10 +497,39 @@ function AramaContent() {
         if (db == null) return -1;
         return da - db;
       });
+    } else if (sortVal === "⭐ Puana Göre") {
+      list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    } else if (sortVal === "💰 Fiyat: Düşük → Yüksek") {
+      list = [...list].sort((a, b) => {
+        const pa = a.price ?? Number.POSITIVE_INFINITY;
+        const pb = b.price ?? Number.POSITIVE_INFINITY;
+        return pa - pb;
+      });
+    } else if (sortVal === "💰 Fiyat: Yüksek → Düşük") {
+      list = [...list].sort((a, b) => {
+        const pa = a.price ?? -1;
+        const pb = b.price ?? -1;
+        return pb - pa;
+      });
+    } else if (sortVal === "💬 Yorum Sayısı") {
+      list = [...list].sort((a, b) => (b.rev ?? 0) - (a.rev ?? 0));
     }
 
     return list;
-  }, [cardsForList, activeTab, priceMax, gpsMode, gpsStatus, userCoords, km, sortVal]);
+  }, [
+    cardsForList,
+    activeTab,
+    priceMin,
+    priceMax,
+    minScoreFilter,
+    ozellikColumnAvailable,
+    requiredOzellikKeys,
+    gpsMode,
+    gpsStatus,
+    userCoords,
+    km,
+    sortVal,
+  ]);
 
   const tabCounts = useMemo(() => {
     const empty = {
