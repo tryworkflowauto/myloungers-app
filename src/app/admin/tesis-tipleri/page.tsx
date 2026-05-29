@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdminToast } from "../AdminToastContext";
 import { supabase } from "@/lib/supabase";
 
@@ -189,6 +189,19 @@ export default function AdminTesisTipleriPage() {
     gorsel: null as string | null,
   });
   const [draftlar, setDraftlar] = useState<Record<string, EditDraft>>({});
+  const yeniFormRef = useRef<HTMLFormElement>(null);
+
+  const siraliListe = [...liste].sort((a, b) => a.sira - b.sira);
+
+  const bosYeni = () => ({
+    slug: "",
+    ad: "",
+    db_value: "",
+    yer_etiketi: "",
+    sira: "0",
+    ikon: "",
+    gorsel: null as string | null,
+  });
 
   const yukle = useCallback(async () => {
     setYukleniyor(true);
@@ -289,15 +302,33 @@ export default function AdminTesisTipleriPage() {
     }
   }
 
-  async function yeniEkle() {
-    const slug = yeni.slug.trim();
-    const ad = yeni.ad.trim();
-    const db_value = yeni.db_value.trim().toUpperCase().replace(/\s+/g, " ");
+  function readYeniAlanlari(form: HTMLFormElement | null) {
+    const fd = form ? new FormData(form) : null;
+    const fromFd = (name: string, fallback: string) => {
+      if (!fd) return fallback;
+      const v = fd.get(name);
+      return v == null ? fallback : String(v);
+    };
+    const slug = fromFd("yeni_slug", yeni.slug).trim();
+    const ad = fromFd("yeni_ad", yeni.ad).trim();
+    const dbRaw = fromFd("yeni_db_value", yeni.db_value).trim();
+    const db_value = dbRaw.toUpperCase().replace(/\s+/g, " ");
+    const yer_etiketi = fromFd("yeni_yer_etiketi", yeni.yer_etiketi).trim();
+    const siraStr = fromFd("yeni_sira", yeni.sira).trim();
+    const ikon = fromFd("yeni_ikon", yeni.ikon).trim();
+    return { slug, ad, db_value, yer_etiketi, siraStr, ikon, gorsel: yeni.gorsel };
+  }
+
+  async function yeniEkleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const { slug, ad, db_value, yer_etiketi, siraStr, ikon, gorsel } = readYeniAlanlari(form);
+
     if (!slug || !ad || !db_value) {
       showToast("slug, ad ve db_value zorunlu", RED);
       return;
     }
-    const siraNum = Number(yeni.sira);
+    const siraNum = Number(siraStr);
     const sira = Number.isFinite(siraNum) ? Math.floor(siraNum) : 0;
 
     setYeniKayit(true);
@@ -307,11 +338,11 @@ export default function AdminTesisTipleriPage() {
         slug,
         ad,
         db_value,
-        yer_etiketi: yeni.yer_etiketi.trim() === "" ? null : yeni.yer_etiketi.trim(),
+        yer_etiketi: yer_etiketi === "" ? null : yer_etiketi,
         sira,
         aktif: true,
-        ikon: yeni.ikon.trim() === "" ? null : yeni.ikon.trim(),
-        gorsel: yeni.gorsel,
+        ikon: ikon === "" ? null : ikon,
+        gorsel,
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { data?: TesisTipi; error?: string };
@@ -321,7 +352,39 @@ export default function AdminTesisTipleriPage() {
       return;
     }
     showToast("✓ Yeni tip eklendi", GREEN);
-    setYeni({ slug: "", ad: "", db_value: "", yer_etiketi: "", sira: "0", ikon: "", gorsel: null });
+    form.reset();
+    setYeni(bosYeni());
+    await yukle();
+  }
+
+  async function satirTasi(index: number, yon: "up" | "down") {
+    const sorted = [...liste].sort((a, b) => a.sira - b.sira);
+    const hedef = yon === "up" ? index - 1 : index + 1;
+    if (hedef < 0 || hedef >= sorted.length) return;
+    const a = sorted[index];
+    const b = sorted[hedef];
+    const siraA = a.sira;
+    const siraB = b.sira;
+
+    setKaydedenId(`swap-${a.id}`);
+    const [res1, res2] = await Promise.all([
+      adminApiFetch("/api/admin/tesis-tipleri", {
+        method: "PATCH",
+        body: JSON.stringify({ id: a.id, sira: siraB }),
+      }),
+      adminApiFetch("/api/admin/tesis-tipleri", {
+        method: "PATCH",
+        body: JSON.stringify({ id: b.id, sira: siraA }),
+      }),
+    ]);
+    setKaydedenId(null);
+
+    if (!res1.ok || !res2.ok) {
+      const j1 = (await res1.json().catch(() => ({}))) as { error?: string };
+      const j2 = (await res2.json().catch(() => ({}))) as { error?: string };
+      showToast(j1.error ?? j2.error ?? "Sıra güncellenemedi", RED);
+      return;
+    }
     await yukle();
   }
 
@@ -359,106 +422,112 @@ export default function AdminTesisTipleriPage() {
         }}
       >
         <div style={{ fontSize: 13, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Yeni tip ekle</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, alignItems: "end" }}>
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>slug</label>
-            <input
-              type="text"
-              value={yeni.slug}
-              onChange={(e) => setYeni((p) => ({ ...p, slug: e.target.value }))}
-              placeholder="ornek-tip"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>ad</label>
-            <input
-              type="text"
-              value={yeni.ad}
-              onChange={(e) => setYeni((p) => ({ ...p, ad: e.target.value }))}
-              placeholder="Görünen ad"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>db_value</label>
-            <input
-              type="text"
-              value={yeni.db_value}
-              onChange={(e) =>
-                setYeni((p) => ({
-                  ...p,
-                  db_value: e.target.value.toUpperCase(),
-                }))
-              }
-              placeholder="BEACH CLUB"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>yer_etiketi</label>
-            <input
-              type="text"
-              value={yeni.yer_etiketi}
-              onChange={(e) => setYeni((p) => ({ ...p, yer_etiketi: e.target.value }))}
-              placeholder="Şezlong (boş=Yer)"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>sira</label>
-            <div style={{ display: "flex", gap: 8 }}>
+        <form
+          ref={yeniFormRef}
+          autoComplete="off"
+          onSubmit={(e) => void yeniEkleSubmit(e)}
+        >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, alignItems: "end" }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>slug</label>
               <input
-                type="number"
-                value={yeni.sira}
-                onChange={(e) => setYeni((p) => ({ ...p, sira: e.target.value }))}
-                style={{ ...inputStyle, width: 70 }}
+                type="text"
+                name="yeni_slug"
+                value={yeni.slug}
+                onChange={(e) => setYeni((p) => ({ ...p, slug: e.target.value }))}
+                placeholder="ornek-tip"
+                style={inputStyle}
               />
-              <button
-                type="button"
-                disabled={yeniKayit}
-                onClick={() => yeniEkle()}
-                style={{
-                  flex: 1,
-                  padding: "8px 12px",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "white",
-                  background: TEAL,
-                  cursor: yeniKayit ? "not-allowed" : "pointer",
-                  opacity: yeniKayit ? 0.7 : 1,
-                }}
-              >
-                {yeniKayit ? "…" : "Ekle"}
-              </button>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>ad</label>
+              <input
+                type="text"
+                name="yeni_ad"
+                value={yeni.ad}
+                onChange={(e) => setYeni((p) => ({ ...p, ad: e.target.value }))}
+                placeholder="Görünen ad"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>db_value</label>
+              <input
+                type="text"
+                name="yeni_db_value"
+                value={yeni.db_value}
+                onChange={(e) => setYeni((p) => ({ ...p, db_value: e.target.value }))}
+                placeholder="BEACH CLUB"
+                style={{ ...inputStyle, textTransform: "uppercase" }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>yer_etiketi</label>
+              <input
+                type="text"
+                name="yeni_yer_etiketi"
+                value={yeni.yer_etiketi}
+                onChange={(e) => setYeni((p) => ({ ...p, yer_etiketi: e.target.value }))}
+                placeholder="Şezlong (boş=Yer)"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>sira</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="number"
+                  name="yeni_sira"
+                  value={yeni.sira}
+                  onChange={(e) => setYeni((p) => ({ ...p, sira: e.target.value }))}
+                  style={{ ...inputStyle, width: 70 }}
+                />
+                <button
+                  type="submit"
+                  disabled={yeniKayit}
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "white",
+                    background: TEAL,
+                    cursor: yeniKayit ? "not-allowed" : "pointer",
+                    opacity: yeniKayit ? 0.7 : 1,
+                  }}
+                >
+                  {yeniKayit ? "…" : "Ekle"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-        <div style={{ display: "flex", gap: 16, marginTop: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>ikon</label>
-            <input
-              type="text"
-              value={yeni.ikon}
-              onChange={(e) => setYeni((p) => ({ ...p, ikon: e.target.value }))}
-              placeholder="🏖️"
-              style={{ ...inputStyle, width: 72 }}
-            />
+          <div style={{ display: "flex", gap: 16, marginTop: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>ikon</label>
+              <input
+                type="text"
+                name="yeni_ikon"
+                value={yeni.ikon}
+                onChange={(e) => setYeni((p) => ({ ...p, ikon: e.target.value }))}
+                placeholder="🏖️"
+                style={{ ...inputStyle, width: 72 }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>görsel</label>
+              <GorselKontrol
+                gorsel={yeni.gorsel}
+                pathKey={yeni.slug.trim() || "yeni"}
+                busy={yeniKayit}
+                onHata={(msg) => showToast(msg, RED)}
+                onGorsel={(url) => setYeni((p) => ({ ...p, gorsel: url }))}
+              />
+              <p style={{ fontSize: 10, color: GRAY400, margin: "4px 0 0" }}>Maks. 2MB • PNG, JPG</p>
+            </div>
           </div>
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>görsel</label>
-            <GorselKontrol
-              gorsel={yeni.gorsel}
-              pathKey={yeni.slug.trim() || "yeni"}
-              busy={yeniKayit}
-              onHata={(msg) => showToast(msg, RED)}
-              onGorsel={(url) => setYeni((p) => ({ ...p, gorsel: url }))}
-            />
-            <p style={{ fontSize: 10, color: GRAY400, margin: "4px 0 0" }}>Maks. 2MB • PNG, JPG</p>
-          </div>
-        </div>
+        </form>
       </div>
 
       <div style={{ background: "white", border: `1px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden" }}>
@@ -467,10 +536,11 @@ export default function AdminTesisTipleriPage() {
         ) : liste.length === 0 ? (
           <div style={{ padding: 24, textAlign: "center", color: GRAY400, fontSize: 13 }}>Kayıt yok</div>
         ) : (
+          <div style={{ maxHeight: "min(60vh, 520px)", overflowY: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>
-                {["ikon", "görsel", "slug", "ad", "db_value", "birim", "sira", "aktif", ""].map((h) => (
+                {["", "ikon", "görsel", "slug", "ad", "db_value", "birim", "sira", "aktif", ""].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -487,12 +557,57 @@ export default function AdminTesisTipleriPage() {
               </tr>
             </thead>
             <tbody>
-              {liste.map((row) => {
+              {siraliListe.map((row, index) => {
                 const d = draftlar[row.id];
                 if (!d) return null;
-                const busy = kaydedenId === row.id;
+                const busy = kaydedenId === row.id || kaydedenId === `swap-${row.id}`;
+                const swapBusy = kaydedenId?.startsWith("swap-") ?? false;
                 return (
                   <tr key={row.id} style={{ borderBottom: `1px solid ${GRAY100}` }}>
+                    <td style={{ padding: "10px 8px", width: 36, verticalAlign: "middle" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {index > 0 ? (
+                          <button
+                            type="button"
+                            title="Yukarı"
+                            disabled={swapBusy}
+                            onClick={() => void satirTasi(index, "up")}
+                            style={{
+                              padding: "2px 6px",
+                              border: `1px solid ${GRAY200}`,
+                              borderRadius: 6,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              background: "white",
+                              cursor: swapBusy ? "not-allowed" : "pointer",
+                              opacity: swapBusy ? 0.5 : 1,
+                            }}
+                          >
+                            ↑
+                          </button>
+                        ) : null}
+                        {index < siraliListe.length - 1 ? (
+                          <button
+                            type="button"
+                            title="Aşağı"
+                            disabled={swapBusy}
+                            onClick={() => void satirTasi(index, "down")}
+                            style={{
+                              padding: "2px 6px",
+                              border: `1px solid ${GRAY200}`,
+                              borderRadius: 6,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              background: "white",
+                              cursor: swapBusy ? "not-allowed" : "pointer",
+                              opacity: swapBusy ? 0.5 : 1,
+                            }}
+                          >
+                            ↓
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
                     <td style={{ padding: "10px 12px", width: 56 }}>
                       <input
                         type="text"
@@ -611,6 +726,7 @@ export default function AdminTesisTipleriPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </>
