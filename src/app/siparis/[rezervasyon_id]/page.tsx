@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getOdemeModu } from "@/lib/odemeModlari";
-import { getSeatUnitLabel } from "@/lib/tesisFacilityTypes";
+import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik } from "@/lib/tesisTipleriDb";
 
 type KategoriRow = { id: string; ad: string; icon: string | null };
 type UrunRow = {
@@ -74,7 +74,7 @@ export default function SiparisPage() {
 
       setYukleniyor(true);
       try {
-        const [rezRes, katRes, urunRes, tesisRes] = await Promise.all([
+        const [rezRes, katRes, urunRes, tesisRes, yerHaritasi] = await Promise.all([
           supabase
             .from("rezervasyonlar")
             .select("bakiye_kalan, bakiye_yuklenen, bakiye_harcanan, giris_yapildi, durum")
@@ -91,13 +91,14 @@ export default function SiparisPage() {
             .eq("tesis_id", tesisId)
             .order("sira", { ascending: true }),
           supabase.from("tesisler").select("ad, odeme_modu, kategori").eq("id", tesisId).maybeSingle(),
+          ensureTesisTipleriYuklendi(supabase),
         ]);
 
         if (rezRes.error) throw rezRes.error;
         if (katRes.error) throw katRes.error;
         if (urunRes.error) throw urunRes.error;
         if (tesisRes.error) throw tesisRes.error;
-        const girisBirim = getSeatUnitLabel((tesisRes.data as { kategori?: unknown } | null)?.kategori);
+        const girisBirim = getSeatUnitLabelDinamik((tesisRes.data as { kategori?: unknown } | null)?.kategori, yerHaritasi);
         if (
           rezRes.data &&
           ((rezRes.data as any).giris_yapildi !== true || (rezRes.data as any).durum !== "onaylandi")

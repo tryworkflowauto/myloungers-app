@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { getLocalizedField } from "@/lib/getLocalizedField";
 import { translateDayShort } from "@/lib/calismaSaatleri";
 import { readSiteLangFromStorage, SITE_LANG_STORAGE_KEY } from "@/lib/site-lang";
-import { getSeatUnitLabel } from "@/lib/tesisFacilityTypes";
+import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 
 type TesisRow = Record<string, any>;
 
@@ -145,6 +145,11 @@ export default function TesisDetailPage() {
   const [resLoading, setResLoading] = useState(false);
   const [userRole, setUserRole] = useState<string>("musteri");
   const [siteLang, setSiteLang] = useState<"tr" | "en">("tr");
+  const [yerEtiketiHaritasi, setYerEtiketiHaritasi] = useState<YerEtiketiHaritasi | null>(null);
+
+  useEffect(() => {
+    void ensureTesisTipleriYuklendi(supabase).then(setYerEtiketiHaritasi);
+  }, []);
 
   function mapDbDurumToStatus(durum: string | null | undefined): SzlStatus {
     switch ((durum || "").toLowerCase()) {
@@ -759,7 +764,7 @@ export default function TesisDetailPage() {
       return;
     }
     if (selSzls.length >= paxCount) {
-      showToast("Maksimum "+paxCount+" "+getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori).toLocaleLowerCase("tr-TR")+" seçebilirsiniz. Kişi sayısını artırmak için + butonunu kullanın.","⚠️");
+      showToast("Maksimum "+paxCount+" "+getSeatUnitLabelDinamik((row as any)?.kategoriler ?? row?.kategori, yerEtiketiHaritasi).toLocaleLowerCase("tr-TR")+" seçebilirsiniz. Kişi sayısını artırmak için + butonunu kullanın.","⚠️");
       return;
     }
     setSelSzls((prev) => [...prev, { no, zoneKey, price }]);
@@ -782,7 +787,7 @@ export default function TesisDetailPage() {
     }
     if (row?.yer_secimsiz !== true && !hizmetSecimliMi) {
       if (selSzls.length === 0) {
-        alert("Lütfen en az 1 "+getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori).toLocaleLowerCase("tr-TR")+" seçin.");
+        alert("Lütfen en az 1 "+getSeatUnitLabelDinamik((row as any)?.kategoriler ?? row?.kategori, yerEtiketiHaritasi).toLocaleLowerCase("tr-TR")+" seçin.");
         return;
       }
     }
@@ -802,7 +807,7 @@ export default function TesisDetailPage() {
         .eq("tesis_id", row?.id);
       if (tumKoltukErr) {
         console.error("[goRes] sezlonglar liste hatası:", tumKoltukErr);
-        showToast(getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori)+" bilgisi yüklenemedi. Lütfen tekrar deneyin.", "⚠️");
+        showToast(getSeatUnitLabelDinamik((row as any)?.kategoriler ?? row?.kategori, yerEtiketiHaritasi)+" bilgisi yüklenemedi. Lütfen tekrar deneyin.", "⚠️");
         return;
       }
       const doluSet = new Set<string>([
@@ -816,7 +821,7 @@ export default function TesisDetailPage() {
         : (tumKoltuklar ?? []);
       const bosKoltuklar = adayKoltuklar.filter((k: { id?: unknown }) => !doluSet.has(String(k.id)));
       if (bosKoltuklar.length < paxCount) {
-        showToast("Bu tarihte yeterli "+getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori).toLocaleLowerCase("tr-TR")+" kalmadı. Lütfen kişi sayısını azaltın veya farklı tarih seçin.", "⚠️");
+        showToast("Bu tarihte yeterli "+getSeatUnitLabelDinamik((row as any)?.kategoriler ?? row?.kategori, yerEtiketiHaritasi).toLocaleLowerCase("tr-TR")+" kalmadı. Lütfen kişi sayısını azaltın veya farklı tarih seçin.", "⚠️");
         return;
       }
       const otomatikSecim = bosKoltuklar.slice(0, paxCount).map((k: { grup_id?: unknown; numara?: unknown }) => {
@@ -962,7 +967,7 @@ export default function TesisDetailPage() {
   const yerSecimsizMi = row?.yer_secimsiz === true;
   const hizmetSecimliMi = row?.hizmet_secimli === true;
   const rawKatForBirim = (row as any)?.kategoriler ?? (row as any)?.kategori;
-  const birim = getSeatUnitLabel(rawKatForBirim);
+  const birim = getSeatUnitLabelDinamik(rawKatForBirim, yerEtiketiHaritasi);
   const birimLower = birim.toLocaleLowerCase("tr-TR");
   const yerlesimPlanBaslik = birim === "Yer" ? "Tesis Yerleşim Planı" : `Tesis ${birim} Yerleşim Planı`;
   const tip2VarsayilanAciklama =

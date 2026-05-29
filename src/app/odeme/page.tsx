@@ -6,7 +6,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
-import { getLabel, getSeatUnitLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
+import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
+import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
 
 function tesisKategoriDisplayLabel(kategori: unknown): string {
@@ -132,6 +133,11 @@ function OdemeContent() {
   const [kalanSure, setKalanSure] = useState<number>(0); // saniye cinsinden
   const [sureDoldu, setSureDoldu] = useState<boolean>(false);
   const [legalFoot, setLegalFoot] = useState<"" | "?lang=en">("");
+  const [yerEtiketiHaritasi, setYerEtiketiHaritasi] = useState<YerEtiketiHaritasi | null>(null);
+
+  useEffect(() => {
+    void ensureTesisTipleriYuklendi(supabase).then(setYerEtiketiHaritasi);
+  }, []);
 
   useEffect(() => {
     const sync = () => setLegalFoot(footerLegalQueryFromLang(readSiteLangFromStorage()));
@@ -350,13 +356,13 @@ function OdemeContent() {
         .eq("id", rezId)
         .eq("durum", "bekliyor");
       
-      const birimAlert = getSeatUnitLabel(tesisKategori);
+      const birimAlert = getSeatUnitLabelDinamik(tesisKategori, yerEtiketiHaritasi);
       alert("⏰ Rezervasyon tutma süreniz doldu. "+birimAlert+" yeniden müsait. Ana sayfaya yönlendiriliyorsunuz.");
       window.location.href = "/";
     }
     
     iptalEt();
-  }, [sureDoldu, searchParams, tesisKategori]);
+  }, [sureDoldu, searchParams, tesisKategori, yerEtiketiHaritasi]);
 
   function validate() {
     const e: Record<string, boolean> = {};
@@ -395,7 +401,7 @@ function OdemeContent() {
 
   const szlChips = res.szl.split(", ").filter(Boolean);
   const unitPrice = res.toplam / (res.gun * Math.max(res.kisi, 1));
-  const birim = getSeatUnitLabel(tesisKategori);
+  const birim = getSeatUnitLabelDinamik(tesisKategori, yerEtiketiHaritasi);
   const birimLower = birim.toLocaleLowerCase("tr-TR");
   const tesisCatLabel = tesisKategoriDisplayLabel(tesisKategori);
   const tesisSlug = (searchParams.get("tesis") || "reklamotv").toLowerCase();

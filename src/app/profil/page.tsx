@@ -9,7 +9,8 @@ import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { SIPARIS_DURUM } from "@/lib/constants";
 import { getOdemeModu } from "@/lib/odemeModlari";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
-import { getLabel, getSeatUnitLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
+import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
+import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import CallWaiterModal from "@/components/CallWaiterModal";
 
 /** tesisler.kategori → kart etiketi (Spa, Beach Club, Tekne Turu vb.) */
@@ -255,6 +256,11 @@ export default function ProfilPage() {
   const [orders, setOrders] = useState<MusteriSiparis[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [gecmisAcik, setGecmisAcik] = useState(false);
+  const [yerEtiketiHaritasi, setYerEtiketiHaritasi] = useState<YerEtiketiHaritasi | null>(null);
+
+  useEffect(() => {
+    void ensureTesisTipleriYuklendi(supabase).then(setYerEtiketiHaritasi);
+  }, []);
   const [orderRezIds, setOrderRezIds] = useState<string[]>([]);
   const [gecmisTumSiparisler, setGecmisTumSiparisler] = useState<MusteriSiparis[]>([]);
   const [gecmisTumLoading, setGecmisTumLoading] = useState(false);
@@ -621,7 +627,7 @@ export default function ProfilPage() {
             iptalSaatOncesi: tesisInfo?.iptal_saat_oncesi,
             calismaSaatleri: tesisInfo?.calisma_saatleri,
             odemeModu: r.tesis_id != null ? tesisInfo?.odeme_modu ?? null : null,
-            seatUnitLabel: getSeatUnitLabel(tesisInfo?.kategori),
+            seatUnitLabel: getSeatUnitLabelDinamik(tesisInfo?.kategori, yerEtiketiHaritasi),
           };
         });
 
@@ -639,7 +645,7 @@ export default function ProfilPage() {
     }
 
     loadReservations();
-  }, [user]);
+  }, [user, yerEtiketiHaritasi]);
 
   useEffect(() => {
     if (!user || reservations.length === 0) return;
@@ -2364,7 +2370,7 @@ export default function ProfilPage() {
                             href={`/tesis/${item.tesis?.slug}`}
                             style={{position:"absolute",right:16,bottom:12,background:"var(--orange)",color:"#1a1a1a",padding:"8px 16px",borderRadius:8,fontSize:"0.85rem",fontWeight:600,textDecoration:"none",whiteSpace:"nowrap",zIndex:10,opacity:1,visibility:"visible"}}
                           >
-                            {getSeatUnitLabel(item.tesis?.kategori)} Seç →
+                            {getSeatUnitLabelDinamik(item.tesis?.kategori, yerEtiketiHaritasi)} Seç →
                           </a>
                         </div>
                       </div>

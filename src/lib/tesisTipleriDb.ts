@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
-import { getFacilityType, normalizeToCanonical, type FacilityTypeId } from "@/lib/tesisFacilityTypes";
+import { getFacilityType, getSeatUnitLabel, normalizeToCanonical, type FacilityTypeId } from "@/lib/tesisFacilityTypes";
 
 export type TesisTipiCatalogRow = {
   id: string;
@@ -81,4 +81,79 @@ export function kategoriInputToDbValues(input: unknown, catalog: TesisTipiCatalo
   }
 
   return out;
+}
+
+export type YerEtiketiHaritasi = ReadonlyMap<string, string>;
+
+let yerEtiketiCache: YerEtiketiHaritasi | null = null;
+let yerEtiketiLoadPromise: Promise<YerEtiketiHaritasi> | null = null;
+
+/** `tesis_tipleri` satırlarından db_value → yer_etiketi haritası */
+export function buildYerEtiketiHaritasi(
+  rows: readonly { db_value: string; yer_etiketi?: string | null }[],
+): YerEtiketiHaritasi {
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    const dv = row.db_value?.trim();
+    const yer = row.yer_etiketi?.trim();
+    if (!dv || !yer) continue;
+    map.set(dv, yer);
+    map.set(normDbValue(dv), yer);
+  }
+  return map;
+}
+
+function findYerEtiketiInHarita(token: string, harita: YerEtiketiHaritasi): string | null {
+  const t = token.trim();
+  if (!t || harita.size === 0) return null;
+  const direct = harita.get(t);
+  if (direct) return direct;
+  const normalized = normDbValue(t);
+  const fromNorm = harita.get(normalized);
+  if (fromNorm) return fromNorm;
+  for (const [k, v] of harita) {
+    if (normDbValue(k) === normalized) return v;
+  }
+  return null;
+}
+
+/** Modül cache — tesis_tipleri (tüm satırlar) bir kez yüklenir */
+export async function ensureTesisTipleriYuklendi(client: SupabaseClient): Promise<YerEtiketiHaritasi> {
+  if (yerEtiketiCache) return yerEtiketiCache;
+  if (yerEtiketiLoadPromise) return yerEtiketiLoadPromise;
+
+  yerEtiketiLoadPromise = (async () => {
+    const { data, error } = await client
+      .from("tesis_tipleri")
+      .select("db_value, yer_etiketi");
+
+    if (error) {
+      console.error("[tesisTipleriDb] ensureTesisTipleriYuklendi", error);
+      yerEtiketiCache = new Map();
+      return yerEtiketiCache;
+    }
+
+    yerEtiketiCache = buildYerEtiketiHaritasi(data ?? []);
+    return yerEtiketiCache;
+  })();
+
+  return yerEtiketiLoadPromise;
+}
+
+/**
+ * `tesisler.kategori` → birim etiketi.
+ * Önce tablo haritası (yer_etiketi); yoksa/boşsa `getSeatUnitLabel` (kod haritası); o da yoksa "Yer".
+ */
+export function getSeatUnitLabelDinamik(
+  kategori: unknown,
+  harita: YerEtiketiHaritasi | null | undefined,
+): string {
+  if (harita && harita.size > 0) {
+    const parts = normalizeKategoriList(kategori);
+    for (const p of parts) {
+      const label = findYerEtiketiInHarita(p, harita);
+      if (label) return label;
+    }
+  }
+  return getSeatUnitLabel(kategori);
 }

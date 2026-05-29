@@ -8,7 +8,7 @@ import "./arama.css";
 import { supabase } from "@/lib/supabase";
 import { readSiteLangFromStorage, type SiteLang } from "@/lib/site-lang";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
-import { getSeatUnitLabel } from "@/lib/tesisFacilityTypes";
+import { buildYerEtiketiHaritasi, getSeatUnitLabelDinamik } from "@/lib/tesisTipleriDb";
 
 const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 
@@ -21,6 +21,7 @@ type AktifTesisTipi = {
   db_value: string;
   sira: number;
   ikon: string | null;
+  yer_etiketi: string | null;
 };
 
 /** tesisler.kategori içinde db_value exact match */
@@ -192,7 +193,7 @@ function AramaContent() {
     async function fetchAktifTipler() {
       const { data, error } = await supabase
         .from("tesis_tipleri")
-        .select("id, slug, ad, db_value, sira, ikon")
+        .select("id, slug, ad, db_value, sira, ikon, yer_etiketi")
         .eq("aktif", true)
         .order("sira", { ascending: true });
 
@@ -545,6 +546,11 @@ function AramaContent() {
     return counts;
   }, [cards, aktifTipler]);
 
+  const yerEtiketiHaritasi = useMemo(
+    () => buildYerEtiketiHaritasi(aktifTipler),
+    [aktifTipler],
+  );
+
   const TABS = useMemo(() => {
     const tumuLabel = siteLang === "en" ? "All" : TUMU_TAB_KEY;
     const tumuTab = {
@@ -691,7 +697,7 @@ function AramaContent() {
           {loading && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesisler yükleniyor…</div>}
           {!loading && filtered.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesis bulunamadı</div>}
           {filtered.map((c) => {
-            const birim = getSeatUnitLabel(c.kategoriRaw);
+            const birim = getSeatUnitLabelDinamik(c.kategoriRaw, yerEtiketiHaritasi);
             const birimLower = birim.toLocaleLowerCase("tr-TR");
             return (
             <div
