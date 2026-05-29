@@ -156,6 +156,7 @@ function matchesHomeCategory(
   aktifTipler: AktifTesisTipi[],
 ): boolean {
   if (activeCategory === "all") return true;
+  if (aktifTipler.length === 0) return true;
   const tip = aktifTipler.find((t) => t.slug === activeCategory);
   if (!tip) return true;
   return tesisHasDbValue(kategoriRaw, tip.db_value);
@@ -707,11 +708,20 @@ export default function Home() {
 
   const goToTipSlug = useCallback(
     (slug: string) => {
-      setActiveCategory(slug);
       router.push(`/arama?tip=${encodeURIComponent(slug)}`);
     },
     [router],
   );
+
+  const popularGridTesisler = useMemo(() => {
+    const list = popularTesisler ?? [];
+    if (activeCategory === "all" || aktifTipler.length === 0) {
+      return list.slice(0, 4);
+    }
+    return list
+      .filter((t) => matchesHomeCategory(activeCategory, (t as { kategori?: unknown }).kategori, aktifTipler))
+      .slice(0, 4);
+  }, [popularTesisler, activeCategory, aktifTipler]);
 
   const srchFacilityLabel = useMemo(() => {
     if (!srchFacilityKey) return "";
@@ -1366,10 +1376,7 @@ export default function Home() {
           <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
         <div className="pgrid" id="tesisGrid">
-          {popularTesisler
-            ?.filter((t) => matchesHomeCategory(activeCategory, (t as { kategori?: unknown }).kategori, aktifTipler))
-            ?.slice(0, 4)
-            ?.map((t) => {
+          {popularGridTesisler.map((t) => {
             const name = t.ad as string;
             const ilce = (t.ilce as string) || "";
             const sehir = (t.sehir as string) || "";
