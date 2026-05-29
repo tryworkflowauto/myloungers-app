@@ -92,7 +92,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabaseAdmin
       .from("tesis_tipleri")
-      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif")
+      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif, gorsel, ikon")
       .order("sira", { ascending: true });
 
     if (error) {
@@ -123,6 +123,11 @@ export async function POST(req: Request) {
       yerRaw == null || String(yerRaw).trim() === "" ? null : String(yerRaw).trim();
     const siraNum = Number(body.sira);
     const sira = Number.isFinite(siraNum) ? Math.floor(siraNum) : 0;
+    const gorselRaw = body.gorsel;
+    const gorsel =
+      gorselRaw == null || String(gorselRaw).trim() === "" ? null : String(gorselRaw).trim();
+    const ikonRaw = body.ikon;
+    const ikon = ikonRaw == null || String(ikonRaw).trim() === "" ? null : String(ikonRaw).trim();
 
     if (!slug) {
       return NextResponse.json({ error: "slug zorunludur." }, { status: 400 });
@@ -143,8 +148,10 @@ export async function POST(req: Request) {
         yer_etiketi,
         sira,
         aktif: body.aktif === false ? false : true,
+        gorsel,
+        ikon,
       })
-      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif")
+      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif, gorsel, ikon")
       .single();
 
     if (error) {
@@ -203,6 +210,17 @@ export async function PATCH(req: Request) {
       patch.aktif = body.aktif;
     }
 
+    if (body.gorsel !== undefined) {
+      const gorselRaw = body.gorsel;
+      patch.gorsel =
+        gorselRaw == null || String(gorselRaw).trim() === "" ? null : String(gorselRaw).trim();
+    }
+
+    if (body.ikon !== undefined) {
+      const ikonRaw = body.ikon;
+      patch.ikon = ikonRaw == null || String(ikonRaw).trim() === "" ? null : String(ikonRaw).trim();
+    }
+
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: "Güncellenecek alan yok." }, { status: 400 });
     }
@@ -211,7 +229,7 @@ export async function PATCH(req: Request) {
       .from("tesis_tipleri")
       .update(patch)
       .eq("id", id)
-      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif")
+      .select("id, slug, ad, db_value, yer_etiketi, sira, aktif, gorsel, ikon")
       .single();
 
     if (error) {

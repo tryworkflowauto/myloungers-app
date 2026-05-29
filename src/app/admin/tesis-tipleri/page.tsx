@@ -15,6 +15,10 @@ const GRAY800 = "#1E293B";
 const GREEN = "#10B981";
 const RED = "#EF4444";
 
+const STORAGE_BUCKET = "menu-gorseller";
+const KATEGORI_GORSEL_PREFIX = "kategoriler/";
+const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2MB — menu/sezlong ile aynı
+
 type TesisTipi = {
   id: string;
   slug: string;
@@ -23,12 +27,16 @@ type TesisTipi = {
   yer_etiketi: string | null;
   sira: number;
   aktif: boolean;
+  gorsel: string | null;
+  ikon: string | null;
 };
 
 type EditDraft = {
   ad: string;
   yer_etiketi: string;
   sira: string;
+  ikon: string;
+  gorsel: string | null;
 };
 
 const inputStyle: React.CSSProperties = {
@@ -46,6 +54,110 @@ const readOnlyStyle: React.CSSProperties = {
   color: GRAY600,
   cursor: "not-allowed",
 };
+
+async function uploadKategoriGorsel(file: File, pathKey: string): Promise<string | null> {
+  if (!file.type.startsWith("image/")) return null;
+  if (file.size > MAX_FILE_BYTES) return null;
+  const safeKey = pathKey.trim().replace(/[^a-zA-Z0-9_-]/g, "-") || "tip";
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${KATEGORI_GORSEL_PREFIX}${safeKey}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
+    contentType: file.type || "image/jpeg",
+    upsert: true,
+  });
+  if (error) {
+    console.error("Storage upload error:", error);
+    return null;
+  }
+  const { data: urlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return urlData.publicUrl;
+}
+
+function GorselKontrol({
+  gorsel,
+  onGorsel,
+  pathKey,
+  onHata,
+  busy,
+}: {
+  gorsel: string | null;
+  onGorsel: (url: string | null) => void;
+  pathKey: string;
+  onHata: (msg: string) => void;
+  busy?: boolean;
+}) {
+  async function handleFile(file: File | null) {
+    if (!file || busy) return;
+    if (!file.type.startsWith("image/")) {
+      onHata("Sadece görsel dosyası yükleyebilirsiniz");
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      onHata(`Dosya 2MB'dan büyük olamaz: ${file.name}`);
+      return;
+    }
+    const url = await uploadKategoriGorsel(file, pathKey);
+    if (!url) {
+      onHata("Görsel yüklenemedi");
+      return;
+    }
+    onGorsel(url);
+  }
+
+  return (
+    <div>
+      {gorsel ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={gorsel}
+            alt=""
+            style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", border: `2px solid ${GRAY200}` }}
+          />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onGorsel(null)}
+            style={{
+              padding: "2px 6px",
+              fontSize: 9,
+              fontWeight: 700,
+              borderRadius: 6,
+              border: "1px solid #FECACA",
+              background: "#FEF2F2",
+              color: RED,
+              cursor: busy ? "not-allowed" : "pointer",
+            }}
+          >
+            Kaldır
+          </button>
+        </div>
+      ) : null}
+      <label
+        style={{
+          fontSize: 10,
+          color: TEAL,
+          fontWeight: 600,
+          cursor: busy ? "not-allowed" : "pointer",
+          textDecoration: "underline",
+        }}
+      >
+        {gorsel ? "Değiştir" : "Yükle"}
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          disabled={busy}
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+            void handleFile(file);
+            e.target.value = "";
+          }}
+        />
+      </label>
+    </div>
+  );
+}
 
 async function adminApiFetch(path: string, init?: RequestInit) {
   const { data: { session } } = await supabase.auth.getSession();
@@ -73,6 +185,8 @@ export default function AdminTesisTipleriPage() {
     db_value: "",
     yer_etiketi: "",
     sira: "0",
+    ikon: "",
+    gorsel: null as string | null,
   });
   const [draftlar, setDraftlar] = useState<Record<string, EditDraft>>({});
 
@@ -94,6 +208,8 @@ export default function AdminTesisTipleriPage() {
         ad: r.ad,
         yer_etiketi: r.yer_etiketi ?? "",
         sira: String(r.sira),
+        ikon: r.ikon ?? "",
+        gorsel: r.gorsel ?? null,
       };
     }
     setDraftlar(drafts);
@@ -144,6 +260,8 @@ export default function AdminTesisTipleriPage() {
         ad,
         yer_etiketi: d.yer_etiketi.trim() === "" ? null : d.yer_etiketi.trim(),
         sira: Math.floor(siraNum),
+        ikon: d.ikon.trim() === "" ? null : d.ikon.trim(),
+        gorsel: d.gorsel,
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { data?: TesisTipi; error?: string };
@@ -163,6 +281,8 @@ export default function AdminTesisTipleriPage() {
           ad: json.data!.ad,
           yer_etiketi: json.data!.yer_etiketi ?? "",
           sira: String(json.data!.sira),
+          ikon: json.data!.ikon ?? "",
+          gorsel: json.data!.gorsel ?? null,
         },
       }));
       showToast("✓ Kaydedildi", GREEN);
@@ -190,6 +310,8 @@ export default function AdminTesisTipleriPage() {
         yer_etiketi: yeni.yer_etiketi.trim() === "" ? null : yeni.yer_etiketi.trim(),
         sira,
         aktif: true,
+        ikon: yeni.ikon.trim() === "" ? null : yeni.ikon.trim(),
+        gorsel: yeni.gorsel,
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { data?: TesisTipi; error?: string };
@@ -199,7 +321,7 @@ export default function AdminTesisTipleriPage() {
       return;
     }
     showToast("✓ Yeni tip eklendi", GREEN);
-    setYeni({ slug: "", ad: "", db_value: "", yer_etiketi: "", sira: "0" });
+    setYeni({ slug: "", ad: "", db_value: "", yer_etiketi: "", sira: "0", ikon: "", gorsel: null });
     await yukle();
   }
 
@@ -314,6 +436,29 @@ export default function AdminTesisTipleriPage() {
             </div>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 16, marginTop: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div>
+            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>ikon</label>
+            <input
+              type="text"
+              value={yeni.ikon}
+              onChange={(e) => setYeni((p) => ({ ...p, ikon: e.target.value }))}
+              placeholder="🏖️"
+              style={{ ...inputStyle, width: 72 }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 10, fontWeight: 700, color: GRAY600, display: "block", marginBottom: 4 }}>görsel</label>
+            <GorselKontrol
+              gorsel={yeni.gorsel}
+              pathKey={yeni.slug.trim() || "yeni"}
+              busy={yeniKayit}
+              onHata={(msg) => showToast(msg, RED)}
+              onGorsel={(url) => setYeni((p) => ({ ...p, gorsel: url }))}
+            />
+            <p style={{ fontSize: 10, color: GRAY400, margin: "4px 0 0" }}>Maks. 2MB • PNG, JPG</p>
+          </div>
+        </div>
       </div>
 
       <div style={{ background: "white", border: `1px solid ${GRAY200}`, borderRadius: 12, overflow: "hidden" }}>
@@ -325,7 +470,7 @@ export default function AdminTesisTipleriPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: GRAY50, borderBottom: `1px solid ${GRAY200}` }}>
-                {["slug", "ad", "db_value", "birim", "sira", "aktif", ""].map((h) => (
+                {["ikon", "görsel", "slug", "ad", "db_value", "birim", "sira", "aktif", ""].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -348,6 +493,34 @@ export default function AdminTesisTipleriPage() {
                 const busy = kaydedenId === row.id;
                 return (
                   <tr key={row.id} style={{ borderBottom: `1px solid ${GRAY100}` }}>
+                    <td style={{ padding: "10px 12px", width: 56 }}>
+                      <input
+                        type="text"
+                        value={d.ikon}
+                        onChange={(e) =>
+                          setDraftlar((prev) => ({
+                            ...prev,
+                            [row.id]: { ...prev[row.id], ikon: e.target.value },
+                          }))
+                        }
+                        placeholder="🏖️"
+                        style={{ ...inputStyle, width: 48, textAlign: "center" }}
+                      />
+                    </td>
+                    <td style={{ padding: "10px 12px", minWidth: 100 }}>
+                      <GorselKontrol
+                        gorsel={d.gorsel}
+                        pathKey={row.slug || row.id}
+                        busy={busy}
+                        onHata={(msg) => showToast(msg, RED)}
+                        onGorsel={(url) =>
+                          setDraftlar((prev) => ({
+                            ...prev,
+                            [row.id]: { ...prev[row.id], gorsel: url },
+                          }))
+                        }
+                      />
+                    </td>
                     <td style={{ padding: "10px 12px" }}>
                       <input type="text" value={row.slug} readOnly style={readOnlyStyle} title="Salt okunur" />
                     </td>
