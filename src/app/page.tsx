@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, type MouseEvent } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { persistSiteLang, readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
-import { homeActiveCategoryMatchesKategori } from "@/lib/tesisKategori";
+import { normalizeKategoriList } from "@/lib/tesisKategori";
 import "./myloungers.css";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -134,11 +134,32 @@ function sliderMobileSrc(desktopSrc: string): string {
   return desktopSrc.replace(/\.png$/i, "-m.png");
 }
 
-const CAT_IMGS = [
-  "/images/tesis_kategorisi-otel.png",
-  "/images/tesis_kategorisi-beach.png",
-  "/images/tesis_kategorsi-aquapark.png",
-];
+type AktifTesisTipi = {
+  id: string;
+  slug: string;
+  ad: string;
+  db_value: string;
+  sira: number;
+  ikon: string | null;
+  gorsel: string | null;
+};
+
+/** tesisler.kategori içinde db_value exact match */
+function tesisHasDbValue(k: unknown, dbValue: string): boolean {
+  if (!dbValue) return false;
+  return normalizeKategoriList(k).some((part) => part === dbValue);
+}
+
+function matchesHomeCategory(
+  activeCategory: string,
+  kategoriRaw: unknown,
+  aktifTipler: AktifTesisTipi[],
+): boolean {
+  if (activeCategory === "all") return true;
+  const tip = aktifTipler.find((t) => t.slug === activeCategory);
+  if (!tip) return true;
+  return tesisHasDbValue(kategoriRaw, tip.db_value);
+}
 
 const ILLER: Record<string, string[]> = {
   Muğla: ["Bodrum", "Yalıkavak", "Turgutreis", "Gümbet", "Gündoğan", "Ortakent", "Bitez", "Güvercinlik", "Marmaris", "Fethiye", "Datça", "Milas"],
@@ -159,49 +180,6 @@ const ILLER: Record<string, string[]> = {
   Kayseri: ["Melikgazi", "Kocasinan", "Talas", "Develi", "Bünyan", "İncesu"],
   Eskişehir: ["Tepebaşı", "Odunpazarı", "Sivrihisar", "Mahmudiye", "Seyitgazi"],
 };
-
-type HomeFacilityTypeKey = "hotel" | "beach" | "aqua" | "restoran" | "bar" | "tekne" | "spa";
-
-type HomeActiveCategory = "all" | HomeFacilityTypeKey;
-
-function facilityTypeLabel(key: HomeFacilityTypeKey, tr: Record<string, string>): string {
-  switch (key) {
-    case "hotel":
-      return tr.filter_hotel;
-    case "beach":
-      return tr.filter_beach;
-    case "aqua":
-      return tr.filter_aqua;
-    case "restoran":
-      return tr.nav_restoran;
-    case "bar":
-      return tr.nav_bar;
-    case "tekne":
-      return tr.nav_tekne;
-    case "spa":
-      return tr.nav_spa;
-  }
-}
-
-const SEARCH_FACILITY_PARAM: Record<HomeFacilityTypeKey, string> = {
-  hotel: "hotel",
-  beach: "beach",
-  aqua: "aqua",
-  restoran: "restoran",
-  bar: "bar",
-  tekne: "tekne",
-  spa: "spa",
-};
-
-const FACILITY_TYPE_DEFS: Array<{ key: HomeFacilityTypeKey; emoji?: string }> = [
-  { key: "hotel", emoji: "🏨" },
-  { key: "beach", emoji: "🏖️" },
-  { key: "aqua", emoji: "💦" },
-  { key: "restoran", emoji: "🍽️" },
-  { key: "bar", emoji: "🍸" },
-  { key: "tekne" },
-  { key: "spa" },
-];
 
 const SORT_OPTS = [
   { icon: "⭐", label: "Popüler" },
@@ -276,9 +254,10 @@ export default function Home() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [basvuruOpen, setBasvuruOpen] = useState(false);
   const [bmPane, setBmPane] = useState(1);
-  const [activeCategory, setActiveCategory] = useState<HomeActiveCategory>("all");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [aktifTipler, setAktifTipler] = useState<AktifTesisTipi[]>([]);
   const [srchRegion, setSrchRegion] = useState("");
-  const [srchFacilityKey, setSrchFacilityKey] = useState<"" | HomeFacilityTypeKey>("");
+  const [srchFacilityKey, setSrchFacilityKey] = useState("");
   const [srchDate, setSrchDate] = useState("");
   const [srchName, setSrchName] = useState("");
   const [panelRegion, setPanelRegion] = useState(false);
@@ -339,6 +318,24 @@ export default function Home() {
     }
 
     fetchTesisSlugs();
+  }, []);
+
+  useEffect(() => {
+    async function fetchAktifTipler() {
+      const { data, error } = await supabase
+        .from("tesis_tipleri")
+        .select("id, slug, ad, db_value, sira, ikon, gorsel")
+        .eq("aktif", true)
+        .order("sira", { ascending: true });
+
+      if (error) {
+        console.error("[home] tesis_tipleri sorgu hatası:", error);
+        return;
+      }
+      setAktifTipler((data ?? []) as AktifTesisTipi[]);
+    }
+
+    void fetchAktifTipler();
   }, []);
 
   useEffect(() => {
@@ -654,7 +651,7 @@ export default function Home() {
     const params = new URLSearchParams();
     const konum = activeIlce ? `${selectedProvince} / ${activeIlce}` : selectedProvince;
     if (konum) params.set("konum", konum);
-    if (srchFacilityKey) params.set("tip", SEARCH_FACILITY_PARAM[srchFacilityKey]);
+    if (srchFacilityKey) params.set("tip", srchFacilityKey);
     if (srchDate) params.set("tarih", srchDate);
     const qs = params.toString();
     router.push(qs ? `/arama?${qs}` : "/arama");
@@ -671,7 +668,7 @@ export default function Home() {
       params.set("gps", "1");
       params.set("km", String(radius));
     }
-    if (srchFacilityKey) params.set("tip", SEARCH_FACILITY_PARAM[srchFacilityKey]);
+    if (srchFacilityKey) params.set("tip", srchFacilityKey);
     if (srchDate) params.set("tarih", srchDate);
     if (filterSort !== 0) params.set("sira", String(filterSort));
     if (filterPriceMin !== 0) params.set("fiyatMin", String(filterPriceMin));
@@ -708,27 +705,18 @@ export default function Home() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
-  /** Ana sayfa kategori → /arama `tip` (arama `TIP_QUERY_TO_TAB` ile uyumlu; kart `data-cat` ile aynı değerler). */
-  const HOME_CATEGORY_ARAMA_TIP: Record<Exclude<HomeActiveCategory, "all">, string> = {
-    hotel: "hotel",
-    beach: "beach",
-    aqua: "aqua",
-    restoran: "restoran",
-    bar: "bar",
-    tekne: "tekne",
-    spa: "spa",
-  };
+  const goToTipSlug = useCallback(
+    (slug: string) => {
+      setActiveCategory(slug);
+      router.push(`/arama?tip=${encodeURIComponent(slug)}`);
+    },
+    [router],
+  );
 
-  const filterByCategory = (cat: Exclude<HomeActiveCategory, "all">) => {
-    const tip = HOME_CATEGORY_ARAMA_TIP[cat];
-    setActiveCategory(cat);
-    router.push(`/arama?tip=${encodeURIComponent(tip)}`);
-  };
-
-  const goToCategoryListing = (e: MouseEvent<HTMLElement>) => {
-    const cat = e.currentTarget.dataset.cat;
-    if (cat) router.push(`/arama?tip=${encodeURIComponent(cat)}`);
-  };
+  const srchFacilityLabel = useMemo(() => {
+    if (!srchFacilityKey) return "";
+    return aktifTipler.find((t) => t.slug === srchFacilityKey)?.ad ?? "";
+  }, [srchFacilityKey, aktifTipler]);
 
   return (
     <div className="home-page">
@@ -739,85 +727,19 @@ export default function Home() {
             <img src="/logo.png" alt="MyLoungers" className="logo-img" />
           </Link>
           <div className="nav-cats">
-            <button
-              type="button"
-              className={`nc ${activeCategory === "hotel" ? "on" : ""}`}
-              onClick={() => filterByCategory("hotel")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 22V12H8v10"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
-              {t.nav_hotel}
-            </button>
-            <button
-              type="button"
-              className={`nc ${activeCategory === "beach" ? "on" : ""}`}
-              onClick={() => filterByCategory("beach")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 4C14 4 11 6 10 9L3 21"/><path d="M22 4C19 4 16 6 15 9L8 21"/><path d="M7 21h14"/><circle cx="19" cy="4" r="1" fill="currentColor"/></svg>
-              {t.nav_beach}
-            </button>
-            <button
-              type="button"
-              className={`nc ${activeCategory === "aqua" ? "on" : ""}`}
-              onClick={() => filterByCategory("aqua")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
-              {t.nav_aqua}
-            </button>
-            <button
-              type="button"
-              id="nc4"
-              className={`nc ${activeCategory === "restoran" ? "on" : ""}`}
-              onClick={() => filterByCategory("restoran")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
-                <path d="M7 2v20" />
-                <path d="M17 2v20" />
-                <path d="M21 2c-1.5 0-3 1-3 3v7h3" />
-              </svg>
-              {t.nav_restoran}
-            </button>
-            <button
-              type="button"
-              id="nc5"
-              className={`nc ${activeCategory === "bar" ? "on" : ""}`}
-              onClick={() => filterByCategory("bar")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8 21h8" />
-                <path d="M12 15v6" />
-                <path d="M17 3H7l5 8 5-8z" />
-                <line x1="9" y1="6" x2="15" y2="6" />
-              </svg>
-              {t.nav_bar}
-            </button>
-            <button
-              type="button"
-              id="nc6"
-              className={`nc ${activeCategory === "tekne" ? "on" : ""}`}
-              onClick={() => filterByCategory("tekne")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
-                <path d="M20 18l-1.4-7H5.4L4 18" />
-                <path d="M12 11V4M9 4h6" />
-              </svg>
-              {t.nav_tekne}
-            </button>
-            <button
-              type="button"
-              id="nc7"
-              className={`nc ${activeCategory === "spa" ? "on" : ""}`}
-              onClick={() => filterByCategory("spa")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
-                <path d="M7 4C5 7 5 10 7 12" />
-                <path d="M17 4c2 3 2 6 0 8" />
-                <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
-              </svg>
-              {t.nav_spa}
-            </button>
+            {aktifTipler.map((tip) => (
+              <button
+                key={tip.slug}
+                type="button"
+                className={`nc ${activeCategory === tip.slug ? "on" : ""}`}
+                onClick={() => goToTipSlug(tip.slug)}
+              >
+                <span aria-hidden style={{ fontSize: "1.05em", lineHeight: 1 }}>
+                  {tip.ikon?.trim() || "🏷️"}
+                </span>
+                {tip.ad}
+              </button>
+            ))}
             <Link href="/basvuru" className="nc">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               {t.nav_apply}
@@ -960,44 +882,17 @@ export default function Home() {
       {/* MOB CATS */}
       <div className="mob-cats">
         <div className="mob-cats-in">
-          <button type="button" className={`mcat ${activeCategory === "hotel" ? "on" : ""}`} onClick={() => filterByCategory("hotel")}>{t.nav_hotel}</button>
-          <button type="button" className={`mcat ${activeCategory === "beach" ? "on" : ""}`} onClick={() => filterByCategory("beach")}>{t.nav_beach}</button>
-          <button type="button" className={`mcat ${activeCategory === "aqua" ? "on" : ""}`} onClick={() => filterByCategory("aqua")}>{t.nav_aqua}</button>
-          <button type="button" id="mc4" className={`mcat ${activeCategory === "restoran" ? "on" : ""}`} onClick={() => filterByCategory("restoran")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
-              <path d="M7 2v20" />
-              <path d="M17 2v20" />
-              <path d="M21 2c-1.5 0-3 1-3 3v7h3" />
-            </svg>
-            {t.nav_restoran}
-          </button>
-          <button type="button" id="mc5" className={`mcat ${activeCategory === "bar" ? "on" : ""}`} onClick={() => filterByCategory("bar")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 21h8" />
-              <path d="M12 15v6" />
-              <path d="M17 3H7l5 8 5-8z" />
-              <line x1="9" y1="6" x2="15" y2="6" />
-            </svg>
-            {t.nav_bar}
-          </button>
-          <button type="button" id="mc6" className={`mcat ${activeCategory === "tekne" ? "on" : ""}`} onClick={() => filterByCategory("tekne")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
-              <path d="M20 18l-1.4-7H5.4L4 18" />
-              <path d="M12 11V4M9 4h6" />
-            </svg>
-            {t.nav_tekne}
-          </button>
-          <button type="button" id="mc7" className={`mcat ${activeCategory === "spa" ? "on" : ""}`} onClick={() => filterByCategory("spa")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
-              <path d="M7 4C5 7 5 10 7 12" />
-              <path d="M17 4c2 3 2 6 0 8" />
-              <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
-            </svg>
-            {t.nav_spa}
-          </button>
+          {aktifTipler.map((tip) => (
+            <button
+              key={tip.slug}
+              type="button"
+              className={`mcat ${activeCategory === tip.slug ? "on" : ""}`}
+              onClick={() => goToTipSlug(tip.slug)}
+            >
+              {tip.ikon?.trim() ? `${tip.ikon.trim()} ` : ""}
+              {tip.ad}
+            </button>
+          ))}
           <Link href="/basvuru" className="mcat">{t.nav_apply}</Link>
         </div>
       </div>
@@ -1078,69 +973,20 @@ export default function Home() {
               </>
             )}
           </div>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("hotel"); }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 22V12H8v10"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
-            {t.nav_hotel}
-          </button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("beach"); }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 4C14 4 11 6 10 9L3 21"/><path d="M22 4C19 4 16 6 15 9L8 21"/><path d="M7 21h14"/><circle cx="19" cy="4" r="1" fill="currentColor"/></svg>
-            {t.nav_beach}
-          </button>
-          <button type="button" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("aqua"); }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0"/><path d="M2 7c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
-            {t.nav_aqua}
-          </button>
-          <button type="button" id="ml4" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("restoran"); }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 2v7c0 1.1.9 2 2 2h2v11" />
-              <path d="M7 2v20" />
-              <path d="M17 2v20" />
-              <path d="M21 2c-1.5 0-3 1-3 3v7h3" />
-            </svg>
-            {t.nav_restoran}
-          </button>
-          <button type="button" id="ml5" className="mob-link" onClick={() => { setMenuOpen(false); filterByCategory("bar"); }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 21h8" />
-              <path d="M12 15v6" />
-              <path d="M17 3H7l5 8 5-8z" />
-              <line x1="9" y1="6" x2="15" y2="6" />
-            </svg>
-            {t.nav_bar}
-          </button>
-          <button
-            type="button"
-            id="ml6"
-            className="mob-link"
-            onClick={() => {
-              setMenuOpen(false);
-              filterByCategory("tekne");
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
-              <path d="M20 18l-1.4-7H5.4L4 18" />
-              <path d="M12 11V4M9 4h6" />
-            </svg>
-            {t.nav_tekne}
-          </button>
-          <button
-            type="button"
-            id="ml7"
-            className="mob-link"
-            onClick={() => {
-              setMenuOpen(false);
-              filterByCategory("spa");
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
-              <path d="M7 4C5 7 5 10 7 12" />
-              <path d="M17 4c2 3 2 6 0 8" />
-              <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
-            </svg>
-            {t.nav_spa}
-          </button>
+          {aktifTipler.map((tip) => (
+            <button
+              key={tip.slug}
+              type="button"
+              className="mob-link"
+              onClick={() => {
+                setMenuOpen(false);
+                goToTipSlug(tip.slug);
+              }}
+            >
+              <span aria-hidden>{tip.ikon?.trim() || "🏷️"}</span>
+              {tip.ad}
+            </button>
+          ))}
           <Link href="/basvuru" className="mob-link" onClick={() => setMenuOpen(false)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             {t.nav_apply}
@@ -1243,53 +1089,32 @@ export default function Home() {
                 tabIndex={0}
               >
                 <span className="sfl">{t.sfl_type}</span>
-                <span className="sfv">{srchFacilityKey ? facilityTypeLabel(srchFacilityKey, t) : t.sfv_type}</span>
+                <span className="sfv">{srchFacilityLabel || t.sfv_type}</span>
               </div>
               {panelType && (
                 <div className="srch-dropdown type-dropdown" onClick={(e) => e.stopPropagation()}>
                   <div className="type-title">TESİS TÜRÜ SEÇİN</div>
                   <div className="type-grid">
-                    {FACILITY_TYPE_DEFS.map((ft) => {
-                      const label = facilityTypeLabel(ft.key, t);
-                      const sel = srchFacilityKey === ft.key;
-                      const tpId =
-                        ft.key === "restoran"
-                          ? "tp-restoran"
-                          : ft.key === "bar"
-                            ? "tp-bar"
-                            : ft.key === "tekne"
-                              ? "tp-tekne"
-                              : ft.key === "spa"
-                                ? "tp-spa"
-                                : undefined;
-                      return (
-                        <button
-                          key={ft.key}
-                          type="button"
-                          id={tpId}
-                          className={`type-btn ${sel ? "sel" : ""}`}
-                          onClick={() => setSrchFacilityKey(sel ? "" : ft.key)}
-                        >
-                          {ft.emoji ? (
-                            <span>{ft.emoji}</span>
-                          ) : ft.key === "tekne" ? (
-                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M2 20a6 6 0 003 1c1.5 0 3-.5 4-1.5s2.5-1.5 4-1.5 3 .5 4 1.5 2.5 1.5 4 1.5a6 6 0 003-1" />
-                              <path d="M20 18l-1.4-7H5.4L4 18" />
-                              <path d="M12 11V4M9 4h6" />
-                            </svg>
-                          ) : (
-                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 2C9 5 9 8 12 11s3 6 0 9" />
-                              <path d="M7 4C5 7 5 10 7 12" />
-                              <path d="M17 4c2 3 2 6 0 8" />
-                              <path d="M3 18c2 2 4 3 9 3s7-1 9-3" />
-                            </svg>
-                          )}
-                          <span>{label}</span>
-                        </button>
-                      );
-                    })}
+                    {aktifTipler.length === 0 ? (
+                      <div style={{ gridColumn: "1 / -1", fontSize: ".78rem", color: "var(--i3)", padding: "8px 4px" }}>
+                        Tesis tipleri yüklenince burada görünür.
+                      </div>
+                    ) : (
+                      aktifTipler.map((tip) => {
+                        const sel = srchFacilityKey === tip.slug;
+                        return (
+                          <button
+                            key={tip.slug}
+                            type="button"
+                            className={`type-btn ${sel ? "sel" : ""}`}
+                            onClick={() => setSrchFacilityKey(sel ? "" : tip.slug)}
+                          >
+                            <span>{tip.ikon?.trim() || "🏷️"}</span>
+                            <span>{tip.ad}</span>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                   <div className="srch-drop-footer">
                     <button type="button" className="srch-drop-btn" onClick={() => setSrchFacilityKey("")}>{t.r_clear}</button>
@@ -1498,63 +1323,40 @@ export default function Home() {
 <h2 className="sec-h" id="cat-title">{t.cat_title}</h2>
         <button type="button" className="sec-a" id="cat-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
         </div>
+        {aktifTipler.length > 0 && (
         <div className="cat-grid">
-          <div id="oteller" className="cat-card" data-cat="hotel" onClick={goToCategoryListing}>
-            <img src={CAT_IMGS[0]} alt="Hotel" />
-            <div className="cat-ov">
-<div className="cat-name" id="cat1-name">{t.cat_hotel}</div>
-            <div className="cat-sub" id="cat1-sub">{t.cat_hotel_sub}</div>
+          {aktifTipler.map((tip) => (
+            <div
+              key={tip.slug}
+              id={`cat-${tip.slug}`}
+              className="cat-card"
+              onClick={() => goToTipSlug(tip.slug)}
+            >
+              {tip.gorsel ? (
+                <img src={tip.gorsel} alt={tip.ad} />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "3.5rem",
+                    background: "linear-gradient(145deg, #0ABAB5 0%, #0A1628 100%)",
+                  }}
+                  aria-hidden
+                >
+                  {tip.ikon?.trim() || "🏷️"}
+                </div>
+              )}
+              <div className="cat-ov">
+                <div className="cat-name">{tip.ad}</div>
+              </div>
             </div>
-            <div className="cat-badge ct" id="cat1-badge">{t.badge_popular}</div>
-          </div>
-          <div id="beach-club" className="cat-card" data-cat="beach" onClick={goToCategoryListing}>
-            <img src={CAT_IMGS[1]} alt="Beach Club" />
-            <div className="cat-ov">
-              <div className="cat-name" id="cat2-name">{t.cat_beach}</div>
-              <div className="cat-sub" id="cat2-sub">{t.cat_beach_sub}</div>
-            </div>
-          </div>
-          <div id="aqua-park" className="cat-card" data-cat="aqua" onClick={goToCategoryListing}>
-            <img src={CAT_IMGS[2]} alt="Aqua Park" />
-            <div className="cat-ov">
-              <div className="cat-name" id="cat3-name">{t.cat_aqua}</div>
-              <div className="cat-sub" id="cat3-sub">{t.cat_aqua_sub}</div>
-            </div>
-            <div className="cat-badge co" id="cat3-badge">{t.badge_new}</div>
-          </div>
-          <div id="cat-restoran" className="cat-card" onClick={() => filterByCategory("restoran")}>
-            <img src="/images/tesis_kategorisi-restoran.jpg" alt={t.nav_restoran} />
-            <div className="cat-ov">
-              <div className="cat-name" id="cat4-name">{t.nav_restoran}</div>
-              <div className="cat-sub" id="cat4-sub">{t.cat_restoran_sub}</div>
-            </div>
-            <div className="cat-badge co" id="cat4-badge">{t.badge_new}</div>
-          </div>
-          <div id="cat-bar" className="cat-card" onClick={() => filterByCategory("bar")}>
-            <img src="/images/tesis_kategorisi-bar.jpg" alt={t.nav_bar} />
-            <div className="cat-ov">
-              <div className="cat-name" id="cat5-name">{t.nav_bar}</div>
-              <div className="cat-sub" id="cat5-sub">{t.cat_bar_sub}</div>
-            </div>
-            <div className="cat-badge co" id="cat5-badge">{t.badge_new}</div>
-          </div>
-          <div id="cat-tekne" className="cat-card" onClick={() => filterByCategory("tekne")}>
-            <img src="/images/tesis_kategorisi-tekne.jpg" alt={t.nav_tekne} />
-            <div className="cat-ov">
-              <div className="cat-name" id="cat6-name">{t.nav_tekne}</div>
-              <div className="cat-sub" id="cat6-sub">{t.cat_tekne_sub}</div>
-            </div>
-            <div className="cat-badge co" id="cat6-badge">{t.badge_new}</div>
-          </div>
-          <div id="cat-spa" className="cat-card" onClick={() => filterByCategory("spa")}>
-            <img src="/images/tesis_kategorisi-spa.jpg" alt={t.nav_spa} />
-            <div className="cat-ov">
-              <div className="cat-name" id="cat7-name">{t.nav_spa}</div>
-              <div className="cat-sub" id="cat7-sub">{t.cat_spa_sub}</div>
-            </div>
-            <div className="cat-badge co" id="cat7-badge">{t.badge_new}</div>
-          </div>
+          ))}
         </div>
+        )}
       </section>
 
       {/* FAV / PRODUCTS — En Çok Tercih Edilenler */}
@@ -1565,7 +1367,7 @@ export default function Home() {
         </div>
         <div className="pgrid" id="tesisGrid">
           {popularTesisler
-            ?.filter((t) => homeActiveCategoryMatchesKategori(activeCategory, (t as { kategori?: unknown }).kategori))
+            ?.filter((t) => matchesHomeCategory(activeCategory, (t as { kategori?: unknown }).kategori, aktifTipler))
             ?.slice(0, 4)
             ?.map((t) => {
             const name = t.ad as string;
