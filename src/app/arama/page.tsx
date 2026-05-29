@@ -7,54 +7,38 @@ import dynamic from "next/dynamic";
 import "./arama.css";
 import { supabase } from "@/lib/supabase";
 import { readSiteLangFromStorage, type SiteLang } from "@/lib/site-lang";
-import { aramaTabMatchesKategori, normalizeKategoriList } from "@/lib/tesisKategori";
+import { normalizeKategoriList } from "@/lib/tesisKategori";
 import { getSeatUnitLabel } from "@/lib/tesisFacilityTypes";
 
 const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 
-/** Arama sekmesi iç anahtarları — `activeTab` ve `TIP_QUERY_TO_TAB` ile uyumlu */
-type AramaTabKey =
-  | "Tümü"
-  | "Hotel"
-  | "Beach Club"
-  | "Aqua Park"
-  | "Restoran"
-  | "Bar & Lounge"
-  | "Tekne Turu"
-  | "Spa";
+const TUMU_TAB_KEY = "Tümü";
 
-const ARAMA_TAB_LABEL_TR: Record<AramaTabKey, string> = {
-  "Tümü": "Tümü",
-  Hotel: "Hotel",
-  "Beach Club": "Beach Club",
-  "Aqua Park": "Aqua Park",
-  Restoran: "Restoran",
-  "Bar & Lounge": "Bar & Lounge",
-  "Tekne Turu": "Tekne Turu",
-  Spa: "Spa",
+type AktifTesisTipi = {
+  id: string;
+  slug: string;
+  ad: string;
+  db_value: string;
+  sira: number;
+  ikon: string | null;
 };
 
-const ARAMA_TAB_LABEL_EN: Record<AramaTabKey, string> = {
-  "Tümü": "All",
-  Hotel: "Hotel",
-  "Beach Club": "Beach Club",
-  "Aqua Park": "Aqua Park",
-  Restoran: "Restaurant",
-  "Bar & Lounge": "Bar & Lounge",
-  "Tekne Turu": "Boat Tour",
-  Spa: "Spa",
-};
+/** tesisler.kategori içinde db_value exact match */
+function tesisHasDbValue(k: unknown, dbValue: string): boolean {
+  if (!dbValue) return false;
+  return normalizeKategoriList(k).some((part) => part === dbValue);
+}
 
-/** Ana sayfa `data-cat` / arama `tip` sorgusu → sekme; `tesisler.kategori` ile eşleşir */
-const TIP_QUERY_TO_TAB: Record<string, AramaTabKey> = {
-  hotel: "Hotel",
-  beach: "Beach Club",
-  aqua: "Aqua Park",
-  restoran: "Restoran",
-  bar: "Bar & Lounge",
-  tekne: "Tekne Turu",
-  spa: "Spa",
-};
+function matchesAramaTab(
+  activeTab: string,
+  kategoriRaw: unknown,
+  aktifTipler: AktifTesisTipi[],
+): boolean {
+  if (activeTab === TUMU_TAB_KEY) return true;
+  const tip = aktifTipler.find((t) => t.slug === activeTab);
+  if (!tip) return true;
+  return tesisHasDbValue(kategoriRaw, tip.db_value);
+}
 
 const SORT_MESAFE = "📍 Mesafeye Göre";
 
@@ -183,7 +167,8 @@ function AramaContent() {
   const [viewMode, setViewMode] = useState<"list"|"grid">("list");
   const [fpOpen, setFpOpen] = useState(false);
   const [favs, setFavs] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<AramaTabKey>("Tümü");
+  const [activeTab, setActiveTab] = useState<string>(TUMU_TAB_KEY);
+  const [aktifTipler, setAktifTipler] = useState<AktifTesisTipi[]>([]);
   const [filterBadge, setFilterBadge] = useState(0);
   const [priceMin, setPriceMin] = useState(0);
   const [priceMax, setPriceMax] = useState(5000);
@@ -201,6 +186,24 @@ function AramaContent() {
     sync();
     window.addEventListener("myloungers_langchange", sync);
     return () => window.removeEventListener("myloungers_langchange", sync);
+  }, []);
+
+  useEffect(() => {
+    async function fetchAktifTipler() {
+      const { data, error } = await supabase
+        .from("tesis_tipleri")
+        .select("id, slug, ad, db_value, sira, ikon")
+        .eq("aktif", true)
+        .order("sira", { ascending: true });
+
+      if (error) {
+        console.error("[arama] tesis_tipleri sorgu hatası:", error);
+        return;
+      }
+      setAktifTipler((data ?? []) as AktifTesisTipi[]);
+    }
+
+    void fetchAktifTipler();
   }, []);
 
   useEffect(() => {
@@ -349,13 +352,14 @@ function AramaContent() {
     if (tarih) setDateVal(tarih);
     if (tip) {
       setTypeVal(tip);
-      const tab = TIP_QUERY_TO_TAB[tip.toLowerCase()];
-      if (tab) setActiveTab(tab);
+      const tipNorm = tip.trim().toLowerCase();
+      const matched = aktifTipler.find((t) => t.slug.toLowerCase() === tipNorm);
+      setActiveTab(matched ? matched.slug : TUMU_TAB_KEY);
     } else {
       setTypeVal("");
-      setActiveTab("Tümü");
+      setActiveTab(TUMU_TAB_KEY);
     }
-  }, [searchParams]);
+  }, [searchParams, aktifTipler]);
 
   const ozellikParam = searchParams.get("ozellik");
   const requiredOzellikKeys = useMemo(() => {
@@ -465,7 +469,7 @@ function AramaContent() {
 
   const filtered = useMemo(() => {
     let list = cardsForList
-      .filter((c) => aramaTabMatchesKategori(activeTab, c.kategoriRaw))
+      .filter((c) => matchesAramaTab(activeTab, c.kategoriRaw, aktifTipler))
       .filter((c) => {
         if (c.price == null) return true;
         return c.price >= priceMin && c.price <= priceMax;
@@ -520,6 +524,7 @@ function AramaContent() {
   }, [
     cardsForList,
     activeTab,
+    aktifTipler,
     priceMin,
     priceMax,
     minScoreFilter,
@@ -533,49 +538,27 @@ function AramaContent() {
   ]);
 
   const tabCounts = useMemo(() => {
-    const empty = {
-      all: 0,
-      Hotel: 0,
-      "Beach Club": 0,
-      "Aqua Park": 0,
-      Restoran: 0,
-      "Bar & Lounge": 0,
-      "Tekne Turu": 0,
-      Spa: 0,
-    };
-    if (!cards.length) return empty;
-    const c = (tabKey: AramaTabKey) =>
-      cards.filter((card) => aramaTabMatchesKategori(tabKey, card.kategoriRaw)).length;
-    return {
-      all: cards.length,
-      Hotel: c("Hotel"),
-      "Beach Club": c("Beach Club"),
-      "Aqua Park": c("Aqua Park"),
-      Restoran: c("Restoran"),
-      "Bar & Lounge": c("Bar & Lounge"),
-      "Tekne Turu": c("Tekne Turu"),
-      Spa: c("Spa"),
-    };
-  }, [cards]);
+    const counts: Record<string, number> = { [TUMU_TAB_KEY]: cards.length };
+    for (const tip of aktifTipler) {
+      counts[tip.slug] = cards.filter((card) => tesisHasDbValue(card.kategoriRaw, tip.db_value)).length;
+    }
+    return counts;
+  }, [cards, aktifTipler]);
 
   const TABS = useMemo(() => {
-    const labels = siteLang === "en" ? ARAMA_TAB_LABEL_EN : ARAMA_TAB_LABEL_TR;
-    const defs: { key: AramaTabKey; emoji: string }[] = [
-      { key: "Tümü", emoji: "🏖️" },
-      { key: "Hotel", emoji: "🏨" },
-      { key: "Beach Club", emoji: "🌊" },
-      { key: "Aqua Park", emoji: "💦" },
-      { key: "Restoran", emoji: "🍽️" },
-      { key: "Bar & Lounge", emoji: "🍸" },
-      { key: "Tekne Turu", emoji: "⛵" },
-      { key: "Spa", emoji: "💆" },
-    ];
-    return defs.map(({ key, emoji }) => ({
-      key,
-      label: `${emoji} ${labels[key]}`,
-      count: key === "Tümü" ? tabCounts.all : tabCounts[key],
+    const tumuLabel = siteLang === "en" ? "All" : TUMU_TAB_KEY;
+    const tumuTab = {
+      key: TUMU_TAB_KEY,
+      label: `🏖️ ${tumuLabel}`,
+      count: tabCounts[TUMU_TAB_KEY] ?? cards.length,
+    };
+    const tipTabs = aktifTipler.map((tip) => ({
+      key: tip.slug,
+      label: `${tip.ikon?.trim() || "🏷️"} ${tip.ad}`,
+      count: tabCounts[tip.slug] ?? 0,
     }));
-  }, [tabCounts, siteLang]);
+    return [tumuTab, ...tipTabs];
+  }, [aktifTipler, tabCounts, siteLang, cards.length]);
 
   const uniqueCities = useMemo(() => {
     const s = new Set<string>();
@@ -805,21 +788,17 @@ function AramaContent() {
             </div>
             <div className="fg">
               <div className="fg-title">🏖️ Tesis Tipi</div>
-              {[
-                ["Hotel", tabCounts.Hotel],
-                ["Beach Club", tabCounts["Beach Club"]],
-                ["Aqua Park", tabCounts["Aqua Park"]],
-                ["Restoran", tabCounts.Restoran],
-                ["Bar & Lounge", tabCounts["Bar & Lounge"]],
-                ["Tekne Turu", tabCounts["Tekne Turu"]],
-                ["Spa", tabCounts.Spa],
-              ].map(([label, cnt]) => (
-                <label key={label} className="fc">
-                  <input type="checkbox" readOnly />
-                  <span className="fc-lbl">{label}</span>
-                  <span className="fc-cnt">{cnt}</span>
-                </label>
-              ))}
+              {aktifTipler.length === 0 ? (
+                <div style={{ fontSize: ".78rem", color: "var(--i3)" }}>Tesis tipleri yüklenince burada görünür.</div>
+              ) : (
+                aktifTipler.map((tip) => (
+                  <label key={tip.slug} className="fc">
+                    <input type="checkbox" readOnly />
+                    <span className="fc-lbl">{tip.ad}</span>
+                    <span className="fc-cnt">{tabCounts[tip.slug] ?? 0}</span>
+                  </label>
+                ))
+              )}
             </div>
             <div className="fg">
               <div className="fg-title">💰 Max Fiyat / Gün</div>
