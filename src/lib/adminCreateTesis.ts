@@ -276,5 +276,17 @@ export async function createTesisWithOwner(
     };
   }
 
+  const { error: yetkiliErr } = await admin.from("tesis_yetkili").upsert(
+    {
+      kullanici_id: authUserId,
+      tesis_id: tesisId,
+      rol: "sahip",
+    },
+    { onConflict: "kullanici_id,tesis_id", ignoreDuplicates: true },
+  );
+  if (yetkiliErr) {
+    console.warn("[adminCreateTesis] tesis_yetkili upsert atlandı:", yetkiliErr.message);
+  }
+
   return { success: true, tesisId, slug: savedSlug };
 }

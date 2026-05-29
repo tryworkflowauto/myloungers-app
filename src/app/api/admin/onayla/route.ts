@@ -96,6 +96,18 @@ export async function POST(req: Request) {
         console.error("kullanicilar insert error", userInsErr);
         return NextResponse.json({ error: "Kullanıcı kaydı oluşturulamadı" }, { status: 500 });
       }
+
+      const { error: yetkiliErr } = await supabaseAdmin.from("tesis_yetkili").upsert(
+        {
+          kullanici_id: authUserId,
+          tesis_id: tesis.id,
+          rol: "sahip",
+        },
+        { onConflict: "kullanici_id,tesis_id", ignoreDuplicates: true },
+      );
+      if (yetkiliErr) {
+        console.warn("tesis_yetkili upsert atlandı:", yetkiliErr.message);
+      }
     }
 
     return NextResponse.json({
