@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { getLocalizedField } from "@/lib/getLocalizedField";
 import { translateDayShort } from "@/lib/calismaSaatleri";
 import { readSiteLangFromStorage, SITE_LANG_STORAGE_KEY } from "@/lib/site-lang";
+import { getSeatUnitLabel } from "@/lib/tesisFacilityTypes";
 
 type TesisRow = Record<string, any>;
 
@@ -758,7 +759,7 @@ export default function TesisDetailPage() {
       return;
     }
     if (selSzls.length >= paxCount) {
-      showToast("Maksimum "+paxCount+" yer seçebilirsiniz. Kişi sayısını artırmak için + butonunu kullanın.","⚠️");
+      showToast("Maksimum "+paxCount+" "+getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori).toLocaleLowerCase("tr-TR")+" seçebilirsiniz. Kişi sayısını artırmak için + butonunu kullanın.","⚠️");
       return;
     }
     setSelSzls((prev) => [...prev, { no, zoneKey, price }]);
@@ -781,7 +782,7 @@ export default function TesisDetailPage() {
     }
     if (row?.yer_secimsiz !== true && !hizmetSecimliMi) {
       if (selSzls.length === 0) {
-        alert("Lütfen en az 1 yer seçin.");
+        alert("Lütfen en az 1 "+getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori).toLocaleLowerCase("tr-TR")+" seçin.");
         return;
       }
     }
@@ -801,7 +802,7 @@ export default function TesisDetailPage() {
         .eq("tesis_id", row?.id);
       if (tumKoltukErr) {
         console.error("[goRes] sezlonglar liste hatası:", tumKoltukErr);
-        showToast("Yer bilgisi yüklenemedi. Lütfen tekrar deneyin.", "⚠️");
+        showToast(getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori)+" bilgisi yüklenemedi. Lütfen tekrar deneyin.", "⚠️");
         return;
       }
       const doluSet = new Set<string>([
@@ -815,7 +816,7 @@ export default function TesisDetailPage() {
         : (tumKoltuklar ?? []);
       const bosKoltuklar = adayKoltuklar.filter((k: { id?: unknown }) => !doluSet.has(String(k.id)));
       if (bosKoltuklar.length < paxCount) {
-        showToast("Bu tarihte yeterli yer kalmadı. Lütfen kişi sayısını azaltın veya farklı tarih seçin.", "⚠️");
+        showToast("Bu tarihte yeterli "+getSeatUnitLabel((row as any)?.kategoriler ?? row?.kategori).toLocaleLowerCase("tr-TR")+" kalmadı. Lütfen kişi sayısını azaltın veya farklı tarih seçin.", "⚠️");
         return;
       }
       const otomatikSecim = bosKoltuklar.slice(0, paxCount).map((k: { grup_id?: unknown; numara?: unknown }) => {
@@ -960,6 +961,14 @@ export default function TesisDetailPage() {
 
   const yerSecimsizMi = row?.yer_secimsiz === true;
   const hizmetSecimliMi = row?.hizmet_secimli === true;
+  const rawKatForBirim = (row as any)?.kategoriler ?? (row as any)?.kategori;
+  const birim = getSeatUnitLabel(rawKatForBirim);
+  const birimLower = birim.toLocaleLowerCase("tr-TR");
+  const yerlesimPlanBaslik = birim === "Yer" ? "Tesis Yerleşim Planı" : `Tesis ${birim} Yerleşim Planı`;
+  const tip2VarsayilanAciklama =
+    birim === "Yer"
+      ? "Bu tesiste yer/koltuk seçimi yapılmaz. Yerleriniz tesiste belirlenecektir. Lütfen tarih ve kişi sayısı seçerek rezervasyonunuzu tamamlayın."
+      : `Bu tesiste ${birimLower} seçimi yapılmaz. ${birim}larınız tesiste belirlenecektir. Lütfen tarih ve kişi sayısı seçerek rezervasyonunuzu tamamlayın.`;
   const ozetFiyatBirim = zones.length > 0 ? (selStart && isWE(selStart) ? (zones[0].pe ?? 0) : (zones[0].pw ?? 0)) : 0;
   const secilenHizmet = hizmetSecimliMi && secilenHizmetKey
     ? zones.find((z) => z.key === secilenHizmetKey)
@@ -1227,7 +1236,7 @@ export default function TesisDetailPage() {
   const btnText = resLoading ? "İşleniyor..."
     : !selStart ? "Tarih Seçerek Başlayın"
     : (hizmetSecimliMi && !secilenHizmetKey) ? "🧖 Hizmet Seçin"
-    : (!yerSecimsizMi && !hizmetSecimliMi && selSzls.length === 0) ? "🛏 Haritadan Yer Seç"
+    : (!yerSecimsizMi && !hizmetSecimliMi && selSzls.length === 0) ? "🛏 Haritadan "+birim+" Seç"
     : "📅 Rezervasyonu Tamamla →";
 
   if (loading) {
@@ -1720,7 +1729,7 @@ export default function TesisDetailPage() {
             {/* YERLEŞİM PLANI */}
             <div className="panel panel-yerlesim">
               <div className="ph" onClick={() => togglePanel("plan")}>
-                <div className="ph-l"><span className="ph-ic">🗺️</span><div><div className="ph-title">Tesis Yerleşim Planı</div><div className="ph-sub">Bölgeye tıklayarak yer seçin</div></div></div>
+                <div className="ph-l"><span className="ph-ic">🗺️</span><div><div className="ph-title">{yerlesimPlanBaslik}</div><div className="ph-sub">Bölgeye tıklayarak {birimLower} seçin</div></div></div>
                 <svg className={`ch${openPanels.plan ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {openPanels.plan && <div className="pb" style={{ padding: 16 }}>
@@ -1766,7 +1775,7 @@ export default function TesisDetailPage() {
             {!yerSecimsizMi && !hizmetSecimliMi && (
             <div className="panel panel-szl" ref={szlRef}>
               <div className={`ph${!openPanels.szl ? " ph-teal" : ""}`} onClick={() => togglePanel("szl")}>
-                <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">Yer Seç</div><div className="ph-sub">100 yer · İskele · VIP · Silver</div></div></div>
+                <div className="ph-l"><span className="ph-ic">🏖️</span><div><div className="ph-title">{birim} Seç</div><div className="ph-sub">100 yer · İskele · VIP · Silver</div></div></div>
                 <svg className={`ch${openPanels.szl ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {openPanels.szl && <div className="pb" style={{ padding: 22 }}>
@@ -1796,7 +1805,7 @@ export default function TesisDetailPage() {
                           ) : null}
                         </div>
                         <div style={{ flexShrink:0, textAlign:"right", fontSize:12, fontWeight:800, color:"white", whiteSpace:"nowrap", alignSelf:"flex-start", maxWidth:"48%", overflow:"hidden", textOverflow:"ellipsis" }}>
-                          ₺{z.pw.toLocaleString("tr-TR")} / gün · {z.count} Yer · %{z.dolulukPct} Dolu
+                          ₺{z.pw.toLocaleString("tr-TR")} / gün · {z.count} {birim} · %{z.dolulukPct} Dolu
                         </div>
                       </div>
                       <div style={{ background:"white" }}>
@@ -1875,11 +1884,11 @@ export default function TesisDetailPage() {
                 <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"16px 18px", background:"#F0F9FF", border:"1.5px solid #BAE6FD", borderRadius:12 }}>
                   <span style={{ fontSize:22 }}>ℹ️</span>
                   <div>
-                    <div style={{ fontWeight:800, fontSize:14, color:"#0C4A6E", marginBottom:6 }}>Yer Seçimi Yok</div>
+                    <div style={{ fontWeight:800, fontSize:14, color:"#0C4A6E", marginBottom:6 }}>{birim} Seçimi Yok</div>
                     <div style={{ fontSize:13, color:"#075985", lineHeight:1.5 }}>
                       {row?.yer_secimsiz_aciklama && String(row.yer_secimsiz_aciklama).trim()
                         ? String(row.yer_secimsiz_aciklama)
-                        : "Bu tesiste yer/koltuk seçimi yapılmaz. Yerleriniz tesiste belirlenecektir. Lütfen tarih ve kişi sayısı seçerek rezervasyonunuzu tamamlayın."}
+                        : tip2VarsayilanAciklama}
                     </div>
                   </div>
                 </div>
@@ -2328,7 +2337,7 @@ export default function TesisDetailPage() {
                 </div>
                 <div className={`sb-step${(hizmetSecimliMi ? !!(selStart && secilenHizmetKey) : (yerSecimsizMi ? !!(selStart && paxCount > 0) : selSzls.length > 0)) ? " act" : ""}`}>
                   <div className="sb-step-ic">{hizmetSecimliMi ? "🧖" : "🛏"}</div>
-                  <div className="sb-step-n">{hizmetSecimliMi ? "Hizmet" : "Yer"}</div>
+                  <div className="sb-step-n">{hizmetSecimliMi ? "Hizmet" : birim}</div>
                   <div className="sb-step-v">{hizmetSecimliMi ? (secilenHizmet?.label ?? "Seç") : (yerSecimsizMi ? (paxCount + " kişi") : (selSzls.length > 0 ? selSzls.length + " seçildi" : "Seç"))}</div>
                 </div>
                 <div className="sb-step">
@@ -2357,7 +2366,7 @@ export default function TesisDetailPage() {
               </div>
               <div className="cal-leg">
                 <div className="cal-lgi"><div className="cal-lgd" style={{ background: "var(--tlt)", border: "1px solid var(--teal)" }}></div>Müsait</div>
-                <div className="cal-lgi"><div className="cal-lgd" style={{ background: "#FEF3C7", border: "1px solid #FDE68A" }}></div>Az yer</div>
+                <div className="cal-lgi"><div className="cal-lgd" style={{ background: "#FEF3C7", border: "1px solid #FDE68A" }}></div>Az {birimLower}</div>
                 <div className="cal-lgi"><div className="cal-lgd" style={{ background: "#FEE2E2", border: "1px solid #FCA5A5" }}></div>Dolu</div>
                 <div className="cal-lgi"><div className="cal-lgd" style={{ background: "var(--or)" }}></div>Seçili aralık</div>
               </div>
@@ -2383,7 +2392,7 @@ export default function TesisDetailPage() {
 
               {selStart && (
                 <div className="pax-row">
-                  <div><div className="pax-lbl">👥 Kişi Sayısı</div><div className="pax-sub">Maks. 5 · Her kişi 1 yer</div></div>
+                  <div><div className="pax-lbl">👥 Kişi Sayısı</div><div className="pax-sub">Maks. 5 · Her kişi 1 {birimLower}</div></div>
                   <div className="pax-ctrl">
                     <button className="pax-btn" disabled={paxCount === 1} onClick={() => setPaxCount((p) => Math.max(1, p - 1))}>−</button>
                     <span className="pax-num">{paxCount}</span>
@@ -2394,7 +2403,7 @@ export default function TesisDetailPage() {
 
               {selStart && !yerSecimsizMi && (
                 <div className="szl-bar">
-                  <span className="szl-bar-t">Seçilen yer</span>
+                  <span className="szl-bar-t">Seçilen {birimLower}</span>
                   <span className="szl-bar-n">{selSzls.length} / {paxCount}</span>
                 </div>
               )}
@@ -2412,9 +2421,9 @@ export default function TesisDetailPage() {
                     )}
                     <div className="bsum-row"><span>Süre</span><b>{days} gün</b></div>
                     {!yerSecimsizMi && (
-                      <div className="bsum-row"><span>Yer(ler)</span><b>{szlNames}</b></div>
+                      <div className="bsum-row"><span>{birim}(ler)</span><b>{szlNames}</b></div>
                     )}
-                    <div className="bsum-row"><span>Kişi sayısı</span><b>{efektifAdet}{yerSecimsizMi ? " kişi" : " kişi / yer"}</b></div>
+                    <div className="bsum-row"><span>Kişi sayısı</span><b>{efektifAdet}{yerSecimsizMi ? " kişi" : " kişi / "+birimLower}</b></div>
                     <div className="bsum-row"><span>Birim fiyat / gün</span><b>{hizmetSecimliMi ? ("₺" + hizmetFiyatBirim.toLocaleString("tr-TR") + " / gün") : (yerSecimsizMi ? ("₺" + ozetFiyatBirim.toLocaleString("tr-TR") + " / gün") : (units + " / gün"))}</b></div>
                     <div className="bsum-row bsum-total"><span>Toplam</span><span>₺{efektifTotal.toLocaleString("tr-TR")}</span></div>
                   </div>

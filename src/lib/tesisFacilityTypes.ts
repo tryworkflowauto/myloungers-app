@@ -154,3 +154,22 @@ export function normalizeToCanonical(value: unknown): FacilityTypeId | null {
   }
   return null;
 }
+
+/** Yer seçimli rezervasyon UI — birim etiketi (yalnızca görünen metin). */
+const SEAT_UNIT_LABEL_BY_FACILITY: Partial<Record<FacilityTypeId, string>> = {
+  beach: "Şezlong",
+  restoran: "Masa",
+  tekne: "Koltuk",
+};
+
+/**
+ * `tesisler.kategori` → müşteri arayüzünde yer/şezlong/masa/koltuk birim adı.
+ * İlk eşleşen kanonik kategori kullanılır; hotel/aqua/bar/spa/bilinmeyen → "Yer".
+ */
+export function getSeatUnitLabel(kategori: unknown): string {
+  const id = normalizeToCanonical(kategori);
+  if (id && SEAT_UNIT_LABEL_BY_FACILITY[id]) {
+    return SEAT_UNIT_LABEL_BY_FACILITY[id]!;
+  }
+  return "Yer";
+}

@@ -8,6 +8,7 @@ import "./arama.css";
 import { supabase } from "@/lib/supabase";
 import { readSiteLangFromStorage, type SiteLang } from "@/lib/site-lang";
 import { aramaTabMatchesKategori, normalizeKategoriList } from "@/lib/tesisKategori";
+import { getSeatUnitLabel } from "@/lib/tesisFacilityTypes";
 
 const SearchBar = dynamic(() => import("./SearchBar"), { ssr: false });
 
@@ -706,7 +707,10 @@ function AramaContent() {
         <div className={`cards${viewMode==="grid"?" grid":""}`}>
           {loading && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesisler yükleniyor…</div>}
           {!loading && filtered.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: "#94A3B8", fontSize: ".9rem" }}>Tesis bulunamadı</div>}
-          {filtered.map(c => (
+          {filtered.map((c) => {
+            const birim = getSeatUnitLabel(c.kategoriRaw);
+            const birimLower = birim.toLocaleLowerCase("tr-TR");
+            return (
             <div
               key={c.id}
               className="card"
@@ -743,7 +747,7 @@ function AramaContent() {
                   <div>
                     <div className="card-price-from">başlangıç</div>
                     <div className="card-price-val">{c.price !== null ? `₺${c.price.toLocaleString("tr-TR")}` : "—"}</div>
-                    <div className="card-price-unit">/ şezlong / gün</div>
+                    <div className="card-price-unit">/ {birimLower} / gün</div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
                     {typeof c.aktif === "boolean" && (
@@ -761,13 +765,14 @@ function AramaContent() {
                         router.push(`/tesis/${targetSlug}`);
                       }}
                     >
-                      {c.avail === "full" ? "Dolu" : "Şezlong Seç →"}
+                      {c.avail === "full" ? "Dolu" : `${birim} Seç →`}
                     </button>
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>

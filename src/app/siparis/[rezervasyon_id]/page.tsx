@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getOdemeModu } from "@/lib/odemeModlari";
+import { getSeatUnitLabel } from "@/lib/tesisFacilityTypes";
 
 type KategoriRow = { id: string; ad: string; icon: string | null };
 type UrunRow = {
@@ -89,18 +90,19 @@ export default function SiparisPage() {
             .select("id, kategori_id, ad, aciklama, fiyat, gorsel_url, icon, badges")
             .eq("tesis_id", tesisId)
             .order("sira", { ascending: true }),
-          supabase.from("tesisler").select("ad, odeme_modu").eq("id", tesisId).maybeSingle(),
+          supabase.from("tesisler").select("ad, odeme_modu, kategori").eq("id", tesisId).maybeSingle(),
         ]);
 
         if (rezRes.error) throw rezRes.error;
         if (katRes.error) throw katRes.error;
         if (urunRes.error) throw urunRes.error;
         if (tesisRes.error) throw tesisRes.error;
+        const girisBirim = getSeatUnitLabel((tesisRes.data as { kategori?: unknown } | null)?.kategori);
         if (
           rezRes.data &&
           ((rezRes.data as any).giris_yapildi !== true || (rezRes.data as any).durum !== "onaylandi")
         ) {
-          showToast("Önce şezlongunuzun girişini yapın (QR okutun veya kod girin)", "error");
+          showToast(`Önce ${girisBirim} girişinizi yapın (QR okutun veya kod girin)`, "error");
           router.push("/profil");
           setYukleniyor(false);
           return;

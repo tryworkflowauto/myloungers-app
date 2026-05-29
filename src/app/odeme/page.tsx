@@ -6,6 +6,24 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
+import { getLabel, getSeatUnitLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
+import { normalizeKategoriList } from "@/lib/tesisKategori";
+
+function tesisKategoriDisplayLabel(kategori: unknown): string {
+  const parts = normalizeKategoriList(kategori);
+  const tokens = parts.length > 0 ? parts : kategori != null ? [kategori] : [];
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  for (const tok of tokens) {
+    if (tok == null) continue;
+    const id = normalizeToCanonical(tok);
+    const label = id ? getLabel(id) : String(tok).trim();
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    labels.push(label);
+  }
+  return labels.length > 0 ? labels.join(", ") : "—";
+}
 
 type ResData = {
   tesis: string;
@@ -108,6 +126,7 @@ function OdemeContent() {
   const [tesisCover, setTesisCover] = useState("/logo.png");
   const [tesisAddress, setTesisAddress] = useState("");
   const [tesisIptalPolitikasi, setTesisIptalPolitikasi] = useState<string | null>(null);
+  const [tesisKategori, setTesisKategori] = useState<unknown>(null);
   // Rezervasyon tutma süresi sayacı
   const [rezerveliKadar, setRezerveliKadar] = useState<Date | null>(null);
   const [kalanSure, setKalanSure] = useState<number>(0); // saniye cinsinden
@@ -198,15 +217,16 @@ function OdemeContent() {
 
   useEffect(() => {
     const tesisParam = res.tesis?.trim();
-    if (!tesisParam) {
+      if (!tesisParam) {
       setTesisCover("/logo.png");
       setTesisAddress("");
+      setTesisKategori(null);
       return;
     }
     let cancelled = false;
     (async () => {
       const slugKey = tesisParam.toLowerCase();
-      const sel = "fotograflar, adres, ilce, sehir, iptal_politikasi";
+      const sel = "fotograflar, adres, ilce, sehir, iptal_politikasi, kategori";
       const { data: bySlug } = await supabase
         .from("tesisler")
         .select(sel)
@@ -233,11 +253,13 @@ function OdemeContent() {
       if (!row) {
         setTesisCover("/logo.png");
         setTesisAddress("");
+        setTesisKategori(null);
         return;
       }
       setTesisCover(firstPhotoFromFotograflar(row.fotograflar));
       setTesisAddress(addressFromTesisRow(row));
       setTesisIptalPolitikasi((row as any).iptal_politikasi ?? null);
+      setTesisKategori((row as { kategori?: unknown }).kategori ?? null);
     })();
     return () => { cancelled = true; };
   }, [res.tesis]);
@@ -328,12 +350,13 @@ function OdemeContent() {
         .eq("id", rezId)
         .eq("durum", "bekliyor");
       
-      alert("⏰ Rezervasyon tutma süreniz doldu. Şezlong yeniden müsait. Ana sayfaya yönlendiriliyorsunuz.");
+      const birimAlert = getSeatUnitLabel(tesisKategori);
+      alert("⏰ Rezervasyon tutma süreniz doldu. "+birimAlert+" yeniden müsait. Ana sayfaya yönlendiriliyorsunuz.");
       window.location.href = "/";
     }
     
     iptalEt();
-  }, [sureDoldu, searchParams]);
+  }, [sureDoldu, searchParams, tesisKategori]);
 
   function validate() {
     const e: Record<string, boolean> = {};
@@ -372,6 +395,9 @@ function OdemeContent() {
 
   const szlChips = res.szl.split(", ").filter(Boolean);
   const unitPrice = res.toplam / (res.gun * Math.max(res.kisi, 1));
+  const birim = getSeatUnitLabel(tesisKategori);
+  const birimLower = birim.toLocaleLowerCase("tr-TR");
+  const tesisCatLabel = tesisKategoriDisplayLabel(tesisKategori);
   const tesisSlug = (searchParams.get("tesis") || "reklamotv").toLowerCase();
   const paymentResult = searchParams.get("sonuc");
 
@@ -612,7 +638,7 @@ function OdemeContent() {
           }}>
             <span style={{ fontSize: 24 }}>⏱️</span>
             <span>
-              Şezlongunuz tutuluyor: {" "}
+              {birim}unuz tutuluyor: {" "}
               <span style={{ fontFamily: "monospace", fontSize: 20 }}>
                 {String(Math.floor(kalanSure / 60)).padStart(2, "0")}:{String(kalanSure % 60).padStart(2, "0")}
               </span>
@@ -660,7 +686,7 @@ function OdemeContent() {
                     <img className="res-hotel-img" src={tesisCover} alt={res.tesis || "Tesis"} />
                     <div>
                       <div className="res-hotel-name">{res.tesis}</div>
-                      <span className="res-hotel-cat">Beach Club</span>
+                      <span className="res-hotel-cat">{tesisCatLabel}</span>
                       <div className="res-hotel-loc">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                         {tesisAddress}
@@ -682,7 +708,7 @@ function OdemeContent() {
                       <div><div className="res-row-v">{res.kisi} Kişi</div></div>
                     </div>
                     <div className="res-row">
-                      <div className="res-row-l"><span className="res-row-ic">🛏</span><span className="res-row-t">Seçilen Şezlonglar</span></div>
+                      <div className="res-row-l"><span className="res-row-ic">🛏</span><span className="res-row-t">Seçilen {birim}lar</span></div>
                       <div>
                         <div className="szl-chips">
                           {szlChips.map((s) => <span key={s} className="szl-chip">{s}</span>)}
@@ -692,12 +718,12 @@ function OdemeContent() {
                     </div>
                     <div className="res-row">
                       <div className="res-row-l"><span className="res-row-ic">💰</span><span className="res-row-t">Birim Fiyat</span></div>
-                      <div><div className="res-row-v">₺{unitPrice.toLocaleString("tr-TR")} / gün</div><div className="res-row-sub">/ şezlong</div></div>
+                      <div><div className="res-row-v">₺{unitPrice.toLocaleString("tr-TR")} / gün</div><div className="res-row-sub">/ {birimLower}</div></div>
                     </div>
                   </div>
 
                   <div className="price-breakdown">
-                    <div className="pb-row"><span>{res.kisi} şezlong × {res.gun} gün</span><span>{res.kisi * res.gun} rezervasyon</span></div>
+                    <div className="pb-row"><span>{res.kisi} {birimLower} × {res.gun} gün</span><span>{res.kisi * res.gun} rezervasyon</span></div>
                     <div className="pb-row"><span>Birim fiyat</span><span>₺{unitPrice.toLocaleString("tr-TR")}</span></div>
                     <div className="pb-row"><span>Ara toplam</span><span>₺{res.toplam.toLocaleString("tr-TR")}</span></div>
                     <div className="pb-row"><span>Hizmet bedeli</span><span style={{ color: "var(--green-dk)" }}>Ücretsiz</span></div>
@@ -939,7 +965,7 @@ function OdemeContent() {
                     ["🏖️ Tesis", res.tesis],
                     ["📅 Tarih", res.tarih],
                     ...(res.saat ? [["🕐 Saat", `Saat: ${res.saat}`] as [string, string]] : []),
-                    ["🛏 Şezlong", res.szl],
+                    ["🛏 "+birim, res.szl],
                     ["👤 Misafir", (form.name + " " + form.surname).trim() || "Misafir"],
                     ["💰 Ödenen", "₺" + res.toplam.toLocaleString("tr-TR") + " ✓"],
                   ].map(([l, v]) => (
@@ -985,14 +1011,14 @@ function OdemeContent() {
               <div className="sum-name">{res.tesis}</div>
               <div className="sum-meta">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                {tesisAddress ? `${tesisAddress} · Beach Club` : "Beach Club"}
+                {tesisAddress ? `${tesisAddress} · ${tesisCatLabel}` : tesisCatLabel}
               </div>
               <div className="sum-rows">
                 <div className="sum-row"><span className="sum-row-l">📅 Tarih</span><span className="sum-row-v">{res.tarih}</span></div>
                 {!!res.saat && (
                   <div className="sum-row"><span className="sum-row-l">🕐 Saat</span><span className="sum-row-v">Saat: {res.saat}</span></div>
                 )}
-                <div className="sum-row"><span className="sum-row-l">🛏 Şezlong</span><span className="sum-row-v">{res.szl}</span></div>
+                <div className="sum-row"><span className="sum-row-l">🛏 {birim}</span><span className="sum-row-v">{res.szl}</span></div>
                 <div className="sum-row"><span className="sum-row-l">👥 Kişi</span><span className="sum-row-v">{res.kisi} kişi</span></div>
                 <div className="sum-row"><span className="sum-row-l">📆 Süre</span><span className="sum-row-v">{res.gun} gün</span></div>
               </div>

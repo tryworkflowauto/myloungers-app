@@ -9,7 +9,7 @@ import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { SIPARIS_DURUM } from "@/lib/constants";
 import { getOdemeModu } from "@/lib/odemeModlari";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
-import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
+import { getLabel, getSeatUnitLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
 import CallWaiterModal from "@/components/CallWaiterModal";
 
 /** tesisler.kategori → kart etiketi (Spa, Beach Club, Tekne Turu vb.) */
@@ -60,6 +60,8 @@ type Reservation = {
   calismaSaatleri?: any;
   /** tesisten okunan odeme_modu (null = bilinmiyor → getOdemeModu fallback) */
   odemeModu?: string | null;
+  /** Görünen birim etiketi (Şezlong / Masa / Koltuk / Yer) */
+  seatUnitLabel: string;
 };
 
 type UserReview = {
@@ -169,11 +171,11 @@ const STATUS_META: Record<
 };
 
 const RESERVATIONS: Reservation[] = [
-  { id:1, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-7842", dates:"15–17 Tem 2025", szl:"A3, A4 · İskele", gun:"2 gün", odenen:"₺5.000", status:"upcoming", statusTxt:"📅 Yaklaşan", statusCss:"background:#EFF6FF;color:#2563EB;border-color:#BFDBFE", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
-  { id:2, name:"Marmaris Beach Resort", cat:"Beach Club", loc:"Marmaris", code:"MYL-7651", dates:"3–5 Haz 2025", szl:"B7 · Silver", gun:"2 gün", odenen:"₺3.400", status:"active", statusTxt:"✅ Aktif", statusCss:"background:#F0FDF4;color:#16A34A;border-color:#BBF7D0", img:"https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&fit=crop" },
-  { id:3, name:"Fethiye Paradise Club", cat:"Beach Club", loc:"Fethiye", code:"MYL-7420", dates:"20 May 2025", szl:"C2 · VIP", gun:"1 gün", odenen:"₺1.500", status:"past", statusTxt:"✓ Tamamlandı", statusCss:"background:#F9FAFB;color:#6B7280;border-color:#E5E7EB", img:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&fit=crop", stars:4 },
-  { id:4, name:"Bodrum Luxury Suites", cat:"Hotel", loc:"Bodrum", code:"MYL-7201", dates:"1–2 May 2025", szl:"D1, D2 · VIP", gun:"1 gün", odenen:"₺3.600", status:"past", statusTxt:"✓ Tamamlandı", statusCss:"background:#F9FAFB;color:#6B7280;border-color:#E5E7EB", img:"https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&fit=crop", review:true },
-  { id:5, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-6988", dates:"10 Nis 2025", szl:"A5 · İskele", gun:"1 gün", odenen:"₺1.250", status:"cancel", statusTxt:"✗ İptal", statusCss:"background:#FEF2F2;color:#DC2626;border-color:#FECACA", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop" },
+  { id:1, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-7842", dates:"15–17 Tem 2025", szl:"A3, A4 · İskele", gun:"2 gün", odenen:"₺5.000", status:"upcoming", statusTxt:"📅 Yaklaşan", statusCss:"background:#EFF6FF;color:#2563EB;border-color:#BFDBFE", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop", seatUnitLabel:"Şezlong" },
+  { id:2, name:"Marmaris Beach Resort", cat:"Beach Club", loc:"Marmaris", code:"MYL-7651", dates:"3–5 Haz 2025", szl:"B7 · Silver", gun:"2 gün", odenen:"₺3.400", status:"active", statusTxt:"✅ Aktif", statusCss:"background:#F0FDF4;color:#16A34A;border-color:#BBF7D0", img:"https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&fit=crop", seatUnitLabel:"Şezlong" },
+  { id:3, name:"Fethiye Paradise Club", cat:"Beach Club", loc:"Fethiye", code:"MYL-7420", dates:"20 May 2025", szl:"C2 · VIP", gun:"1 gün", odenen:"₺1.500", status:"past", statusTxt:"✓ Tamamlandı", statusCss:"background:#F9FAFB;color:#6B7280;border-color:#E5E7EB", img:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&fit=crop", stars:4, seatUnitLabel:"Şezlong" },
+  { id:4, name:"Bodrum Luxury Suites", cat:"Hotel", loc:"Bodrum", code:"MYL-7201", dates:"1–2 May 2025", szl:"D1, D2 · VIP", gun:"1 gün", odenen:"₺3.600", status:"past", statusTxt:"✓ Tamamlandı", statusCss:"background:#F9FAFB;color:#6B7280;border-color:#E5E7EB", img:"https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&fit=crop", review:true, seatUnitLabel:"Yer" },
+  { id:5, name:"Zuzuu Beach Hotel", cat:"Beach Club", loc:"Bodrum", code:"MYL-6988", dates:"10 Nis 2025", szl:"A5 · İskele", gun:"1 gün", odenen:"₺1.250", status:"cancel", statusTxt:"✗ İptal", statusCss:"background:#FEF2F2;color:#DC2626;border-color:#FECACA", img:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop", seatUnitLabel:"Şezlong" },
 ];
 
 const TR_DAYS = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
@@ -619,6 +621,7 @@ export default function ProfilPage() {
             iptalSaatOncesi: tesisInfo?.iptal_saat_oncesi,
             calismaSaatleri: tesisInfo?.calisma_saatleri,
             odemeModu: r.tesis_id != null ? tesisInfo?.odeme_modu ?? null : null,
+            seatUnitLabel: getSeatUnitLabel(tesisInfo?.kategori),
           };
         });
 
@@ -1705,7 +1708,7 @@ export default function ProfilPage() {
           <div>
             <div className="sec-label">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>
-              Şezlong Girişi
+              Yer Girişi
             </div>
             <div className="qr-btns">
               <button
@@ -1721,7 +1724,7 @@ export default function ProfilPage() {
               </button>
               <button className="qr-btn qr-btn-secondary" onClick={() => setKodModal(true)}>
                 <span className="qr-btn-ico">⌨️</span>
-                <span><span className="qr-btn-title">Kod Gir</span><span className="qr-btn-sub">Şezlong kodunu girerek giriş yap</span></span>
+                <span><span className="qr-btn-title">Kod Gir</span><span className="qr-btn-sub">Yer kodunu girerek giriş yap</span></span>
               </button>
             </div>
           </div>
@@ -1833,7 +1836,7 @@ export default function ProfilPage() {
                       {r.saatLabel ? (
                         <div className="rc-row"><span>🕐</span><span className="rc-row-t">Saat</span><span className="rc-row-v">Saat: {r.saatLabel}</span></div>
                       ) : null}
-                      <div className="rc-row"><span>🛏</span><span className="rc-row-t">Şezlong</span><span className="rc-row-v" style={{ whiteSpace: 'pre-line' }}>{r.szl}</span></div>
+                      <div className="rc-row"><span>🛏</span><span className="rc-row-t">{r.seatUnitLabel}</span><span className="rc-row-v" style={{ whiteSpace: 'pre-line' }}>{r.szl}</span></div>
                       <div className="rc-row"><span>📆</span><span className="rc-row-t">Süre</span><span className="rc-row-v">{r.gun}</span></div>
                       <div className="rc-row"><span>💰</span><span className="rc-row-t">Ödenen</span><span className="rc-row-v" style={{color:"#16A34A"}}>₺{((r as any).bakiyeYuklenen ?? 0).toLocaleString("tr-TR")}</span></div>
                       <div className="rc-row"><span>💳</span><span className="rc-row-t">Kalan</span><span className="rc-row-v" style={{color: ((r as any).bakiyeKalan ?? 0) > 0 ? "#0891B2" : "#94A3B8"}}>₺{((r as any).bakiyeKalan ?? 0).toLocaleString("tr-TR")}</span></div>
@@ -1851,7 +1854,7 @@ export default function ProfilPage() {
                         const sureSn = cagri.varisSuresi ?? Math.round((varisMs - createdMs) / 1000);
                         return (
                           <div style={{ padding:"8px 12px", borderRadius:8, margin:"6px 0 2px", background:"rgba(8,145,178,0.08)", border:"1px solid rgba(8,145,178,0.25)", fontSize:".75rem", color:"#0C4A6E", fontWeight:500 }}>
-                            💚 Garson şezlongunuza geldi &bull; Süre: {formatSure(sureSn)}
+                            💚 Garson yanınıza geldi &bull; Süre: {formatSure(sureSn)}
                           </div>
                         );
                       }
@@ -1945,7 +1948,7 @@ export default function ProfilPage() {
                                   router.push("/siparis/" + r.id + "?tesis_id=" + (r.tesisId || ""));
                                   return;
                                 }
-                                showToast("🔒 Önce şezlong girişinizi yapın. Yukarıdaki QR Oku veya Kod Gir ile şezlong kodunuzu doğrulayın.", "error");
+                                showToast("🔒 Önce yer girişinizi yapın. Yukarıdaki QR Oku veya Kod Gir ile yer kodunuzu doğrulayın.", "error");
                               }}
                             >
                               {r.girisYapildi === true && r.durum === "onaylandi" ? "🍽️ Sipariş Ver" : "🔒 Sipariş Ver"}
@@ -2361,7 +2364,7 @@ export default function ProfilPage() {
                             href={`/tesis/${item.tesis?.slug}`}
                             style={{position:"absolute",right:16,bottom:12,background:"var(--orange)",color:"#1a1a1a",padding:"8px 16px",borderRadius:8,fontSize:"0.85rem",fontWeight:600,textDecoration:"none",whiteSpace:"nowrap",zIndex:10,opacity:1,visibility:"visible"}}
                           >
-                            Şezlong Seç →
+                            {getSeatUnitLabel(item.tesis?.kategori)} Seç →
                           </a>
                         </div>
                       </div>
@@ -2586,8 +2589,8 @@ export default function ProfilPage() {
         <div className="modal-overlay" style={{alignItems:"flex-end"}} onClick={e => { if(e.target===e.currentTarget) setKodModal(false); setAvatarDropdown(false); }}>
           <div className="kod-sheet">
             <button className="modal-close" style={{position:"absolute",top:16,right:16}} onClick={() => setKodModal(false)}>✕</button>
-            <div style={{fontSize:"1rem",fontWeight:900,marginBottom:6,color:"var(--navy)"}}>⌨️ Şezlong Kodu Gir</div>
-            <div style={{fontSize:".78rem",color:"var(--i3)",marginBottom:16}}>Şezlong üzerindeki kodu girerek rezervasyonunuzu aktif edin.</div>
+            <div style={{fontSize:"1rem",fontWeight:900,marginBottom:6,color:"var(--navy)"}}>⌨️ Yer Kodu Gir</div>
+            <div style={{fontSize:".78rem",color:"var(--i3)",marginBottom:16}}>Yer üzerindeki kodu girerek rezervasyonunuzu aktif edin.</div>
             <input className="kod-input" value={kodVal} onChange={e=>setKodVal(e.target.value.toUpperCase())} placeholder="MYL-DDMMYYYY-GX" maxLength={20} />
             <button className="kod-submit" onClick={submitKod}>Kodu Doğrula →</button>
           </div>
