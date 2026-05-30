@@ -4,6 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import {
+  getAktifTesisId,
+  getKullaniciTesisleri,
+  setAktifTesisId,
+  type TesisOzet,
+} from '@/lib/aktifTesis';
 
 const menuItems = [
   { section: 'ANA MENÜ' },
@@ -28,14 +34,18 @@ export default function IsletmeSidebar() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
   const [tesisAdi, setTesisAdi] = useState<string | null>(null);
+  const [tesisListesi, setTesisListesi] = useState<TesisOzet[]>([]);
+  const [aktifTesisId, setAktifTesisIdState] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [rezBekleyenCount, setRezBekleyenCount] = useState(0);
   const [siparisYeniCount, setSiparisYeniCount] = useState(0);
   const [bekleyenYorumSayisi, setBekleyenYorumSayisi] = useState(0);
+  const [tesisDropdownOpen, setTesisDropdownOpen] = useState(false);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [cikisModal,    setCikisModal]    = useState(false);
   const [toast,         setToast]         = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const tesisDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,31 +82,29 @@ export default function IsletmeSidebar() {
           : (kullanici.ad ?? kullanici.soyad ?? null);
       setUserName(fullName ?? authData.user.email ?? authData.user.user_metadata?.name ?? null);
 
-      const tesisId = kullanici.tesis_id as string | null | undefined;
-      if (!tesisId) {
-        setTesisAdi(null);
+      const [tesisler, aktifId] = await Promise.all([
+        getKullaniciTesisleri(supabase),
+        getAktifTesisId(supabase),
+      ]);
+      if (cancelled) return;
+
+      setTesisListesi(tesisler);
+      setAktifTesisIdState(aktifId);
+
+      const aktifTesis = aktifId ? tesisler.find((t) => t.id === aktifId) : null;
+      setTesisAdi(aktifTesis?.ad ?? null);
+
+      if (!aktifId) {
         setRezBekleyenCount(0);
         setSiparisYeniCount(0);
         setBekleyenYorumSayisi(0);
         return;
       }
 
-      const { data: tesis, error: tesisError } = await supabase
-        .from('tesisler')
-        .select('ad')
-        .eq('id', tesisId)
-        .maybeSingle();
-
-      if (!cancelled && tesis && typeof (tesis as { ad?: string }).ad === 'string') {
-        setTesisAdi((tesis as { ad: string }).ad);
-      } else if (!cancelled) {
-        setTesisAdi(null);
-      }
-
       const [{ count: rezCount, error: rezErr }, { count: sipCount, error: sipErr }, { count: yorumCount, error: yorumErr }] = await Promise.all([
-        supabase.from('rezervasyonlar').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
-        supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'yeni'),
-        supabase.from('yorumlar').select('*', { count: 'exact', head: true }).eq('tesis_id', tesisId).eq('durum', 'bekliyor'),
+        supabase.from('rezervasyonlar').select('*', { count: 'exact', head: true }).eq('tesis_id', aktifId).eq('durum', 'bekliyor'),
+        supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('tesis_id', aktifId).eq('durum', 'yeni'),
+        supabase.from('yorumlar').select('*', { count: 'exact', head: true }).eq('tesis_id', aktifId).eq('durum', 'bekliyor'),
       ]);
       if (!cancelled) {
         setRezBekleyenCount(rezErr ? 0 : (rezCount ?? 0));
@@ -111,11 +119,23 @@ export default function IsletmeSidebar() {
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
+  function handleTesisSec(tesis: TesisOzet) {
+    if (tesis.id === aktifTesisId) {
+      setTesisDropdownOpen(false);
+      return;
+    }
+    setAktifTesisId(tesis.id);
+    window.location.reload();
+  }
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (tesisDropdownRef.current && !tesisDropdownRef.current.contains(e.target as Node)) {
+        setTesisDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -124,7 +144,13 @@ export default function IsletmeSidebar() {
 
   // ESC closes modal
   useEffect(() => {
-    function h(e: KeyboardEvent) { if (e.key === 'Escape') { setDropdownOpen(false); setCikisModal(false); } }
+    function h(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setDropdownOpen(false);
+        setTesisDropdownOpen(false);
+        setCikisModal(false);
+      }
+    }
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
@@ -144,10 +170,71 @@ export default function IsletmeSidebar() {
         </Link>
       </div>
       {/* Tesis Seçici */}
-      <div style={{ margin: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-        <div style={{ width: '8px', height: '8px', background: '#10B981', borderRadius: '50%' }}></div>
-        <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, flex: 1 }}>{tesisAdi ?? '—'}</span>
-        <span style={{ color: '#94A3B8', fontSize: '12px' }}>▾</span>
+      <div ref={tesisDropdownRef} style={{ margin: '12px 16px', position: 'relative' }}>
+        <div
+          onClick={tesisListesi.length > 1 ? () => setTesisDropdownOpen((o) => !o) : undefined}
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            cursor: tesisListesi.length > 1 ? 'pointer' : 'pointer',
+          }}
+        >
+          <div style={{ width: '8px', height: '8px', background: '#10B981', borderRadius: '50%' }}></div>
+          <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, flex: 1 }}>{tesisAdi ?? '—'}</span>
+          <span style={{
+            color: '#94A3B8',
+            fontSize: '12px',
+            transform: tesisListesi.length > 1 && tesisDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+          }}>▾</span>
+        </div>
+        {tesisDropdownOpen && tesisListesi.length > 1 && (
+          <div style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            background: '#1E293B',
+            borderRadius: '10px',
+            border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            overflow: 'hidden',
+            zIndex: 200,
+          }}>
+            {tesisListesi.map((tesis) => (
+              <button
+                key={tesis.id}
+                type="button"
+                onClick={() => handleTesisSec(tesis)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  background: tesis.id === aktifTesisId ? 'rgba(10,186,181,0.15)' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: tesis.id === aktifTesisId ? 700 : 600,
+                  color: tesis.id === aktifTesisId ? '#0ABAB5' : '#fff',
+                  textAlign: 'left',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => { if (tesis.id !== aktifTesisId) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={(e) => { if (tesis.id !== aktifTesisId) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <div style={{ width: '6px', height: '6px', background: tesis.id === aktifTesisId ? '#0ABAB5' : '#10B981', borderRadius: '50%', flexShrink: 0 }}></div>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tesis.ad}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {/* Nav */}
       <nav style={{ padding: '8px 0', flex: 1 }}>
