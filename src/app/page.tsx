@@ -1635,7 +1635,6 @@ export default function Home() {
       <section className="rev">
         <div className="sec-row">
           <h2 className="sec-h" id="rev-title">{t.rev_title}</h2>
-          <a href="/yorumlar" className="sec-a" id="rev-all">{t.rev_all} →</a>
         </div>
         <div className="rgrid">
           {homeReviews.map((r) => (
