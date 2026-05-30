@@ -103,25 +103,71 @@ type Rezervasyon = {
 
 type RezKategori = "aktif" | "yaklasan" | "tamamlandi" | "iptal";
 
+type KanonikRezDurum = "iptal" | "tamamlandi" | "suresi_doldu" | "aktif" | "bekliyor" | "yaklasan";
+
+type RezDurumInput = {
+  durum?: string | null;
+  giris_yapildi?: boolean | null;
+  girisYapildi?: boolean | null;
+  baslangic_tarih?: string | null;
+  bitis_tarih?: string | null;
+  baslangicTarih?: string | null;
+  bitisTarih?: string | null;
+};
+
+/** Tarih + ödeme/giriş bazlı tek kanonik durum (rozet ve kartlar aynı kaynak) */
+function hesaplaRezDurum(r: RezDurumInput, bugun: string): KanonikRezDurum {
+  if ((r.durum ?? "").toLowerCase() === "iptal") return "iptal";
+
+  const bas = ((r.baslangic_tarih ?? r.baslangicTarih) || "").slice(0, 10);
+  const bit = ((r.bitis_tarih ?? r.bitisTarih) || "").slice(0, 10);
+  const giris = r.giris_yapildi === true || r.girisYapildi === true;
+  const durum = (r.durum ?? "").toLowerCase();
+
+  if (bit && bit < bugun) {
+    if (giris || durum !== "bekliyor") return "tamamlandi";
+    return "suresi_doldu";
+  }
+
+  if (bas && bit && bas <= bugun && bit >= bugun) {
+    return giris ? "aktif" : "bekliyor";
+  }
+
+  if (bas && bas > bugun) return "yaklasan";
+
+  return "bekliyor";
+}
+
+function kanonikToBadge(k: KanonikRezDurum): { status: string; statusLabel: string; disabled: boolean } {
+  switch (k) {
+    case "iptal":
+      return { status: "iptal", statusLabel: "✖ İptal", disabled: true };
+    case "tamamlandi":
+      return { status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false };
+    case "suresi_doldu":
+      return { status: "suresi_doldu", statusLabel: "⚠ Süresi doldu", disabled: true };
+    case "aktif":
+      return { status: "aktif", statusLabel: "● Aktif", disabled: false };
+    case "yaklasan":
+      return { status: "yaklasan", statusLabel: "◔ Yaklaşan", disabled: false };
+    case "bekliyor":
+    default:
+      return { status: "bekliyor", statusLabel: "◷ Bekliyor", disabled: false };
+  }
+}
+
+function kanonikToTabKategori(k: KanonikRezDurum): RezKategori {
+  if (k === "iptal" || k === "suresi_doldu") return "iptal";
+  if (k === "tamamlandi") return "tamamlandi";
+  if (k === "yaklasan") return "yaklasan";
+  return "aktif";
+}
 const GRUP_COLORS: Record<string, string> = {
   Silver: "linear-gradient(135deg,#0ABAB5,#0A1628)",
   VIP: "linear-gradient(135deg,#F5821F,#0A1628)",
   İskele: "linear-gradient(135deg,#F59E0B,#0A1628)",
   Gold: "linear-gradient(135deg,#8B5CF6,#0A1628)",
 };
-
-function durumToStatus(durum: string | null): { status: string; statusLabel: string; disabled: boolean } {
-  const d = (durum ?? "").toLowerCase();
-  if (d === "iptal" || d === "cancel" || d === "cancelled")
-    return { status: "iptal", statusLabel: "✖ İptal", disabled: true };
-  if (d === "tamamlandi" || d === "tamamlandı")
-    return { status: "tamamlandi", statusLabel: "✓ Tamamlandı", disabled: false };
-  if (d === "aktif")
-    return { status: "aktif", statusLabel: "● Aktif", disabled: false };
-  if (d === "rezerve")
-    return { status: "rezerve", statusLabel: "◔ Yaklaşan", disabled: false };
-  return { status: "bekliyor", statusLabel: "◷ Bekliyor", disabled: false };
-}
 
 function mapRowToRezervasyon(
   r: {
@@ -141,7 +187,8 @@ function mapRowToRezervasyon(
     saat?: string | null;
     created_at?: string | null;
   },
-  index: number
+  index: number,
+  bugun: string,
 ): Rezervasyon {
   const idStr = String(r.id);
   const rawAd = r.musteri_adi ?? (r as { musteriAdi?: string | null }).musteriAdi;
@@ -158,29 +205,27 @@ function mapRowToRezervasyon(
   const tarih = start ? start.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }) : "—";
   const tarihISO = startStr.slice(0, 10) || "";
   const saatPart = start ? start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "";
-  const { status, statusLabel, disabled } =
-    (r.durum ?? "").toLowerCase() === "iptal"
-      ? { status: "iptal", statusLabel: "✖ İptal", disabled: true }
-      : r.giris_yapildi
-        ? { status: "aktif", statusLabel: "● Aktif", disabled: false }
-        : { status: "bekliyor", statusLabel: "◷ Bekliyor", disabled: false };
+  const { status, statusLabel, disabled } = kanonikToBadge(hesaplaRezDurum(r, bugun));
   const tutarNum = Number(r.toplam_tutar ?? 0);
   const tutar = `₺${tutarNum.toLocaleString("tr-TR")}`;
-  const statusText = statusLabel.replace(/^[●◔◷✓✖]\s*/, "");
+  const statusText = statusLabel.replace(/^[●◔◷✓✖⚠]\s*/, "");
   const createdFmt = fmtCreatedAtIstanbul(r.created_at);
   let tarihSub: string;
   if (createdFmt) {
     tarihSub = `Rez: ${createdFmt} — ${statusText}`;
   } else {
-    tarihSub = disabled ? "İptal edildi" : `— — ${statusText}`;
+    tarihSub = status === "iptal" ? "İptal edildi" : `— — ${statusText}`;
   }
   let tutarSub = "Yeni";
   let tutarColor = NAVY;
-  if (disabled) {
+  if (status === "iptal") {
     tutarSub = "İade edildi";
     tutarColor = RED;
+  } else if (status === "suresi_doldu") {
+    tutarSub = "Süresi doldu";
+    tutarColor = GRAY600;
   } else if (status === "tamamlandi") tutarSub = "Tamamlandı";
-  else if (status === "aktif" || status === "rezerve" || status === "bekliyor") tutarSub = `Bakiye: ${tutar}`;
+  else if (status === "aktif" || status === "yaklasan" || status === "bekliyor") tutarSub = `Bakiye: ${tutar}`;
 
   const kisi = r.kisi_sayisi ?? 1;
   const szl = r.sezlonglar;
@@ -377,7 +422,8 @@ export default function IsletmeRezervasyonlarPage() {
           console.error("Rezervasyonlar fetch error:", error);
           setRezervasyonlar([]);
         } else {
-          const list = (data ?? []).map((r: any, i: number) => mapRowToRezervasyon(r, i));
+          const bugunStr = new Date().toISOString().slice(0, 10);
+          const list = (data ?? []).map((r: any, i: number) => mapRowToRezervasyon(r, i, bugunStr));
           setRezervasyonlar(list);
         }
         setLoading(false);
@@ -413,16 +459,18 @@ export default function IsletmeRezervasyonlarPage() {
 
   // ── FILTERING ──────────────────────────────────────────────────────────────
   const bugun = new Date().toISOString().slice(0, 10);
-  const rezKategori = (r: Rezervasyon): RezKategori => {
-    if (r.durum === "iptal") return "iptal";
-    const bas = (r.baslangicTarih || "").slice(0, 10);
-    const bit = (r.bitisTarih || "").slice(0, 10);
-    if (bit && bit < bugun) return "tamamlandi";
-    if (bas && bit && bas <= bugun && bit >= bugun) return "aktif";
-    if (bas && bas > bugun) return "yaklasan";
-    // Tarih verisi eksik/bozuk olsa bile kaydı kategorisiz bırakma.
-    return "yaklasan";
-  };
+  const rezKategori = (r: Rezervasyon): RezKategori =>
+    kanonikToTabKategori(
+      hesaplaRezDurum(
+        {
+          durum: r.durum,
+          girisYapildi: r.girisYapildi,
+          baslangicTarih: r.baslangicTarih,
+          bitisTarih: r.bitisTarih,
+        },
+        bugun,
+      ),
+    );
 
   const filtrelenmis = rezervasyonlar.filter((r) => {
     // Tab
@@ -700,7 +748,8 @@ export default function IsletmeRezervasyonlarPage() {
         sezlong_id: yeniForm.sezlongId || null,
         sezlonglar: selectedSezlong ? { numara: selectedSezlong.numara, sezlong_gruplari: { ad: selectedSezlong.grupAd } } : null,
       },
-      rezervasyonlar.length
+      rezervasyonlar.length,
+      new Date().toISOString().slice(0, 10),
     );
     setRezervasyonlar((prev) => [newRez, ...prev]);
     setYeniForm(emptyYeniForm);
@@ -735,16 +784,18 @@ export default function IsletmeRezervasyonlarPage() {
   // ── STATUS STYLE HELPERS ───────────────────────────────────────────────────
   function statusBg(status: string) {
     if (status === "aktif") return "#DCFCE7";
-    if (status === "rezerve") return "#DBEAFE";
+    if (status === "yaklasan" || status === "rezerve") return "#DBEAFE";
     if (status === "tamamlandi") return GRAY100;
     if (status === "iptal") return "#FEE2E2";
+    if (status === "suresi_doldu") return GRAY100;
     return "#FEF3C7";
   }
   function statusColor(status: string) {
     if (status === "aktif") return "#16A34A";
-    if (status === "rezerve") return "#2563EB";
+    if (status === "yaklasan" || status === "rezerve") return "#2563EB";
     if (status === "tamamlandi") return GRAY600;
     if (status === "iptal") return "#DC2626";
+    if (status === "suresi_doldu") return GRAY600;
     return "#D97706";
   }
 
@@ -843,8 +894,9 @@ export default function IsletmeRezervasyonlarPage() {
           >
             <option value="">Tüm Durumlar</option>
             <option value="aktif">Aktif</option>
-            <option value="rezerve">Yaklaşan</option>
+            <option value="yaklasan">Yaklaşan</option>
             <option value="bekliyor">Bekliyor</option>
+            <option value="suresi_doldu">Süresi doldu</option>
             <option value="tamamlandi">Tamamlandı</option>
             <option value="iptal">İptal</option>
           </select>
