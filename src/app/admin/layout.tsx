@@ -61,7 +61,7 @@ function komisyonSecToNumber(komisyonSec: string, ozelKomisyon: string): number 
 
 const NAV_ITEMS = [
   { href: "/admin",               label: "Dashboard",         icon: "📊", activePath: "/admin"          },
-  { href: "/admin/tesisler",      label: "Tesisler",          icon: "🏖️", badge: 2, badgeColor: ORANGE  },
+  { href: "/admin/tesisler",      label: "Tesisler",          icon: "🏖️", badgeColor: ORANGE  },
   { href: "/admin/tesis-tipleri", label: "Kategori Yönetimi", icon: "🏷️"                                 },
   { href: "/admin/kullanicilar",  label: "Kullanıcılar",      icon: "👤"                                 },
   { href: "/admin/komisyon",      label: "Komisyon Takibi",   icon: "💰", activePath: "/admin/komisyon"  },
@@ -71,15 +71,17 @@ const NAV_ITEMS = [
   { href: "/admin/ayarlar",       label: "Platform Ayarları", icon: "⚙️"                                 },
 ];
 
-function NavLink({ item, bekleyenYorumSayisi, bekleyenSikayetSayisi }: { item: (typeof NAV_ITEMS)[0]; bekleyenYorumSayisi: number; bekleyenSikayetSayisi: number | null }) {
+function NavLink({ item, bekleyenBasvuruSayisi, bekleyenYorumSayisi, bekleyenSikayetSayisi }: { item: (typeof NAV_ITEMS)[0]; bekleyenBasvuruSayisi: number; bekleyenYorumSayisi: number; bekleyenSikayetSayisi: number | null }) {
   const pathname = usePathname();
   const isActive = item.activePath ? pathname === item.activePath : pathname.startsWith(item.href) && (item.href === "/admin" ? pathname === "/admin" : true);
   const badgeToShow =
-    item.href === "/admin/yorumlar"
+    item.href === "/admin/tesisler"
+      ? (bekleyenBasvuruSayisi > 0 ? bekleyenBasvuruSayisi : null)
+      : item.href === "/admin/yorumlar"
       ? (bekleyenYorumSayisi > 0 ? bekleyenYorumSayisi : null)
       : item.href === "/admin/sikayetler"
         ? (bekleyenSikayetSayisi != null && bekleyenSikayetSayisi > 0 ? bekleyenSikayetSayisi : null)
-        : item.badge;
+        : null;
 
   return (
     <Link
@@ -102,6 +104,7 @@ function NavLink({ item, bekleyenYorumSayisi, bekleyenSikayetSayisi }: { item: (
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const [bekleyenBasvuruSayisi, setBekleyenBasvuruSayisi] = useState(0);
   const [bekleyenYorumSayisi, setBekleyenYorumSayisi] = useState(0);
   const [bekleyenSikayetSayisi, setBekleyenSikayetSayisi] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -235,6 +238,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   useEffect(() => {
+    const fetchBekleyenBasvurular = async () => {
+      const { count } = await supabase
+        .from("basvurular")
+        .select("*", { count: "exact", head: true })
+        .eq("durum", "beklemede");
+      setBekleyenBasvuruSayisi(count || 0);
+    };
+    fetchBekleyenBasvurular();
+  }, []);
+
+  useEffect(() => {
     const fetchBekleyenYorumlar = async () => {
       const { count } = await supabase
         .from("yorumlar")
@@ -275,13 +289,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{ margin: "10px 16px", background: "rgba(245,130,31,0.15)", border: "1px solid rgba(245,130,31,0.3)", borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 700, color: ORANGE }}>🔐 Platform Yöneticisi</div>
         <nav style={{ padding: "4px 0", flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Platform</div>
-          {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
+          {NAV_ITEMS.slice(0, 3).map((n) => <NavLink key={n.label} item={n} bekleyenBasvuruSayisi={bekleyenBasvuruSayisi} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Finans</div>
-          {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
+          {NAV_ITEMS.slice(3, 5).map((n) => <NavLink key={n.label} item={n} bekleyenBasvuruSayisi={bekleyenBasvuruSayisi} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Moderasyon</div>
-          {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
+          {NAV_ITEMS.slice(5, 7).map((n) => <NavLink key={n.label} item={n} bekleyenBasvuruSayisi={bekleyenBasvuruSayisi} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />)}
           <div style={{ padding: "14px 16px 5px", fontSize: 9, fontWeight: 700, color: GRAY400 }}>Sistem</div>
-          <NavLink item={NAV_ITEMS[7]} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />
+          <NavLink item={NAV_ITEMS[7]} bekleyenBasvuruSayisi={bekleyenBasvuruSayisi} bekleyenYorumSayisi={bekleyenYorumSayisi} bekleyenSikayetSayisi={bekleyenSikayetSayisi} />
         </nav>
         <div style={{ padding: 14, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
