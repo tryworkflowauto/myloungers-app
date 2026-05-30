@@ -269,8 +269,8 @@ export default function IsletmeDashboardPage() {
         supabase.from("siparisler").select("id, durum, created_at").eq("tesis_id", tesisId).eq("durum", "yeni").order("created_at", { ascending: true }).limit(8),
         supabase.from("rezervasyonlar").select("id, baslangic_tarih").eq("tesis_id", tesisId).not("pgtranid", "is", null).gte("baslangic_tarih", now.toISOString()).lte("baslangic_tarih", ucGunSonra.toISOString()),
         supabase.from("rezervasyonlar").select("id, musteri_adi, bakiye_kalan, bakiye_son_tarih").eq("tesis_id", tesisId).not("bakiye_son_tarih", "is", null).lte("bakiye_son_tarih", ucGunSonra.toISOString()).order("bakiye_son_tarih", { ascending: true }).limit(10),
-        supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).not("pgtranid", "is", null).gte("created_at", haftaninBasi.toISOString()).lte("created_at", haftaninSonu.toISOString()),
-        supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).not("pgtranid", "is", null).gte("created_at", bugunBas.toISOString()).lte("created_at", bugunSon.toISOString()),
+        supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).not("pgtranid", "is", null).neq("durum", "iptal").gte("created_at", haftaninBasi.toISOString()).lte("created_at", haftaninSonu.toISOString()),
+        supabase.from("rezervasyonlar").select("toplam_tutar").eq("tesis_id", tesisId).not("pgtranid", "is", null).neq("durum", "iptal").gte("created_at", bugunBas.toISOString()).lte("created_at", bugunSon.toISOString()),
         supabase.from("rezervasyonlar").select("id", { count: "exact", head: true }).eq("tesis_id", tesisId).eq("durum", "aktif").gte("created_at", bugunBas.toISOString()).lte("created_at", bugunSon.toISOString()),
         supabase.from("yorumlar").select("id", { count: "exact", head: true }).eq("tesis_id", tesisId).neq("durum", "cevaplandi"),
       ]);

@@ -6,9 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { getAktifTesisId } from "@/lib/aktifTesis";
 import { SIPARIS_DURUM } from "@/lib/constants";
 
-/** Gerçek gelir sayılacak rezervasyon durumları (iptal/bekleyen/planlı hariç) */
-const GELIR_DURUMLARI = ["aktif", "onaylandi", "tamamlandi"] as const;
-/** Gelir raporunda rezervasyon tutarının ait olduğu tarih (ödeme/kayıt anı) */
+/** Online ödenen rezervasyon geliri: pgtranid dolu + iptal hariç (manuel rezervasyonlar gelire girmez) */
 const REZ_GELIR_TARIH_KOLONU = "created_at" as const;
 /** Tamamlanan sipariş durumları (iptal hariç) */
 const SIPARIS_GELIR_DURUMLARI = [SIPARIS_DURUM.TESLIM_EDILDI, "tamamlandi"] as const;
@@ -245,7 +243,8 @@ export default function IsletmeRaporlarPage() {
       .from("rezervasyonlar")
       .select("toplam_tutar")
       .eq("tesis_id", tesisId)
-      .in("durum", [...GELIR_DURUMLARI])
+      .not("pgtranid", "is", null)
+      .neq("durum", "iptal")
       .gte(REZ_GELIR_TARIH_KOLONU, startIso)
       .lte(REZ_GELIR_TARIH_KOLONU, endIso)
       .then(({ data, error }) => {
@@ -614,7 +613,8 @@ export default function IsletmeRaporlarPage() {
           .from("rezervasyonlar")
           .select(`${REZ_GELIR_TARIH_KOLONU}, toplam_tutar`)
           .eq("tesis_id", tesisId)
-          .in("durum", [...GELIR_DURUMLARI])
+          .not("pgtranid", "is", null)
+          .neq("durum", "iptal")
           .gte(REZ_GELIR_TARIH_KOLONU, startIso)
           .lte(REZ_GELIR_TARIH_KOLONU, endIso),
         supabase
@@ -715,7 +715,8 @@ export default function IsletmeRaporlarPage() {
         .from("rezervasyonlar")
         .select("toplam_tutar, sezlonglar(sezlong_gruplari(ad, renk))")
         .eq("tesis_id", tesisId)
-        .in("durum", [...GELIR_DURUMLARI])
+        .not("pgtranid", "is", null)
+        .neq("durum", "iptal")
         .gte(REZ_GELIR_TARIH_KOLONU, startIso)
         .lte(REZ_GELIR_TARIH_KOLONU, endIso);
 
