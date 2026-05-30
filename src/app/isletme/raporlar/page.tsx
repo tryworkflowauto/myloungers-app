@@ -4,6 +4,58 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getAktifTesisId } from "@/lib/aktifTesis";
+import { SIPARIS_DURUM } from "@/lib/constants";
+
+/** Gerçek gelir sayılacak rezervasyon durumları (iptal/bekleyen/planlı hariç) */
+const GELIR_DURUMLARI = ["aktif", "onaylandi", "tamamlandi"] as const;
+/** Gelir raporunda rezervasyon tutarının ait olduğu tarih (ödeme/kayıt anı) */
+const REZ_GELIR_TARIH_KOLONU = "created_at" as const;
+/** Tamamlanan sipariş durumları (iptal hariç) */
+const SIPARIS_GELIR_DURUMLARI = [SIPARIS_DURUM.TESLIM_EDILDI, "tamamlandi"] as const;
+const SIP_GELIR_TARIH_KOLONU = "created_at" as const;
+
+type TarihAraligi = { bas: string; bit: string };
+
+function computeDonemRange(donem: string, now = new Date()): TarihAraligi & { startIso: string; endIso: string } {
+  let bas = new Date(now);
+  let bit = new Date(now);
+
+  if (donem === "bugun") {
+    bas = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    bit = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (donem === "hafta") {
+    const day = now.getDay();
+    const diffToMonday = day === 0 ? 6 : day - 1;
+    bas = new Date(now);
+    bas.setDate(now.getDate() - diffToMonday);
+    bit = new Date(bas);
+    bit.setDate(bas.getDate() + 6);
+  } else if (donem === "ay") {
+    bas = new Date(now.getFullYear(), now.getMonth(), 1);
+    bit = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else {
+    bas = new Date(now.getFullYear(), 0, 1);
+    bit = new Date(now.getFullYear(), 11, 31);
+  }
+
+  const basStr = `${bas.getFullYear()}-${String(bas.getMonth() + 1).padStart(2, "0")}-${String(bas.getDate()).padStart(2, "0")}`;
+  const bitStr = `${bit.getFullYear()}-${String(bit.getMonth() + 1).padStart(2, "0")}-${String(bit.getDate()).padStart(2, "0")}`;
+  return {
+    bas: basStr,
+    bit: bitStr,
+    startIso: `${basStr}T00:00:00.000`,
+    endIso: `${bitStr}T23:59:59.999`,
+  };
+}
+
+function aralikToIso(range: TarihAraligi): { startIso: string; endIso: string } {
+  return {
+    startIso: `${range.bas}T00:00:00.000`,
+    endIso: `${range.bit}T23:59:59.999`,
+  };
+}
+
+const INITIAL_GELIR_RANGE = computeDonemRange("hafta");
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -76,6 +128,7 @@ type GarsonRow = {
 export default function IsletmeRaporlarPage() {
   const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
+  const [tesisAdi, setTesisAdi] = useState<string | null>(null);
 
   const [activeTab, setActiveTab]     = useState<TabKey>("gelir");
   const [donemGelir, setDonemGelir]   = useState("hafta");
@@ -83,9 +136,12 @@ export default function IsletmeRaporlarPage() {
   const [donemUrun, setDonemUrun]     = useState("hafta");
 
   // Date range
-  const [tarihBaslangic, setTarihBaslangic] = useState("2026-03-01");
-  const [tarihBitis, setTarihBitis]         = useState("2026-03-11");
-  const [uygulanmisTarih, setUygulanmisTarih] = useState<{ bas: string; bit: string } | null>(null);
+  const [tarihBaslangic, setTarihBaslangic] = useState(INITIAL_GELIR_RANGE.bas);
+  const [tarihBitis, setTarihBitis]         = useState(INITIAL_GELIR_RANGE.bit);
+  const [uygulanmisTarih, setUygulanmisTarih] = useState<TarihAraligi | null>({
+    bas: INITIAL_GELIR_RANGE.bas,
+    bit: INITIAL_GELIR_RANGE.bit,
+  });
 
   // Bar chart tooltip
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -161,42 +217,63 @@ export default function IsletmeRaporlarPage() {
     };
   }, []);
 
-  // Supabase: rezervasyonlar + siparisler (toplamlar)
   useEffect(() => {
-    if (!tesisId) {
+    let cancelled = false;
+    async function loadTesisAdi() {
+      if (!tesisId) {
+        setTesisAdi(null);
+        return;
+      }
+      const { data } = await supabase.from("tesisler").select("ad").eq("id", tesisId).maybeSingle();
+      if (!cancelled) setTesisAdi((data as { ad?: string } | null)?.ad ?? null);
+    }
+    loadTesisAdi();
+    return () => {
+      cancelled = true;
+    };
+  }, [tesisId]);
+
+  // Supabase: rezervasyonlar + siparisler (toplamlar — durum + tarih filtreli)
+  useEffect(() => {
+    if (!tesisId || !uygulanmisTarih) {
       setSumRez(0);
       setSumSip(0);
       return;
     }
+    const { startIso, endIso } = aralikToIso(uygulanmisTarih);
     supabase
       .from("rezervasyonlar")
       .select("toplam_tutar")
       .eq("tesis_id", tesisId)
+      .in("durum", [...GELIR_DURUMLARI])
+      .gte(REZ_GELIR_TARIH_KOLONU, startIso)
+      .lte(REZ_GELIR_TARIH_KOLONU, endIso)
       .then(({ data, error }) => {
-        console.log("[sumRez] tesisId:", tesisId, "data:", data, "error:", error);
         if (error) {
           console.error("rezervasyonlar sum error:", error);
           setSumRez(0);
           return;
         }
-        const total = (data ?? []).reduce((acc: number, r: any) => acc + Number(r.toplam_tutar ?? 0), 0);
+        const total = (data ?? []).reduce((acc: number, r: { toplam_tutar?: unknown }) => acc + Number(r.toplam_tutar ?? 0), 0);
         setSumRez(total);
       });
     supabase
       .from("siparisler")
       .select("toplam")
       .eq("tesis_id", tesisId)
+      .in("durum", [...SIPARIS_GELIR_DURUMLARI])
+      .gte(SIP_GELIR_TARIH_KOLONU, startIso)
+      .lte(SIP_GELIR_TARIH_KOLONU, endIso)
       .then(({ data, error }) => {
-        console.log("[sumSip] tesisId:", tesisId, "data:", data, "error:", error);
         if (error) {
           console.error("siparisler sum error:", error);
           setSumSip(0);
           return;
         }
-        const total = (data ?? []).reduce((acc: number, r: any) => acc + Number(r.toplam ?? 0), 0);
+        const total = (data ?? []).reduce((acc: number, r: { toplam?: unknown }) => acc + Number(r.toplam ?? 0), 0);
         setSumSip(total);
       });
-  }, [tesisId]);
+  }, [tesisId, uygulanmisTarih]);
 
   // Bakiye takibi: rezervasyonlar
   async function fetchBakiyeler() {
@@ -465,33 +542,10 @@ export default function IsletmeRaporlarPage() {
   }, [activeTab, donemUrun, tesisId]);
 
   useEffect(() => {
-    const now = new Date();
-    let bas = new Date(now);
-    let bit = new Date(now);
-
-    if (donemGelir === "bugun") {
-      bas = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      bit = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else if (donemGelir === "hafta") {
-      const day = now.getDay();
-      const diffToMonday = day === 0 ? 6 : day - 1;
-      bas = new Date(now);
-      bas.setDate(now.getDate() - diffToMonday);
-      bit = new Date(bas);
-      bit.setDate(bas.getDate() + 6);
-    } else if (donemGelir === "ay") {
-      bas = new Date(now.getFullYear(), now.getMonth(), 1);
-      bit = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    } else {
-      bas = new Date(now.getFullYear(), 0, 1);
-      bit = new Date(now.getFullYear(), 11, 31);
-    }
-
-    const basStr = `${bas.getFullYear()}-${String(bas.getMonth() + 1).padStart(2, "0")}-${String(bas.getDate()).padStart(2, "0")}`;
-    const bitStr = `${bit.getFullYear()}-${String(bit.getMonth() + 1).padStart(2, "0")}-${String(bit.getDate()).padStart(2, "0")}`;
-    setTarihBaslangic(basStr);
-    setTarihBitis(bitStr);
-    setUygulanmisTarih({ bas: basStr, bit: bitStr });
+    const range = computeDonemRange(donemGelir);
+    setTarihBaslangic(range.bas);
+    setTarihBitis(range.bit);
+    setUygulanmisTarih({ bas: range.bas, bit: range.bit });
   }, [donemGelir]);
 
   useEffect(() => {
@@ -547,65 +601,30 @@ export default function IsletmeRaporlarPage() {
 
   useEffect(() => {
     async function fetchGunlukData() {
-      if (!tesisId) {
+      if (!tesisId || !uygulanmisTarih) {
         setGunlukChartData([]);
         return;
       }
 
       const now = new Date();
-      let start = new Date(now);
-      let end = new Date(now);
-      if (donemGelir === "bugun") {
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-      } else if (donemGelir === "hafta") {
-        const day = now.getDay(); // 0: Pazar, 1: Pazartesi, ...
-        const diffToMonday = day === 0 ? 6 : day - 1;
-        start = new Date(now);
-        start.setDate(now.getDate() - diffToMonday);
-        start.setHours(0, 0, 0, 0);
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23, 59, 59, 999);
-      } else if (donemGelir === "ay") {
-        start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-      } else {
-        start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
-        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-      }
-
-      const startIso = start.toISOString();
-      const endIso = end.toISOString();
-      console.log("[getGunlukData] date range:", { donemGelir, startIso, endIso });
+      const { startIso, endIso } = aralikToIso(uygulanmisTarih);
 
       const [rezRes, sipRes] = await Promise.all([
         supabase
           .from("rezervasyonlar")
-          .select("created_at, toplam_tutar")
+          .select(`${REZ_GELIR_TARIH_KOLONU}, toplam_tutar`)
           .eq("tesis_id", tesisId)
-          .gte("created_at", startIso)
-          .lte("created_at", endIso),
+          .in("durum", [...GELIR_DURUMLARI])
+          .gte(REZ_GELIR_TARIH_KOLONU, startIso)
+          .lte(REZ_GELIR_TARIH_KOLONU, endIso),
         supabase
           .from("siparisler")
-          .select("created_at, toplam")
+          .select(`${SIP_GELIR_TARIH_KOLONU}, toplam`)
           .eq("tesis_id", tesisId)
-          .gte("created_at", startIso)
-          .lte("created_at", endIso),
+          .in("durum", [...SIPARIS_GELIR_DURUMLARI])
+          .gte(SIP_GELIR_TARIH_KOLONU, startIso)
+          .lte(SIP_GELIR_TARIH_KOLONU, endIso),
       ]);
-
-      console.log("[getGunlukData] rezervasyonlar raw:", {
-        startIso,
-        endIso,
-        data: rezRes.data,
-        error: rezRes.error,
-      });
-      console.log("[getGunlukData] siparisler raw:", {
-        startIso,
-        endIso,
-        data: sipRes.data,
-        error: sipRes.error,
-      });
 
       if (rezRes.error || sipRes.error) {
         if (rezRes.error) console.error("gunluk rezervasyonlar error:", rezRes.error);
@@ -613,10 +632,6 @@ export default function IsletmeRaporlarPage() {
         setGunlukChartData([]);
         return;
       }
-      console.log("[getGunlukData] supabase row counts:", {
-        rezervasyonlar: rezRes.data?.length ?? 0,
-        siparisler: sipRes.data?.length ?? 0,
-      });
 
       const monthsShort = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
       const weekdaysShort = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
@@ -655,16 +670,16 @@ export default function IsletmeRaporlarPage() {
         }
       }
 
-      (rezRes.data ?? []).forEach((r: any) => {
-        const dt = r.created_at ? new Date(r.created_at) : null;
+      (rezRes.data ?? []).forEach((r: Record<string, unknown>) => {
+        const dt = r[REZ_GELIR_TARIH_KOLONU] ? new Date(String(r[REZ_GELIR_TARIH_KOLONU])) : null;
         if (!dt) return;
         const key = donemGelir === "bugun" ? `${dt.toISOString().slice(0, 13)}:00` : keyOf(dt);
         if (!bucket.has(key)) return;
         bucket.get(key)!.sezVal += Number(r.toplam_tutar ?? 0);
       });
 
-      (sipRes.data ?? []).forEach((s: any) => {
-        const dt = s.created_at ? new Date(s.created_at) : null;
+      (sipRes.data ?? []).forEach((s: Record<string, unknown>) => {
+        const dt = s[SIP_GELIR_TARIH_KOLONU] ? new Date(String(s[SIP_GELIR_TARIH_KOLONU])) : null;
         if (!dt) return;
         const key = donemGelir === "bugun" ? `${dt.toISOString().slice(0, 13)}:00` : keyOf(dt);
         if (!bucket.has(key)) return;
@@ -685,24 +700,24 @@ export default function IsletmeRaporlarPage() {
       setGunlukChartData(rows);
     }
     fetchGunlukData();
-  }, [donemGelir, tesisId]);
+  }, [donemGelir, tesisId, uygulanmisTarih]);
 
   useEffect(() => {
     async function fetchGrupBazliGelir() {
-      if (!tesisId || !tarihBaslangic || !tarihBitis) {
+      if (!tesisId || !uygulanmisTarih) {
         setGrupBazliGelirRows([]);
         return;
       }
 
-      const startIso = `${tarihBaslangic}T00:00:00.000`;
-      const endIso = `${tarihBitis}T23:59:59.999`;
+      const { startIso, endIso } = aralikToIso(uygulanmisTarih);
 
       const { data, error } = await supabase
         .from("rezervasyonlar")
         .select("toplam_tutar, sezlonglar(sezlong_gruplari(ad, renk))")
         .eq("tesis_id", tesisId)
-        .gte("created_at", startIso)
-        .lte("created_at", endIso);
+        .in("durum", [...GELIR_DURUMLARI])
+        .gte(REZ_GELIR_TARIH_KOLONU, startIso)
+        .lte(REZ_GELIR_TARIH_KOLONU, endIso);
 
       if (error) {
         console.error("grup bazli gelir fetch error:", error);
@@ -727,7 +742,7 @@ export default function IsletmeRaporlarPage() {
     }
 
     fetchGrupBazliGelir();
-  }, [tesisId, tarihBaslangic, tarihBitis]);
+  }, [tesisId, uygulanmisTarih]);
 
   // ── Derived data ─────────────────────────────────────────────────────────
   function getGunlukData(): GunlukItem[] {
@@ -886,7 +901,7 @@ export default function IsletmeRaporlarPage() {
       <header style={{ background: "white", borderBottom: `1px solid ${GRAY200}`, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Bakiye & Raporlar</h1>
-          <span style={{ fontSize: 11, color: GRAY400 }}>Zuzuu Beach Hotel • 2026</span>
+          <span style={{ fontSize: 11, color: GRAY400 }}>{tesisAdi ?? "—"} • {new Date().getFullYear()}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F0FFFE", border: `1px solid ${TEAL}`, borderRadius: 20, padding: "4px 12px", fontSize: 11, fontWeight: 600, color: TEAL }}>
