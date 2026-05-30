@@ -80,6 +80,8 @@ export default function AdminKomisyonPage() {
       const { data: rezData, error: rezErr } = await supabase
         .from("rezervasyonlar")
         .select("tesis_id, toplam_tutar, created_at")
+        .not("pgtranid", "is", null)
+        .neq("durum", "iptal")
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 

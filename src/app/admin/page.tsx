@@ -287,7 +287,7 @@ export default function AdminPage() {
       supabase.from("tesisler").select("id, ad, sehir, aktif, kapasite, puan").order("ad", { ascending: true }),
       supabase.from("basvurular").select("*").eq("durum", "beklemede").order("id", { ascending: false }),
       supabase.from("yorumlar").select("id, tesis_id, musteri_adi, puan, yorum, sikayet_var, tesisler(ad)").eq("sikayet_var", true),
-      supabase.from("rezervasyonlar").select("tesis_id, toplam_tutar, created_at").gte("created_at", start.toISOString()).lte("created_at", end.toISOString()),
+      supabase.from("rezervasyonlar").select("tesis_id, toplam_tutar, created_at").not("pgtranid", "is", null).neq("durum", "iptal").gte("created_at", start.toISOString()).lte("created_at", end.toISOString()),
       supabase.from("kullanicilar").select("*", { count: "exact", head: true }).eq("rol", "musteri"),
     ]);
 
