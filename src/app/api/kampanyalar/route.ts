@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireTesisYetkisi } from "@/lib/requireTesisYetkisi";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,6 +31,11 @@ export async function POST(req: Request) {
 
     if (!tesis_id || !ad) {
       return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
+    }
+
+    const gate = await requireTesisYetkisi(req, String(tesis_id));
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.message }, { status: gate.status });
     }
 
     const { data, error } = await supabaseAdmin
@@ -82,6 +88,11 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
     }
 
+    const gate = await requireTesisYetkisi(req, String(tesis_id));
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.message }, { status: gate.status });
+    }
+
     const { error } = await supabaseAdmin
       .from("kampanyalar")
       .update({
@@ -119,6 +130,11 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
     }
 
+    const gate = await requireTesisYetkisi(req, String(tesis_id));
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.message }, { status: gate.status });
+    }
+
     const { error } = await supabaseAdmin
       .from("kampanyalar")
       .delete()
@@ -144,6 +160,11 @@ export async function PATCH(req: Request) {
 
     if (!id || !tesis_id || !durum) {
       return NextResponse.json({ error: "Eksik veri" }, { status: 400 });
+    }
+
+    const gate = await requireTesisYetkisi(req, String(tesis_id));
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.message }, { status: gate.status });
     }
 
     const { error } = await supabaseAdmin

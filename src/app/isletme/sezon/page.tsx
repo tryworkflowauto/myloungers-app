@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getAktifTesisId } from "@/lib/aktifTesis";
+import { adminApiFetch } from "@/lib/adminApiFetch";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -516,9 +517,8 @@ export default function IsletmeSezonPage() {
     };
     console.log("[saveKampanya] payload:", payload);
     if (editKamp) {
-      const res = await fetch("/api/kampanyalar", {
+      const res = await adminApiFetch("/api/kampanyalar", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: editKamp.id,
           tesis_id: tesisId,
@@ -542,9 +542,8 @@ export default function IsletmeSezonPage() {
       console.log("[saveKampanya] update success", { id: editKamp.id, tesisId });
       showToast(`✅ "${kampForm.name}" kampanyası güncellendi`);
     } else {
-      const res = await fetch("/api/kampanyalar", {
+      const res = await adminApiFetch("/api/kampanyalar", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const result = await res.json().catch(() => null);
@@ -569,9 +568,8 @@ export default function IsletmeSezonPage() {
   }
 
   async function handleKampanyaSil(k: Kampanya) {
-    const res = await fetch("/api/kampanyalar", {
+    const res = await adminApiFetch("/api/kampanyalar", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: k.id, tesis_id: tesisId }),
     });
     const result = await res.json().catch(() => null);
@@ -586,9 +584,8 @@ export default function IsletmeSezonPage() {
   }
 
   async function handleKampanyaDurumGuncelle(k: Kampanya, durum: KampanyaDurum) {
-    const res = await fetch("/api/kampanyalar", {
+    const res = await adminApiFetch("/api/kampanyalar", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: k.id, tesis_id: tesisId, durum }),
     });
     const result = await res.json().catch(() => null);
