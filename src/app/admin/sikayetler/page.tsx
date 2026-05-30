@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAdminToast } from "../AdminToastContext";
 import { supabase } from "@/lib/supabase";
+import { adminApiFetch } from "@/lib/adminApiFetch";
 
 const NAVY = "#0A1628"; const TEAL = "#0ABAB5";
 const GRAY50 = "#F8FAFC"; const GRAY100 = "#F1F5F9"; const GRAY200 = "#E2E8F0";
@@ -58,9 +59,8 @@ function mapYorumRow(r: Record<string, unknown>, sebepFromSikayetMetin: boolean)
 }
 
 async function adminSikayetAction(action: "delete" | "reddet", kaynak: Sikayet["kaynak"], id: string) {
-  const res = await fetch("/api/admin/sikayetler", {
+  const res = await adminApiFetch("/api/admin/sikayetler", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, kaynak, id }),
   });
   return res.ok;

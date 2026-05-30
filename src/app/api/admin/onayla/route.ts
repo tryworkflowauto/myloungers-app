@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { fetchAktifTesisTipleri, kategoriInputToDbValues } from "@/lib/tesisTipleriDb";
+import { requireAdmin } from "@/lib/requireAdmin";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,6 +29,11 @@ type BasvuruPayload = {
 
 export async function POST(req: Request) {
   try {
+    const gate = await requireAdmin(req);
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.message }, { status: gate.status });
+    }
+
     const body = await req.json();
     const b: BasvuruPayload = body.basvuru ?? body;
     if (!b || !b.id) {

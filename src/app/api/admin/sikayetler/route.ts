@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/requireAdmin";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,11 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
+    const gate = await requireAdmin(req);
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.message }, { status: gate.status });
+    }
+
     const body = await req.json();
     const action = body.action as string | undefined;
     const kaynak = body.kaynak as string | undefined;

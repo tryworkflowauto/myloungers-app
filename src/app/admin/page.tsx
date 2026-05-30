@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminToast } from "./AdminToastContext";
 import { supabase } from "@/lib/supabase";
+import { adminApiFetch } from "@/lib/adminApiFetch";
 
 const NAVY   = "#0A1628";
 const TEAL   = "#0ABAB5";
@@ -495,9 +496,8 @@ export default function AdminPage() {
 
   async function onaylaTesis(t: Tesis) {
     if (!t.basvuru) return;
-    const res = await fetch("/api/admin/onayla", {
+    const res = await adminApiFetch("/api/admin/onayla", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ basvuru: t.basvuru }),
     });
     if (!res.ok) {
@@ -520,9 +520,8 @@ export default function AdminPage() {
     await loadDashboardData();
   }
   async function askiyaAl(id: string) {
-    const res = await fetch("/api/admin/tesis-durum", {
+    const res = await adminApiFetch("/api/admin/tesis-durum", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, aktif: false }),
     });
     if (!res.ok) {

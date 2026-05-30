@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAdminToast } from "../AdminToastContext";
+import { adminApiFetch } from "@/lib/adminApiFetch";
 
 const NAVY    = "#0A1628";
 const TEAL    = "#0ABAB5";
@@ -187,9 +188,8 @@ export default function AdminKomisyonPage() {
     setRows(p => p.map(r => r.id === id ? { ...r, ozelOranEdit: !r.ozelOranEdit } : r));
   }
   async function kaydetOzelOran(m: MutabakatRow) {
-    const res = await fetch("/api/admin/tesis-komisyon-orani", {
+    const res = await adminApiFetch("/api/admin/tesis-komisyon-orani", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: m.id, oran: m.ozelOran }),
     });
     if (!res.ok) {

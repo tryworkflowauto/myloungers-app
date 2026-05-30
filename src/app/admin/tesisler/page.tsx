@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useAdminToast } from "../AdminToastContext";
+import { adminApiFetch } from "@/lib/adminApiFetch";
 
 const NAVY = "#0A1628"; const TEAL = "#0ABAB5"; const ORANGE = "#F5821F";
 const GRAY50 = "#F8FAFC"; const GRAY100 = "#F1F5F9"; const GRAY200 = "#E2E8F0";
@@ -133,9 +134,8 @@ export default function AdminTesislerPage() {
   async function askiyaAl(id: string) {
     if (!id) return;
     try {
-      const res = await fetch("/api/admin/tesis-durum", {
+      const res = await adminApiFetch("/api/admin/tesis-durum", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, aktif: false }),
       });
       const data = await res.json().catch(() => ({}));
@@ -152,9 +152,8 @@ export default function AdminTesislerPage() {
   async function aktifYap(id: string) {
     if (!id) return;
     try {
-      const res = await fetch("/api/admin/tesis-durum", {
+      const res = await adminApiFetch("/api/admin/tesis-durum", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, aktif: true }),
       });
       const data = await res.json().catch(() => ({}));
@@ -172,9 +171,8 @@ export default function AdminTesislerPage() {
   async function onaylaBasvuru(b: Basvuru) {
     try {
       setBasvuruSavingId(b.id);
-      const res = await fetch("/api/admin/onayla", {
+      const res = await adminApiFetch("/api/admin/onayla", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ basvuru: b }),
       });
       const data = await res.json();
