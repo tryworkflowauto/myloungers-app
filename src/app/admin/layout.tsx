@@ -114,6 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [modalIsletmeSahibi, setModalIsletmeSahibi] = useState("");
   const [modalTelefon, setModalTelefon] = useState("");
   const [modalEmail, setModalEmail] = useState("");
+  const [modalSahipModu, setModalSahipModu] = useState<"yeni" | "mevcut">("yeni");
   const [modalSehirIlce, setModalSehirIlce] = useState("");
   const [modalKapasite, setModalKapasite] = useState<number | "">("");
   const [modalOdemeModu, setModalOdemeModu] = useState<string>("harcama_limitli");
@@ -136,6 +137,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setModalIsletmeSahibi("");
     setModalTelefon("");
     setModalEmail("");
+    setModalSahipModu("yeni");
     setModalSehirIlce("");
     setModalKapasite("");
     setModalOdemeModu("harcama_limitli");
@@ -157,6 +159,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     if (sifre.trim().length < 8) {
       showToast("Şifre en az 8 karakter olmalıdır.", RED);
+      return;
+    }
+    if (modalSahipModu === "mevcut" && !modalEmail.trim()) {
+      showToast("Mevcut hesap için e-posta zorunludur.", RED);
       return;
     }
     const { sehir, ilce } = splitSehirIlce(modalSehirIlce);
@@ -184,6 +190,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ? Number(modalIslemBedeli)
           : null,
       isletmeSahibiAdSoyad: modalIsletmeSahibi.trim() || null,
+      sahipModu: modalSahipModu,
     };
     if (komisyonOrani != null && Number.isFinite(komisyonOrani)) body.komisyonOrani = komisyonOrani;
 
@@ -208,7 +215,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       };
       if (res.ok && data.success) {
         const slugTxt = data.slug ? ` (${data.slug})` : "";
-        showToast(`✅ Tesis oluşturuldu${slugTxt}! Davet için e-posta gönderilmiş olabilir.`, GREEN);
+        const sonuc =
+          modalSahipModu === "mevcut"
+            ? " Mevcut hesaba bağlandı."
+            : " Davet için e-posta gönderilmiş olabilir.";
+        showToast(`✅ Tesis oluşturuldu${slugTxt}!${sonuc}`, GREEN);
         resetTesisModalForm();
         setModalOpen(false);
         router.refresh();
@@ -420,8 +431,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
               <div style={{ marginBottom: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: GRAY400, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${GRAY100}` }}>Panel Erişimi</div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Sahip hesabı</label>
+                  <select value={modalSahipModu} onChange={(e) => setModalSahipModu(e.target.value === "mevcut" ? "mevcut" : "yeni")} style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}>
+                    <option value="yeni">Yeni hesap (davet gönderilir)</option>
+                    <option value="mevcut">Mevcut hesap (e-posta ile bağla)</option>
+                  </select>
+                </div>
                 <div style={{ marginBottom: 12 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 4 }}>Geçici Şifre</label><div style={{ display: "flex", gap: 8 }}><input type="text" value={sifre} onChange={(e) => setSifre(e.target.value)} style={{ flex: 1, padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} /><button onClick={sifreYenile} style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, borderRadius: 8, border: `1px solid ${GRAY200}`, background: GRAY100, color: GRAY800, cursor: "pointer" }}>🔄 Yenile</button></div></div>
-                <div style={{ fontSize: 11, color: GRAY400 }}>Panel linki ve şifre e-posta ile gönderilecek. İlk girişte değiştirmeleri istenecek.</div>
+                <div style={{ fontSize: 11, color: GRAY400 }}>
+                  {modalSahipModu === "yeni"
+                    ? "Panel linki ve şifre e-posta ile gönderilecek. İlk girişte değiştirmeleri istenecek."
+                    : "Mevcut işletmeci hesabı e-posta ile bulunur; yeni tesise yetki eklenir (varsayılan tesis değişmez)."}
+                </div>
               </div>
             </div>
             <div style={{ padding: "14px 24px", borderTop: `1px solid ${GRAY100}`, display: "flex", justifyContent: "flex-end", gap: 8, position: "sticky", bottom: 0, background: "white" }}>

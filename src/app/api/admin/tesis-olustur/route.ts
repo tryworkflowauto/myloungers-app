@@ -83,7 +83,10 @@ function isLikelyClientError(msg: string | undefined): boolean {
     m.includes("tanınmayan") ||
     m.includes("taninmayan") ||
     m.includes("kategori işlenemedi") ||
-    m.includes("kategori islenemedi")
+    m.includes("kategori islenemedi") ||
+    m.includes("zaten kayıtlı") ||
+    m.includes("hesap bulunamadı") ||
+    m.includes("mevcut hesap")
   );
 }
 
@@ -122,6 +125,7 @@ export async function POST(req: Request) {
       kaporaTutari: raw?.kaporaTutari ?? null,
       komisyonTipi: raw?.komisyonTipi ?? null,
       islemBedeli: raw?.islemBedeli ?? null,
+      sahipModu: raw?.sahipModu === "mevcut" ? "mevcut" : "yeni",
     };
 
     const result = await createTesisWithOwner(input);

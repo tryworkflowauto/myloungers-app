@@ -9,6 +9,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { fetchAktifTesisTipleri, kategoriInputToDbValues } from "@/lib/tesisTipleriDb";
 import { getOdemeModu, getKomisyonTipi, DEFAULT_ODEME_MODU, DEFAULT_KOMISYON_TIPI } from "./odemeModlari";
 
+export type SahipModu = "yeni" | "mevcut";
+
 export type CreateTesisWithOwnerInput = {
   isletmeAdi: string;
   /** Canonical facility id, slug veya db_value */
@@ -28,6 +30,8 @@ export type CreateTesisWithOwnerInput = {
   kaporaTutari?: number | null; // Tip kapora ise avans tutarı
   komisyonTipi?: string | null; // 'yuzde' | 'islem_bedeli' | 'yok'
   islemBedeli?: number | null; // Komisyon tipi islem_bedeli ise sabit tutar
+  /** 'yeni': davet + kullanicilar; 'mevcut': yalnızca tesis_yetkili (varsayılan 'yeni') */
+  sahipModu?: SahipModu | null;
 };
 
 export type CreateTesisWithOwnerResult = {
@@ -129,6 +133,51 @@ function getServiceAdmin(): SupabaseClient {
   return createClient(url.trim(), key.trim(), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+}
+
+async function upsertTesisYetkiliSahip(
+  admin: SupabaseClient,
+  kullaniciId: string,
+  tesisId: string,
+): Promise<string | null> {
+  const { error } = await admin.from("tesis_yetkili").upsert(
+    {
+      kullanici_id: kullaniciId,
+      tesis_id: tesisId,
+      rol: "sahip",
+    },
+    { onConflict: "kullanici_id,tesis_id", ignoreDuplicates: true },
+  );
+  if (error) {
+    console.warn("[adminCreateTesis] tesis_yetkili upsert atlandı:", error.message);
+    return error.message;
+  }
+  return null;
+}
+
+async function findKullaniciIdByEmail(
+  admin: SupabaseClient,
+  email: string,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("kullanicilar")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (error || !data?.id) return null;
+  return String(data.id);
+}
+
+function isInviteAlreadyRegisteredError(message: string | undefined): boolean {
+  if (!message) return false;
+  const m = message.toLowerCase();
+  return (
+    m.includes("already") ||
+    m.includes("registered") ||
+    m.includes("exists") ||
+    m.includes("duplicate") ||
+    m.includes("zaten")
+  );
 }
 
 /**
@@ -239,15 +288,60 @@ export async function createTesisWithOwner(
     return { success: true, tesisId, slug: savedSlug };
   }
 
+  const sahipModu: SahipModu = input.sahipModu === "mevcut" ? "mevcut" : "yeni";
+
+  if (sahipModu === "mevcut") {
+    const mevcutKullaniciId = await findKullaniciIdByEmail(admin, emailVal);
+    if (!mevcutKullaniciId) {
+      return {
+        success: false,
+        tesisId,
+        slug: savedSlug,
+        error: "Bu e-postayla kayıtlı hesap bulunamadı.",
+      };
+    }
+
+    const yetkiliErr = await upsertTesisYetkiliSahip(admin, mevcutKullaniciId, tesisId);
+    if (yetkiliErr) {
+      return {
+        success: false,
+        tesisId,
+        slug: savedSlug,
+        error: `Tesis oluşturuldu ancak hesaba bağlanamadı: ${yetkiliErr}`,
+      };
+    }
+
+    return { success: true, tesisId, slug: savedSlug };
+  }
+
+  const existingKullaniciId = await findKullaniciIdByEmail(admin, emailVal);
+  if (existingKullaniciId) {
+    return {
+      success: false,
+      tesisId,
+      slug: savedSlug,
+      error: "Bu e-posta zaten kayıtlı; 'Mevcut hesap' seçeneğini kullanın.",
+    };
+  }
+
   const { data: inviteData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(emailVal);
   if (inviteErr || !inviteData?.user?.id) {
     console.error("[adminCreateTesis] inviteUserByEmail error", inviteErr);
+    const inviteMsg = inviteErr?.message ?? "";
+    if (isInviteAlreadyRegisteredError(inviteMsg)) {
+      return {
+        success: false,
+        tesisId,
+        slug: savedSlug,
+        error: "Bu e-posta zaten kayıtlı; 'Mevcut hesap' seçeneğini kullanın.",
+      };
+    }
     return {
       success: false,
       tesisId,
       slug: savedSlug,
       error:
-        inviteErr?.message ??
+        inviteMsg ||
         "Davet gönderilemedi; tesis oluşturuldu ancak işletme hesabı oluşturulamadı. kullanicilar kaydını elle tamamlayın.",
     };
   }
@@ -276,17 +370,7 @@ export async function createTesisWithOwner(
     };
   }
 
-  const { error: yetkiliErr } = await admin.from("tesis_yetkili").upsert(
-    {
-      kullanici_id: authUserId,
-      tesis_id: tesisId,
-      rol: "sahip",
-    },
-    { onConflict: "kullanici_id,tesis_id", ignoreDuplicates: true },
-  );
-  if (yetkiliErr) {
-    console.warn("[adminCreateTesis] tesis_yetkili upsert atlandı:", yetkiliErr.message);
-  }
+  await upsertTesisYetkiliSahip(admin, authUserId, tesisId);
 
   return { success: true, tesisId, slug: savedSlug };
 }
