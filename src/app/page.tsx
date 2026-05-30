@@ -534,7 +534,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from("yorumlar")
         .select("id, yorum, puan, musteri_adi, dogrulanmis, tesisler(ad, sehir, ilce, kategori, aktif)")
-        .eq("durum", "onaylı")
+        .in("durum", ["onaylı", "cevaplandi"])
         .order("created_at", { ascending: false })
         .limit(20);
       if (cancelled) return;

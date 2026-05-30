@@ -371,7 +371,7 @@ export default function TesisDetailPage() {
         .from("yorumlar")
         .select("*")
         .eq("tesis_id", row.id)
-        .eq("durum", "onaylı")
+        .in("durum", ["onaylı", "cevaplandi"])
         .order("created_at", { ascending: false });
       // Alt kategori ortalamalarını hesapla
       if (data && data.length > 0) {
