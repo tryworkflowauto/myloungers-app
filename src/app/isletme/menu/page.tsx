@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { getAktifTesisId } from "@/lib/aktifTesis";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -147,12 +148,8 @@ export default function IsletmeMenuPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
-        .from("kullanicilar")
-        .select("tesis_id")
-        .eq("id", user.id)
-        .single();
-      if (data?.tesis_id) setTesisId(data.tesis_id);
+      const aktifId = await getAktifTesisId(supabase);
+      if (aktifId) setTesisId(aktifId);
     };
     getTesisId();
   }, [router]);

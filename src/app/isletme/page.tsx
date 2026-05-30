@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { getAktifTesisId } from "@/lib/aktifTesis";
 
 // HTML :root ile birebir
 const NAVY = "#0A1628";
@@ -182,20 +183,15 @@ export default function IsletmeDashboardPage() {
         return;
       }
 
-      const userId = authData.user.id;
-      const { data: kullanici, error: kullaniciError } = await supabase
-        .from("kullanicilar")
-        .select("tesis_id")
-        .eq("id", userId)
-        .maybeSingle();
+      const aktifId = await getAktifTesisId(supabase);
 
-      if (kullaniciError || !kullanici || !kullanici.tesis_id || cancelled) {
+      if (!aktifId || cancelled) {
         setTesisId(null);
         setAuthChecked(true);
         return;
       }
 
-      setTesisId(String(kullanici.tesis_id));
+      setTesisId(aktifId);
       setAuthChecked(true);
     }
 

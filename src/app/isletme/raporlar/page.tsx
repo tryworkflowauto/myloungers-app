@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getAktifTesisId } from "@/lib/aktifTesis";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -146,17 +147,13 @@ export default function IsletmeRaporlarPage() {
         return;
       }
 
-      const { data: kullanici, error: kullaniciErr } = await supabase
-        .from("kullanicilar")
-        .select("tesis_id")
-        .eq("id", authData.user.id)
-        .maybeSingle();
+      const aktifId = await getAktifTesisId(supabase);
       if (cancelled) return;
-      if (kullaniciErr || !kullanici?.tesis_id) {
+      if (!aktifId) {
         setTesisId(null);
         return;
       }
-      setTesisId(String(kullanici.tesis_id));
+      setTesisId(aktifId);
     };
     getTesisId();
     return () => {

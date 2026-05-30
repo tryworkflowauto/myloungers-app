@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getAktifTesisId } from "@/lib/aktifTesis";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -353,29 +354,22 @@ export default function IsletmePersonelPage() {
 
       const { data: kById } = await supabase
         .from("kullanicilar")
-        .select("rol, tesis_id")
+        .select("rol")
         .eq("id", authData.user.id)
         .maybeSingle();
       if (cancelled) return;
 
       let rol = String((kById as { rol?: string } | null)?.rol ?? "").toLowerCase();
-      let tesisIdVal = (kById as { tesis_id?: unknown } | null)?.tesis_id;
 
-      const hasTesis =
-        tesisIdVal != null &&
-        String(tesisIdVal).trim() !== "";
-
-      if (!hasTesis && authData.user.email) {
+      if (!rol && authData.user.email) {
         const { data: kByEmail } = await supabase
           .from("kullanicilar")
-          .select("rol, tesis_id")
+          .select("rol")
           .eq("email", authData.user.email)
           .maybeSingle();
         if (cancelled) return;
         if (kByEmail) {
-          if (!rol) rol = String((kByEmail as { rol?: string }).rol ?? "").toLowerCase();
-          const te = (kByEmail as { tesis_id?: unknown }).tesis_id;
-          if (te != null && String(te).trim() !== "") tesisIdVal = te;
+          rol = String((kByEmail as { rol?: string }).rol ?? "").toLowerCase();
         }
       }
 
@@ -385,13 +379,14 @@ export default function IsletmePersonelPage() {
         return;
       }
 
-      if (tesisIdVal == null || String(tesisIdVal).trim() === "") {
+      const aktifId = await getAktifTesisId(supabase);
+      if (aktifId == null || String(aktifId).trim() === "") {
         console.log("personel/getTesisId: tesis_id yok", { kById });
         setTesisId(null);
         setAuthLoading(false);
         return;
       }
-      setTesisId(String(tesisIdVal));
+      setTesisId(String(aktifId));
       setAuthLoading(false);
     };
     getTesisId();

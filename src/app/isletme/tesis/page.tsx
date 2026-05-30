@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { fetchAktifTesisTipleri, type TesisTipiCatalogRow } from "@/lib/tesisTipleriDb";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
 import { normalizeToCanonical, getFacilityType } from "@/lib/tesisFacilityTypes";
+import { getAktifTesisId } from "@/lib/aktifTesis";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -170,20 +171,14 @@ export default function IsletmeTesisPage() {
         if (authErr) console.error("Tesis yüklenemedi:", authErr);
         return;
       }
-      const userId = authData.user.id;
 
-      const { data: kullanici, error: kullaniciErr } = await supabase
-        .from("kullanicilar")
-        .select("tesis_id")
-        .eq("id", userId)
-        .maybeSingle();
+      const aktifId = await getAktifTesisId(supabase);
 
       if (cancelled) return;
-      if (kullaniciErr || !kullanici || kullanici.tesis_id == null) {
-        if (kullaniciErr) console.error("Tesis yüklenemedi:", kullaniciErr);
+      if (!aktifId) {
         return;
       }
-      const tesis_id = kullanici.tesis_id as string;
+      const tesis_id = aktifId;
 
       const { data, error } = await supabase
         .from("tesisler")

@@ -3,6 +3,7 @@
 import { useState, useEffect, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getAktifTesisId } from "@/lib/aktifTesis";
 
 // HTML'deki :root değişkenleri
 const NAVY = "#0A1628";
@@ -387,29 +388,22 @@ export default function IsletmeSezlongPage() {
 
       const { data: kById } = await supabase
         .from("kullanicilar")
-        .select("rol, tesis_id")
+        .select("rol")
         .eq("id", authData.user.id)
         .maybeSingle();
       if (cancelled) return;
 
       let rol = String((kById as { rol?: string } | null)?.rol ?? "").toLowerCase();
-      let tesisIdVal = (kById as { tesis_id?: unknown } | null)?.tesis_id;
 
-      const hasTesis =
-        tesisIdVal != null &&
-        String(tesisIdVal).trim() !== "";
-
-      if (!hasTesis && authData.user.email) {
+      if (!rol && authData.user.email) {
         const { data: kByEmail } = await supabase
           .from("kullanicilar")
-          .select("rol, tesis_id")
+          .select("rol")
           .eq("email", authData.user.email)
           .maybeSingle();
         if (cancelled) return;
         if (kByEmail) {
-          if (!rol) rol = String((kByEmail as { rol?: string }).rol ?? "").toLowerCase();
-          const te = (kByEmail as { tesis_id?: unknown }).tesis_id;
-          if (te != null && String(te).trim() !== "") tesisIdVal = te;
+          rol = String((kByEmail as { rol?: string }).rol ?? "").toLowerCase();
         }
       }
 
@@ -420,12 +414,13 @@ export default function IsletmeSezlongPage() {
         return;
       }
 
-      if (tesisIdVal == null || String(tesisIdVal).trim() === "") {
+      const aktifId = await getAktifTesisId(supabase);
+      if (aktifId == null || String(aktifId).trim() === "") {
         setTesisId(null);
         setAuthChecked(true);
         return;
       }
-      setTesisId(String(tesisIdVal));
+      setTesisId(String(aktifId));
       setAuthChecked(true);
     }
 
@@ -1137,37 +1132,7 @@ export default function IsletmeSezlongPage() {
   async function handleGrupEkle() {
     if (!grupEkleForm.ad.trim()) return;
 
-    const { data: authData, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !authData?.user) {
-      showToast("❌ Grup eklenemedi");
-      return;
-    }
-
-    const { data: kById } = await supabase
-      .from("kullanicilar")
-      .select("tesis_id")
-      .eq("id", authData.user.id)
-      .maybeSingle();
-
-    let tesisIdVal = (kById as { tesis_id?: unknown } | null)?.tesis_id;
-    const hasTesis =
-      tesisIdVal != null &&
-      String(tesisIdVal).trim() !== "";
-
-    if (!hasTesis && authData.user.email) {
-      const { data: kByEmail } = await supabase
-        .from("kullanicilar")
-        .select("tesis_id")
-        .eq("email", authData.user.email)
-        .maybeSingle();
-      const te = (kByEmail as { tesis_id?: unknown } | null)?.tesis_id;
-      if (te != null && String(te).trim() !== "") tesisIdVal = te;
-    }
-
-    const currentTesisId =
-      tesisIdVal != null && String(tesisIdVal).trim() !== ""
-        ? String(tesisIdVal)
-        : null;
+    const currentTesisId = tesisId;
     if (!currentTesisId) {
       showToast("❌ Grup eklenemedi");
       return;

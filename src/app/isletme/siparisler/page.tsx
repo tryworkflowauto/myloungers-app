@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { SIPARIS_DURUM } from "@/lib/constants";
+import { getAktifTesisId } from "@/lib/aktifTesis";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -259,21 +260,8 @@ export default function IsletmeSiparislerPage() {
         if (!cancelled) setTesisId(null);
         return;
       }
-      let { data: k } = await supabase
-        .from("kullanicilar")
-        .select("tesis_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!k && user.email) {
-        const r = await supabase
-          .from("kullanicilar")
-          .select("tesis_id")
-          .eq("email", user.email)
-          .maybeSingle();
-        k = r.data;
-      }
-      const tid = k?.tesis_id != null ? String(k.tesis_id) : null;
-      if (!cancelled) setTesisId(tid);
+      const aktifId = await getAktifTesisId(supabase);
+      if (!cancelled) setTesisId(aktifId);
     }
     loadTesis();
     const {
