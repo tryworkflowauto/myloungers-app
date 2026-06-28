@@ -1420,7 +1420,7 @@ export default function Home() {
       <section className="sec">
         <div className="sec-row">
 <h2 className="sec-h" id="cat-title">{t.cat_title}</h2>
-        <button type="button" className="sec-a" id="cat-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
+        <Link href="/arama" className="sec-a" id="cat-all">{t.view_all} →</Link>
         </div>
         {aktifTiplerLoading ? (
         <div className="cat-grid">
@@ -1470,7 +1470,7 @@ export default function Home() {
       <section className="sec" id="tesisler-section">
         <div className="sec-row">
           <h2 className="sec-h" id="fav-title">{t.popular_title}</h2>
-          <button type="button" className="sec-a" id="fav-all" onClick={() => setActiveCategory("all")}>{t.view_all} →</button>
+          <Link href="/arama" className="sec-a" id="fav-all">{t.view_all} →</Link>
         </div>
         <div className="pgrid" id="tesisGrid">
           {popularLoading ? (
