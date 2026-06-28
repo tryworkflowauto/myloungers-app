@@ -94,7 +94,7 @@ export default function TesisDetailPage() {
   const [toast, setToast] = useState<{msg:string;icon:string}|null>(null);
   const [lbIdx, setLbIdx] = useState(0);
   const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
-    about: false, feats: false, plan: false, szl: false, hizmet: false,
+    about: false, feats: false, plan: false, szl: false, hizmet: false, seans: false,
     video: false, transport: false, rules: false, menu: false, reviews: false,
   });
   const [menuKategoriler, setMenuKategoriler] = useState<MenuKategoriRow[]>([]);
@@ -122,6 +122,7 @@ export default function TesisDetailPage() {
   const [paxCount, setPaxCount] = useState(1);
   const [selSzls, setSelSzls] = useState<SelSzl[]>([]);
   const [secilenHizmetKey, setSecilenHizmetKey] = useState<string | null>(null);
+  const [secilenSeansKey, setSecilenSeansKey] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoEmbed, setVideoEmbed] = useState<string | null>(null);
   const [avail, setAvail] = useState<Record<string, string>>({});
@@ -776,6 +777,7 @@ export default function TesisDetailPage() {
     setSelSzls([]);
     setPaxCount(1);
     setRezervasyonSaati("");
+    setSecilenSeansKey(null);
   }
 
   async function goRes() {
@@ -783,6 +785,10 @@ export default function TesisDetailPage() {
     if (!selStart) { alert("Lütfen giriş tarihini seçin."); return; }
     if (hizmetSecimliMi && !secilenHizmetKey) {
       showToast("Lütfen bir hizmet seçin.", "⚠️");
+      return;
+    }
+    if (row?.yer_secimsiz === true && !hizmetSecimliMi && zones.length > 1 && !secilenSeansKey) {
+      showToast("Lütfen bir seans seçin.", "⚠️");
       return;
     }
     if (row?.yer_secimsiz !== true && !hizmetSecimliMi) {
@@ -818,7 +824,9 @@ export default function TesisDetailPage() {
       ]);
       const adayKoltuklar = hizmetSecimliMi
         ? (tumKoltuklar ?? []).filter((k: { grup_id?: unknown }) => String(k.grup_id) === secilenHizmetKey)
-        : (tumKoltuklar ?? []);
+        : row?.yer_secimsiz === true && zones.length > 1
+          ? (tumKoltuklar ?? []).filter((k: { grup_id?: unknown }) => String(k.grup_id) === secilenSeansKey)
+          : (tumKoltuklar ?? []);
       const bosKoltuklar = adayKoltuklar.filter((k: { id?: unknown }) => !doluSet.has(String(k.id)));
       if (bosKoltuklar.length < paxCount) {
         showToast("Bu tarihte yeterli "+getSeatUnitLabelDinamik((row as any)?.kategoriler ?? row?.kategori, yerEtiketiHaritasi).toLocaleLowerCase("tr-TR")+" kalmadı. Lütfen kişi sayısını azaltın veya farklı tarih seçin.", "⚠️");
@@ -973,6 +981,7 @@ export default function TesisDetailPage() {
 
   const yerSecimsizMi = row?.yer_secimsiz === true;
   const hizmetSecimliMi = row?.hizmet_secimli === true;
+  const cokSeansliYerSecimsiz = yerSecimsizMi && !hizmetSecimliMi && zones.length > 1;
   const rawKatForBirim = (row as any)?.kategoriler ?? (row as any)?.kategori;
   const birim = getSeatUnitLabelDinamik(rawKatForBirim, yerEtiketiHaritasi);
   const birimLower = birim.toLocaleLowerCase("tr-TR");
@@ -981,9 +990,20 @@ export default function TesisDetailPage() {
     birim === "Yer"
       ? "Bu tesiste yer/koltuk seçimi yapılmaz. Yerleriniz tesiste belirlenecektir. Lütfen tarih ve kişi sayısı seçerek rezervasyonunuzu tamamlayın."
       : `Bu tesiste ${birimLower} seçimi yapılmaz. ${birim}larınız tesiste belirlenecektir. Lütfen tarih ve kişi sayısı seçerek rezervasyonunuzu tamamlayın.`;
-  const ozetFiyatBirim = zones.length > 0 ? (selStart && isWE(selStart) ? (zones[0].pe ?? 0) : (zones[0].pw ?? 0)) : 0;
+  const ozetFiyatGrup =
+    cokSeansliYerSecimsiz && secilenSeansKey
+      ? zones.find((z) => z.key === secilenSeansKey) ?? zones[0]
+      : zones.length > 0
+        ? zones[0]
+        : null;
+  const ozetFiyatBirim = ozetFiyatGrup
+    ? (selStart && isWE(selStart) ? (ozetFiyatGrup.pe ?? 0) : (ozetFiyatGrup.pw ?? 0))
+    : 0;
   const secilenHizmet = hizmetSecimliMi && secilenHizmetKey
     ? zones.find((z) => z.key === secilenHizmetKey)
+    : null;
+  const secilenSeans = cokSeansliYerSecimsiz && secilenSeansKey
+    ? zones.find((z) => z.key === secilenSeansKey)
     : null;
   const hizmetFiyatBirim = secilenHizmet
     ? (selStart && isWE(selStart) ? (secilenHizmet.pe ?? 0) : (secilenHizmet.pw ?? 0))
@@ -992,7 +1012,7 @@ export default function TesisDetailPage() {
   const efektifTotal = hizmetSecimliMi
     ? (hizmetFiyatBirim * paxCount * Math.max(days, 1))
     : (yerSecimsizMi ? (ozetFiyatBirim * paxCount * Math.max(days, 1)) : total);
-  const ozetGorunsun = selStart && (hizmetSecimliMi ? (!!secilenHizmetKey && paxCount > 0) : (yerSecimsizMi ? paxCount > 0 : selSzls.length > 0));
+  const ozetGorunsun = selStart && (hizmetSecimliMi ? (!!secilenHizmetKey && paxCount > 0) : (yerSecimsizMi ? (cokSeansliYerSecimsiz ? (!!secilenSeansKey && paxCount > 0) : paxCount > 0) : selSzls.length > 0));
 
   const calYear = calDt.getFullYear();
   const calMonth = calDt.getMonth();
@@ -1243,11 +1263,13 @@ export default function TesisDetailPage() {
     !selStart ||
     (!yerSecimsizMi && !hizmetSecimliMi && selSzls.length === 0) ||
     (hizmetSecimliMi && !secilenHizmetKey) ||
+    (cokSeansliYerSecimsiz && !secilenSeansKey) ||
     resLoading ||
     (row?.saat_zorunlu === true && !rezervasyonSaati.trim());
   const btnText = resLoading ? "İşleniyor..."
     : !selStart ? "Tarih Seçerek Başlayın"
     : (hizmetSecimliMi && !secilenHizmetKey) ? "🧖 Hizmet Seçin"
+    : (cokSeansliYerSecimsiz && !secilenSeansKey) ? "Seans Seçin"
     : (!yerSecimsizMi && !hizmetSecimliMi && selSzls.length === 0) ? "🛏 Haritadan "+birim+" Seç"
     : "📅 Rezervasyonu Tamamla →";
 
@@ -1906,6 +1928,66 @@ export default function TesisDetailPage() {
                 </div>
               </div>
             )}
+            {cokSeansliYerSecimsiz && (
+              <div className="panel panel-hizmet">
+                <div className="ph ph-hizmet" onClick={() => togglePanel("seans")}>
+                  <div className="ph-l">
+                    <span className="ph-ic">🕐</span>
+                    <div>
+                      <div className="ph-title">Seans Seçin</div>
+                      <div className="ph-sub">Katılmak istediğiniz seansı seçin</div>
+                    </div>
+                  </div>
+                  <svg className={`ch${openPanels.seans ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                {openPanels.seans && (
+                  <div className="pb" style={{ padding: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+                      {zones.map((z) => {
+                        const secili = secilenSeansKey === z.key;
+                        const fiyatGoster = selStart && isWE(selStart) ? (z.pe ?? 0) : (z.pw ?? 0);
+                        const grupLoc = {
+                          ad: z.label ?? "",
+                          ad_en: z.ad_en,
+                          aciklama: z.aciklama ?? "",
+                          aciklama_en: z.aciklama_en,
+                        };
+                        const baslikLoc = getLocalizedField(grupLoc, "ad", siteLang);
+                        const aciklamaLoc = getLocalizedField(grupLoc, "aciklama", siteLang);
+                        return (
+                          <div
+                            key={z.key}
+                            onClick={() => setSecilenSeansKey(z.key)}
+                            style={{
+                              cursor: "pointer",
+                              border: secili ? "2.5px solid #0EA5E9" : "1.5px solid #E2E8F0",
+                              borderRadius: 14,
+                              overflow: "hidden",
+                              background: "#fff",
+                              boxShadow: secili ? "0 4px 16px rgba(14,165,233,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {z.gorsel ? (
+                              <img src={z.gorsel} alt={baslikLoc} style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
+                            ) : (
+                              <div style={{ width: "100%", height: 130, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🕐</div>
+                            )}
+                            <div style={{ padding: "12px 14px" }}>
+                              <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", marginBottom: 4 }}>{baslikLoc}</div>
+                              {aciklamaLoc ? (
+                                <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.4, marginBottom: 8 }}>{aciklamaLoc}</div>
+                              ) : null}
+                              <div style={{ fontWeight: 800, fontSize: 15, color: "#0EA5E9" }}>₺{fiyatGoster.toLocaleString("tr-TR")}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* VİDEO */}
             {(videoUrl || videoEmbed) && (
@@ -2347,10 +2429,10 @@ export default function TesisDetailPage() {
                   <div className="sb-step-n">Tarih</div>
                   <div className="sb-step-v">{selStart ? selStart.getDate() + " " + MN[selStart.getMonth()].substr(0,3) + (selEnd ? " – " + selEnd.getDate() + " " + MN[selEnd.getMonth()].substr(0,3) : " →") : "Seç"}</div>
                 </div>
-                <div className={`sb-step${(hizmetSecimliMi ? !!(selStart && secilenHizmetKey) : (yerSecimsizMi ? !!(selStart && paxCount > 0) : selSzls.length > 0)) ? " act" : ""}`}>
-                  <div className="sb-step-ic">{hizmetSecimliMi ? "🧖" : "🛏"}</div>
-                  <div className="sb-step-n">{hizmetSecimliMi ? "Hizmet" : birim}</div>
-                  <div className="sb-step-v">{hizmetSecimliMi ? (secilenHizmet?.label ?? "Seç") : (yerSecimsizMi ? (paxCount + " kişi") : (selSzls.length > 0 ? selSzls.length + " seçildi" : "Seç"))}</div>
+                <div className={`sb-step${(hizmetSecimliMi ? !!(selStart && secilenHizmetKey) : (cokSeansliYerSecimsiz ? !!(selStart && secilenSeansKey) : (yerSecimsizMi ? !!(selStart && paxCount > 0) : selSzls.length > 0))) ? " act" : ""}`}>
+                  <div className="sb-step-ic">{hizmetSecimliMi ? "🧖" : cokSeansliYerSecimsiz ? "🕐" : "🛏"}</div>
+                  <div className="sb-step-n">{hizmetSecimliMi ? "Hizmet" : cokSeansliYerSecimsiz ? "Seans" : birim}</div>
+                  <div className="sb-step-v">{hizmetSecimliMi ? (secilenHizmet?.label ?? "Seç") : (cokSeansliYerSecimsiz ? (secilenSeans?.label ?? "Seç") : (yerSecimsizMi ? (paxCount + " kişi") : (selSzls.length > 0 ? selSzls.length + " seçildi" : "Seç")))}</div>
                 </div>
                 <div className="sb-step">
                   <div className="sb-step-ic">👥</div>
