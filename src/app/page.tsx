@@ -275,6 +275,15 @@ function homeShortName(full: string): string {
   return `${p[0]} ${p[p.length - 1][0]}.`;
 }
 
+function parseTesisNumeric(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = parseFloat(String(v).replace(",", "."));
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 export default function Home() {
   const router = useRouter();
   const [currentLang, setCurrentLang] = useState<"tr" | "en">("tr");
@@ -512,7 +521,7 @@ export default function Home() {
       try {
         const { data } = await supabase
           .from("tesisler")
-          .select("id, ad, slug, ilce, sehir, puan, fotograflar, kategori")
+          .select("id, ad, slug, ilce, sehir, puan, fotograflar, kategori, min_fiyat, max_fiyat")
           .eq("aktif", true)
           .order("puan", { ascending: false })
           .limit(120);
@@ -1495,6 +1504,10 @@ export default function Home() {
 
             const slugValue = (tesisRow.slug && String(tesisRow.slug).trim()) || String(tesisRow.id);
             const periyotEtiketi = getPeriyotEtiketiDinamik(tesisRow.kategori, periyotEtiketiHaritasi);
+            const minF = parseTesisNumeric(tesisRow.min_fiyat);
+            const maxF = parseTesisNumeric(tesisRow.max_fiyat);
+            const showPrice = minF !== null && minF > 0;
+            const isPriceRange = showPrice && maxF !== null && minF < maxF;
 
             const cardContent = (
               <>
@@ -1512,6 +1525,12 @@ export default function Home() {
                 <div className="pl">
                   {ilce && sehir ? `${ilce} / ${sehir}` : ilce || sehir || ""}
                 </div>
+                {showPrice && (
+                  <div className="pprice">
+                    <span className="pprice-amt">₺{minF.toLocaleString("tr-TR")}</span>
+                    {isPriceRange && <span className="pprice-from">'den başlayan</span>}
+                  </div>
+                )}
                 <div className="pf">
                   <span className="pfc">Wi-Fi</span>
                   <span className="pfc">Bar</span>

@@ -124,6 +124,8 @@ type Card = {
   /** `tesisler.ozellikler` — kolon yoksa null */
   ozellikler: string[] | null;
   price: number | null;
+  minFiyat: number | null;
+  maxFiyat: number | null;
   avail: string;
   availTxt: string;
   badge: string;
@@ -139,6 +141,15 @@ function tesisRowImage(t: Record<string, unknown>): string {
     if (typeof src === "string" && src.trim()) return src;
   }
   return "/logo.png";
+}
+
+function parseTesisNumeric(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = parseFloat(String(v).replace(",", "."));
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+  }
+  return null;
 }
 
 function tesisRowPrice(t: Record<string, unknown>): number | null {
@@ -236,6 +247,8 @@ function AramaContent() {
             const sehir = String(t.sehir ?? "").trim();
             const loc = [ilce, sehir].filter(Boolean).join(", ") || "";
             const price = tesisRowPrice(t);
+            const minFiyat = parseTesisNumeric(t.min_fiyat);
+            const maxFiyat = parseTesisNumeric(t.max_fiyat);
             return {
               id: String(t.id),
               name: String(t.ad ?? ""),
@@ -254,6 +267,8 @@ function AramaContent() {
               feats: [],
               ozellikler: parseOzelliklerField(t.ozellikler),
               price,
+              minFiyat,
+              maxFiyat,
               avail: aktif === false ? "full" : "ok",
               availTxt: aktif === false ? "Kapalı" : "—",
               badge: "",
@@ -734,9 +749,23 @@ function AramaContent() {
                 <div className="card-feats">{c.feats.map(f => <span key={f} className="card-feat">{f}</span>)}</div>
                 <div className="card-footer">
                   <div>
-                    <div className="card-price-from">başlangıç</div>
-                    <div className="card-price-val">{c.price !== null ? `₺${c.price.toLocaleString("tr-TR")}` : "—"}</div>
-                    <div className="card-price-unit">/ {birimLower} / gün</div>
+                    {c.minFiyat === null || c.minFiyat <= 0 ? (
+                      <>
+                        <div className="card-price-val">—</div>
+                        <div className="card-price-unit">/ {birimLower} / gün</div>
+                      </>
+                    ) : c.maxFiyat !== null && c.minFiyat < c.maxFiyat ? (
+                      <>
+                        <div className="card-price-val">₺{c.minFiyat.toLocaleString("tr-TR")}</div>
+                        <div className="card-price-from">'den başlayan</div>
+                        <div className="card-price-unit">/ {birimLower} / gün</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="card-price-val">₺{c.minFiyat.toLocaleString("tr-TR")}</div>
+                        <div className="card-price-unit">/ {birimLower} / gün</div>
+                      </>
+                    )}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
                     {typeof c.aktif === "boolean" && (
