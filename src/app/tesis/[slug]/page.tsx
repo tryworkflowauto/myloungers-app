@@ -8,6 +8,7 @@ import { getLocalizedField } from "@/lib/getLocalizedField";
 import { translateDayShort } from "@/lib/calismaSaatleri";
 import { readSiteLangFromStorage, SITE_LANG_STORAGE_KEY } from "@/lib/site-lang";
 import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
+import { trackEvent } from '@/components/MetaPixel';
 
 type TesisRow = Record<string, any>;
 
@@ -1272,6 +1273,10 @@ export default function TesisDetailPage() {
     : (cokSeansliYerSecimsiz && !secilenSeansKey) ? "Seans Seçin"
     : (!yerSecimsizMi && !hizmetSecimliMi && selSzls.length === 0) ? "🛏 Haritadan "+birim+" Seç"
     : "📅 Rezervasyonu Tamamla →";
+
+  useEffect(() => {
+    trackEvent('ViewContent');
+  }, []);
 
   if (loading) {
     return (

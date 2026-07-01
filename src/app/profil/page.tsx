@@ -13,6 +13,7 @@ import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
 import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import CallWaiterModal from "@/components/CallWaiterModal";
 import { getPanelPathForRole, isMusteriRole } from "@/lib/rolePanelPath";
+import { trackEvent } from '@/components/MetaPixel';
 
 /** tesisler.kategori → kart etiketi (Spa, Beach Club, Tekne Turu vb.) */
 function profilTesisKategoriLabel(kategori: unknown): string {
@@ -1243,6 +1244,17 @@ export default function ProfilPage() {
     const aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
     return `Üye: ${aylar[d.getMonth()]} ${d.getFullYear()}`;
   })();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('odeme') === 'basarili') {
+      trackEvent('Purchase');
+      params.delete('odeme');
+      const yeniUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.replaceState({}, '', yeniUrl);
+    }
+  }, []);
 
   if (userLoading) {
     return null;

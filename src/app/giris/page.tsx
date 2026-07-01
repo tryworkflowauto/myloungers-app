@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readSiteLangFromStorage } from "@/lib/site-lang";
 import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { getPanelPathForRole } from "@/lib/rolePanelPath";
+import { trackEvent } from '@/components/MetaPixel';
 
 function isSafeRedirectPath(path: string): boolean {
   return path.startsWith("/") && !path.startsWith("//");
@@ -147,6 +148,8 @@ function GirisContent() {
         setLoading(false);
         return;
       }
+
+      trackEvent('CompleteRegistration');
 
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email: regEmail,

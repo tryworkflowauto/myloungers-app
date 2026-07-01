@@ -159,7 +159,7 @@ async function redirectForResponseCode(
       return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
     }
   }
-  if (ok) return NextResponse.redirect("https://myloungers.com/profil");
+  if (ok) return NextResponse.redirect("https://myloungers.com/profil?odeme=basarili");
   return NextResponse.redirect("https://myloungers.com/odeme?sonuc=hata");
 }
 

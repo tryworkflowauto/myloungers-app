@@ -59,3 +59,9 @@ export default function MetaPixel() {
     </>
   );
 }
+
+export function trackEvent(eventName: string, params?: Record<string, any>) {
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+    (window as any).fbq('track', eventName, params);
+  }
+}

@@ -9,6 +9,7 @@ import { footerLegalQueryFromLang } from "@/lib/footer-legal-query";
 import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
 import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
+import { trackEvent } from '@/components/MetaPixel';
 
 function tesisKategoriDisplayLabel(kategori: unknown): string {
   const parts = normalizeKategoriList(kategori);
@@ -476,6 +477,10 @@ function OdemeContent() {
       setPaymentError(true);
     }
   }
+
+  useEffect(() => {
+    trackEvent('InitiateCheckout');
+  }, []);
 
   if (authAllowed !== true) return null;
 
