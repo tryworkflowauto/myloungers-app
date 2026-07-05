@@ -172,6 +172,8 @@ function matchesHomeCategory(
 }
 
 const HOME_SKEL_COUNT = 4;
+/** Grid’de en fazla HOME_SKEL_COUNT kart; kategori filtresi için 3× buffer */
+const POPULAR_FETCH_LIMIT = HOME_SKEL_COUNT * 3;
 
 function PopularCardSkeleton() {
   return (
@@ -524,7 +526,7 @@ export default function Home() {
           .select("id, ad, slug, ilce, sehir, puan, fotograflar, kategori, min_fiyat, max_fiyat")
           .eq("aktif", true)
           .order("puan", { ascending: false })
-          .limit(120);
+          .limit(POPULAR_FETCH_LIMIT);
         if (data) setPopularTesisler(data);
       } finally {
         setPopularLoading(false);
