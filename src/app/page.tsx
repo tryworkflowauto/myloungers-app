@@ -129,18 +129,18 @@ const LANG_OPTS = [
 ];
 
 const SLIDER_IMGS = [
-  "/images/11.png",
-  "/images/1.png",
-  "/images/2.png",
-  "/images/5.png",
-  "/images/6.png",
-  "/images/9.png",
-  "/images/10.png",
+  "/images/11.webp",
+  "/images/1.webp",
+  "/images/2.webp",
+  "/images/5.webp",
+  "/images/6.webp",
+  "/images/9.webp",
+  "/images/10.webp",
 ] as const;
 
-/** Mobil hero: /images/X-m.png (768px ve altı, picture/source). Dosya yoksa onError ile geniş görsel. */
+/** Mobil hero: /images/X-m.webp (768px ve altı, picture/source). Dosya yoksa onError ile geniş görsel. */
 function sliderMobileSrc(desktopSrc: string): string {
-  return desktopSrc.replace(/\.png$/i, "-m.png");
+  return desktopSrc.replace(/\.webp$/i, "-m.webp");
 }
 
 type AktifTesisTipi = {
