@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import "@/app/myloungers.css";
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/constants";
 
 const TEAL = "#0ABAB5";
 
@@ -52,14 +53,14 @@ export function LegalPageLayout({ title, children, footerLegalQuery = "" }: Lega
               Türkiye&apos;nin tatil rezervasyon platformu.
             </p>
             <div className="fa">
-              <a href="#" className="fapp">
+              <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="fapp">
                 <img
                   src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
                   alt="Download on the App Store"
                   style={{ width: 140, height: 42 }}
                 />
               </a>
-              <a href="#" className="fapp">
+              <a href={GOOGLE_PLAY_URL} target="_blank" rel="noopener noreferrer" className="fapp">
                 <img
                   src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
                   alt="Google Play&apos;den edinin"
