@@ -1683,7 +1683,7 @@ export default function Home() {
           <div>
             <img src="/logo.png" alt="MyLoungers" className="fl-logo" />
             <p className="fd" id="footer-desc">{t.footer_desc}</p>
-            <div className="fa">
+            <div className="fa" id="download-app">
               <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="fapp">
                 <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style={{ width: 140, height: 42 }} />
               </a>

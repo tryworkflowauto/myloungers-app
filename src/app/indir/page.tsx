@@ -18,5 +18,5 @@ export default async function IndirPage() {
     redirect(GOOGLE_PLAY_URL);
   }
 
-  redirect("/");
+  redirect("/#download-app");
 }
