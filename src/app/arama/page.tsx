@@ -164,6 +164,17 @@ function tesisRowPrice(t: Record<string, unknown>): number | null {
   return null;
 }
 
+/** Aktif kartlardaki en yüksek `price` (filtre tavanı + slider üst sınırı için) */
+function catalogMaxPriceFromCards(cards: Card[]): number {
+  let max = 0;
+  for (const c of cards) {
+    if (c.price != null && Number.isFinite(c.price) && c.price > max) {
+      max = c.price;
+    }
+  }
+  return max;
+}
+
 function AramaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -183,7 +194,7 @@ function AramaContent() {
   const [aktifTipler, setAktifTipler] = useState<AktifTesisTipi[]>([]);
   const [filterBadge, setFilterBadge] = useState(0);
   const [priceMin, setPriceMin] = useState(0);
-  const [priceMax, setPriceMax] = useState(5000);
+  const [priceMax, setPriceMax] = useState(0);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -362,8 +373,6 @@ function AramaContent() {
     if (fiyatMaxParam) {
       const n = Number.parseInt(fiyatMaxParam, 10);
       if (Number.isFinite(n) && n > 0) setPriceMax(n);
-    } else {
-      setPriceMax(5000);
     }
     if (tarih) setDateVal(tarih);
     if (tip) {
@@ -463,6 +472,16 @@ function AramaContent() {
 
   const gpsMode = searchParams.get("gps") === "1";
 
+  const catalogMaxPrice = useMemo(() => catalogMaxPriceFromCards(cards), [cards]);
+  const sliderPriceMax = Math.max(catalogMaxPrice, 200);
+
+  useEffect(() => {
+    if (searchParams.get("fiyatMax")) return;
+    if (catalogMaxPrice > 0) {
+      setPriceMax(catalogMaxPrice);
+    }
+  }, [catalogMaxPrice, searchParams]);
+
   const cardsForList = useMemo(() => {
     if (!gpsMode || gpsStatus !== "ready" || !userCoords) {
       return cards;
@@ -488,7 +507,8 @@ function AramaContent() {
       .filter((c) => matchesAramaTab(activeTab, c.kategoriRaw, aktifTipler))
       .filter((c) => {
         if (c.price == null) return true;
-        return c.price >= priceMin && c.price <= priceMax;
+        const ceiling = catalogMaxPrice > 0 ? priceMax : Number.POSITIVE_INFINITY;
+        return c.price >= priceMin && c.price <= ceiling;
       });
 
     if (minScoreFilter != null) {
@@ -543,6 +563,7 @@ function AramaContent() {
     aktifTipler,
     priceMin,
     priceMax,
+    catalogMaxPrice,
     minScoreFilter,
     ozellikColumnAvailable,
     requiredOzellikKeys,
@@ -837,12 +858,12 @@ function AramaContent() {
             </div>
             <div className="fg">
               <div className="fg-title">💰 Max Fiyat / Gün</div>
-              <input type="range" className="frange" min={200} max={5000} step={100} value={priceMax} onChange={e => setPriceMax(+e.target.value)} />
+              <input type="range" className="frange" min={200} max={sliderPriceMax} step={100} value={Math.min(Math.max(priceMax, 200), sliderPriceMax)} onChange={e => setPriceMax(+e.target.value)} />
               <div className="frange-vals"><span>₺200</span><span>₺{priceMax.toLocaleString("tr-TR")}</span></div>
             </div>
           </div>
           <div className="fp-footer">
-            <button className="fp-clear" onClick={() => { setPriceMax(5000); setFpOpen(false); }}>✕ Temizle</button>
+            <button className="fp-clear" onClick={() => { setPriceMax(catalogMaxPrice > 0 ? catalogMaxPrice : sliderPriceMax); setFpOpen(false); }}>✕ Temizle</button>
             <button className="fp-apply" onClick={() => setFpOpen(false)}>Sonuçları Gör →</button>
           </div>
         </div>
