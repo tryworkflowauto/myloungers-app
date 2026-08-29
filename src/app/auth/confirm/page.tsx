@@ -17,14 +17,41 @@ export default function AuthConfirmPage() {
     const hash = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
     const hashParams = new URLSearchParams(hash);
     const access_token = hashParams.get("access_token") ?? "";
+    const code =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("code") ?? ""
+        : "";
 
-    if (!access_token) {
+    function readyFromUserId(id: string | undefined) {
+      if (id) {
+        setUserId(id);
+        setStatus("ready");
+        return true;
+      }
       setStatus("error");
-      setMessage("Geçersiz bağlantı. access_token bulunamadı.");
-      return;
+      setMessage("Kullanıcı bilgisi alınamadı.");
+      return false;
     }
 
     (async () => {
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          console.error("exchangeCodeForSession error", error);
+          setStatus("error");
+          setMessage(error.message || "Kod doğrulanamadı.");
+          return;
+        }
+        readyFromUserId(data?.user?.id ?? data?.session?.user?.id);
+        return;
+      }
+
+      if (!access_token) {
+        setStatus("error");
+        setMessage("Geçersiz bağlantı. access_token bulunamadı.");
+        return;
+      }
+
       const { data, error } = await supabase.auth.getUser(access_token);
       if (error) {
         console.error("getUser error", error);
@@ -32,13 +59,7 @@ export default function AuthConfirmPage() {
         setMessage(error.message || "Token doğrulanamadı.");
         return;
       }
-      if (data?.user?.id) {
-        setUserId(data.user.id);
-        setStatus("ready");
-      } else {
-        setStatus("error");
-        setMessage("Kullanıcı bilgisi alınamadı.");
-      }
+      readyFromUserId(data?.user?.id);
     })();
   }, []);
 
