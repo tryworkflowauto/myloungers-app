@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useAdminToast } from "../AdminToastContext";
 import { adminApiFetch } from "@/lib/adminApiFetch";
@@ -54,6 +54,7 @@ export default function AdminTesislerPage() {
   const [basvurular, setBasvurular] = useState<Basvuru[]>([]);
   const [basvuruLoading, setBasvuruLoading] = useState(true);
   const [basvuruSavingId, setBasvuruSavingId] = useState<string | null>(null);
+  const onayInFlightRef = useRef<string | null>(null);
   const [ara, setAra] = useState("");
   const [tab, setTab] = useState<"tumu" | "aktif" | "onay" | "askida">("tumu");
   const [onayModal, setOnayModal] = useState<Tesis | null>(null);
@@ -169,6 +170,10 @@ export default function AdminTesislerPage() {
   }
 
   async function onaylaBasvuru(b: Basvuru) {
+    if (onayInFlightRef.current) return;
+    if (!window.confirm("Bu başvuruyu onaylıyor musunuz?")) return;
+    if (onayInFlightRef.current) return;
+    onayInFlightRef.current = b.id;
     try {
       setBasvuruSavingId(b.id);
       const res = await adminApiFetch("/api/admin/onayla", {
@@ -206,6 +211,7 @@ export default function AdminTesislerPage() {
       console.error(err);
       showToast("Onay sırasında hata oluştu", RED);
     } finally {
+      if (onayInFlightRef.current === b.id) onayInFlightRef.current = null;
       setBasvuruSavingId(null);
     }
   }
@@ -255,11 +261,12 @@ export default function AdminTesislerPage() {
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
+                    type="button"
                     disabled={basvuruSavingId === b.id}
                     onClick={() => onaylaBasvuru(b)}
                     style={{ padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 7, border: "none", background: TEAL, color: "white", cursor: "pointer", opacity: basvuruSavingId === b.id ? 0.7 : 1 }}
                   >
-                    ✓ Onayla
+                    {basvuruSavingId === b.id ? "Onaylanıyor..." : "✓ Onayla"}
                   </button>
                   <button
                     disabled={basvuruSavingId === b.id}

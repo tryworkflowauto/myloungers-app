@@ -40,14 +40,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Geçersiz başvuru verisi" }, { status: 400 });
     }
 
-    // 1) Başvuru durumunu güncelle
-    const { error: updErr } = await supabaseAdmin
+    // 1) Yalnızca beklemede ise onayla (çift tıklama / tekrar POST kilidi)
+    const { data: claimed, error: updErr } = await supabaseAdmin
       .from("basvurular")
       .update({ durum: "onaylandi" })
-      .eq("id", b.id);
+      .eq("id", b.id)
+      .eq("durum", "beklemede")
+      .select("id")
+      .maybeSingle();
     if (updErr) {
       console.error("basvurular update error", updErr);
       return NextResponse.json({ error: "Başvuru güncellenemedi" }, { status: 500 });
+    }
+    if (!claimed) {
+      return NextResponse.json(
+        { error: "Bu başvuru zaten onaylanmış veya işleme alınmış" },
+        { status: 409 }
+      );
     }
 
     const catalog = await fetchAktifTesisTipleri(supabaseAdmin);
@@ -90,14 +99,14 @@ export async function POST(req: Request) {
       }
       const authUserId = inviteData.user.id;
 
-      // 4) kullanicilar tablosuna kayıt
-      const { error: userInsErr } = await supabaseAdmin.from("kullanicilar").insert({
+      // 4) kullanicilar: trigger handle_new_user aynı id ile musteri satırı eklemiş olabilir
+      const { error: userInsErr } = await supabaseAdmin.from("kullanicilar").upsert({
         id: authUserId,
         ad: b.ad_soyad,
         email: b.email,
         rol: "isletme",
         tesis_id: tesis.id,
-      });
+      }, { onConflict: "id" });
       if (userInsErr) {
         console.error("kullanicilar insert error", userInsErr);
         return NextResponse.json({ error: "Kullanıcı kaydı oluşturulamadı" }, { status: 500 });
