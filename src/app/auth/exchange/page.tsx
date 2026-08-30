@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { getPanelPathForRole } from "@/lib/rolePanelPath";
 
 function AuthExchangeInner() {
   const router = useRouter();
@@ -29,9 +30,7 @@ function AuthExchangeInner() {
       }
       const { data: kullanici } = await supabase.from("kullanicilar").select("rol").eq("email", data.user.email).single();
       const rol = (kullanici as any)?.rol;
-      if (rol === "admin") window.location.href = "/admin";
-      else if (rol === "isletmeci") window.location.href = "/isletme";
-      else window.location.href = "/profil";
+      window.location.href = getPanelPathForRole(rol);
     });
   }, []);
 

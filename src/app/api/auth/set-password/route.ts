@@ -84,7 +84,7 @@ export async function POST(req: Request) {
           id: userId,
           email,
           ad: ad || null,
-          rol: "isletme",
+          rol: "isletmeci",
           password_hash,
         });
       if (insertErr) {

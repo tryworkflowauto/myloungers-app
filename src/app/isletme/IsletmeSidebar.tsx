@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -29,6 +29,7 @@ const menuItems = [
 
 export default function IsletmeSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -345,7 +346,11 @@ export default function IsletmeSidebar() {
                 Vazgeç
               </button>
               <button
-                onClick={() => { setCikisModal(false); showToast('🚪 Çıkış yapıldı — Yakında aktif olacak'); }}
+                onClick={async () => {
+                  setCikisModal(false);
+                  await supabase.auth.signOut();
+                  router.push("/giris");
+                }}
                 style={{ padding: '9px 22px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, border: 'none', background: '#EF4444', color: 'white', cursor: 'pointer' }}
               >
                 🚪 Çıkış Yap

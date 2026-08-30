@@ -104,7 +104,7 @@ export async function POST(req: Request) {
         id: authUserId,
         ad: b.ad_soyad,
         email: b.email,
-        rol: "isletme",
+        rol: "isletmeci",
         tesis_id: tesis.id,
       }, { onConflict: "id" });
       if (userInsErr) {
