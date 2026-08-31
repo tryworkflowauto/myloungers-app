@@ -1,10 +1,51 @@
 import Link from "next/link";
+import { tesisMatchesKategoriToken } from "@/lib/tesisKategori";
 import {
   formatKesfetFiyat,
   skuLoc,
   tesisDetailHref,
   type KesfetSku,
 } from "../_lib/data";
+
+const ICON_PROPS = {
+  width: 48,
+  height: 48,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "#0ABAB5",
+  strokeWidth: 1.6,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
+
+function TeknePlaceholderIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <circle cx="12" cy="5" r="2.15" />
+      <path d="M12 7.2v10.3" />
+      <path d="M7.5 11.2h9" />
+      <path d="M5 16.2c1.7 2.8 4.1 4.2 7 4.2s5.3-1.4 7-4.2" />
+      <path d="M5 16.2H4.2M19 16.2h.8" />
+    </svg>
+  );
+}
+
+function SpaPlaceholderIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M12 20s-7-4.2-7-10.1C5 7 7.5 5 10.1 4.6c0 2.5 1.2 5 1.9 6.4.7-1.4 1.9-3.9 1.9-6.4C16.5 5 19 7 19 9.9c0 5.9-7 10.1-7 10.1z" />
+      <path d="M8.4 13.6c1.3.9 2.5 1.4 3.6 1.4s2.3-.5 3.6-1.4" />
+    </svg>
+  );
+}
+
+function isTekneSku(sku: KesfetSku): boolean {
+  return (
+    tesisMatchesKategoriToken(sku.kategoriRaw, "TEKNE TURU") ||
+    tesisMatchesKategoriToken(sku.kategoriRaw, "TEKNE")
+  );
+}
 
 export function SkuCard({ sku }: { sku: KesfetSku }) {
   const loc = skuLoc(sku);
@@ -15,7 +56,7 @@ export function SkuCard({ sku }: { sku: KesfetSku }) {
           <img src={sku.gorsel} alt="" />
         ) : (
           <div className="kesfet-sku-ph" aria-hidden>
-            ·
+            {isTekneSku(sku) ? <TeknePlaceholderIcon /> : <SpaPlaceholderIcon />}
           </div>
         )}
       </div>
