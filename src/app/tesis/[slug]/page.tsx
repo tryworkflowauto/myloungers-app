@@ -40,6 +40,7 @@ type ZoneDef = {
   ad_en?: string;
   aciklama_en?: string;
   dolulukPct: number;
+  tumTekneSabitFiyat: boolean;
 };
 
 function isWE(dt: Date) {
@@ -336,11 +337,21 @@ export default function TesisDetailPage() {
       if (!row) return;
       const tesisId = row.id;
 
-      const { data: grupRows, error: grupErr } = await supabase
+      let { data: grupRows, error: grupErr } = await supabase
         .from("sezlong_gruplari")
-        .select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en, gorsel")
+        .select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en, gorsel, tum_tekne_sabit_fiyat")
         .eq("tesis_id", tesisId)
         .order("sira", { ascending: true });
+
+      if (grupErr) {
+        const fallback = await supabase
+          .from("sezlong_gruplari")
+          .select("id, ad, ad_en, renk, kapasite, fiyat, aciklama, aciklama_en, gorsel")
+          .eq("tesis_id", tesisId)
+          .order("sira", { ascending: true });
+        grupRows = (fallback.data ?? []).map((g) => ({ ...g, tum_tekne_sabit_fiyat: false }));
+        grupErr = fallback.error;
+      }
 
       const { data: sezRows, error: sezErr } = await supabase
         .from("sezlonglar")
@@ -414,6 +425,7 @@ export default function TesisDetailPage() {
           ad_en: adEnStr,
           aciklama_en: aciklamaEnStr,
           dolulukPct,
+          tumTekneSabitFiyat: g.tum_tekne_sabit_fiyat === true,
         };
       });
 
@@ -428,6 +440,22 @@ export default function TesisDetailPage() {
       cancelled = true;
     };
   }, [row?.id, rezervedByType]);
+
+  useEffect(() => {
+    const yerSecimsizMi = row?.yer_secimsiz === true;
+    const hizmetSecimliMi = row?.hizmet_secimli === true;
+    const cokSeansli = yerSecimsizMi && !hizmetSecimliMi && zones.length > 1;
+    const grup = hizmetSecimliMi
+      ? zones.find((z) => z.key === secilenHizmetKey)
+      : cokSeansli
+        ? (secilenSeansKey ? zones.find((z) => z.key === secilenSeansKey) : zones[0])
+        : yerSecimsizMi
+          ? zones[0]
+          : undefined;
+    if (grup?.tumTekneSabitFiyat === true) {
+      setPaxCount(1);
+    }
+  }, [row?.yer_secimsiz, row?.hizmet_secimli, zones, secilenHizmetKey, secilenSeansKey]);
 
   useEffect(() => {
     if (!row?.id) return;
@@ -908,6 +936,16 @@ export default function TesisDetailPage() {
       kullanilacakSzls = selSzls;
     }
 
+    const tumTekneGrupGoRes = hizmetSecimliMi
+      ? zones.find((z) => z.key === secilenHizmetKey)
+      : row?.yer_secimsiz === true && zones.length > 1
+        ? zones.find((z) => z.key === secilenSeansKey)
+        : zones[0];
+    const tumTekneSabitFiyatGoRes = tumTekneGrupGoRes?.tumTekneSabitFiyat === true;
+    if (tumTekneSabitFiyatGoRes && kullanilacakSzls.length > 1) {
+      kullanilacakSzls = kullanilacakSzls.slice(0, 1);
+    }
+
     const { data: authRez } = await supabase.auth.getUser();
     if (!authRez?.user) {
       const slugStr = slug ? String(slug) : "";
@@ -926,7 +964,9 @@ export default function TesisDetailPage() {
       : startStr;
     const gunSayisi = days;
     const sezlonglar = kullanilacakSzls.map(s => s.no).join(",");
-    const toplamFiyat = kullanilacakSzls.reduce((a, s) => a + s.price * Math.max(gunSayisi, 1), 0);
+    const toplamFiyat = tumTekneSabitFiyatGoRes
+      ? ((kullanilacakSzls[0]?.price ?? tumTekneGrupGoRes?.pw ?? 0) * Math.max(gunSayisi, 1))
+      : kullanilacakSzls.reduce((a, s) => a + s.price * Math.max(gunSayisi, 1), 0);
 
     const tesisIdForSez = row?.id as string | undefined;
     // Tüm satırlar aynı tutma süresini paylaşır (tek ödeme akışı)
@@ -1073,8 +1113,12 @@ export default function TesisDetailPage() {
   const hizmetFiyatBirim = secilenHizmet
     ? (selStart && isWE(selStart) ? (secilenHizmet.pe ?? 0) : (secilenHizmet.pw ?? 0))
     : 0;
+  const tumTekneGrup = hizmetSecimliMi ? secilenHizmet : ozetFiyatGrup;
+  const tumTekneSabitFiyatMi = tumTekneGrup?.tumTekneSabitFiyat === true;
   const efektifAdet = (yerSecimsizMi || hizmetSecimliMi) ? paxCount : selSzls.length;
-  const efektifTotal = hizmetSecimliMi
+  const efektifTotal = tumTekneSabitFiyatMi
+    ? (ozetFiyatBirim * Math.max(days, 1))
+    : hizmetSecimliMi
     ? (hizmetFiyatBirim * paxCount * Math.max(days, 1))
     : (yerSecimsizMi ? (ozetFiyatBirim * paxCount * Math.max(days, 1)) : total);
   const ozetGorunsun = selStart && (hizmetSecimliMi ? (!!secilenHizmetKey && paxCount > 0) : (yerSecimsizMi ? (cokSeansliYerSecimsiz ? (!!secilenSeansKey && paxCount > 0) : paxCount > 0) : selSzls.length > 0));
@@ -2576,7 +2620,16 @@ export default function TesisDetailPage() {
                 </div>
               )}
 
-              {selStart && (
+              {selStart && tumTekneSabitFiyatMi && (
+                <div className="pax-row">
+                  <div>
+                    <div className="pax-lbl">🚤 Tüm tekne</div>
+                    <div className="pax-sub">Tüm tekne — {tumTekneGrup?.count ?? ""} kişiye kadar dahil</div>
+                  </div>
+                </div>
+              )}
+
+              {selStart && !tumTekneSabitFiyatMi && (
                 <div className="pax-row">
                   <div><div className="pax-lbl">👥 Kişi Sayısı</div><div className="pax-sub">Maks. 5 · Her kişi 1 {birimLower}</div></div>
                   <div className="pax-ctrl">
@@ -2609,7 +2662,11 @@ export default function TesisDetailPage() {
                     {!yerSecimsizMi && (
                       <div className="bsum-row"><span>{birim}(ler)</span><b>{szlNames}</b></div>
                     )}
-                    <div className="bsum-row"><span>Kişi sayısı</span><b>{efektifAdet}{yerSecimsizMi ? " kişi" : " kişi / "+birimLower}</b></div>
+                    {tumTekneSabitFiyatMi ? (
+                      <div className="bsum-row"><span>Kişi</span><b>Tüm tekne — {tumTekneGrup?.count ?? ""} kişiye kadar dahil</b></div>
+                    ) : (
+                      <div className="bsum-row"><span>Kişi sayısı</span><b>{efektifAdet}{yerSecimsizMi ? " kişi" : " kişi / "+birimLower}</b></div>
+                    )}
                     <div className="bsum-row"><span>Birim fiyat / gün</span><b>{hizmetSecimliMi ? ("₺" + hizmetFiyatBirim.toLocaleString("tr-TR") + " / gün") : (yerSecimsizMi ? ("₺" + ozetFiyatBirim.toLocaleString("tr-TR") + " / gün") : (units + " / gün"))}</b></div>
                     <div className="bsum-row bsum-total"><span>Toplam</span><span>₺{efektifTotal.toLocaleString("tr-TR")}</span></div>
                   </div>
