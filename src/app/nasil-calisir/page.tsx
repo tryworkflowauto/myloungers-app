@@ -14,7 +14,7 @@ const STEPS = [
   {
     title: "Öde & Onayla",
     icon: "✅",
-    text: "Güvenli ödeme yap, QR kodunu veya onayını göster. 256-bit SSL şifreli güvenli ödeme. Destekleyen tesislerde QR kod ile temassız giriş.",
+    text: "Güvenli ödeme yap, rezervasyon onayını göster. Rezervasyon kodu ile hızlı giriş.",
   },
 ];
 

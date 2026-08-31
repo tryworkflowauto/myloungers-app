@@ -30,13 +30,13 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restoran, Bar & Lounge, Tekne Turu, Spa...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
     srch_btn: "Tesis Ara", filter_btn: "Filtrele",
     r_search_placeholder: "İl ara...", r_all: "Tümü", r_clear: "Temizle", r_ok: "Tamam", r_select_il: "İl seçin",
-    st_active: "Aktif tesis", st_res: "Rezervasyon", st_dest: "Destinasyon", st_rating: "Ortalama puan", st_qr: "Temassız giriş",
+    st_active: "Aktif Tesis", st_focus: "Farklı Deneyimler", st_instant: "Rezervasyon", st_secure: "Ödeme", st_online: "Online Rezervasyon",
     cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
     cat_hotel_sub: "Konfor ve hizmet", cat_beach_sub: "Şezlong & deniz keyfi", cat_aqua_sub: "Eğlence & kaydırak",
     cat_restoran_sub: "Menü ve ambians", cat_bar_sub: "İçecek ve eğlence",
     cat_tekne_sub: "Deniz turu & balık avı", cat_spa_sub: "Masaj & wellness",
     badge_popular: "Popüler", badge_new: "Yeni", tag_daily: "Günlük",
-    how_title: "Nasıl", how_title2: "Çalışır?", how_sub: "3 adımda tatil rezervasyonu",
+    how_title: "Nasıl", how_title2: "Çalışır?", how_sub: "3 adımda kolay rezervasyon",
     how1: "Tesis Seç", how2: "Yerini Seç", how3: "Öde & Onayla",
     plan_tag: "Rezervasyon Planı", plan_title: "Harita veya tesisten istediğin yeri seç",
     b2b_tag: "Tesis Sahipleri İçin", b2b_title: "Tesisinizi MyLoungers'a ekleyin",
@@ -57,13 +57,13 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant, Bar & Lounge, Boat Tour, Spa...", sfv_date: "Select date", sfv_name: "Search...",
     srch_btn: "Search", filter_btn: "Filter",
     r_search_placeholder: "Search city...", r_all: "All", r_clear: "Clear", r_ok: "OK", r_select_il: "Select city",
-    st_active: "Active facilities", st_res: "Reservations", st_dest: "Destinations", st_rating: "Average rating", st_qr: "Contactless entry",
+    st_active: "Active Facilities", st_focus: "Different Experiences", st_instant: "Instant Booking", st_secure: "Secure Payment", st_online: "Online Booking",
     cat_hotel: "Hotel", cat_beach: "Beach Club", cat_aqua: "Aqua Park",
     cat_hotel_sub: "Comfort and service", cat_beach_sub: "Sunbed & sea", cat_aqua_sub: "Fun & slides",
     cat_restoran_sub: "Dining & ambience", cat_bar_sub: "Drinks & lounge",
     cat_tekne_sub: "Sea tours & fishing", cat_spa_sub: "Massage & wellness",
     badge_popular: "Popular", badge_new: "New", tag_daily: "Daily",
-    how_title: "How", how_title2: "It Works", how_sub: "Holiday reservations in 3 steps",
+    how_title: "How", how_title2: "It Works", how_sub: "Easy booking in 3 steps",
     how1: "Choose Facility", how2: "Choose your spot", how3: "Pay & Confirm",
     plan_tag: "Reservation layout", plan_title: "Pick your spot on the map or venue layout",
     b2b_tag: "For Facility Owners", b2b_title: "Add your facility to MyLoungers",
@@ -89,7 +89,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     cat_hotel_sub: "Komfort und Service", cat_beach_sub: "Liegestuhl & Meer", cat_aqua_sub: "Spaß & Rutschen",
     cat_restoran_sub: "Kulinarik & Ambiente", cat_bar_sub: "Drinks & Lounge",
     badge_popular: "Beliebt", badge_new: "Neu", tag_daily: "Täglich",
-    how_title: "Wie", how_title2: "es funktioniert", how_sub: "Urlaubsbuchung in 3 Schritten",
+    how_title: "Wie", how_title2: "es funktioniert", how_sub: "Einfache Buchung in 3 Schritten",
     how1: "Einrichtung wählen", how2: "Platz wählen", how3: "Bezahlen & Bestätigen",
     plan_tag: "Reservierungsplan", plan_title: "Wählen Sie Ihren Platz auf der Karte oder im Plan der Einrichtung",
     b2b_tag: "Für Einrichtungsinhaber", b2b_title: "Fügen Sie Ihre Einrichtung zu MyLoungers hinzu",
@@ -115,7 +115,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     cat_hotel_sub: "Комфорт и сервис", cat_beach_sub: "Шезлонг и море", cat_aqua_sub: "Развлечения и горки",
     cat_restoran_sub: "Кухня и атмосфера", cat_bar_sub: "Бар и отдых",
     badge_popular: "Популярный", badge_new: "Новый", tag_daily: "Ежедневно",
-    how_title: "Как", how_title2: "это работает", how_sub: "Бронирование отдыха за 3 шага",
+    how_title: "Как", how_title2: "это работает", how_sub: "Лёгкое бронирование за 3 шага",
     how1: "Выберите объект", how2: "Выберите место", how3: "Оплатите и подтвердите",
     plan_tag: "План бронирования", plan_title: "Выберите место на карте или схеме заведения",
     b2b_tag: "Для владельцев", b2b_title: "Добавьте свой объект в MyLoungers",
@@ -335,6 +335,7 @@ export default function Home() {
   const [planSilverFiyat, setPlanSilverFiyat] = useState(1000);
   const [planGoldFiyat, setPlanGoldFiyat] = useState(600);
   const [homeReviews, setHomeReviews] = useState<HomeReviewCard[]>([]);
+  const [aktifTesisSayisi, setAktifTesisSayisi] = useState<number | null>(null);
 
   const closePanels = () => {
     setPanelRegion(false);
@@ -342,6 +343,16 @@ export default function Home() {
     setPanelDate(false);
     setPanelName(false);
   };
+
+  useEffect(() => {
+    supabase
+      .from("tesisler")
+      .select("*", { count: "exact", head: true })
+      .eq("aktif", true)
+      .then(({ count, error }) => {
+        if (!error && typeof count === "number") setAktifTesisSayisi(count);
+      });
+  }, []);
 
   useEffect(() => {
     async function fetchTesisSlugs() {
@@ -1416,15 +1427,15 @@ export default function Home() {
       {/* STATS */}
       <div className="stats">
         <div className="stats-in">
-          <div><span className="stn">100+</span><span className="stl" id="stl1">{t.st_active}</span></div>
+          <div><span className="stn">{aktifTesisSayisi !== null ? aktifTesisSayisi : "—"}</span><span className="stl" id="stl1">{t.st_active}</span></div>
           <div className="std" />
-          <div><span className="stn">50K+</span><span className="stl" id="stl2">{t.st_res}</span></div>
+          <div><span className="stn">{currentLang === "en" ? "One Place" : "Tek Yerde"}</span><span className="stl" id="stl2">{t.st_focus}</span></div>
           <div className="std" />
-          <div><span className="stn">15</span><span className="stl" id="stl3">{t.st_dest}</span></div>
+          <div><span className="stn">Anında</span><span className="stl" id="stl3">{t.st_instant}</span></div>
           <div className="std" />
-          <div><span className="stn">4.9★</span><span className="stl" id="stl4">{t.st_rating}</span></div>
+          <div><span className="stn">Güvenli</span><span className="stl" id="stl4">{t.st_secure}</span></div>
           <div className="std" />
-          <div><span className="stn">QR</span><span className="stl" id="stl5">{t.st_qr}</span></div>
+          <div><span className="stn">{currentLang === "en" ? "24/7" : "7/24"}</span><span className="stl" id="stl5">{t.st_online}</span></div>
         </div>
       </div>
 
@@ -1575,7 +1586,7 @@ export default function Home() {
                 <li>Gerçek kullanıcı yorumları ve puanlarını gör</li>
                 <li>Anlık müsaitlik durumunu kontrol et</li>
               </ul>
-              <div className="hs-badge">🗺️ 15+ Destinasyon</div>
+              <div className="hs-badge">🗺️ Müsaitlik Kontrolü</div>
             </div>
             <div className="hs">
               <div className="hs-top">
@@ -1590,7 +1601,7 @@ export default function Home() {
                 <li>Standart veya premium seçenekler arasından seçin (tesise göre değişir)</li>
                 <li>Birden fazla yeri veya kişiyi aynı anda rezerve edin</li>
               </ul>
-              <div className="hs-badge">📍 100+ Rezervasyon seçeneği / tesis</div>
+              <div className="hs-badge">📍 Esnek Seçenekler</div>
             </div>
             <div className="hs">
               <div className="hs-top">
@@ -1599,13 +1610,13 @@ export default function Home() {
               </div>
               <span className="hi">✅</span>
               <h3 id="how3-title">{t.how3}</h3>
-              <p className="hs-desc" id="how3-desc">Güvenli ödeme yap, QR kodunu göster.</p>
+              <p className="hs-desc" id="how3-desc">Güvenli ödeme yap, rezervasyon onayını göster.</p>
               <ul className="hs-list">
-                <li>iyzico ile 256-bit SSL şifreli güvenli ödeme</li>
-                <li>QR kod ile temassız, kasasız tesis girişi</li>
-                <li>24 saate kadar ücretsiz iptal imkânı</li>
+                <li>Paratika altyapısı ile güvenli ödeme</li>
+                <li>Rezervasyon kodu ile hızlı giriş</li>
+                <li>Tesise göre değişen iptal seçenekleri</li>
               </ul>
-              <div className="hs-badge">🔒 Güvenli &amp; Anında Onay</div>
+              <div className="hs-badge">🔒 Güvenli Rezervasyon</div>
             </div>
           </div>
           <div className="how-cta">
@@ -1638,7 +1649,7 @@ export default function Home() {
               <div className="b2bi">💳</div>
               <div>
                 <h4 id="b2b2-title">Online Ödeme &amp; Raporlama</h4>
-                <p id="b2b2-desc">iyzico altyapısıyla tahsilatlar otomatik, raporlar anlık — kasaya dokunmadan.</p>
+                <p id="b2b2-desc">Paratika altyapısıyla tahsilatlar otomatik, raporlar anlık — kasaya dokunmadan.</p>
               </div>
             </div>
             <div className="b2bc">
