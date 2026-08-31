@@ -6,7 +6,7 @@ export function KesfetShell({ children }: { children: React.ReactNode }) {
     <div className="kesfet-page">
       <nav className="kesfet-nav">
         <Link href="/" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-          <img src="/logo.png" alt="MyLoungers" />
+          <img src="/logo.png" alt="MyLoungers" className="kesfet-nav-logo" />
         </Link>
         <Link href="/" className="kesfet-nav-back">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
