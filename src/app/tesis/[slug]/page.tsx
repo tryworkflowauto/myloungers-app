@@ -60,6 +60,16 @@ function fmtRange(start: Date | null, end: Date | null) {
 
 type SelSzl = { no: string; zoneKey: string; price: number };
 
+type AktifKampanya = {
+  id: string | number;
+  ad: string | null;
+  aciklama: string | null;
+  indirim_orani: number | null;
+  tip: string | null;
+  baslangic_tarihi: string | null;
+  bitis_tarihi: string | null;
+};
+
 /** Supabase menu_kategorileri satırı (ad_en opsiyonel) */
 type MenuKategoriRow = {
   id: string;
@@ -148,6 +158,7 @@ export default function TesisDetailPage() {
   const [userRole, setUserRole] = useState<string>("musteri");
   const [siteLang, setSiteLang] = useState<"tr" | "en">("tr");
   const [yerEtiketiHaritasi, setYerEtiketiHaritasi] = useState<YerEtiketiHaritasi | null>(null);
+  const [aktifKampanyalar, setAktifKampanyalar] = useState<AktifKampanya[]>([]);
 
   useEffect(() => {
     void ensureTesisTipleriYuklendi(supabase).then(setYerEtiketiHaritasi);
@@ -232,6 +243,59 @@ export default function TesisDetailPage() {
 
     fetchTesis();
   }, [slug]);
+
+  useEffect(() => {
+    if (!row?.id) {
+      setAktifKampanyalar([]);
+      return;
+    }
+    const tesisId = row.id;
+    let cancelled = false;
+
+    async function fetchAktifKampanyalar() {
+      const { data, error } = await supabase
+        .from("kampanyalar")
+        .select("id, ad, aciklama, indirim_orani, tip, baslangic_tarihi, bitis_tarihi")
+        .eq("tesis_id", tesisId)
+        .eq("durum", "aktif")
+        .eq("musteri_goster", true);
+
+      if (cancelled) return;
+      if (error || !data) {
+        setAktifKampanyalar([]);
+        return;
+      }
+
+      const now = new Date();
+      const todayStr =
+        now.getFullYear() +
+        "-" +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(now.getDate()).padStart(2, "0");
+
+      function toDayStr(v: unknown): string | null {
+        if (v == null || v === "") return null;
+        const m = String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+        return m ? m[1] : null;
+      }
+
+      setAktifKampanyalar(
+        data.filter((k) => {
+          const bas = toDayStr(k.baslangic_tarihi);
+          const bit = toDayStr(k.bitis_tarihi);
+          const basOk = bas == null || bas <= todayStr;
+          const bitOk = bit == null || bit >= todayStr;
+          return basOk && bitOk;
+        })
+      );
+    }
+
+    fetchAktifKampanyalar();
+    return () => {
+      cancelled = true;
+    };
+  }, [row?.id]);
 
   useEffect(() => {
     setSiteLang(readSiteLangFromStorage());
@@ -1629,6 +1693,29 @@ export default function TesisDetailPage() {
             {HOTEL.address} &nbsp;·&nbsp;
             <a href={HOTEL.mapsUrl} target="_blank" rel="noreferrer" style={{ color: "var(--tdk)", fontWeight: 700, textDecoration: "none" }}>Haritada gör</a>
           </div>
+          {aktifKampanyalar.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+              {aktifKampanyalar.map((k) => (
+                <div
+                  key={k.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    background: "#FFF7ED",
+                    border: "1.5px solid #FDBA74",
+                    color: "#9A3412",
+                    fontSize: ".75rem",
+                    fontWeight: 700,
+                    padding: "6px 12px",
+                    borderRadius: 10,
+                  }}
+                >
+                  🎉 {k.ad ?? "Kampanya"}
+                  {Number(k.indirim_orani) > 0 ? ` — %${Number(k.indirim_orani)} indirim` : ""}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* GALERİ */}
