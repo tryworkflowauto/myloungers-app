@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import MetaPixel from "@/components/MetaPixel";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 export const metadata: Metadata = {
   title: "MyLoungers | Tatil Rezervasyon Platformu",
@@ -30,7 +31,7 @@ export default function RootLayout({
           body { font-family: 'Gotham Rounded', 'Inter', sans-serif; background: #fff; color: #111; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
         `}</style>
       </head>
-      <body><MetaPixel />{children}</body>
+      <body><MetaPixel /><GoogleAnalytics />{children}</body>
     </html>
   );
 }
