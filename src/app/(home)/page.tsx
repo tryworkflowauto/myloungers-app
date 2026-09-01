@@ -13,7 +13,7 @@ import {
   getPeriyotEtiketiDinamik,
   type PeriyotEtiketiHaritasi,
 } from "@/lib/tesisTipleriDb";
-import "./myloungers.css";
+import "@/app/myloungers.css";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   tr: {
