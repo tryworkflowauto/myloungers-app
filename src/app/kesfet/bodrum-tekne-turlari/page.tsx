@@ -1,7 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { KesfetBreadcrumb } from "../_components/KesfetShell";
 import { SkuGrid } from "../_components/SkuCard";
 import { fetchKesfetSkus } from "../_lib/data";
+
+export const metadata: Metadata = {
+  title: "Bodrum Tekne Turları – Fiyatlar ve Rezervasyon | MyLoungers",
+  description:
+    "Bodrum'daki rezervasyona açık tekne turlarını inceleyin. Güncel fiyatları karşılaştırın, kalkış noktasını seçin ve online rezervasyon yapın.",
+  openGraph: {
+    title: "Bodrum Tekne Turları – Fiyatlar ve Rezervasyon | MyLoungers",
+    description:
+      "Bodrum'daki rezervasyona açık tekne turlarını inceleyin. Güncel fiyatları karşılaştırın, kalkış noktasını seçin ve online rezervasyon yapın.",
+  },
+};
 
 export default async function BodrumTekneTurlariPage() {
   const skus = await fetchKesfetSkus("tekne");

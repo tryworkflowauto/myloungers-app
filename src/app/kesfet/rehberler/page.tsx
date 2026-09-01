@@ -1,6 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { KesfetBreadcrumb } from "../_components/KesfetShell";
 import { fetchYayindaRehberler, type KesfetRehber } from "../_lib/data";
+
+export const metadata: Metadata = {
+  title: "Bodrum Tekne ve Spa Rehberleri | MyLoungers",
+  description:
+    "Tekne turu seçimi ve spa deneyimleri hakkında faydalı rehberlerle doğru kararı verin, gerçek rezervasyon seçeneklerine ulaşın.",
+  openGraph: {
+    title: "Bodrum Tekne ve Spa Rehberleri | MyLoungers",
+    description:
+      "Tekne turu seçimi ve spa deneyimleri hakkında faydalı rehberlerle doğru kararı verin, gerçek rezervasyon seçeneklerine ulaşın.",
+  },
+};
 
 function RehberList({ items }: { items: KesfetRehber[] }) {
   return (

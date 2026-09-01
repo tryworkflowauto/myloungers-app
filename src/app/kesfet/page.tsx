@@ -1,6 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SkuGrid } from "./_components/SkuCard";
 import { fetchKesfetSkus, fetchYayindaRehberler } from "./_lib/data";
+
+export const metadata: Metadata = {
+  title: "Bodrum Tekne Turları ve Spa Deneyimleri | MyLoungers",
+  description:
+    "Bodrum'da tekne turlarını, spa ve masaj hizmetlerini ve güncel fırsatları keşfedin. Gerçek fiyatları inceleyin ve online rezervasyon yapın.",
+  openGraph: {
+    title: "Bodrum Tekne Turları ve Spa Deneyimleri | MyLoungers",
+    description:
+      "Bodrum'da tekne turlarını, spa ve masaj hizmetlerini ve güncel fırsatları keşfedin. Gerçek fiyatları inceleyin ve online rezervasyon yapın.",
+  },
+};
 
 export default async function KesfetPage() {
   const [skus, rehberler] = await Promise.all([

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { KesfetBreadcrumb } from "../_components/KesfetShell";
 import {
@@ -7,6 +8,17 @@ import {
   tesisDetailHref,
   type KesfetSku,
 } from "../_lib/data";
+
+export const metadata: Metadata = {
+  title: "Bodrum Tekne Turu Fiyatları | MyLoungers",
+  description:
+    "Bodrum tekne turu fiyatlarını kişi başı ve tüm tekne seçenekleriyle karşılaştırın. Güncel fiyatları inceleyin ve online rezervasyon yapın.",
+  openGraph: {
+    title: "Bodrum Tekne Turu Fiyatları | MyLoungers",
+    description:
+      "Bodrum tekne turu fiyatlarını kişi başı ve tüm tekne seçenekleriyle karşılaştırın. Güncel fiyatları inceleyin ve online rezervasyon yapın.",
+  },
+};
 
 function PriceTable({ rows }: { rows: KesfetSku[] }) {
   if (rows.length === 0) {

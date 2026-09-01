@@ -1,7 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { KesfetBreadcrumb } from "../_components/KesfetShell";
 import { SkuGrid } from "../_components/SkuCard";
 import { fetchAktifKampanyalar, fetchKesfetSkus, tesisDetailHref } from "../_lib/data";
+
+export const metadata: Metadata = {
+  title: "Bodrum Fırsatları ve Rezervasyona Açık Deneyimler | MyLoungers",
+  description:
+    "Bodrum'da tekne turu ve spa deneyimlerindeki güncel fırsatları kontrol edin. Rezervasyona açık deneyimleri ve gerçek fiyatları MyLoungers'ta keşfedin.",
+  openGraph: {
+    title: "Bodrum Fırsatları ve Rezervasyona Açık Deneyimler | MyLoungers",
+    description:
+      "Bodrum'da tekne turu ve spa deneyimlerindeki güncel fırsatları kontrol edin. Rezervasyona açık deneyimleri ve gerçek fiyatları MyLoungers'ta keşfedin.",
+  },
+};
 
 function kampanyaTarih(bas: string | null, bit: string | null): string {
   if (!bas && !bit) return "";
