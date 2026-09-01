@@ -49,6 +49,7 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
     const slug = typeof rawSlug === "string" ? decodeURIComponent(rawSlug).trim() : "";
     if (!slug) return FALLBACK_METADATA;
 
+    const canonical = { alternates: { canonical: `/tesis/${slug}` as const } };
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("tesisler")
@@ -58,9 +59,9 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
 
     if (error) {
       console.error("[tesis layout] tesisler select error", error);
-      return FALLBACK_METADATA;
+      return { ...FALLBACK_METADATA, ...canonical };
     }
-    if (!data) return FALLBACK_METADATA;
+    if (!data) return { ...FALLBACK_METADATA, ...canonical };
 
     const ad = typeof data.ad === "string" && data.ad.trim() ? data.ad.trim() : "Tesis";
     const kategori = kategoriLabel(data.kategori);
@@ -74,6 +75,7 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
         title,
         description,
       },
+      ...canonical,
     };
   } catch (err) {
     console.error("[tesis layout] generateMetadata failed", err);

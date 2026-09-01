@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     description:
       "Bodrum'da tekne turlarını, spa ve masaj hizmetlerini ve güncel fırsatları keşfedin. Gerçek fiyatları inceleyin ve online rezervasyon yapın.",
   },
+  alternates: { canonical: "/kesfet" },
 };
 
 export default async function KesfetPage() {

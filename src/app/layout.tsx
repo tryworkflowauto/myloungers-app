@@ -4,6 +4,7 @@ import MetaPixel from "@/components/MetaPixel";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://myloungers.com"),
   title: "MyLoungers | Tatil Rezervasyon Platformu",
   description:
     "Hotel, beach club, aqua park, restoran, bar, tekne turu ve spa rezervasyonlarınızı online yapın. Türkiye'nin tatil rezervasyon platformu MyLoungers.",

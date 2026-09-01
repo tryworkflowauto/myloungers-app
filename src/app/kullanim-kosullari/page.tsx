@@ -18,10 +18,10 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const sp = await searchParams;
   const supabase = await createClient();
   const row = await fetchYasalMetinBySlug(supabase, SLUG);
-  if (!row) return { title: "MyLoungers" };
+  if (!row) return { title: "MyLoungers", alternates: { canonical: "/kullanim-kosullari" } };
   const en = isLegalPageEnglish(sp.lang);
   const { title, description } = pickYasalMetinForLang(row, en);
-  return { title: `${title} | MyLoungers`, description };
+  return { title: `${title} | MyLoungers`, description, alternates: { canonical: "/kullanim-kosullari" } };
 }
 
 export default async function KullanimKosullariPage({ searchParams }: PageProps) {

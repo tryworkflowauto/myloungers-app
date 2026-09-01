@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     description:
       "Tekne turu seçimi ve spa deneyimleri hakkında faydalı rehberlerle doğru kararı verin, gerçek rezervasyon seçeneklerine ulaşın.",
   },
+  alternates: { canonical: "/kesfet/rehberler" },
 };
 
 function RehberList({ items }: { items: KesfetRehber[] }) {

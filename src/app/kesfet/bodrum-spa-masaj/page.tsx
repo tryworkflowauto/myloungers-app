@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { KesfetBreadcrumb } from "../_components/KesfetShell";
 import { SkuGrid } from "../_components/SkuCard";
-import { fetchKesfetSkus } from "../_lib/data";
+import { fetchKesfetSkus, tesisDetailHref } from "../_lib/data";
 
 export const metadata: Metadata = {
   title: "Bodrum Spa ve Masaj Hizmetleri | MyLoungers",
@@ -12,13 +12,36 @@ export const metadata: Metadata = {
     description:
       "Bodrum'da masaj, hamam ve spa hizmetlerini keşfedin. Gerçek fiyatlarla, online rezervasyon imkanıyla MyLoungers'ta.",
   },
+  alternates: { canonical: "/kesfet/bodrum-spa-masaj" },
 };
 
 export default async function BodrumSpaMasajPage() {
   const skus = await fetchKesfetSkus("spa");
 
+  const itemList =
+    skus.length === 0
+      ? null
+      : {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          itemListElement: skus.map((sku, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: sku.skuAd,
+            url: `https://myloungers.com${tesisDetailHref(sku.tesisSlug)}`,
+          })),
+        };
+
   return (
     <>
+      {itemList ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(itemList).replace(/</g, "\\u003c"),
+          }}
+        />
+      ) : null}
       <KesfetBreadcrumb
         items={[
           { href: "/", label: "Ana Sayfa" },

@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     description:
       "Bodrum'da tekne turu ve spa deneyimlerindeki güncel fırsatları kontrol edin. Rezervasyona açık deneyimleri ve gerçek fiyatları MyLoungers'ta keşfedin.",
   },
+  alternates: { canonical: "/kesfet/firsatlar" },
 };
 
 function kampanyaTarih(bas: string | null, bit: string | null): string {

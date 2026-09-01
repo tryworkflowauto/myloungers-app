@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     description:
       "Bodrum tekne turu fiyatlarını kişi başı ve tüm tekne seçenekleriyle karşılaştırın. Güncel fiyatları inceleyin ve online rezervasyon yapın.",
   },
+  alternates: { canonical: "/kesfet/bodrum-tekne-turu-fiyatlari" },
 };
 
 function PriceTable({ rows }: { rows: KesfetSku[] }) {
