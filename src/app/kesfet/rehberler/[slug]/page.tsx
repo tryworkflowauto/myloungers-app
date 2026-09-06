@@ -3,7 +3,15 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KesfetBreadcrumb } from "../../_components/KesfetShell";
-import { fetchRehberBySlug, rehberCtaLabel, type KesfetRehber } from "../../_lib/data";
+import {
+  fetchAktifTesislerBySlugs,
+  fetchRehberBySlug,
+  rehberCtaLabel,
+  tesisDetailHref,
+  type KesfetRehber,
+  type RehberTesisKart,
+  type RehberTesisRol,
+} from "../../_lib/data";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -92,7 +100,34 @@ function tryParseTable(block: string): { header: string[]; body: string[][] } | 
   return { header, body };
 }
 
-function renderIcerik(icerik: string) {
+function parseTesislerToken(block: string): RehberTesisRol | "invalid" | null {
+  if (block === "{{TESISLER:ozel}}") return "ozel";
+  if (block === "{{TESISLER:paylasimli}}") return "paylasimli";
+  if (/^\{\{TESISLER:[^}]*\}\}$/.test(block)) return "invalid";
+  return null;
+}
+
+function RehberTesisKartlari({ tesisler }: { tesisler: RehberTesisKart[] }) {
+  if (tesisler.length === 0) return null;
+  return (
+    <div className="kesfet-sku-grid" style={{ margin: "8px 0 18px" }}>
+      {tesisler.map((t) => {
+        const loc = [t.ilce, t.sehir].filter(Boolean).join(", ");
+        return (
+          <Link key={t.slug} href={tesisDetailHref(t.slug)} className="kesfet-rehber-card">
+            <h3>{t.ad}</h3>
+            {loc ? <div className="kesfet-sku-loc">{loc}</div> : null}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderIcerik(
+  icerik: string,
+  kartlar: { ozel: RehberTesisKart[]; paylasimli: RehberTesisKart[] },
+) {
   const blocks = icerik
     .split(/\n{2,}/)
     .map((b) => b.trim())
@@ -124,6 +159,15 @@ function renderIcerik(icerik: string) {
         </div>
       );
     }
+
+    const token = parseTesislerToken(block);
+    if (token === "ozel") {
+      return <RehberTesisKartlari key={i} tesisler={kartlar.ozel} />;
+    }
+    if (token === "paylasimli") {
+      return <RehberTesisKartlari key={i} tesisler={kartlar.paylasimli} />;
+    }
+    if (token === "invalid") return null;
 
     const h3 = block.match(/^###\s+(.+)$/);
     if (h3) {
@@ -202,6 +246,33 @@ export default async function RehberDetayPage({ params }: PageProps) {
   const rehber = await fetchRehberBySlug(slug);
   if (!rehber) notFound();
 
+  const uniqueSlugs: string[] = [];
+  const seenSlug = new Set<string>();
+  for (const item of rehber.ilgiliTesisler) {
+    if (seenSlug.has(item.slug)) continue;
+    seenSlug.add(item.slug);
+    uniqueSlugs.push(item.slug);
+  }
+  const aktifTesisler = await fetchAktifTesislerBySlugs(uniqueSlugs);
+  const aktifBySlug = new Map(aktifTesisler.map((t) => [t.slug, t]));
+  const ozel: RehberTesisKart[] = [];
+  const paylasimli: RehberTesisKart[] = [];
+  const seenOzel = new Set<string>();
+  const seenPaylasimli = new Set<string>();
+  for (const item of rehber.ilgiliTesisler) {
+    const live = aktifBySlug.get(item.slug);
+    if (!live) continue;
+    if (item.rol === "ozel") {
+      if (seenOzel.has(live.slug)) continue;
+      seenOzel.add(live.slug);
+      ozel.push(live);
+    } else if (item.rol === "paylasimli") {
+      if (seenPaylasimli.has(live.slug)) continue;
+      seenPaylasimli.add(live.slug);
+      paylasimli.push(live);
+    }
+  }
+
   const canonical = rehberCanonical(rehber.slug);
   const ctaHref = rehber.ilgiliKesfetUrl || "/kesfet";
   const ctaLabel = rehberCtaLabel(rehber);
@@ -224,7 +295,7 @@ export default async function RehberDetayPage({ params }: PageProps) {
         </span>
         <h1 className="kesfet-h1">{rehber.baslik}</h1>
         {rehber.ozet ? <p className="kesfet-lead">{rehber.ozet}</p> : null}
-        {renderIcerik(rehber.icerik)}
+        {renderIcerik(rehber.icerik, { ozel, paylasimli })}
         <div style={{ marginTop: 28 }}>
           <Link href={ctaHref} className="kesfet-cta">
             {ctaLabel}

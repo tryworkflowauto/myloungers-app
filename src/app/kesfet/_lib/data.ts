@@ -29,6 +29,20 @@ export type KesfetKampanya = {
   tesisSlug: string;
 };
 
+export type RehberTesisRol = "ozel" | "paylasimli";
+
+export type RehberIlgiliTesis = {
+  slug: string;
+  rol: RehberTesisRol;
+};
+
+export type RehberTesisKart = {
+  slug: string;
+  ad: string;
+  ilce: string | null;
+  sehir: string | null;
+};
+
 export type KesfetRehber = {
   id: string;
   slug: string;
@@ -38,6 +52,7 @@ export type KesfetRehber = {
   icerik: string;
   ilgiliKesfetUrl: string | null;
   createdAt: string | null;
+  ilgiliTesisler: RehberIlgiliTesis[];
 };
 
 type TesisEmbed = {
@@ -84,6 +99,7 @@ type RehberRow = {
   icerik?: string | null;
   ilgili_kesfet_url?: string | null;
   created_at?: string | null;
+  ilgili_tesisler?: unknown;
 };
 
 function firstTesis(raw: TesisEmbed | TesisEmbed[] | null | undefined): TesisEmbed | null {
@@ -142,6 +158,21 @@ function mapSkuRow(g: SkuRow): KesfetSku | null {
   };
 }
 
+function parseIlgiliTesisler(raw: unknown): RehberIlgiliTesis[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RehberIlgiliTesis[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    if (typeof rec.slug !== "string") continue;
+    const slug = rec.slug.trim();
+    if (!slug) continue;
+    if (rec.rol !== "ozel" && rec.rol !== "paylasimli") continue;
+    out.push({ slug, rol: rec.rol });
+  }
+  return out;
+}
+
 function mapRehberRow(r: RehberRow): KesfetRehber {
   const createdAt =
     typeof r.created_at === "string" && r.created_at.trim() ? r.created_at.trim() : null;
@@ -154,6 +185,7 @@ function mapRehberRow(r: RehberRow): KesfetRehber {
     icerik: String(r.icerik ?? ""),
     ilgiliKesfetUrl: r.ilgili_kesfet_url ? String(r.ilgili_kesfet_url) : null,
     createdAt,
+    ilgiliTesisler: parseIlgiliTesisler(r.ilgili_tesisler),
   };
 }
 
@@ -318,10 +350,52 @@ export async function fetchRehberBySlug(slug: string): Promise<KesfetRehber | nu
   const sb = await createClient();
   const { data, error } = await sb
     .from("rehberler")
-    .select("id, slug, baslik, kategori, ozet, icerik, ilgili_kesfet_url, created_at")
+    .select("id, slug, baslik, kategori, ozet, icerik, ilgili_kesfet_url, created_at, ilgili_tesisler")
     .eq("slug", slug)
     .eq("yayinda", true)
     .maybeSingle();
   if (error || !data) return null;
   return mapRehberRow(data as unknown as RehberRow);
+}
+
+export async function fetchAktifTesislerBySlugs(slugs: string[]): Promise<RehberTesisKart[]> {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const s of slugs) {
+    const t = typeof s === "string" ? s.trim() : "";
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    unique.push(t);
+  }
+  if (unique.length === 0) return [];
+
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from("tesisler")
+    .select("ad, slug, ilce, sehir, aktif")
+    .eq("aktif", true)
+    .in("slug", unique);
+  if (error || !data) return [];
+
+  const bySlug = new Map<string, RehberTesisKart>();
+  for (const row of data as Array<{
+    ad?: unknown;
+    slug?: unknown;
+    ilce?: unknown;
+    sehir?: unknown;
+    aktif?: unknown;
+  }>) {
+    if (row.aktif !== true) continue;
+    const slug = typeof row.slug === "string" ? row.slug.trim() : "";
+    const ad = typeof row.ad === "string" ? row.ad.trim() : "";
+    if (!slug || !ad) continue;
+    bySlug.set(slug, {
+      slug,
+      ad,
+      ilce: typeof row.ilce === "string" && row.ilce.trim() ? row.ilce.trim() : null,
+      sehir: typeof row.sehir === "string" && row.sehir.trim() ? row.sehir.trim() : null,
+    });
+  }
+
+  return unique.map((s) => bySlug.get(s)).filter((x): x is RehberTesisKart => x != null);
 }
