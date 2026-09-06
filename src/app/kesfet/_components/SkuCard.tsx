@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { tesisMatchesKategoriToken } from "@/lib/tesisKategori";
 import {
   formatKesfetFiyat,
   skuLoc,
-  tesisDetailHref,
   type KesfetSku,
 } from "../_lib/data";
+import { KesfetTesisSelectLink } from "./KesfetTesisSelectLink";
 
 const ICON_PROPS = {
   width: 48,
@@ -47,10 +46,24 @@ function isTekneSku(sku: KesfetSku): boolean {
   );
 }
 
-export function SkuCard({ sku }: { sku: KesfetSku }) {
+export function SkuCard({
+  sku,
+  itemListId,
+  itemListName,
+}: {
+  sku: KesfetSku;
+  itemListId: string;
+  itemListName: string;
+}) {
   const loc = skuLoc(sku);
   return (
-    <Link href={tesisDetailHref(sku.tesisSlug)} className="kesfet-sku">
+    <KesfetTesisSelectLink
+      slug={sku.tesisSlug}
+      name={sku.tesisAd}
+      itemListId={itemListId}
+      itemListName={itemListName}
+      className="kesfet-sku"
+    >
       <div className="kesfet-sku-img">
         {sku.gorsel ? (
           <img src={sku.gorsel} alt="" />
@@ -66,18 +79,28 @@ export function SkuCard({ sku }: { sku: KesfetSku }) {
         {loc ? <div className="kesfet-sku-loc">{loc}</div> : null}
         <div className="kesfet-sku-price">{formatKesfetFiyat(sku)}</div>
       </div>
-    </Link>
+    </KesfetTesisSelectLink>
   );
 }
 
-export function SkuGrid({ skus, emptyText }: { skus: KesfetSku[]; emptyText: string }) {
+export function SkuGrid({
+  skus,
+  emptyText,
+  itemListId,
+  itemListName,
+}: {
+  skus: KesfetSku[];
+  emptyText: string;
+  itemListId: string;
+  itemListName: string;
+}) {
   if (skus.length === 0) {
     return <div className="kesfet-empty">{emptyText}</div>;
   }
   return (
     <div className="kesfet-sku-grid">
       {skus.map((sku) => (
-        <SkuCard key={sku.id} sku={sku} />
+        <SkuCard key={sku.id} sku={sku} itemListId={itemListId} itemListName={itemListName} />
       ))}
     </div>
   );

@@ -3,11 +3,11 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KesfetBreadcrumb } from "../../_components/KesfetShell";
+import { KesfetTesisSelectLink } from "../../_components/KesfetTesisSelectLink";
 import {
   fetchAktifTesislerBySlugs,
   fetchRehberBySlug,
   rehberCtaLabel,
-  tesisDetailHref,
   type KesfetRehber,
   type RehberTesisKart,
   type RehberTesisRol,
@@ -107,17 +107,32 @@ function parseTesislerToken(block: string): RehberTesisRol | "invalid" | null {
   return null;
 }
 
-function RehberTesisKartlari({ tesisler }: { tesisler: RehberTesisKart[] }) {
+function RehberTesisKartlari({
+  tesisler,
+  itemListId,
+  itemListName,
+}: {
+  tesisler: RehberTesisKart[];
+  itemListId: string;
+  itemListName: string;
+}) {
   if (tesisler.length === 0) return null;
   return (
     <div className="kesfet-sku-grid" style={{ margin: "8px 0 18px" }}>
       {tesisler.map((t) => {
         const loc = [t.ilce, t.sehir].filter(Boolean).join(", ");
         return (
-          <Link key={t.slug} href={tesisDetailHref(t.slug)} className="kesfet-rehber-card">
+          <KesfetTesisSelectLink
+            key={t.slug}
+            slug={t.slug}
+            name={t.ad}
+            itemListId={itemListId}
+            itemListName={itemListName}
+            className="kesfet-rehber-card"
+          >
             <h3>{t.ad}</h3>
             {loc ? <div className="kesfet-sku-loc">{loc}</div> : null}
-          </Link>
+          </KesfetTesisSelectLink>
         );
       })}
     </div>
@@ -127,6 +142,7 @@ function RehberTesisKartlari({ tesisler }: { tesisler: RehberTesisKart[] }) {
 function renderIcerik(
   icerik: string,
   kartlar: { ozel: RehberTesisKart[]; paylasimli: RehberTesisKart[] },
+  listCtx: { slug: string; baslik: string },
 ) {
   const blocks = icerik
     .split(/\n{2,}/)
@@ -162,10 +178,24 @@ function renderIcerik(
 
     const token = parseTesislerToken(block);
     if (token === "ozel") {
-      return <RehberTesisKartlari key={i} tesisler={kartlar.ozel} />;
+      return (
+        <RehberTesisKartlari
+          key={i}
+          tesisler={kartlar.ozel}
+          itemListId={`kesfet-rehberler:${listCtx.slug}:ozel`}
+          itemListName={`${listCtx.baslik} — özel`}
+        />
+      );
     }
     if (token === "paylasimli") {
-      return <RehberTesisKartlari key={i} tesisler={kartlar.paylasimli} />;
+      return (
+        <RehberTesisKartlari
+          key={i}
+          tesisler={kartlar.paylasimli}
+          itemListId={`kesfet-rehberler:${listCtx.slug}:paylasimli`}
+          itemListName={`${listCtx.baslik} — paylaşımlı`}
+        />
+      );
     }
     if (token === "invalid") return null;
 
@@ -295,7 +325,7 @@ export default async function RehberDetayPage({ params }: PageProps) {
         </span>
         <h1 className="kesfet-h1">{rehber.baslik}</h1>
         {rehber.ozet ? <p className="kesfet-lead">{rehber.ozet}</p> : null}
-        {renderIcerik(rehber.icerik, { ozel, paylasimli })}
+        {renderIcerik(rehber.icerik, { ozel, paylasimli }, { slug: rehber.slug, baslik: rehber.baslik })}
         <div style={{ marginTop: 28 }}>
           <Link href={ctaHref} className="kesfet-cta">
             {ctaLabel}

@@ -57,6 +57,8 @@ export default async function BodrumSpaMasajPage() {
       <SkuGrid
         skus={skus}
         emptyText="Şu an listelenecek aktif bir spa hizmeti bulunmuyor."
+        itemListId="kesfet-bodrum-spa-masaj"
+        itemListName="Bodrum Spa & Masaj"
       />
     </>
   );

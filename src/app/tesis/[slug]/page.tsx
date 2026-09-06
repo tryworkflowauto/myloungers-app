@@ -9,6 +9,7 @@ import { translateDayShort } from "@/lib/calismaSaatleri";
 import { readSiteLangFromStorage, SITE_LANG_STORAGE_KEY } from "@/lib/site-lang";
 import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import { trackEvent } from '@/components/MetaPixel';
+import { sendGAEvent } from "@/lib/sendGAEvent";
 
 type TesisRow = Record<string, any>;
 
@@ -150,6 +151,7 @@ export default function TesisDetailPage() {
     kilitli: new Set(),
     dolu: new Set(),
   });
+  const viewItemSentFor = useRef<string | null>(null);
   const szlRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLDivElement>(null);
   const resInFlightRef = useRef(false);
@@ -1385,6 +1387,42 @@ export default function TesisDetailPage() {
   useEffect(() => {
     trackEvent('ViewContent');
   }, []);
+
+  useEffect(() => {
+    if (!row?.id) return;
+    const urlSlug = slug ? String(slug).trim() : "";
+    const rowSlug = typeof row.slug === "string" ? row.slug.trim() : "";
+    if (rowSlug && urlSlug && rowSlug !== urlSlug) return;
+    const itemId = rowSlug || urlSlug;
+    const itemName =
+      (typeof row.ad === "string" && row.ad.trim()) ||
+      (typeof row.name === "string" && row.name.trim()) ||
+      "";
+    if (!itemId || !itemName) return;
+    if (viewItemSentFor.current === itemId) return;
+    viewItemSentFor.current = itemId;
+
+    const rawKat = row.kategoriler ?? row.kategori;
+    let cats: string[] = [];
+    if (Array.isArray(rawKat)) {
+      cats = rawKat.map((k: unknown) => String(k).trim()).filter(Boolean);
+    } else if (typeof rawKat === "string" && rawKat.trim()) {
+      try {
+        const parsed: unknown = JSON.parse(rawKat);
+        if (Array.isArray(parsed)) {
+          cats = parsed.map((k: unknown) => String(k).trim()).filter(Boolean);
+        } else {
+          cats = [rawKat.trim()];
+        }
+      } catch {
+        cats = rawKat.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+    }
+
+    const item: { [key: string]: string } = { item_id: itemId, item_name: itemName };
+    if (cats.length === 1) item.item_category = cats[0];
+    sendGAEvent("view_item", { items: [item] });
+  }, [row?.id, slug]);
 
   if (loading) {
     return (

@@ -102,6 +102,8 @@ export default async function KesfetPage() {
         <SkuGrid
           skus={skus}
           emptyText="Şu an listelenecek bir deneyim bulunmuyor. Tesis aramasından devam edebilirsin."
+          itemListId="kesfet"
+          itemListName="Keşfet"
         />
       </section>
 

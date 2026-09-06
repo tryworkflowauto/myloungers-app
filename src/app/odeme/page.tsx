@@ -10,6 +10,7 @@ import { getLabel, normalizeToCanonical } from "@/lib/tesisFacilityTypes";
 import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import { normalizeKategoriList } from "@/lib/tesisKategori";
 import { trackEvent } from '@/components/MetaPixel';
+import { sendGAEvent } from "@/lib/sendGAEvent";
 
 function tesisKategoriDisplayLabel(kategori: unknown): string {
   const parts = normalizeKategoriList(kategori);
@@ -121,6 +122,7 @@ function OdemeContent() {
   const [kvkkErr, setKvkkErr] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const paymentInFlightRef = useRef(false);
+  const beginCheckoutSentFor = useRef<string | null>(null);
   const [paymentError, setPaymentError] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [authAllowed, setAuthAllowed] = useState<boolean | null>(null);
@@ -481,6 +483,34 @@ function OdemeContent() {
   useEffect(() => {
     trackEvent('InitiateCheckout');
   }, []);
+
+  useEffect(() => {
+    if (authAllowed !== true) return;
+    const sonuc = searchParams.get("sonuc");
+    if (sonuc === "basarili" || sonuc === "hata") return;
+
+    const rezId = (searchParams.get("rezervasyonId") || searchParams.get("id") || "").trim();
+    if (!rezId) return;
+
+    const fiyatRaw = (searchParams.get("fiyat") || "").trim();
+    if (!fiyatRaw) return;
+    const value = Number.parseInt(fiyatRaw, 10);
+    if (!Number.isFinite(value) || value <= 0) return;
+
+    try {
+      sessionStorage.setItem("myloungers_ga4_checkout_reservation_id", rezId);
+    } catch {
+      /* private mode / storage blocked */
+    }
+
+    if (beginCheckoutSentFor.current === rezId) return;
+    beginCheckoutSentFor.current = rezId;
+
+    const tesisName = (searchParams.get("tesis") || "").trim();
+    const item: { [key: string]: string | number } = { price: value, quantity: 1 };
+    if (tesisName) item.item_name = tesisName;
+    sendGAEvent("begin_checkout", { currency: "TRY", value, items: [item] });
+  }, [authAllowed, searchParams]);
 
   if (authAllowed !== true) return null;
 

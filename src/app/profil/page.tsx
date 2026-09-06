@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +14,7 @@ import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHar
 import CallWaiterModal from "@/components/CallWaiterModal";
 import { getPanelPathForRole, isMusteriRole } from "@/lib/rolePanelPath";
 import { trackEvent } from '@/components/MetaPixel';
+import { sendGAEvent } from "@/lib/sendGAEvent";
 
 /** tesisler.kategori → kart etiketi (Spa, Beach Club, Tekne Turu vb.) */
 function profilTesisKategoriLabel(kategori: unknown): string {
@@ -65,6 +66,11 @@ type Reservation = {
   odemeModu?: string | null;
   /** Görünen birim etiketi (Şezlong / Masa / Koltuk / Yer) */
   seatUnitLabel: string;
+  pgtranid?: string | null;
+  toplamTutar?: number;
+  gaItemSlug?: string | null;
+  gaItemName?: string | null;
+  gaKategori?: unknown;
 };
 
 type UserReview = {
@@ -275,6 +281,7 @@ export default function ProfilPage() {
   const [bildirimlerLoading, setBildirimlerLoading] = useState(false);
   const [tick, setTick] = useState(0);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const odemeBasariliHintRef = useRef(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -394,6 +401,7 @@ export default function ProfilPage() {
             ad: string;
             loc: string;
             slug: string | null;
+            liveAd: string | null;
             iptal_saat_oncesi?: number;
             calisma_saatleri?: any;
             odeme_modu?: string | null;
@@ -419,6 +427,7 @@ export default function ProfilPage() {
                 ad: t.ad || `Tesis #${t.id}`,
                 loc: locParts || "-",
                 slug: typeof t.slug === "string" && t.slug.trim() ? t.slug.trim() : null,
+                liveAd: typeof t.ad === "string" && t.ad.trim() ? t.ad.trim() : null,
                 iptal_saat_oncesi: typeof t.iptal_saat_oncesi === "number" ? t.iptal_saat_oncesi : undefined,
                 calisma_saatleri: t.calisma_saatleri ?? undefined,
                 odeme_modu: typeof t.odeme_modu === "string" && t.odeme_modu.trim() !== "" ? t.odeme_modu.trim() : null,
@@ -647,6 +656,11 @@ export default function ProfilPage() {
             calismaSaatleri: tesisInfo?.calisma_saatleri,
             odemeModu: r.tesis_id != null ? tesisInfo?.odeme_modu ?? null : null,
             seatUnitLabel: getSeatUnitLabelDinamik(tesisInfo?.kategori, yerEtiketiHaritasi),
+            pgtranid: typeof r.pgtranid === "string" && r.pgtranid.trim() ? r.pgtranid.trim() : null,
+            toplamTutar: Number(r.toplam_tutar),
+            gaItemSlug: slugDb || null,
+            gaItemName: tesisInfo?.liveAd ?? null,
+            gaKategori: tesisInfo?.kategori ?? null,
           };
         });
 
@@ -1245,6 +1259,20 @@ export default function ProfilPage() {
     return `Üye: ${aylar[d.getMonth()]} ${d.getFullYear()}`;
   })();
 
+  useLayoutEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get("odeme") === "basarili") {
+        sessionStorage.setItem("myloungers_ga4_odeme_basarili", "1");
+        odemeBasariliHintRef.current = true;
+      } else {
+        odemeBasariliHintRef.current =
+          sessionStorage.getItem("myloungers_ga4_odeme_basarili") === "1";
+      }
+    } catch {
+      odemeBasariliHintRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -1255,6 +1283,85 @@ export default function ProfilPage() {
       window.history.replaceState({}, '', yeniUrl);
     }
   }, []);
+
+  useEffect(() => {
+    if (!odemeBasariliHintRef.current) return;
+    if (!user || resLoading) return;
+
+    let hintId = "";
+    try {
+      hintId = (sessionStorage.getItem("myloungers_ga4_checkout_reservation_id") || "").trim();
+    } catch {
+      return;
+    }
+    if (!hintId) return;
+
+    const hintRow = reservations.find((r) => String(r.id) === hintId);
+    if (!hintRow) return;
+
+    const hintDurum = (hintRow.durum || "").toLowerCase();
+    if (hintDurum !== "aktif" && hintDurum !== "onaylandi") return;
+
+    const pgtranid = (hintRow.pgtranid || "").trim();
+    if (!pgtranid) return;
+
+    let alreadySent = false;
+    try {
+      alreadySent = sessionStorage.getItem(`myloungers_ga4_purchase_${pgtranid}`) === "1";
+    } catch {
+      return;
+    }
+    if (alreadySent) return;
+
+    const group = reservations.filter((r) => (r.pgtranid || "").trim() === pgtranid);
+    if (group.length === 0) return;
+    if (!group.every((r) => {
+      const d = (r.durum || "").toLowerCase();
+      return d === "aktif" || d === "onaylandi";
+    })) return;
+
+    const tesisIds = new Set(
+      group.map((r) => (r.tesisId || "").trim()).filter(Boolean)
+    );
+    if (tesisIds.size !== 1) return;
+
+    const slugs = new Set(group.map((r) => (r.gaItemSlug || "").trim()).filter(Boolean));
+    const names = new Set(group.map((r) => (r.gaItemName || "").trim()).filter(Boolean));
+    if (slugs.size > 1 || names.size > 1) return;
+
+    let value = 0;
+    for (const row of group) {
+      const t = Number(row.toplamTutar);
+      if (!Number.isFinite(t) || t < 0) return;
+      value += t;
+    }
+    if (!Number.isFinite(value) || value <= 0) return;
+
+    if (typeof window.gtag !== "function") return;
+
+    const item: { [key: string]: string | number } = { price: value, quantity: 1 };
+    const itemSlug = slugs.size === 1 ? [...slugs][0] : "";
+    const itemName = names.size === 1 ? [...names][0] : "";
+    if (itemSlug) item.item_id = itemSlug;
+    if (itemName) item.item_name = itemName;
+    const cats = normalizeKategoriList(hintRow.gaKategori);
+    if (cats.length === 1) item.item_category = cats[0];
+
+    sendGAEvent("purchase", {
+      transaction_id: pgtranid,
+      value,
+      currency: "TRY",
+      items: [item],
+    });
+
+    try {
+      sessionStorage.setItem(`myloungers_ga4_purchase_${pgtranid}`, "1");
+      sessionStorage.removeItem("myloungers_ga4_checkout_reservation_id");
+      sessionStorage.removeItem("myloungers_ga4_odeme_basarili");
+    } catch {
+      /* storage blocked */
+    }
+  }, [user, reservations, resLoading]);
 
   if (userLoading) {
     return null;

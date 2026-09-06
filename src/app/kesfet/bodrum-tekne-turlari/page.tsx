@@ -62,6 +62,8 @@ export default async function BodrumTekneTurlariPage() {
       <SkuGrid
         skus={skus}
         emptyText="Şu an listelenecek aktif bir tekne turu bulunmuyor."
+        itemListId="kesfet-bodrum-tekne-turlari"
+        itemListName="Bodrum Tekne Turları"
       />
     </>
   );

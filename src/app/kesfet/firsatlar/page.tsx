@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { KesfetBreadcrumb } from "../_components/KesfetShell";
+import { KesfetTesisSelectLink } from "../_components/KesfetTesisSelectLink";
 import { SkuGrid } from "../_components/SkuCard";
-import { fetchAktifKampanyalar, fetchKesfetSkus, tesisDetailHref } from "../_lib/data";
+import { fetchAktifKampanyalar, fetchKesfetSkus } from "../_lib/data";
 
 export const metadata: Metadata = {
   title: "Bodrum Fırsatları ve Rezervasyona Açık Deneyimler | MyLoungers",
@@ -40,7 +40,14 @@ export default async function FirsatlarPage() {
         <p className="kesfet-lead">Şu an misafirlere gösterilen aktif kampanyalar.</p>
         <div className="kesfet-sku-grid">
           {kampanyalar.map((k) => (
-            <Link key={k.id} href={tesisDetailHref(k.tesisSlug)} className="kesfet-kampanya">
+            <KesfetTesisSelectLink
+              key={k.id}
+              slug={k.tesisSlug}
+              name={k.tesisAd}
+              itemListId="kesfet-firsatlar"
+              itemListName="Fırsatlar"
+              className="kesfet-kampanya"
+            >
               <h3>{k.ad}</h3>
               <p>
                 {k.tesisAd}
@@ -50,7 +57,7 @@ export default async function FirsatlarPage() {
               {kampanyaTarih(k.baslangic, k.bitis) ? (
                 <p style={{ marginTop: 6 }}>{kampanyaTarih(k.baslangic, k.bitis)}</p>
               ) : null}
-            </Link>
+            </KesfetTesisSelectLink>
           ))}
         </div>
       </>
@@ -75,6 +82,8 @@ export default async function FirsatlarPage() {
       <SkuGrid
         skus={skus}
         emptyText="Şu an listelenecek bir deneyim bulunmuyor."
+        itemListId="kesfet-firsatlar"
+        itemListName="Fırsatlar"
       />
     </>
   );

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KesfetBreadcrumb } from "../_components/KesfetShell";
+import { KesfetTesisSelectLink } from "../_components/KesfetTesisSelectLink";
 import {
   fetchKesfetSkus,
   formatKesfetFiyat,
   skuLoc,
-  tesisDetailHref,
   type KesfetSku,
 } from "../_lib/data";
 
@@ -21,7 +21,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/kesfet/bodrum-tekne-turu-fiyatlari" },
 };
 
-function PriceTable({ rows }: { rows: KesfetSku[] }) {
+function PriceTable({
+  rows,
+  itemListId,
+  itemListName,
+}: {
+  rows: KesfetSku[];
+  itemListId: string;
+  itemListName: string;
+}) {
   if (rows.length === 0) {
     return <div className="kesfet-empty">Bu fiyat grubunda kayıt bulunmuyor.</div>;
   }
@@ -40,7 +48,14 @@ function PriceTable({ rows }: { rows: KesfetSku[] }) {
           {rows.map((sku) => (
             <tr key={sku.id}>
               <td>
-                <Link href={tesisDetailHref(sku.tesisSlug)}>{sku.tesisAd}</Link>
+                <KesfetTesisSelectLink
+                  slug={sku.tesisSlug}
+                  name={sku.tesisAd}
+                  itemListId={itemListId}
+                  itemListName={itemListName}
+                >
+                  {sku.tesisAd}
+                </KesfetTesisSelectLink>
               </td>
               <td>{sku.skuAd}</td>
               <td>{skuLoc(sku) || "—"}</td>
@@ -80,12 +95,20 @@ export default async function BodrumTekneTuruFiyatlariPage() {
 
       <section className="kesfet-sec">
         <h2 className="kesfet-h2">Tüm tekne sabit fiyatlar</h2>
-        <PriceTable rows={sabit} />
+        <PriceTable
+          rows={sabit}
+          itemListId="kesfet-bodrum-tekne-turu-fiyatlari-tum-tekne"
+          itemListName="Bodrum Tekne Turu Fiyatları — tüm tekne"
+        />
       </section>
 
       <section className="kesfet-sec">
         <h2 className="kesfet-h2">Kişi başı fiyatlar</h2>
-        <PriceTable rows={kisiBasi} />
+        <PriceTable
+          rows={kisiBasi}
+          itemListId="kesfet-bodrum-tekne-turu-fiyatlari-kisi-basi"
+          itemListName="Bodrum Tekne Turu Fiyatları — kişi başı"
+        />
       </section>
     </>
   );
