@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "İletişim | MyLoungers",
+  description: "MyLoungers iletişim: telefon, e-posta ve Teknokent adresi. Hafta içi 09:00–18:00 arasında bize ulaşın.",
+  alternates: { canonical: "/iletisim" },
+  openGraph: {
+    title: "İletişim | MyLoungers",
+    description: "MyLoungers iletişim: telefon, e-posta ve Teknokent adresi. Hafta içi 09:00–18:00 arasında bize ulaşın.",
+    url: "/iletisim",
+  },
+};
 
 const CONTACTS = [
   {

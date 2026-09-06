@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Hakkımızda | MyLoungers",
+  description: "MyLoungers; otel, beach club, aqua park, restoran, bar, tekne turu ve spa rezervasyonunu dijitalleştiren Türkiye'nin tatil rezervasyon platformudur.",
+  alternates: { canonical: "/hakkimizda" },
+  openGraph: {
+    title: "Hakkımızda | MyLoungers",
+    description: "MyLoungers; otel, beach club, aqua park, restoran, bar, tekne turu ve spa rezervasyonunu dijitalleştiren Türkiye'nin tatil rezervasyon platformudur.",
+    url: "/hakkimizda",
+  },
+};
 
 const SECTIONS = [
   {

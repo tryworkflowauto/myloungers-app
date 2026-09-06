@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Nasıl Çalışır? | MyLoungers",
+  description: "MyLoungers'ta 3 adımda tatil rezervasyonu: tesisi seçin, yerinizi belirleyin, güvenli ödeme ile onaylayın. Gerçek fiyatlar ve anlık müsaitlik.",
+  alternates: { canonical: "/nasil-calisir" },
+  openGraph: {
+    title: "Nasıl Çalışır? | MyLoungers",
+    description: "MyLoungers'ta 3 adımda tatil rezervasyonu: tesisi seçin, yerinizi belirleyin, güvenli ödeme ile onaylayın. Gerçek fiyatlar ve anlık müsaitlik.",
+    url: "/nasil-calisir",
+  },
+};
 
 const STEPS = [
   {
