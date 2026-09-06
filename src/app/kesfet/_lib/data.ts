@@ -37,6 +37,7 @@ export type KesfetRehber = {
   ozet: string;
   icerik: string;
   ilgiliKesfetUrl: string | null;
+  createdAt: string | null;
 };
 
 type TesisEmbed = {
@@ -82,6 +83,7 @@ type RehberRow = {
   ozet?: string | null;
   icerik?: string | null;
   ilgili_kesfet_url?: string | null;
+  created_at?: string | null;
 };
 
 function firstTesis(raw: TesisEmbed | TesisEmbed[] | null | undefined): TesisEmbed | null {
@@ -141,6 +143,8 @@ function mapSkuRow(g: SkuRow): KesfetSku | null {
 }
 
 function mapRehberRow(r: RehberRow): KesfetRehber {
+  const createdAt =
+    typeof r.created_at === "string" && r.created_at.trim() ? r.created_at.trim() : null;
   return {
     id: String(r.id),
     slug: String(r.slug ?? ""),
@@ -149,6 +153,7 @@ function mapRehberRow(r: RehberRow): KesfetRehber {
     ozet: String(r.ozet ?? ""),
     icerik: String(r.icerik ?? ""),
     ilgiliKesfetUrl: r.ilgili_kesfet_url ? String(r.ilgili_kesfet_url) : null,
+    createdAt,
   };
 }
 
@@ -313,7 +318,7 @@ export async function fetchRehberBySlug(slug: string): Promise<KesfetRehber | nu
   const sb = await createClient();
   const { data, error } = await sb
     .from("rehberler")
-    .select("id, slug, baslik, kategori, ozet, icerik, ilgili_kesfet_url")
+    .select("id, slug, baslik, kategori, ozet, icerik, ilgili_kesfet_url, created_at")
     .eq("slug", slug)
     .eq("yayinda", true)
     .maybeSingle();
