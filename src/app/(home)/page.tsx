@@ -27,7 +27,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Rezervasyon Yap", card_per_day: "/gün", view_all: "Tümünü gör",
     btn_login: "Giriş Yap", btn_signup: "Üye Ol",
     sfl_region: "Bölge", sfl_type: "Tesis Tipi", sfl_date: "Tarih", sfl_name: "Tesis Adı",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restoran, Bar & Lounge, Tekne Turu, Spa...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
+    sfv_region: "İl / ilçe seçin", sfv_type: "Hotel, Beach Club, Aqua Park, Restoran, Bar & Lounge, Tekne Turu, Spa...", sfv_date: "Tarih seçin", sfv_name: "Ara...",
     srch_btn: "Tesis Ara", filter_btn: "Filtrele",
     r_search_placeholder: "İl ara...", r_all: "Tümü", r_clear: "Temizle", r_ok: "Tamam", r_select_il: "İl seçin",
     st_active: "Aktif Tesis", st_focus: "Farklı Deneyimler", st_instant: "Rezervasyon", st_secure: "Ödeme", st_online: "Online Rezervasyon",
@@ -54,7 +54,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Book Now", card_per_day: "/day", view_all: "View All",
     btn_login: "Log In", btn_signup: "Sign Up",
     sfl_region: "Region", sfl_type: "Facility Type", sfl_date: "Date", sfl_name: "Facility Name",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant, Bar & Lounge, Boat Tour, Spa...", sfv_date: "Select date", sfv_name: "Search...",
+    sfv_region: "Select city / district", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant, Bar & Lounge, Boat Tour, Spa...", sfv_date: "Select date", sfv_name: "Search...",
     srch_btn: "Search", filter_btn: "Filter",
     r_search_placeholder: "Search city...", r_all: "All", r_clear: "Clear", r_ok: "OK", r_select_il: "Select city",
     st_active: "Active Facilities", st_focus: "Different Experiences", st_instant: "Instant Booking", st_secure: "Secure Payment", st_online: "Online Booking",
@@ -81,7 +81,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Jetzt buchen", card_per_day: "/Tag", view_all: "Alle anzeigen",
     btn_login: "Anmelden", btn_signup: "Registrieren",
     sfl_region: "Region", sfl_type: "Einrichtungstyp", sfl_date: "Datum", sfl_name: "Einrichtungsname",
-    sfv_region: "Bodrum, Antalya, Marmaris...", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant...", sfv_date: "Datum wählen", sfv_name: "Suchen...",
+    sfv_region: "Stadt / Bezirk wählen", sfv_type: "Hotel, Beach Club, Aqua Park, Restaurant...", sfv_date: "Datum wählen", sfv_name: "Suchen...",
     srch_btn: "Suchen", filter_btn: "Filtern",
     r_search_placeholder: "Stadt suchen...", r_all: "Alle", r_clear: "Löschen", r_ok: "OK", r_select_il: "Stadt wählen",
     st_active: "Aktive Einrichtungen", st_res: "Reservierungen", st_dest: "Reiseziele", st_rating: "Durchschnittsbewertung", st_qr: "Berührungsloser Eintritt",
@@ -107,7 +107,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     card_btn: "Забронировать", card_per_day: "/день", view_all: "Все",
     btn_login: "Войти", btn_signup: "Регистрация",
     sfl_region: "Регион", sfl_type: "Тип объекта", sfl_date: "Дата", sfl_name: "Название",
-    sfv_region: "Бодрум, Анталья, Мармарис...", sfv_type: "Отель, Пляжный клуб, Аквапарк...", sfv_date: "Выберите дату", sfv_name: "Поиск...",
+    sfv_region: "Выберите город / район", sfv_type: "Отель, Пляжный клуб, Аквапарк...", sfv_date: "Выберите дату", sfv_name: "Поиск...",
     srch_btn: "Поиск", filter_btn: "Фильтр",
     r_search_placeholder: "Поиск города...", r_all: "Все", r_clear: "Очистить", r_ok: "OK", r_select_il: "Выберите город",
     st_active: "Активные объекты", st_res: "Бронирования", st_dest: "Направления", st_rating: "Средний рейтинг", st_qr: "Бесконтактный вход",
@@ -198,25 +198,27 @@ function CategoryCardSkeleton() {
   );
 }
 
-const ILLER: Record<string, string[]> = {
-  Muğla: ["Bodrum", "Yalıkavak", "Turgutreis", "Gümbet", "Gündoğan", "Ortakent", "Bitez", "Güvercinlik", "Marmaris", "Fethiye", "Datça", "Milas"],
-  Antalya: ["Kemer", "Alanya", "Side", "Manavgat", "Belek", "Kaş", "Kalkan"],
-  İzmir: ["Çeşme", "Alaçatı", "Foça", "Urla", "Seferihisar"],
-  İstanbul: ["Beşiktaş", "Sarıyer", "Bakırköy", "Kadıköy"],
-  Ankara: ["Çankaya", "Keçiören", "Mamak", "Etimesgut"],
-  Adana: ["Seyhan", "Çukurova", "Yüreğir", "Sarıçam", "Aladağ"],
-  Aydın: ["Didim", "Kuşadası", "Söke"],
-  Balıkesir: ["Ayvalık", "Edremit", "Bandırma", "Burhaniye", "Erdek", "Gönen"],
-  Bursa: ["Osmangazi", "Nilüfer", "Yıldırım", "Mudanya", "Gemlik", "İnegöl"],
-  Mersin: ["Mezitli", "Yenişehir", "Toroslar", "Silifke", "Anamur", "Erdemli"],
-  Hatay: ["Antakya", "İskenderun", "Samandağ", "Harbiye", "Defne", "Dörtyol"],
-  Trabzon: ["Ortahisar", "Akçaabat", "Yomra", "Sürmene", "Of", "Araklı"],
-  Samsun: ["İlkadım", "Atakum", "Canik", "Bafra", "Çarşamba", "Terme"],
-  Konya: ["Selçuklu", "Meram", "Karatay", "Beyşehir", "Akşehir", "Seydişehir"],
-  Gaziantep: ["Şahinbey", "Şehitkamil", "Nizip", "İslahiye", "Araban", "Oğuzeli"],
-  Kayseri: ["Melikgazi", "Kocasinan", "Talas", "Develi", "Bünyan", "İncesu"],
-  Eskişehir: ["Tepebaşı", "Odunpazarı", "Sivrihisar", "Mahmudiye", "Seyitgazi"],
-};
+/** Aktif tesis satırlarından unique il → ilçe haritası (boş/null hariç). */
+function buildIllerFromTesisRows(rows: { sehir?: unknown; ilce?: unknown }[]): Record<string, string[]> {
+  const bySehir = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const sehir = typeof row.sehir === "string" ? row.sehir.trim() : "";
+    if (!sehir) continue;
+    let ilceSet = bySehir.get(sehir);
+    if (!ilceSet) {
+      ilceSet = new Set();
+      bySehir.set(sehir, ilceSet);
+    }
+    const ilce = typeof row.ilce === "string" ? row.ilce.trim() : "";
+    if (ilce) ilceSet.add(ilce);
+  }
+  const result: Record<string, string[]> = {};
+  const sehirler = Array.from(bySehir.keys()).sort((a, b) => a.localeCompare(b, "tr"));
+  for (const sehir of sehirler) {
+    result[sehir] = Array.from(bySehir.get(sehir)!).sort((a, b) => a.localeCompare(b, "tr"));
+  }
+  return result;
+}
 
 const SORT_OPTS = [
   { icon: "⭐", label: "Popüler" },
@@ -312,6 +314,7 @@ export default function Home() {
   const [panelName, setPanelName] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState("");
   const [activeIlce, setActiveIlce] = useState("");
+  const [iller, setIller] = useState<Record<string, string[]>>({});
   const [ilSearch, setIlSearch] = useState("");
   const [barWidth, setBarWidth] = useState(0);
   const [calDate, setCalDate] = useState(() => new Date());
@@ -528,6 +531,21 @@ export default function Home() {
       window.location.reload();
     }
   };
+
+  useEffect(() => {
+    async function fetchIller() {
+      const { data, error } = await supabase
+        .from("tesisler")
+        .select("sehir, ilce")
+        .eq("aktif", true);
+      if (error) {
+        console.error("Ana sayfa bölge (sehir/ilce) sorgu hatası:", error);
+        return;
+      }
+      setIller(buildIllerFromTesisRows(data ?? []));
+    }
+    void fetchIller();
+  }, []);
 
   // Ana sayfa için en çok tercih edilen tesisleri Supabase'den çek
   useEffect(() => {
@@ -765,8 +783,8 @@ export default function Home() {
     router,
   ]);
 
-  const ilceler = selectedProvince && ILLER[selectedProvince] ? ILLER[selectedProvince] : [];
-  const filteredIller = Object.keys(ILLER).filter((il) =>
+  const ilceler = selectedProvince && iller[selectedProvince] ? iller[selectedProvince] : [];
+  const filteredIller = Object.keys(iller).filter((il) =>
     !ilSearch || il.toLowerCase().includes(ilSearch.toLowerCase())
   );
 
