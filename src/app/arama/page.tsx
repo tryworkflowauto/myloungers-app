@@ -112,6 +112,7 @@ type Card = {
   kategoriRaw: unknown;
   cat: string;
   sehir: string;
+  ilce: string;
   stars: number;
   rev: number | null;
   loc: string;
@@ -173,6 +174,15 @@ function catalogMaxPriceFromCards(cards: Card[]): number {
     }
   }
   return max;
+}
+
+function parseKonumParam(raw: string | null): { province: string; district: string } {
+  const t = (raw ?? "").trim();
+  if (!t) return { province: "", district: "" };
+  const sep = " / ";
+  const idx = t.indexOf(sep);
+  if (idx === -1) return { province: t, district: "" };
+  return { province: t.slice(0, idx).trim(), district: t.slice(idx + sep.length).trim() };
 }
 
 function AramaContent() {
@@ -268,6 +278,7 @@ function AramaContent() {
               kategoriRaw: t.kategori,
               cat: normalizeKategoriList(t.kategori).join(", ") || "—",
               sehir,
+              ilce: typeof t.ilce === "string" ? t.ilce.trim() : "",
               stars,
               rev,
               loc,
@@ -501,6 +512,7 @@ function AramaContent() {
 
   const puanParam = searchParams.get("puan");
   const minScoreFilter = minScoreFromPuanParam(puanParam);
+  const konumParam = searchParams.get("konum");
 
   const filtered = useMemo(() => {
     let list = cardsForList
@@ -522,6 +534,19 @@ function AramaContent() {
         const set = new Set(oz.map((x) => x.toLowerCase()));
         return requiredOzellikKeys.every((k) => set.has(k.toLowerCase()));
       });
+    }
+
+    if (!gpsMode) {
+      const { province, district } = parseKonumParam(konumParam);
+      if (province) {
+        const provinceNorm = province.trim().toLocaleLowerCase("tr-TR");
+        const districtNorm = district.trim().toLocaleLowerCase("tr-TR");
+        list = list.filter((c) => {
+          if (c.sehir.trim().toLocaleLowerCase("tr-TR") !== provinceNorm) return false;
+          if (districtNorm) return c.ilce.trim().toLocaleLowerCase("tr-TR") === districtNorm;
+          return true;
+        });
+      }
     }
 
     if (gpsMode && gpsStatus === "ready" && userCoords) {
@@ -572,6 +597,7 @@ function AramaContent() {
     userCoords,
     km,
     sortVal,
+    konumParam,
   ]);
 
   const tabCounts = useMemo(() => {
