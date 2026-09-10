@@ -229,15 +229,16 @@ const SORT_OPTS = [
 
 const RATING_OPTS = ["Tümü", "3★+", "4★+", "4.5★+"];
 
+/** Chip görünümü + /arama `ozellik` indeksi → `tesisler.imkanlar` exact adları (name / name_en). */
 const FEATURE_OPTS = [
-  { icon: "🏊", label: "Havuz" },
-  { icon: "📶", label: "Wi-Fi" },
-  { icon: "🌊", label: "Denize Sıfır" },
-  { icon: "🍽️", label: "Restoran" },
-  { icon: "🍹", label: "Bar" },
-  { icon: "⛱️", label: "Şemsiye" },
-  { icon: "🅿️", label: "Otopark" },
-  { icon: "✈️", label: "Havalimanı Transfer" },
+  { icon: "🏊", label: "Havuz", names: ["Havuz", "Pool"] },
+  { icon: "📶", label: "Wi-Fi", names: ["Wi-Fi", "Wifi", "WiFi"] },
+  { icon: "🌊", label: "Denize Sıfır", names: ["Denize Sıfır", "Beachfront"] },
+  { icon: "🍽️", label: "Restoran", names: ["Restoran", "Restaurant"] },
+  { icon: "🍹", label: "Bar", names: ["Bar"] },
+  { icon: "⛱️", label: "Şemsiye", names: ["Şemsiye", "Umbrella"] },
+  { icon: "🅿️", label: "Otopark", names: ["Otopark", "Parking"] },
+  { icon: "✈️", label: "Havalimanı Transfer", names: ["Havalimanı Transfer", "Airport Transfer"] },
 ];
 
 type TesisSlugInfo = {

@@ -51,29 +51,53 @@ const SIRA_PARAM_TO_SORT: Record<number, string> = {
   3: "⭐ Puana Göre",
 };
 
-/** Ana sayfa FEATURE_OPTS indeksi → `tesisler.ozellikler` anahtarı (yoksa null) */
-const OZELLIK_INDEX_TO_KEY: (string | null)[] = [
-  "havuz",
-  "wifi",
-  "deniz",
-  "restoran",
-  "bar",
-  null,
-  "otopark",
-  "taksi",
+/** Ana sayfa FEATURE_OPTS indeksi → aktif `tesisler.imkanlar` exact adları (name / name_en). */
+const FEATURE_CHIP_NAMES: string[][] = [
+  ["Havuz", "Pool"],
+  ["Wi-Fi", "Wifi", "WiFi"],
+  ["Denize Sıfır", "Beachfront"],
+  ["Restoran", "Restaurant"],
+  ["Bar"],
+  ["Şemsiye", "Umbrella"],
+  ["Otopark", "Parking"],
+  ["Havalimanı Transfer", "Airport Transfer"],
 ];
 
-function parseOzelliklerField(v: unknown): string[] | null {
-  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
-  if (typeof v === "string" && v.trim()) {
+function normImkanAd(s: string): string {
+  return s.trim().toLocaleLowerCase("tr-TR");
+}
+
+/** `tesisler.imkanlar` — yalnızca active === true; name + name_en. */
+function parseAktifImkanAdlari(raw: unknown): string[] {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
     try {
-      const p = JSON.parse(v) as unknown;
-      if (Array.isArray(p)) return p.map((x) => String(x).trim()).filter(Boolean);
+      parsed = JSON.parse(raw) as unknown;
     } catch {
-      /* ignore */
+      return [];
     }
   }
-  return null;
+  if (!Array.isArray(parsed)) return [];
+  const out: string[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as { active?: unknown; name?: unknown; name_en?: unknown };
+    if (rec.active !== true) continue;
+    if (typeof rec.name === "string") {
+      const n = rec.name.trim();
+      if (n) out.push(n);
+    }
+    if (typeof rec.name_en === "string") {
+      const n = rec.name_en.trim();
+      if (n) out.push(n);
+    }
+  }
+  return out;
+}
+
+function tesisHasChipImkan(imkanAdlari: string[], chipNames: string[]): boolean {
+  const set = new Set(imkanAdlari.map(normImkanAd));
+  return chipNames.some((n) => set.has(normImkanAd(n)));
 }
 
 function minScoreFromPuanParam(puanParam: string | null): number | null {
@@ -122,8 +146,8 @@ type Card = {
   /** km; yalnızca GPS modunda dolu */
   distanceKm: number | null;
   feats: string[];
-  /** `tesisler.ozellikler` — kolon yoksa null */
-  ozellikler: string[] | null;
+  /** Aktif `tesisler.imkanlar` adları (name + name_en) */
+  imkanAdlari: string[];
   price: number | null;
   minFiyat: number | null;
   maxFiyat: number | null;
@@ -287,7 +311,7 @@ function AramaContent() {
               boylam: parseTesisCoord(t.boylam),
               distanceKm: null,
               feats: [],
-              ozellikler: parseOzelliklerField(t.ozellikler),
+              imkanAdlari: parseAktifImkanAdlari(t.imkanlar),
               price,
               minFiyat,
               maxFiyat,
@@ -398,26 +422,14 @@ function AramaContent() {
   }, [searchParams, aktifTipler]);
 
   const ozellikParam = searchParams.get("ozellik");
-  const requiredOzellikKeys = useMemo(() => {
+  const requiredImkanChips = useMemo(() => {
     if (!ozellikParam?.trim()) return [];
     return ozellikParam
       .split(",")
       .map((s) => Number.parseInt(s.trim(), 10))
-      .filter((n) => Number.isFinite(n))
-      .map((idx) => OZELLIK_INDEX_TO_KEY[idx])
-      .filter((k): k is string => typeof k === "string" && k.length > 0);
+      .filter((n) => Number.isFinite(n) && n >= 0 && n < FEATURE_CHIP_NAMES.length)
+      .map((idx) => FEATURE_CHIP_NAMES[idx]);
   }, [ozellikParam]);
-
-  const ozellikColumnAvailable = useMemo(
-    () => cards.some((c) => c.ozellikler != null),
-    [cards],
-  );
-
-  useEffect(() => {
-    if (requiredOzellikKeys.length > 0 && !ozellikColumnAvailable) {
-      console.info("[arama] özellik kolonu yok — ozellik filtresi atlandı");
-    }
-  }, [requiredOzellikKeys, ozellikColumnAvailable]);
 
   useEffect(() => {
     if (searchParams.get("gps") !== "1") {
@@ -527,13 +539,10 @@ function AramaContent() {
       list = list.filter((c) => c.score != null && c.score >= minScoreFilter);
     }
 
-    if (ozellikColumnAvailable && requiredOzellikKeys.length > 0) {
-      list = list.filter((c) => {
-        const oz = c.ozellikler;
-        if (!oz?.length) return false;
-        const set = new Set(oz.map((x) => x.toLowerCase()));
-        return requiredOzellikKeys.every((k) => set.has(k.toLowerCase()));
-      });
+    if (requiredImkanChips.length > 0) {
+      list = list.filter((c) =>
+        requiredImkanChips.every((chipNames) => tesisHasChipImkan(c.imkanAdlari, chipNames)),
+      );
     }
 
     if (!gpsMode) {
@@ -590,8 +599,7 @@ function AramaContent() {
     priceMax,
     catalogMaxPrice,
     minScoreFilter,
-    ozellikColumnAvailable,
-    requiredOzellikKeys,
+    requiredImkanChips,
     gpsMode,
     gpsStatus,
     userCoords,
