@@ -1,5 +1,8 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
 export interface SearchBarProps {
   locInput: string;
   onLocInputChange: (v: string) => void;
@@ -14,6 +17,40 @@ export interface SearchBarProps {
   km: number;
   onKmChange: (v: number) => void;
   onSearch: () => void;
+}
+
+/** Aktif tesis satırlarından unique il → ilçe haritası (boş/null hariç). */
+function buildIllerFromTesisRows(rows: { sehir?: unknown; ilce?: unknown }[]): Record<string, string[]> {
+  const bySehir = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const sehir = typeof row.sehir === "string" ? row.sehir.trim() : "";
+    if (!sehir) continue;
+    let ilceSet = bySehir.get(sehir);
+    if (!ilceSet) {
+      ilceSet = new Set();
+      bySehir.set(sehir, ilceSet);
+    }
+    const ilce = typeof row.ilce === "string" ? row.ilce.trim() : "";
+    if (ilce) ilceSet.add(ilce);
+  }
+  const result: Record<string, string[]> = {};
+  const sehirler = Array.from(bySehir.keys()).sort((a, b) => a.localeCompare(b, "tr"));
+  for (const sehir of sehirler) {
+    result[sehir] = Array.from(bySehir.get(sehir)!).sort((a, b) => a.localeCompare(b, "tr"));
+  }
+  return result;
+}
+
+function parseLocInput(raw: string): { province: string; ilce: string } {
+  const t = raw.trim();
+  if (!t) return { province: "", ilce: "" };
+  const sep = " / ";
+  const idx = t.indexOf(sep);
+  if (idx === -1) return { province: t, ilce: "" };
+  return {
+    province: t.slice(0, idx).trim(),
+    ilce: t.slice(idx + sep.length).trim(),
+  };
 }
 
 export default function SearchBar({
@@ -31,25 +68,152 @@ export default function SearchBar({
   onKmChange,
   onSearch,
 }: SearchBarProps) {
+  const [iller, setIller] = useState<Record<string, string[]>>({});
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [activeIlce, setActiveIlce] = useState("");
+  const [panelOpen, setPanelOpen] = useState(false);
+  const regionWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function fetchIller() {
+      const { data, error } = await supabase
+        .from("tesisler")
+        .select("sehir, ilce")
+        .eq("aktif", true);
+      if (error) {
+        console.error("Arama bölge (sehir/ilce) sorgu hatası:", error);
+        return;
+      }
+      setIller(buildIllerFromTesisRows(data ?? []));
+    }
+    void fetchIller();
+  }, []);
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    function onDocMouseDown(e: MouseEvent) {
+      const el = regionWrapRef.current;
+      if (!el) return;
+      if (!el.contains(e.target as Node)) setPanelOpen(false);
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [panelOpen]);
+
+  function openRegionPanel() {
+    if (gpsOn) return;
+    const parsed = parseLocInput(locInput);
+    setSelectedProvince(parsed.province);
+    setActiveIlce(parsed.ilce);
+    setPanelOpen(true);
+  }
+
+  const ilceler = selectedProvince && iller[selectedProvince] ? iller[selectedProvince] : [];
+  const filteredIller = useMemo(() => Object.keys(iller), [iller]);
+
+  const previewVal = activeIlce
+    ? `${selectedProvince} / ${activeIlce}`
+    : selectedProvince || "";
+
+  const closePanel = useCallback(() => setPanelOpen(false), []);
+
+  function handleTemizle() {
+    setSelectedProvince("");
+    setActiveIlce("");
+    onLocInputChange("");
+    closePanel();
+  }
+
+  function handleTamam() {
+    if (!selectedProvince) {
+      onLocInputChange("");
+    } else if (activeIlce) {
+      onLocInputChange(`${selectedProvince} / ${activeIlce}`);
+    } else {
+      onLocInputChange(selectedProvince);
+    }
+    closePanel();
+  }
+
   return (
     <>
       <div className="arama-srch-card">
-        <div className="arama-sf" style={{ flex: 2, minWidth: 180 }}>
+        <div className="arama-sf arama-region-sf" style={{ flex: 2, minWidth: 180 }} ref={regionWrapRef}>
           <label className="arama-sfl">Konum</label>
           <div className="arama-sf-loc">
-            <input
-              type="text"
-              value={locInput}
-              onChange={e => onLocInputChange(e.target.value)}
-              placeholder="Bodrum, Antalya, Marmaris..."
+            <button
+              type="button"
+              className={`arama-region-trigger${locInput ? " filled" : ""}${panelOpen ? " open" : ""}`}
               disabled={gpsOn}
-              className="arama-sf-input"
-            />
-            <button type="button" className={`arama-gps-btn${gpsOn ? " on" : ""}`} onClick={onToggleGPS}>
+              onClick={() => {
+                if (gpsOn) return;
+                if (panelOpen) setPanelOpen(false);
+                else openRegionPanel();
+              }}
+            >
+              {locInput || "İl / ilçe seçin"}
+            </button>
+            <button
+              type="button"
+              className={`arama-gps-btn${gpsOn ? " on" : ""}`}
+              onClick={() => {
+                setPanelOpen(false);
+                onToggleGPS();
+              }}
+            >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
               {gpsOn ? "✓ GPS" : "GPS"}
             </button>
           </div>
+          {panelOpen && !gpsOn && (
+            <div className="arama-region-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div className="arama-region-cols">
+                <div className="arama-region-iller">
+                  {filteredIller.map((il) => (
+                    <div
+                      key={il}
+                      className={`arama-region-item${selectedProvince === il ? " active" : ""}`}
+                      onClick={() => {
+                        setSelectedProvince(il);
+                        setActiveIlce("");
+                      }}
+                    >
+                      {il}<span className="arama-region-arr">›</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="arama-region-ilceler">
+                  {selectedProvince ? (
+                    <>
+                      <div className="arama-region-ilce-ttl">{selectedProvince}</div>
+                      <div
+                        className={`arama-region-ilce-item${!activeIlce ? " sel" : ""}`}
+                        onClick={() => setActiveIlce("")}
+                      >
+                        Tümü
+                      </div>
+                      {ilceler.map((ilce) => (
+                        <div
+                          key={ilce}
+                          className={`arama-region-ilce-item${activeIlce === ilce ? " sel" : ""}`}
+                          onClick={() => setActiveIlce(ilce)}
+                        >
+                          {ilce}
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="arama-region-empty">İl seçin</div>
+                  )}
+                </div>
+              </div>
+              <div className="arama-region-footer">
+                <span className="arama-region-preview">{previewVal}</span>
+                <button type="button" className="arama-region-btn" onClick={handleTemizle}>Temizle</button>
+                <button type="button" className="arama-region-btn primary" onClick={handleTamam}>Tamam</button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="arama-sf" style={{ minWidth: 130 }}>
           <label className="arama-sfl">Tesis Tipi</label>
