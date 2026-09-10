@@ -716,6 +716,7 @@ function AramaContent() {
             km={km}
             onKmChange={setKm}
             onSearch={handleAraClick}
+            aktifTipler={aktifTipler}
           />
         </div>
       </div>

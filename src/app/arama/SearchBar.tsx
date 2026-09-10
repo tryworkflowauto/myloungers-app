@@ -17,6 +17,7 @@ export interface SearchBarProps {
   km: number;
   onKmChange: (v: number) => void;
   onSearch: () => void;
+  aktifTipler: { slug: string; ad: string }[];
 }
 
 /** Aktif tesis satırlarından unique il → ilçe haritası (boş/null hariç). */
@@ -67,6 +68,7 @@ export default function SearchBar({
   km,
   onKmChange,
   onSearch,
+  aktifTipler,
 }: SearchBarProps) {
   const [iller, setIller] = useState<Record<string, string[]>>({});
   const [selectedProvince, setSelectedProvince] = useState("");
@@ -219,13 +221,9 @@ export default function SearchBar({
           <label className="arama-sfl">Tesis Tipi</label>
           <select value={typeVal} onChange={e => onTypeValChange(e.target.value)} className="arama-sf-select">
             <option value="">Tümü</option>
-            <option value="beach">Beach Club</option>
-            <option value="hotel">Hotel</option>
-            <option value="aqua">Aqua Park</option>
-            <option value="restoran">Restoran</option>
-            <option value="bar">Bar & Lounge</option>
-            <option value="tekne">Tekne Turu</option>
-            <option value="spa">Spa</option>
+            {aktifTipler.map((tip) => (
+              <option key={tip.slug} value={tip.slug}>{tip.ad}</option>
+            ))}
           </select>
         </div>
         <div className="arama-sf" style={{ minWidth: 130 }}>
