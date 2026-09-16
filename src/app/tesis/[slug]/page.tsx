@@ -10,6 +10,7 @@ import { readSiteLangFromStorage, SITE_LANG_STORAGE_KEY } from "@/lib/site-lang"
 import { ensureTesisTipleriYuklendi, getSeatUnitLabelDinamik, type YerEtiketiHaritasi } from "@/lib/tesisTipleriDb";
 import { trackEvent } from '@/components/MetaPixel';
 import { sendGAEvent } from "@/lib/sendGAEvent";
+import { toEmbedUrl } from "@/lib/videoEmbedUrl";
 
 type TesisRow = Record<string, any>;
 
@@ -239,7 +240,7 @@ export default function TesisDetailPage() {
       const video = (fetched as any).video_url;
       if (video && typeof video === "string" && video.trim()) {
         setVideoUrl(video);
-        setVideoEmbed(video);
+        setVideoEmbed(toEmbedUrl(video));
       }
       setLoading(false);
     }
@@ -1066,19 +1067,7 @@ export default function TesisDetailPage() {
       setVideoEmbed(null);
       return;
     }
-    let embed = raw;
-    // Eğer URL zaten embed formatındaysa doğrudan kullan
-    if (raw.includes("youtube.com/embed") || raw.includes("player.vimeo.com/video")) {
-      embed = raw;
-    } else if (raw.includes("youtube.com/watch")) {
-      const vid = raw.split("v=")[1]?.split("&")[0];
-      if (vid) embed = "https://www.youtube.com/embed/" + vid;
-    } else if (raw.includes("youtu.be/")) {
-      embed = "https://www.youtube.com/embed/" + raw.split("youtu.be/")[1].split("?")[0];
-    } else if (raw.includes("vimeo.com/")) {
-      embed = "https://player.vimeo.com/video/" + raw.split("vimeo.com/")[1].split("?")[0];
-    }
-    setVideoEmbed(embed);
+    setVideoEmbed(toEmbedUrl(raw));
   }, [videoUrl]);
 
   const days = selStart && selEnd ? daysBetween(selStart, selEnd) : selStart ? 1 : 0;

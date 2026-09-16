@@ -7,6 +7,7 @@ import { fetchAktifTesisTipleri, type TesisTipiCatalogRow } from "@/lib/tesisTip
 import { normalizeKategoriList } from "@/lib/tesisKategori";
 import { normalizeToCanonical, getFacilityType } from "@/lib/tesisFacilityTypes";
 import { getAktifTesisId } from "@/lib/aktifTesis";
+import { toEmbedUrl } from "@/lib/videoEmbedUrl";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -47,15 +48,6 @@ const INIT_KURALLAR: ListItem[] = [];
 const INIT_KAMPANYA_NOTLARI: ListItem[] = [];
 
 const EMOJI_PICKER = ["🏄","🎯","🎪","🛁","🔒","🌿","🎠","🏋️","🧊","🎭","🌅","🍷"];
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-function toEmbedUrl(url: string): string {
-  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
-  const vm = url.match(/vimeo\.com\/(\d+)/);
-  if (vm) return `https://player.vimeo.com/video/${vm[1]}`;
-  return url;
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function IsletmeTesisPage() {
@@ -231,7 +223,7 @@ export default function IsletmeTesisPage() {
       setDetayAciklamaEn(row.detayli_aciklama_en != null && row.detayli_aciklama_en !== "" ? String(row.detayli_aciklama_en) : "");
       setEnAciklamaTouched(false);
       if (row.aciklama) setAciklama(row.aciklama);
-      if (row.video_url) setVideoUrl(row.video_url);
+      if (row.video_url) setVideoUrl(toEmbedUrl(String(row.video_url)));
       if (row.enlem) setEnlem(String(row.enlem));
       if (row.boylam) setBoylam(String(row.boylam));
       if (row.maps_link) setMapsLink(row.maps_link);
