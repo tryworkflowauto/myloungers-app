@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getAktifTesisId } from "@/lib/aktifTesis";
+import { getOdemeModu } from "@/lib/odemeModlari";
 
 const NAVY = "#0A1628";
 const TEAL = "#0ABAB5";
@@ -302,6 +303,8 @@ const emptyEditForm = {
 export default function IsletmeRezervasyonlarPage() {
   const router = useRouter();
   const [tesisId, setTesisId] = useState<string | null>(null);
+  /** undefined = henüz çekilmedi; null = kolon boş; string = tesisler.odeme_modu */
+  const [tesisOdemeModu, setTesisOdemeModu] = useState<string | null | undefined>(undefined);
 
   const [rezervasyonlar, setRezervasyonlar] = useState<Rezervasyon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -386,12 +389,14 @@ export default function IsletmeRezervasyonlarPage() {
       if (cancelled) return;
       if (authErr || !authData?.user) {
         setTesisId(null);
+        setTesisOdemeModu(undefined);
         return;
       }
       const aktifId = await getAktifTesisId(supabase);
       if (cancelled) return;
       if (!aktifId) {
         setTesisId(null);
+        setTesisOdemeModu(undefined);
         return;
       }
       setTesisId(aktifId);
@@ -405,19 +410,23 @@ export default function IsletmeRezervasyonlarPage() {
   useEffect(() => {
     if (!tesisId) {
       setRezervasyonlar([]);
+      setTesisOdemeModu(undefined);
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    supabase
-      .from("rezervasyonlar")
-      .select("id, rezervasyon_kodu, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, saat, kisi_sayisi, toplam_tutar, durum, giris_yapildi, created_at, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
-      .eq("tesis_id", tesisId)
-      .not("pgtranid", "is", null)
-      .order("baslangic_tarih", { ascending: false })
-      .then(({ data, error }) => {
+    Promise.all([
+      supabase
+        .from("rezervasyonlar")
+        .select("id, rezervasyon_kodu, tesis_id, kullanici_id, musteri_adi, telefon, sezlong_id, baslangic_tarih, bitis_tarih, saat, kisi_sayisi, toplam_tutar, durum, giris_yapildi, created_at, kullanicilar!rezervasyonlar_kullanici_id_fkey(ad, soyad, email), sezlonglar(numara, sezlong_gruplari(ad))")
+        .eq("tesis_id", tesisId)
+        .not("pgtranid", "is", null)
+        .order("baslangic_tarih", { ascending: false }),
+      supabase.from("tesisler").select("odeme_modu").eq("id", tesisId).maybeSingle(),
+    ]).then(([rezRes, tesisRes]) => {
         if (cancelled) return;
+        const { data, error } = rezRes;
         if (error) {
           console.error("Rezervasyonlar fetch error:", error);
           setRezervasyonlar([]);
@@ -425,6 +434,10 @@ export default function IsletmeRezervasyonlarPage() {
           const bugunStr = new Date().toISOString().slice(0, 10);
           const list = (data ?? []).map((r: any, i: number) => mapRowToRezervasyon(r, i, bugunStr));
           setRezervasyonlar(list);
+        }
+        if (!tesisRes.error) {
+          const rawModu = (tesisRes.data as { odeme_modu?: unknown } | null)?.odeme_modu;
+          setTesisOdemeModu(typeof rawModu === "string" && rawModu.trim() !== "" ? rawModu.trim() : null);
         }
         setLoading(false);
       });
@@ -799,6 +812,8 @@ export default function IsletmeRezervasyonlarPage() {
     return "#D97706";
   }
 
+  const odemeModuBilgi = tesisOdemeModu !== undefined ? getOdemeModu(tesisOdemeModu) : null;
+
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800, display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
@@ -809,9 +824,11 @@ export default function IsletmeRezervasyonlarPage() {
           <span style={{ fontSize: 11, color: GRAY400 }}>
             {new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} • Toplam {rezervasyonlar.length} rezervasyon
           </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F0FFFE", border: `1px solid ${TEAL}`, borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700, color: TEAL, marginLeft: 10 }}>
-            💰 Ön Ödemeli Sistem
-          </span>
+          {odemeModuBilgi && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F0FFFE", border: `1px solid ${TEAL}`, borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700, color: TEAL, marginLeft: 10 }}>
+              💰 {odemeModuBilgi.label}
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
@@ -1198,13 +1215,15 @@ export default function IsletmeRezervasyonlarPage() {
               <button onClick={() => setModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: GRAY400 }}>✕</button>
             </div>
 
+            {odemeModuBilgi && (
             <div style={{ background: "#F0FFFE", border: `1.5px solid ${TEAL}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 20 }}>💰</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>Ön Ödemeli Sistem Aktif</div>
-                <div style={{ fontSize: 11, color: GRAY600, marginTop: 2 }}>Yer bedeli müşterinin bakiyesine yüklenir.</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>{odemeModuBilgi.label}</div>
+                <div style={{ fontSize: 11, color: GRAY600, marginTop: 2 }}>{odemeModuBilgi.aciklama}</div>
               </div>
             </div>
+            )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>

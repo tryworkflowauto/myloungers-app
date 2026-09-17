@@ -1845,9 +1845,7 @@ export default function IsletmeSezlongPage() {
                 gap: 12,
               }}
             >
-              <span className="sezlong-wave">🌊</span>
-              <span>D E N İ Z</span>
-              <span className="sezlong-wave">🌊</span>
+              MYLOUNGERS
             </div>
           </div>
 

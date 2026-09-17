@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
     const orderItems = JSON.stringify([{
       productCode: String(orderId).trim(),
       sellerId: "10008941",
-      name: "Şezlong Rezervasyonu",
-      description: "Myloungers şezlong rezervasyonu",
+      name: "MyLoungers Rezervasyonu",
+      description: "MyLoungers rezervasyon hizmeti",
       quantity: 1,
       amount: amountStr,
     }]);
