@@ -2456,13 +2456,6 @@ export default function IsletmeSezlongPage() {
                 ))}
               </div>
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: GRAY600, marginBottom: 4 }}>Ön Ödeme Tipi</label>
-              <select style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 8, fontSize: 13 }}>
-                <option>Ön Ödemeli (Bakiye yüklenir)</option>
-                <option>Sadece Yer Kiralama</option>
-              </select>
-            </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button
                 onClick={() => setModalOpen(false)}

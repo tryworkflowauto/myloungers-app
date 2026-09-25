@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { getAktifTesisId } from "@/lib/aktifTesis";
+import { getOdemeModu } from "@/lib/odemeModlari";
 
 // HTML :root ile birebir
 const NAVY = "#0A1628";
@@ -152,6 +153,9 @@ export default function IsletmeDashboardPage() {
   const [saat, setSaat] = useState("--:--");
   const [tesisId, setTesisId] = useState<string | null>(null);
   const [tesisAdi, setTesisAdi] = useState("Tesis");
+  const [tesisOdemeModu, setTesisOdemeModu] = useState<string | null>(null);
+  const [hizmetSecimli, setHizmetSecimli] = useState(false);
+  const [yerSecimsiz, setYerSecimsiz] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [rezervasyonModalOpen, setRezervasyonModalOpen] = useState(false);
   const [rezForm, setRezForm] = useState({ musteriAdi: "", telefon: "", sezlongGrubu: "Gold", sezlongNo: "", tarih: "", kisiSayisi: "" });
@@ -259,7 +263,7 @@ export default function IsletmeDashboardPage() {
       ucGunSonra.setHours(23, 59, 59, 999);
 
       const [tesisRes, sezonRes, gruplarRes, sezlonglarRes, rezRes, yorumRes, siparisRes, bekleyenSiparisRes, yaklasanRezRes, yaklasanBakiyeRes, haftalikGelirRes, gunlukGelirRes, aktifMusteriRes, cevaplanmayanYorumRes] = await Promise.all([
-        supabase.from("tesisler").select("id, ad").eq("id", tesisId).maybeSingle(),
+        supabase.from("tesisler").select("id, ad, odeme_modu, hizmet_secimli, yer_secimsiz").eq("id", tesisId).maybeSingle(),
         supabase.from("sezonlar").select("id, ad, baslangic, bitis").eq("tesis_id", tesisId).eq("aktif", true).order("bitis", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("sezlong_gruplari").select("id, ad, renk").eq("tesis_id", tesisId),
         supabase.from("sezlonglar").select("id, grup_id, durum").eq("tesis_id", tesisId),
@@ -277,8 +281,12 @@ export default function IsletmeDashboardPage() {
 
       if (cancelled) return;
 
-      const tesis = (tesisRes.data as { id: string; ad: string } | null) ?? null;
+      const tesis = (tesisRes.data as { id: string; ad: string; odeme_modu?: string | null; hizmet_secimli?: boolean | null; yer_secimsiz?: boolean | null } | null) ?? null;
       const fetchedTesisAdi = tesis?.ad ?? "Tesis";
+      const rawOdemeModu = tesis?.odeme_modu;
+      setTesisOdemeModu(typeof rawOdemeModu === "string" && rawOdemeModu.trim() !== "" ? rawOdemeModu.trim() : null);
+      setHizmetSecimli(tesis?.hizmet_secimli === true);
+      setYerSecimsiz(tesis?.yer_secimsiz === true);
       const sezon = sezonRes.data as { ad: string; baslangic: string; bitis: string } | null;
       const gruplar = (gruplarRes.data ?? []) as { id: string; ad: string; renk: string }[];
       const sezlonglar = (sezlonglarRes.data ?? []) as { id: string; grup_id: string; durum: string }[];
@@ -448,6 +456,8 @@ export default function IsletmeDashboardPage() {
     hava: { derece: 24, durum: "Açık", ruzgar: "12 km/s", deniz: "Sakin" },
   };
   const sezonVar = Boolean(sezonData?.ad && sezonData.ad.trim());
+  const rezervasyonModeli = hizmetSecimli ? "Hizmet Seçimli" : yerSecimsiz ? "Yer Seçimsiz" : "Yer Seçimli";
+  const odemeModeli = getOdemeModu(tesisOdemeModu).label;
 
   return (
     <div className="flex flex-col min-h-full" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: GRAY100, color: GRAY800 }}>
@@ -492,6 +502,10 @@ export default function IsletmeDashboardPage() {
           <div>
             <h2 style={{ fontSize: 20, fontWeight: 900, color: "white", marginBottom: 3 }}>🌸 {sezonVar ? sezon.ad : tesisAdi}</h2>
             <span style={{ fontSize: 12, color: GRAY400 }}>{sezonVar ? `${sezon.tesis} · ${sezon.baslangic} — ${sezon.bitis}` : tesisAdi}</span>
+            <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.92)", lineHeight: 1.55 }}>
+              <div>Rezervasyon Modeli: <strong>{rezervasyonModeli}</strong></div>
+              <div>Ödeme Modeli: <strong>{odemeModeli}</strong></div>
+            </div>
           </div>
           <div className="flex gap-7">
             <div><div style={{ fontSize: 24, fontWeight: 900, color: TEAL }}>{sezon.kalanGun}</div><div style={{ fontSize: 10, color: GRAY400, marginTop: 2 }}>Kalan Gün</div></div>

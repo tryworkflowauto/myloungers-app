@@ -7,6 +7,7 @@ import { fetchAktifTesisTipleri, type TesisTipiCatalogRow } from "@/lib/tesisTip
 import { normalizeKategoriList } from "@/lib/tesisKategori";
 import { normalizeToCanonical, getFacilityType } from "@/lib/tesisFacilityTypes";
 import { getAktifTesisId } from "@/lib/aktifTesis";
+import { ilSecenekleri, ilceSecenekleri, ilceStatikListede } from "@/lib/turkiyeIlIlce";
 import { toEmbedUrl } from "@/lib/videoEmbedUrl";
 
 const NAVY = "#0A1628";
@@ -85,7 +86,8 @@ export default function IsletmeTesisPage() {
   const [tesisAdi, setTesisAdi]         = useState("");
   const [sehir, setSehir]               = useState("");
   const [ilce, setIlce]                 = useState("");
-  const [sehirIlce, setSehirIlce]       = useState("");
+  const [dbSehir, setDbSehir]           = useState("");
+  const [dbIlce, setDbIlce]             = useState("");
   const [adres, setAdres]               = useState("");
   const [telefon, setTelefon]           = useState("");
   const [email, setEmail]               = useState("");
@@ -206,12 +208,12 @@ export default function IsletmeTesisPage() {
         if (dbValues.length > 0) setKategoriler(dbValues);
       }
 
-      if (row.sehir) setSehir(row.sehir);
-      if (row.ilce) setIlce(row.ilce);
-      if (row.sehir || row.ilce) {
-        const parts = [row.sehir, row.ilce].filter(Boolean);
-        if (parts.length) setSehirIlce(parts.join(", "));
-      }
+      const yuklenenSehir = typeof row.sehir === "string" ? row.sehir : "";
+      const yuklenenIlce = typeof row.ilce === "string" ? row.ilce : "";
+      setSehir(yuklenenSehir);
+      setIlce(yuklenenIlce);
+      setDbSehir(yuklenenSehir);
+      setDbIlce(yuklenenIlce);
 
       if (row.adres) setAdres(row.adres);
       if (row.telefon) setTelefon(row.telefon);
@@ -445,12 +447,6 @@ export default function IsletmeTesisPage() {
       showToast("❌ İletişim numarası en az 10 karakter olmalı");
       return;
     }
-    // sehir / ilce senkronizasyonu (kullanıcı alanı değiştirdiyse)
-    if (sehirIlce.trim()) {
-      const parts = sehirIlce.split(",").map((p) => p.trim()).filter(Boolean);
-      if (parts[0]) setSehir(parts[0]);
-      if (parts[1]) setIlce(parts[1]);
-    }
     const payload: any = {
       ad: tesisAdi,
       kategori: kategoriler,
@@ -552,20 +548,38 @@ export default function IsletmeTesisPage() {
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tesis Adı</label>
               <input type="text" value={tesisAdi} onChange={(e) => setTesisAdi(e.target.value)} style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }} />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Şehir / İlçe</label>
-              <input
-                type="text"
-                value={sehirIlce}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setSehirIlce(v);
-                  const parts = v.split(",").map((p) => p.trim()).filter(Boolean);
-                  if (parts[0] !== undefined) setSehir(parts[0]);
-                  if (parts[1] !== undefined) setIlce(parts[1]);
-                }}
-                style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13 }}
-              />
+            <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>İl</label>
+                <select
+                  value={sehir}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setSehir(next);
+                    setIlce((prev) => (next === sehir || ilceStatikListede(next, prev) ? prev : ""));
+                  }}
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}
+                >
+                  <option value="">Seçiniz</option>
+                  {ilSecenekleri(sehir).map((il) => (
+                    <option key={il} value={il}>{il}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>İlçe</label>
+                <select
+                  value={ilce}
+                  onChange={(e) => setIlce(e.target.value)}
+                  disabled={!sehir}
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${GRAY200}`, borderRadius: 9, fontSize: 13, background: "white" }}
+                >
+                  <option value="">Seçiniz</option>
+                  {ilceSecenekleri(sehir, sehir.trim() === dbSehir.trim() ? dbIlce : ilce).map((ad) => (
+                    <option key={ad} value={ad}>{ad}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: GRAY600, marginBottom: 6 }}>Tam Adres</label>
@@ -1264,7 +1278,7 @@ export default function IsletmeTesisPage() {
               }
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 20px 16px", background: "linear-gradient(transparent,rgba(0,0,0,0.7))" }}>
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: "white", margin: 0 }}>{tesisAdi}</h2>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: "4px 0 0" }}>📍 {sehirIlce}</p>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: "4px 0 0" }}>📍 {[sehir, ilce].filter((x) => String(x).trim()).join(", ")}</p>
               </div>
             </div>
             {/* Mini galeri */}
