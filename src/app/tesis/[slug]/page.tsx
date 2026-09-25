@@ -1277,6 +1277,11 @@ export default function TesisDetailPage() {
       calismaSaatleri = [];
     }
   }
+  const hasGercekCalismaSaati = calismaSaatleri.some(
+    (g) =>
+      g.kapali === true ||
+      (String(g.acilis ?? "").trim() !== "" && String(g.kapanis ?? "").trim() !== ""),
+  );
 
   // KURALLAR & KAMPANYALAR (Supabase + fallback)
   type IconTextListItem = {
@@ -1291,12 +1296,6 @@ export default function TesisDetailPage() {
     { icon: "🚫", text: "Dışarıdan yiyecek/içecek getirilmez" },
     { icon: "🚫", text: "18 yaş altı 21:00'dan sonra tesis içinde bulunamaz" },
     { icon: "✅", text: "Giriş: 09:00 — Çıkış: 19:00" },
-  ];
-  const defaultKampanyalar: IconTextListItem[] = [
-    { icon: "🌟", text: "Erken Rezervasyon: 30 gün öncesi %10 indirim" },
-    { icon: "🌟", text: "Grup (5+): %15 indirim" },
-    { icon: "🌟", text: "Hafta içi 3 gün full: Kahvaltı dahil" },
-    { icon: "🌟", text: "Sadakat: 5. rezervasyonda %20 indirim" },
   ];
 
   function parseIconTextArray(raw: any): IconTextListItem[] {
@@ -1358,6 +1357,20 @@ export default function TesisDetailPage() {
       ulasim = null;
     }
   }
+  const hasUlasimIcerigi = !!(
+    ulasim &&
+    [
+      ulasim.hat,
+      ulasim.not,
+      ulasim.tel1,
+      ulasim.tel2,
+      ulasim.durak,
+      ulasim.merkeze,
+      ulasim.saatBas,
+      ulasim.saatBit,
+      ulasim["havalimanı"],
+    ].some((v) => String(v ?? "").trim() !== "")
+  );
 
   const btnDisabled =
     !selStart ||
@@ -1844,15 +1857,13 @@ export default function TesisDetailPage() {
             </div>
 
             {/* İMKANLAR */}
+            {imkanlar.length > 0 && (
             <div className="panel panel-imkanlar">
               <div className="ph" onClick={() => togglePanel("feats")}>
                 <div className="ph-l"><span className="ph-ic">✨</span><div><div className="ph-title">Tesis İmkânları</div><div className="ph-sub">Öne çıkan özellikler</div></div></div>
                 <svg className={`ch${openPanels.feats ? " ch-open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               {openPanels.feats && <div className="pb" style={{ padding: 20 }}>
-                {imkanlar.length === 0 ? (
-                  <p style={{ fontSize: ".8rem", color: "var(--i3)" }}>Henüz eklenmedi.</p>
-                ) : (
                   <div className="feat-grid">
                     {imkanlar.map((it) => (
                       <div key={it.name} className="feat-item">
@@ -1861,12 +1872,12 @@ export default function TesisDetailPage() {
                       </div>
                     ))}
                   </div>
-                )}
               </div>}
             </div>
+            )}
 
             {/* ÇALIŞMA SAATLERİ */}
-            {calismaSaatleri.length > 0 && (
+            {hasGercekCalismaSaati && (
               <div className="panel panel-saatler">
                 <div className="ph" onClick={() => togglePanel("hours")}>
                   <div className="ph-l">
@@ -1924,6 +1935,7 @@ export default function TesisDetailPage() {
             )}
 
             {/* YERLEŞİM PLANI */}
+            {!yerSecimsizMi && !hizmetSecimliMi && zones.length > 0 && (
             <div className="panel panel-yerlesim">
               <div className="ph" onClick={() => togglePanel("plan")}>
                 <div className="ph-l"><span className="ph-ic">🗺️</span><div><div className="ph-title">{yerlesimPlanBaslik}</div><div className="ph-sub">Bölgeye tıklayarak {birimLower} seçin</div></div></div>
@@ -1967,6 +1979,7 @@ export default function TesisDetailPage() {
                 </div>
               </div>}
             </div>
+            )}
 
             {/* ŞEZLONG DÜZENİ */}
             {!yerSecimsizMi && !hizmetSecimliMi && (
@@ -2197,7 +2210,7 @@ export default function TesisDetailPage() {
             )}
 
             {/* ULAŞIM */}
-            {ulasim && (
+            {ulasim && hasUlasimIcerigi && (
               <div className="panel panel-ulasim">
                 <div className="ph" onClick={() => togglePanel("transport")}>
                   <div className="ph-l">
@@ -2344,9 +2357,10 @@ export default function TesisDetailPage() {
                       );
                     })}
                   </div>
+                  {parsedKampanyalar.length > 0 && (
                   <div className="rules-col">
                     <h4>🎁 Kampanyalar</h4>
-                    {(parsedKampanyalar.length ? parsedKampanyalar : defaultKampanyalar).map((item, idx) => {
+                    {parsedKampanyalar.map((item, idx) => {
                       const emoji = item.emoji ?? item.icon;
                       const displayText = getLocalizedField(item, "text", siteLang);
                       const startsWithEmoji = emoji && displayText.startsWith(emoji);
@@ -2358,6 +2372,7 @@ export default function TesisDetailPage() {
                       );
                     })}
                   </div>
+                  )}
                 </div>
               </div>}
             </div>
